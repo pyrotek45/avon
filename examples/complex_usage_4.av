@@ -62,25 +62,25 @@ let arr = ["alpha","beta","gamma","delta","epsilon","zeta","eta","theta","iota",
 let body = join (map (\s concat "- " s) arr) "\n" in
 
 [@/tmp/complex_usage_4.txt {"
-	JSON/Files Example
-	
-	This example demonstrates JSON array handling (as a list), readlines
-	simulation and joining lines to create a long document.
-	
-	{body}
-	
-	Extra repeated lines to bulk content for parser stress testing:
-	
-	Line-A
-	Line-B
-	Line-C
-	Line-D
-	Line-E
-	Line-F
-	Line-G
-	Line-H
-	Line-I
-	Line-J
-	
-	End of complex_usage_4
+    JSON/Files Example
+    
+    This example demonstrates JSON array handling (as a list), readlines
+    simulation and joining lines to create a long document.
+    
+    {body}
+    
+    Extra repeated lines to bulk content for parser stress testing:
+    
+    Line-A
+    Line-B
+    Line-C
+    Line-D
+    Line-E
+    Line-F
+    Line-G
+    Line-H
+    Line-I
+    Line-J
+    
+    End of complex_usage_4
 "}]

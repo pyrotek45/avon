@@ -1,5 +1,5 @@
 \name @{name}/file {"
-	header
-	{["line 1","line 2","line 3"]}
-	footer
+    header
+    {["line 1","line 2","line 3"]}
+    footer
 "}

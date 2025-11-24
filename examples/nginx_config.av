@@ -3,13 +3,13 @@ let sites = ["example.com", "static.example.com"] in
 
 map (\s @/etc/nginx/sites-available/{s}.conf {{"
 server {
-	listen 80;
-	server_name {{s}};
-	root /var/www/{{s}}/html;
-	index index.html index.htm;
+    listen 80;
+    server_name {{s}};
+    root /var/www/{{s}}/html;
+    index index.html index.htm;
 
-	location / {
-		try_files $uri $uri/ =404;
-	}
+    location / {
+        try_files $uri $uri/ =404;
+    }
 }
 "}}) sites

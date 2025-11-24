@@ -3,5 +3,5 @@ let a = "A" in
 let b = "B" in
 let items = ["x","y","z"] in
 map (\i @/files/{a}_{b}_{i}.txt {"
-	This is item {i} in group {a}{b}
+    This is item {i} in group {a}{b}
 "}) items

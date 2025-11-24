@@ -6,11 +6,11 @@ let plugins = ["junegunn/vim-plug", "tpope/vim-sensible"] in
 let plugin_lines = map (\p "Plug '" + p + "'") plugins in
 
 @/home/{user}/.config/nvim/init.vim {"
-set nocompatible
-set number
-colorscheme {theme}
-
-call plug#begin('~/.config/nvim/plugged')
-{plugin_lines}
-call plug#end()
+    set nocompatible
+    set number
+    colorscheme {theme}
+    
+    call plug#begin('~/.config/nvim/plugged')
+    {plugin_lines}
+    call plug#end()
 "}

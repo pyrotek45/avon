@@ -1,8 +1,8 @@
 \name ? "world" [ 
-	@/tmp/{name}/file1 {"
-		Hello {name}
-	"}, 
-	@/tmp/{name}/file2 {"
-		Goodbye {name}
-	"} 
+    @/tmp/{name}/file1 {"
+        Hello {name}
+    "}, 
+    @/tmp/{name}/file2 {"
+        Goodbye {name}
+    "} 
 ]

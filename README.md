@@ -44,8 +44,8 @@ Create `greet.av`:
 
 ```avon
 \name @/greeting.txt {"
-Hello, {name}!
-Welcome to Avon.
+    Hello, {name}!
+    Welcome to Avon.
 "}
 ```
 
@@ -62,8 +62,8 @@ Creates `./output/greeting.txt` with personalized content.
 ```avon
 let environments = ["dev", "staging", "prod"] in
 map (\env @/config-{env}.yml {"
-environment: {env}
-debug: {env != "prod"}
+    environment: {env}
+    debug: {env != "prod"}
 "}) environments
 ```
 
@@ -83,9 +83,9 @@ Multi-line templates preserve formatting:
 
 ```avon
 @/config.yml {"
-app: myapp
-port: 8080
-debug: {debug_mode}
+    app: myapp
+    port: 8080
+    debug: {debug_mode}
 "}
 ```
 
@@ -95,9 +95,9 @@ When generating code with braces (Lua, Nginx, JSON), use the escape hatch:
 
 ```avon
 @/config.lua {"
-local config = {{
-  name = "myapp"
-}}
+    local config = {{
+      name = "myapp"
+    }}
 "}
 ```
 
@@ -105,8 +105,8 @@ Or for complex cases, use double-brace templates:
 
 ```avon
 @/output.txt {{"
-Interpolate: {{ 10 + 20 }}
-Literal open: {{{
+    Interpolate: {{ 10 + 20 }}
+    Literal open: {{{
 "}}
 ```
 
@@ -178,8 +178,8 @@ cargo run -- examples/docker_compose_gen.av --deploy --root ./gen --force
 let name = "Alice" in
 let age = 30 in
 @/profile.txt {"
-Name: {name}
-Age: {age}
+    Name: {name}
+    Age: {age}
 "}
 ```
 

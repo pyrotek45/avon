@@ -12,25 +12,25 @@ let navbar = join nav_links " | " in
 
 # Function to generate an HTML page file
 let make_page = \page_name \title \content @/{page_name}.html {"
-	<!DOCTYPE html>
-	<html>
-	<head>
-		<title>{title}</title>
-	</head>
-	<body>
-		<header>
-			<h1>{site_name}</h1>
-			<nav>{navbar}</nav>
-		</header>
-		<main>
-			<h2>{title}</h2>
-			{content}
-		</main>
-		<footer>
-			<p>Copyright 2025 {site_name}. By {author}.</p>
-		</footer>
-	</body>
-	</html>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>{title}</title>
+    </head>
+    <body>
+        <header>
+            <h1>{site_name}</h1>
+            <nav>{navbar}</nav>
+        </header>
+        <main>
+            <h2>{title}</h2>
+            {content}
+        </main>
+        <footer>
+            <p>Copyright 2025 {site_name}. By {author}.</p>
+        </footer>
+    </body>
+    </html>
 "} in
 
 # Generate pages

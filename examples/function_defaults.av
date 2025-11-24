@@ -1,4 +1,4 @@
 # function with defaults and filetemplate
 \name ? "guest" \greeting ? "Welcome" @/tmp/greet_{name}.txt {"
-	{greeting}, {name}!
+    {greeting}, {name}!
 "}

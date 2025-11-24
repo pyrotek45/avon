@@ -62,7 +62,7 @@ Provide fallback values:
 
 ```avon
 \name ? "Guest" @/welcome.txt {"
-Welcome, {name}!
+    Welcome, {name}!
 "}
 ```
 
@@ -78,7 +78,7 @@ if age > 18 then "adult" else "minor"
 
 # In templates:
 @/output.txt {"
-Status: {if count > 0 then "has items" else "empty"}
+    Status: {if count > 0 then "has items" else "empty"}
 "}
 ```
 
@@ -135,10 +135,10 @@ To produce literal braces without starting interpolation, use one more brace tha
 **Lua configuration** (single-brace template):
 ```avon
 @/config.lua {"
-local settings = {{
-  name = "app",
-  debug = { if dev then "true" else "false" }
-}}
+    local settings = {{
+      name = "app",
+      debug = { if dev then "true" else "false" }
+    }}
 "}
 ```
 Produces:
@@ -152,22 +152,22 @@ local settings = {
 **Nginx server block** (single-brace template):
 ```avon
 @/nginx.conf {"
-server {{
-  listen 80;
-  server_name { domain };
-}}
+    server {{
+      listen 80;
+      server_name { domain };
+    }}
 "}
 ```
 
 **Terraform HCL** (double-brace template with `{{ }}` for interpolation):
 ```avon
 @/main.tf {{"
-resource "aws_instance" "web" {{
-  ami = "{{ ami_id }}"
-  tags = {{
-    Name = "{{ instance_name }}"
-  }}
-}}
+    resource "aws_instance" "web" {{
+      ami = "{{ ami_id }}"
+      tags = {{
+        Name = "{{ instance_name }}"
+      }}
+    }}
 "}}
 ```
 
@@ -178,8 +178,8 @@ Combine paths with templates for file generation:
 
 ```avon
 @/config.yml {"
-environment: prod
-debug: false
+    environment: prod
+    debug: false
 "}
 ```
 
@@ -214,6 +214,18 @@ When deployed, this writes the template content to the specified file.
 
 **Examples:** `examples/string_functions.av`, `examples/split_join.av`, `examples/new_functions_demo.av`
 
+### 🔍 String Predicates
+
+| Function | Arity | Purpose | Example | Result |
+|----------|-------|---------|---------|--------|
+| `is_digit` | 1 | Check if all chars are digits | `is_digit "123"` | `true` |
+| `is_alpha` | 1 | Check if all chars are alphabetic | `is_alpha "abc"` | `true` |
+| `is_alphanumeric` | 1 | Check if all chars are alphanumeric | `is_alphanumeric "abc123"` | `true` |
+| `is_whitespace` | 1 | Check if all chars are whitespace | `is_whitespace "  "` | `true` |
+| `is_uppercase` | 1 | Check if all chars are uppercase | `is_uppercase "ABC"` | `true` |
+| `is_lowercase` | 1 | Check if all chars are lowercase | `is_lowercase "abc"` | `true` |
+| `is_empty` | 1 | Check if string or list is empty | `is_empty ""` | `true` |
+
 ### 📊 List Operations
 
 | Function | Arity | Purpose | Example |
@@ -236,6 +248,7 @@ When deployed, this writes the template content to the specified file.
 | `exists` | 1 | Check if file exists |
 | `basename` | 1 | Extract filename from path |
 | `dirname` | 1 | Extract directory from path |
+| `walkdir` | 1 | List all files in directory recursively |
 
 ### 🌐 HTML Generation
 
@@ -413,8 +426,8 @@ Fetch and run a program from GitHub's raw content CDN.
 ```avon
 let app = "myapp" in
 @/config.yml {"
-app: {app}
-debug: false
+    app: {app}
+    debug: false
 "}
 ```
 
@@ -428,8 +441,8 @@ map (\item @/config-{item}.yml {"{item}"}) items
 ```avon
 let env = "prod" in
 @/.env {"
-DEBUG={if env == "prod" then "false" else "true"}
-CACHE_ENABLED={if env == "dev" then "false" else "true"}
+    DEBUG={if env == "prod" then "false" else "true"}
+    CACHE_ENABLED={if env == "dev" then "false" else "true"}
 "}
 ```
 
@@ -478,9 +491,9 @@ Use indentation in templates — Avon's dedent removes it:
 
 ```avon
 @/config.yml {"
-	server:
-	  host: localhost
-	  port: 8080
+    server:
+      host: localhost
+      port: 8080
 "}
 ```
 

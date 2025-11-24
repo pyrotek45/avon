@@ -56,8 +56,8 @@ Now let's generate an actual file. Create `greet.av`:
 
 ```avon
 \name @/greeting.txt {"
-Hello, {name}!
-Welcome to Avon.
+    Hello, {name}!
+    Welcome to Avon.
 "}
 ```
 
@@ -85,8 +85,8 @@ Here's where Avon shines. Let's generate a config file for each environment:
 ```avon
 let environments = ["dev", "staging", "prod"] in
 map (\env @/config-{env}.yml {"
-environment: {env}
-debug: {if env == "prod" then false else true}
+    environment: {env}
+    debug: {if env == "prod" then false else true}
 "}) environments
 ```
 
@@ -258,7 +258,7 @@ When deploying, you can provide default values for parameters using `?`:
 
 ```avon
 \name ? "Guest" @/welcome.txt {"
-Welcome, {name}!
+    Welcome, {name}!
 "}
 ```
 
@@ -284,8 +284,8 @@ This is especially useful for functions with multiple parameters:
 
 ```avon
 \app ? "service" \env ? "dev" @/config-{app}-{env}.yml {"
-app: {app}
-environment: {env}
+    app: {app}
+    environment: {env}
 "}
 ```
 
@@ -293,8 +293,8 @@ environment: {env}
 
 ```avon
 let make_config = \env \debug ? false @/config-{env}.yml {"
-environment: {env}
-debug: {debug}
+    environment: {env}
+    debug: {debug}
 } in
 
 let environments = ["dev", "staging", "prod"] in
@@ -329,8 +329,8 @@ When a list is interpolated into a template, each item appears on its own line:
 ```avon
 let names = ["Alice", "Bob", "Charlie"] in
 @/names.txt {"
-Names:
-{names}
+    Names:
+    {names}
 "}
 ```
 
@@ -363,8 +363,8 @@ Real-world example: generate configuration for each environment:
 ```avon
 let environments = ["dev", "staging", "prod"] in
 let make_config = \env @/config-{env}.yml {"
-environment: {env}
-debug: {env != "prod"}
+    environment: {env}
+    debug: {env != "prod"}
 "} in
 map make_config environments
 ```
@@ -461,9 +461,9 @@ Templates automatically strip common leading whitespace (dedent), so you can ind
 ```avon
 let item = "widget" in
 @/config.yml {"
-	item: {item}
-	description: "A useful widget"
-	version: 1.0
+    item: {item}
+    description: "A useful widget"
+    version: 1.0
 "}
 ```
 
@@ -483,8 +483,8 @@ When you interpolate a list, its items appear on separate lines:
 ```avon
 let items = ["apple", "banana", "cherry"] in
 @/shopping.txt {"
-Items:
-{items}
+    Items:
+    {items}
 "}
 ```
 
@@ -541,14 +541,14 @@ The default template syntax uses single braces for interpolation:
 
 ```avon
 @/config.lua {"
-local config = {{
-  name = "myapp",
-  debug = true
-}}
-
-function init()
-  return config
-end
+    local config = {{
+      name = "myapp",
+      debug = true
+    }}
+    
+    function init()
+      return config
+    end
 "}
 ```
 
@@ -570,9 +570,9 @@ For cases requiring many literal braces, use double-brace templates:
 
 ```avon
 @/output.txt {{"
-Two-brace template: {{ 10 + 20 }}
-Literal open: {{{
-Literal pair: {{{{
+    Two-brace template: {{ 10 + 20 }}
+    Literal open: {{{
+    Literal pair: {{{{
 "}}
 ```
 
@@ -620,7 +620,7 @@ The real power of Avon is **file templates**: combining a file path with a templ
 
 ```avon
 @/path/to/file.txt {"
-File content goes here
+    File content goes here
 "}
 ```
 
@@ -632,7 +632,7 @@ Create `greet.av`:
 
 ```avon
 \name @/greeting.txt {"
-Hello, {name}!
+    Hello, {name}!
 "}
 ```
 
@@ -651,9 +651,16 @@ Return a list of file templates:
 ```avon
 let name = "my-app" in
 [
-	@/docker-compose.yml {" docker-compose: {name} "},
-	@/README.md {"# {name}"},
-	@/.gitignore {"__pycache__/\nnode_modules/"}
+    @/docker-compose.yml {"
+        docker-compose: {name}
+    "},
+    @/README.md {"
+        # {name}
+    "},
+    @/.gitignore {"
+        __pycache__/
+        node_modules/
+    "}
 ]
 ```
 
@@ -672,7 +679,7 @@ Use variables in file paths:
 ```avon
 let configs = ["dev", "prod"] in
 map (\env @/config-{env}.yml {"
-environment: {env}
+    environment: {env}
 "}) configs
 ```
 
@@ -784,8 +791,8 @@ Generate a configuration file with multiple items:
 let items = ["api", "worker", "scheduler"] in
 let formatted = map (\item concat "service: " item) items in
 @/services.conf {"
-Services:
-{formatted}
+    Services:
+    {formatted}
 "}
 ```
 
@@ -905,10 +912,10 @@ Indent templates nicely in your source code. Avon's dedent feature handles the i
 
 ```avon
 @/config.yml {"
-	database:
-	  host: localhost
-	  port: 5432
-	  name: myapp
+    database:
+      host: localhost
+      port: 5432
+      name: myapp
 "}
 ```
 
@@ -1102,7 +1109,7 @@ let a = "A" in
 let b = "B" in
 let combined = concat a b in
 @/out/{combined}.txt {"
-Combined: {combined}
+    Combined: {combined}
 "}
 ```
 

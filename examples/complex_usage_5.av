@@ -58,13 +58,13 @@
 let items = ["alpha","beta","gamma","delta","epsilon","zeta","eta","theta","iota","kappa","lambda","mu","nu","xi","omicron","pi","rho","sigma","tau","upsilon"] in
 
 [@/tmp/complex_usage_5.txt {"
-	Indented List Example
-	
-	The following list is interpolated preserving indentation; dedent will
-	normalize the outer template while keeping list item indentation aligned.
-	
-	Items:
-	{items}
-	
-	End of items
+    Indented List Example
+    
+    The following list is interpolated preserving indentation; dedent will
+    normalize the outer template while keeping list item indentation aligned.
+    
+    Items:
+    {items}
+    
+    End of items
 "}]

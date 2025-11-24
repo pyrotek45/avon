@@ -19,240 +19,240 @@ let has_secrets = true in
 let labels = "    app: {app_name}\n    version: v1\n    managed-by: avon" in
 
 [
-	# Namespace
-	@/k8s/namespace.yaml {"
-		apiVersion: v1
-		kind: Namespace
-		metadata:
-		  name: {namespace}
-	"},
-	
-	# ConfigMap
-	@/k8s/configmap.yaml {"
-		apiVersion: v1
-		kind: ConfigMap
-		metadata:
-		  name: {app_name}-config
-		  namespace: {namespace}
-		data:
-		  LOG_LEVEL: "info"
-		  DATABASE_POOL_SIZE: "10"
-		  CACHE_TTL: "300"
-		  API_TIMEOUT: "30s"
-	"},
-	
-	# Secret
-	@/k8s/secret.yaml {"
-		apiVersion: v1
-		kind: Secret
-		metadata:
-		  name: {app_name}-secrets
-		  namespace: {namespace}
-		type: Opaque
-		stringData:
-		  DATABASE_PASSWORD: "change-me-in-production"
-		  API_KEY: "your-api-key-here"
-		  JWT_SECRET: "your-jwt-secret-here"
-	"},
-	
-	# Deployment
-	@/k8s/deployment.yaml {"
-		apiVersion: apps/v1
-		kind: Deployment
-		metadata:
-		  name: {app_name}
-		  namespace: {namespace}
-		  labels:
-		    app: {app_name}
-		spec:
-		  replicas: {replicas}
-		  selector:
-		    matchLabels:
-		      app: {app_name}
-		  template:
-		    metadata:
-		      labels:
-		        {labels}
-		      annotations:
-		        prometheus.io/scrape: "true"
-		        prometheus.io/port: "{port}"
-		        prometheus.io/path: "/metrics"
-		    spec:
-		      serviceAccountName: {app_name}
-		      securityContext:
-		        runAsNonRoot: true
-		        runAsUser: 1000
-		        fsGroup: 1000
-		      containers:
-		      - name: {app_name}
-		        image: {image}
-		        imagePullPolicy: IfNotPresent
-		        ports:
-		        - name: http
-		          containerPort: {port}
-		          protocol: TCP
-		        env:
-		        - name: APP_NAME
-		          value: {app_name}
-		        - name: DATABASE_URL
-		          valueFrom:
-		            secretKeyRef:
-		              name: {app_name}-secrets
-		              key: DATABASE_PASSWORD
-		        - name: LOG_LEVEL
-		          valueFrom:
-		            configMapKeyRef:
-		              name: {app_name}-config
-		              key: LOG_LEVEL
-		        livenessProbe:
-		          httpGet:
-		            path: /health
-		            port: http
-		          initialDelaySeconds: 30
-		          periodSeconds: 10
-		          timeoutSeconds: 5
-		          failureThreshold: 3
-		        readinessProbe:
-		          httpGet:
-		            path: /ready
-		            port: http
-		          initialDelaySeconds: 10
-		          periodSeconds: 5
-		          timeoutSeconds: 3
-		          failureThreshold: 3
-		        resources:
-		          requests:
-		            cpu: {cpu_request}
-		            memory: {memory_request}
-		          limits:
-		            cpu: {cpu_limit}
-		            memory: {memory_limit}
-		        securityContext:
-		          allowPrivilegeEscalation: false
-		          readOnlyRootFilesystem: true
-		          capabilities:
-		            drop:
-		            - ALL
-		        volumeMounts:
-		        - name: config
-		          mountPath: /etc/config
-		          readOnly: true
-		        - name: tmp
-		          mountPath: /tmp
-		      volumes:
-		      - name: config
-		        configMap:
-		          name: {app_name}-config
-		      - name: tmp
-		        emptyDir: {}
-		      affinity:
-		        podAntiAffinity:
-		          preferredDuringSchedulingIgnoredDuringExecution:
-		          - weight: 100
-		            podAffinityTerm:
-		              labelSelector:
-		                matchExpressions:
-		                - key: app
-		                  operator: In
-		                  values:
-		                  - {app_name}
-		              topologyKey: kubernetes.io/hostname
-	"},
-	
-	# Service
-	@/k8s/service.yaml {"
-		apiVersion: v1
-		kind: Service
-		metadata:
-		  name: {app_name}
-		  namespace: {namespace}
-		  labels:
-		    app: {app_name}
-		spec:
-		  type: ClusterIP
-		  selector:
-		    app: {app_name}
-		  ports:
-		  - name: http
-		    port: 80
-		    targetPort: http
-		    protocol: TCP
-		  sessionAffinity: None
-	"},
-	
-	# Ingress
-	@/k8s/ingress.yaml {"
-		apiVersion: networking.k8s.io/v1
-		kind: Ingress
-		metadata:
-		  name: {app_name}
-		  namespace: {namespace}
-		  annotations:
-		    cert-manager.io/cluster-issuer: letsencrypt-prod
-		    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-		spec:
-		  ingressClassName: nginx
-		  tls:
-		  - hosts:
-		    - {app_name}.example.com
-		    secretName: {app_name}-tls
-		  rules:
-		  - host: {app_name}.example.com
-		    http:
-		      paths:
-		      - path: /
-		        pathType: Prefix
-		        backend:
-		          service:
-		            name: {app_name}
-		            port:
-		              number: 80
-	"},
-	
-	# ServiceAccount
-	@/k8s/serviceaccount.yaml {"
-		apiVersion: v1
-		kind: ServiceAccount
-		metadata:
-		  name: {app_name}
-		  namespace: {namespace}
-		  labels:
-		    app: {app_name}
-	"},
-	
-	# HorizontalPodAutoscaler
-	@/k8s/hpa.yaml {"
-		apiVersion: autoscaling/v2
-		kind: HorizontalPodAutoscaler
-		metadata:
-		  name: {app_name}
-		  namespace: {namespace}
-		spec:
-		  scaleTargetRef:
-		    apiVersion: apps/v1
-		    kind: Deployment
-		    name: {app_name}
-		  minReplicas: 2
-		  maxReplicas: 10
-		  metrics:
-		  - type: Resource
-		    resource:
-		      name: cpu
-		      target:
-		        type: Utilization
-		        averageUtilization: 70
-		  - type: Resource
-		    resource:
-		      name: memory
-		      target:
-		        type: Utilization
-		        averageUtilization: 80
-		  behavior:
-		    scaleDown:
-		      stabilizationWindowSeconds: 300
-		      policies:
-		      - type: Percent
-		        value: 50
-		        periodSeconds: 15
-	"}
+    # Namespace
+    @/k8s/namespace.yaml {"
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: {namespace}
+    "},
+    
+    # ConfigMap
+    @/k8s/configmap.yaml {"
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: {app_name}-config
+          namespace: {namespace}
+        data:
+          LOG_LEVEL: "info"
+          DATABASE_POOL_SIZE: "10"
+          CACHE_TTL: "300"
+          API_TIMEOUT: "30s"
+    "},
+    
+    # Secret
+    @/k8s/secret.yaml {"
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: {app_name}-secrets
+          namespace: {namespace}
+        type: Opaque
+        stringData:
+          DATABASE_PASSWORD: "change-me-in-production"
+          API_KEY: "your-api-key-here"
+          JWT_SECRET: "your-jwt-secret-here"
+    "},
+    
+    # Deployment
+    @/k8s/deployment.yaml {"
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: {app_name}
+          namespace: {namespace}
+          labels:
+            app: {app_name}
+        spec:
+          replicas: {replicas}
+          selector:
+            matchLabels:
+              app: {app_name}
+          template:
+            metadata:
+              labels:
+                {labels}
+              annotations:
+                prometheus.io/scrape: "true"
+                prometheus.io/port: "{port}"
+                prometheus.io/path: "/metrics"
+            spec:
+              serviceAccountName: {app_name}
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                fsGroup: 1000
+              containers:
+              - name: {app_name}
+                image: {image}
+                imagePullPolicy: IfNotPresent
+                ports:
+                - name: http
+                  containerPort: {port}
+                  protocol: TCP
+                env:
+                - name: APP_NAME
+                  value: {app_name}
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {app_name}-secrets
+                      key: DATABASE_PASSWORD
+                - name: LOG_LEVEL
+                  valueFrom:
+                    configMapKeyRef:
+                      name: {app_name}-config
+                      key: LOG_LEVEL
+                livenessProbe:
+                  httpGet:
+                    path: /health
+                    port: http
+                  initialDelaySeconds: 30
+                  periodSeconds: 10
+                  timeoutSeconds: 5
+                  failureThreshold: 3
+                readinessProbe:
+                  httpGet:
+                    path: /ready
+                    port: http
+                  initialDelaySeconds: 10
+                  periodSeconds: 5
+                  timeoutSeconds: 3
+                  failureThreshold: 3
+                resources:
+                  requests:
+                    cpu: {cpu_request}
+                    memory: {memory_request}
+                  limits:
+                    cpu: {cpu_limit}
+                    memory: {memory_limit}
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  capabilities:
+                    drop:
+                    - ALL
+                volumeMounts:
+                - name: config
+                  mountPath: /etc/config
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+              volumes:
+              - name: config
+                configMap:
+                  name: {app_name}-config
+              - name: tmp
+                emptyDir: {}
+              affinity:
+                podAntiAffinity:
+                  preferredDuringSchedulingIgnoredDuringExecution:
+                  - weight: 100
+                    podAffinityTerm:
+                      labelSelector:
+                        matchExpressions:
+                        - key: app
+                          operator: In
+                          values:
+                          - {app_name}
+                      topologyKey: kubernetes.io/hostname
+    "},
+    
+    # Service
+    @/k8s/service.yaml {"
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: {app_name}
+          namespace: {namespace}
+          labels:
+            app: {app_name}
+        spec:
+          type: ClusterIP
+          selector:
+            app: {app_name}
+          ports:
+          - name: http
+            port: 80
+            targetPort: http
+            protocol: TCP
+          sessionAffinity: None
+    "},
+    
+    # Ingress
+    @/k8s/ingress.yaml {"
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: {app_name}
+          namespace: {namespace}
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-prod
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        spec:
+          ingressClassName: nginx
+          tls:
+          - hosts:
+            - {app_name}.example.com
+            secretName: {app_name}-tls
+          rules:
+          - host: {app_name}.example.com
+            http:
+              paths:
+              - path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: {app_name}
+                    port:
+                      number: 80
+    "},
+    
+    # ServiceAccount
+    @/k8s/serviceaccount.yaml {"
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: {app_name}
+          namespace: {namespace}
+          labels:
+            app: {app_name}
+    "},
+    
+    # HorizontalPodAutoscaler
+    @/k8s/hpa.yaml {"
+        apiVersion: autoscaling/v2
+        kind: HorizontalPodAutoscaler
+        metadata:
+          name: {app_name}
+          namespace: {namespace}
+        spec:
+          scaleTargetRef:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: {app_name}
+          minReplicas: 2
+          maxReplicas: 10
+          metrics:
+          - type: Resource
+            resource:
+              name: cpu
+              target:
+                type: Utilization
+                averageUtilization: 70
+          - type: Resource
+            resource:
+              name: memory
+              target:
+                type: Utilization
+                averageUtilization: 80
+          behavior:
+            scaleDown:
+              stabilizationWindowSeconds: 300
+              policies:
+              - type: Percent
+                value: 50
+                periodSeconds: 15
+    "}
 ]

@@ -58,22 +58,22 @@
 # nested lets and defaults
 let prefix = "Report" in
 let make_report = \name ? "anonymous" @/reports/{name}_Summary.txt {"
-	Summary: {name}
-	
-	Contents:
-	  - prefix: {prefix}
-	  - name uppercase: { (upper name) }
-	
-	Generated report for {name}
+    Summary: {name}
+    
+    Contents:
+      - prefix: {prefix}
+      - name uppercase: { (upper name) }
+    
+    Generated report for {name}
 "} in
 
 let make_detailed = \name ? "bob" @/reports/{name}_Detailed.txt {"
-	Detailed Report: {name}
-	
-	Contents:
-	  - prefix: {prefix}
-	
-	Details for {name}
+    Detailed Report: {name}
+    
+    Contents:
+      - prefix: {prefix}
+    
+    Details for {name}
 "} in
 
 # produce two reports
