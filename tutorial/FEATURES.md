@@ -206,8 +206,13 @@ When deployed, this writes the template content to the specified file.
 | `join` | 2 | `join ["a","b"] ", "` | `"a, b"` |
 | `replace` | 3 | `replace "hello" "l" "L"` | `"heLLo"` |
 | `trim` | 1 | `trim "  hello  "` | `"hello"` |
+| `repeat` | 2 | `repeat "x" 3` | `"xxx"` |
+| `pad_left` | 3 | `pad_left "7" 3 "0"` | `"007"` |
+| `pad_right` | 3 | `pad_right "hi" 5 " "` | `"hi   "` |
+| `indent` | 2 | `indent "code" 4` | `"    code"` |
+| `str` | 1 | `str 42` | `"42"` |
 
-**Examples:** `examples/string_functions.av`, `examples/split_join.av`
+**Examples:** `examples/string_functions.av`, `examples/split_join.av`, `examples/new_functions_demo.av`
 
 ### 📊 List Operations
 
@@ -216,6 +221,8 @@ When deployed, this writes the template content to the specified file.
 | `map` | 2 | Transform each item | `map (\x x + 1) [1,2,3]` → `[2,3,4]` |
 | `filter` | 2 | Keep matching items | `filter (\x x > 2) [1,2,3]` → `[3]` |
 | `fold` | 3 | Reduce to value | `fold (\a \x a + x) 0 [1,2,3]` → `6` |
+| `flatmap` | 2 | Map then flatten | `flatmap (\x [x,x]) [1,2]` → `[1,1,2,2]` |
+| `flatten` | 1 | Flatten one level | `flatten [[1,2],[3]]` → `[1,2,3]` |
 | `length` | 1 | Count items | `length [1,2,3]` → `3` |
 
 **Examples:** `examples/map_example.av`, `examples/filter_example.av`, `examples/fold_example.av`, `examples/map_filter_fold.av`
@@ -230,7 +237,41 @@ When deployed, this writes the template content to the specified file.
 | `basename` | 1 | Extract filename from path |
 | `dirname` | 1 | Extract directory from path |
 
-### 📦 Data & Utilities
+### 🌐 HTML Generation
+
+| Function | Arity | Purpose | Example | Result |
+|----------|-------|---------|---------|--------|
+| `html_escape` | 1 | Escape HTML chars | `html_escape "<div>"` | `"&lt;div&gt;"` |
+| `html_tag` | 2 | Create HTML tag | `html_tag "p" "text"` | `"<p>text</p>"` |
+| `html_attr` | 2 | Create attribute | `html_attr "class" "btn"` | `"class=\"btn\""` |
+
+**Examples:** `examples/html_page_gen.av`, `examples/site_generator.av`
+
+### 📝 Markdown Generation
+
+| Function | Arity | Purpose | Example | Result |
+|----------|-------|---------|---------|--------|
+| `md_heading` | 2 | Create heading | `md_heading 1 "Title"` | `"# Title"` |
+| `md_link` | 2 | Create link | `md_link "text" "url"` | `"[text](url)"` |
+| `md_code` | 1 | Inline code | `md_code "x = 1"` | `` "`x = 1`" `` |
+| `md_list` | 1 | Create list | `md_list ["a","b"]` | `"- a\n- b"` |
+
+**Examples:** `examples/markdown_readme_gen.av`
+
+### � Type Conversion & Formatting
+
+| Function | Arity | Purpose | Example |
+|----------|-------|---------|---------|
+| `to_string` | 1 | Convert to string | `to_string 42` → `"42"` |
+| `to_int` | 1 | Convert to integer | `to_int "42"` → `42` |
+| `to_float` | 1 | Convert to float | `to_float "3.14"` → `3.14` |
+| `to_bool` | 1 | Convert to boolean | `to_bool "yes"` → `true` |
+| `format_int` | 2 | Format int with padding | `format_int 7 3` → `"007"` |
+| `format_float` | 2 | Format float with precision | `format_float 3.14159 2` → `"3.14"` |
+
+**Examples:** `examples/casting_demo.av`
+
+### �📦 Data & Utilities
 
 | Function | Arity | Purpose | Example |
 |----------|-------|---------|---------|

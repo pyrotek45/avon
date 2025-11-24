@@ -1,0 +1,9 @@
+# Test 4: JSON array with multiple objects
+let name = "test" in
+
+@/test4_array.txt {"
+[
+  {{ "id": 1, "name": "{name}" }},
+  {{ "id": 2, "name": "other" }}
+]
+"}

@@ -67,17 +67,31 @@ pub fn chunk(stream: &mut Peekable<Chars<'_>>) -> Result<Token, EvalError> {
 
     while let Some(ch) = stream.next() {
         if ch == '"' {
+            // Check if this quote is followed by exactly open_count closing braces
+            let mut matched_braces = 0;
             for _ in 0..open_count {
                 if let Some('}') = stream.peek().cloned() {
                     stream.next();
+                    matched_braces += 1;
                 } else {
                     break;
                 }
             }
-            if !cur.is_empty() {
-                chunks.push(Chunk::String(cur));
+            
+            // Only close the template if we found all the required braces
+            if matched_braces == open_count {
+                if !cur.is_empty() {
+                    chunks.push(Chunk::String(cur));
+                }
+                return Ok(Token::Template(chunks));
+            } else {
+                // Not a closing sequence, treat as literal quote and put back the braces
+                cur.push('"');
+                for _ in 0..matched_braces {
+                    cur.push('}');
+                }
             }
-            return Ok(Token::Template(chunks));
+            continue;
         }
 
         if ch == '{' {

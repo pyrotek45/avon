@@ -1,0 +1,75 @@
+# Demo of new utility functions for config/HTML/markdown generation
+
+# 1. LENGTH - Get length of strings or lists
+let my_string = "hello world" in
+let my_list = [1, 2, 3, 4, 5] in
+
+# 2. STRING FORMATTING
+let repeated = repeat "-" 40 in
+let padded_num = pad_left (str 42) 5 "0" in
+let config_block = indent "host: localhost
+port: 8080" 4 in
+
+# 3. HTML GENERATION
+let user_input = "<script>alert('xss')</script>" in
+let safe_html = html_escape user_input in
+let paragraph = html_tag "p" "Hello, World!" in
+let link_attr = html_attr "href" "https://example.com" in
+
+# 4. MARKDOWN GENERATION
+let doc_title = md_heading 1 "My Document" in
+let section = md_heading 2 "Introduction" in
+let home_link = md_link "Back to Home" "/" in
+let inline_code = md_code "const x = 1" in
+let todo_list = md_list ["Write code", "Test code", "Deploy code"] in
+
+# 5. PRACTICAL: Generate HTML page
+let page_title = "My Website" in
+let nav_items = ["Home", "About", "Contact"] in
+let nav_html = map (\item html_tag "li" (html_tag "a" item)) nav_items in
+
+@/demo_output.txt {"
+{repeated}
+STRING & LIST OPERATIONS
+{repeated}
+
+String length: {length my_string}
+List length: {length my_list}
+
+Repeated chars: {repeated}
+Padded number: {padded_num}
+
+Config block (indented 4 spaces):
+{config_block}
+
+{repeated}
+HTML GENERATION
+{repeated}
+
+Safe HTML: {safe_html}
+Paragraph: {paragraph}
+Link attribute: {link_attr}
+
+Navigation:
+<ul>
+{nav_html}
+</ul>
+
+{repeated}
+MARKDOWN GENERATION
+{repeated}
+
+{doc_title}
+{section}
+
+This is a paragraph of text.
+
+{home_link}
+
+Inline code example: {inline_code}
+
+TODO List:
+{todo_list}
+
+{repeated}
+"}

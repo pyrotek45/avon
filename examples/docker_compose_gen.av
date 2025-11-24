@@ -17,11 +17,11 @@ let services = [
 ] in
 
 # Generate port mapping for web service
-let port_mapping = \port concat "    - \"" (concat port (concat ":\" " port)))) in
+let port_mapping = \port concat "    - \"" (concat port (concat ":" port)) in
 
 # Generate service entry
 let make_service = \service_info 
-	let name = (filter (\x true) service_info) in
+	let name = head service_info in
 	let image = name in
 	let version = name in
 	let port = name in

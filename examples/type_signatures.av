@@ -1,0 +1,30 @@
+# Understanding Avon Type Signatures (Haskell-style)
+
+# concat :: String -> String -> String
+# Takes 2 strings, returns 1 string
+let greeting = concat "Hello" " World" in
+
+# map :: (a -> b) -> [a] -> [b]
+# Takes a function (a -> b) and a list [a], returns list [b]
+let doubled = map (\x x * 2) [1, 2, 3] in
+
+# filter :: (a -> Bool) -> [a] -> [a]
+# Takes a predicate function and a list, returns filtered list
+let evens = filter (\x x > 2) [1, 2, 3, 4, 5] in
+
+# fold :: (acc -> a -> acc) -> acc -> [a] -> acc
+# Takes a binary function, initial accumulator, and list
+# Returns final accumulated value
+let sum = fold (\acc \x acc + x) 0 [1, 2, 3, 4] in
+
+# is_digit :: String -> Bool
+# Takes a string, returns boolean
+let valid = is_digit "12345" in
+
+# Partial application (currying)
+# replace :: String -> String -> String -> String
+# Can be partially applied:
+let fix_typo = \s replace s "teh" "the" in
+let fixed = fix_typo "teh cat" in
+
+[greeting, doubled, evens, sum, valid, fixed]

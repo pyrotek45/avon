@@ -1,0 +1,10 @@
+# Test 1: Simple JSON object with escaped braces
+let name = "test" in
+let value = "123" in
+
+@/test1_json.txt {"
+{{
+  "name": "{name}",
+  "value": "{value}"
+}}
+"}

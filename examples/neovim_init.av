@@ -1,135 +1,16 @@
-# Advanced Neovim Config Generator
-# Demonstrates: nested lets, conditionals, string operations, complex data structures
-
+# Simple Neovim Config Example
 let user = "devuser" in
-let theme = "monokai" in
-let use_lsp = true in
-let use_treesitter = true in
+let theme = "desert" in
 
-# Plugin configuration with categories
-let core_plugins = ["junegunn/vim-plug"] in
-let theme_plugins = ["patstockwell/vim-monokai","kristijanhusak/vim-hybrid-material"] in
-let completion_plugins = ["neoclide/coc.nvim"] in
-let motion_plugins = ["easymotion/vim-easymotion","tpope/vim-surround"] in
-let git_plugins = ["tpope/vim-fugitive","airblade/vim-gitgutter"] in
-let dev_plugins = ["vim-syntastic/syntastic"] in
-let lsp_plugins = ["neovim/nvim-lspconfig"] in
-let ts_plugins = ["nvim-treesitter/nvim-treesitter"] in
-
-# Combine all plugins
-let all_plugins = concat (concat (concat (concat (concat (concat core_plugins theme_plugins) completion_plugins) motion_plugins) git_plugins) dev_plugins) (if use_lsp then lsp_plugins else []) in
-let plugins_with_ts = if use_treesitter then concat all_plugins ts_plugins else all_plugins in
-
-# Generate plugin declarations
-let plugin_lines = map (\p concat "Plug '" (concat p "'")) plugins_with_ts in
-
-# LSP configuration snippet
-let lsp_config = if use_lsp then "
-	\" LSP Configuration
-	if executable('clangd')
-	  lua require'lspconfig'.clangd.setup{}
-	endif
-	if executable('pyright')
-	  lua require'lspconfig'.pyright.setup{}
-	endif
-	if executable('rust-analyzer')
-	  lua require'lspconfig'.rust_analyzer.setup{}
-	endif
-	
-	nnoremap <buffer> <leader>gd <cmd>lua vim.lsp.buf.definition()<CR>
-	nnoremap <buffer> <leader>gr <cmd>lua vim.lsp.buf.references()<CR>
-	nnoremap <buffer> K <cmd>lua vim.lsp.buf.hover()<CR>
-" else "" in
-
-# Treesitter configuration
-let ts_config = if use_treesitter then "
-	\" Treesitter Configuration
-	lua <<EOF
-	require'nvim-treesitter.configs'.setup {
-	  ensure_installed = \"all\",
-	  highlight = {
-	    enable = true,
-	  },
-	}
-	EOF
-" else "" in
+let plugins = ["junegunn/vim-plug", "tpope/vim-sensible"] in
+let plugin_lines = map (\p "Plug '" + p + "'") plugins in
 
 @/home/{user}/.config/nvim/init.vim {"
-	\" Generated Neovim Configuration
-	\" Created by Avon - The Template Language for Developers
-	\" User: {user}
-	\" Theme: {theme}
+set nocompatible
+set number
+colorscheme {theme}
 
-	set nocompatible
-	filetype plugin indent on
-	syntax on
-
-	\" Basic Settings
-	set encoding=utf-8
-	set number relativenumber
-	set tabstop=4 shiftwidth=4 expandtab
-	set autoindent smartindent
-	set smartcase ignorecase
-	set incsearch hlsearch
-	set splitbelow splitright
-	set hidden
-	set clipboard=unnamed
-	set undofile
-	set completeopt=menuone,noinsert,noselect
-
-	\" Appearance
-	colorscheme {theme}
-	set cursorline
-	set wildmenu
-	set list listchars=tab:»·,trail:·
-
-	\" Keybindings
-	let mapleader = \" \"
-	nnoremap <leader>w :w<CR>
-	nnoremap <leader>q :q<CR>
-	nnoremap <leader>x :x<CR>
-	nnoremap <leader>e :Explore<CR>
-	nnoremap <leader>s :split<CR>
-	nnoremap <leader>v :vsplit<CR>
-	nnoremap <leader>h <C-w>h
-	nnoremap <leader>j <C-w>j
-	nnoremap <leader>k <C-w>k
-	nnoremap <leader>l <C-w>l
-
-	\" Plugin Management
-	call plug#begin('~/.config/nvim/plugged')
-	{join plugin_lines "\n"}
-	call plug#end()
-
-	\" Plugin Configurations
-	\" Completion (coc.nvim)
-	inoremap <silent><expr> <TAB>
-	  \\ pumvisible() ? \"\\<C-n>\" :
-	  \\ <SID>check_back_space() ? \"\\<TAB>\" :
-	  \\ coc#refresh()
-	inoremap <expr><S-TAB> pumvisible() ? \"\\<C-p>\" : \"\\<C-h>\"
-
-	\" Git (vim-fugitive and vim-gitgutter)
-	nnoremap <leader>gs :Git<CR>
-	nnoremap <leader>gc :Git commit<CR>
-	nnoremap <leader>gp :Git push<CR>
-	nnoremap <leader>gd :Gdiffsplit<CR>
-
-	\" Easy Motion
-	map  / <Plug>(easymotion-sn)
-	omap / <Plug>(easymotion-tn)
-
-	{lsp_config}
-
-	{ts_config}
-
-	\" Auto Commands
-	augroup vimrc
-	  autocmd!
-	  autocmd BufWritePre * %s/\\s\\+$//e
-	augroup END
-
-	\" Status Line
-	set statusline=%F\\ %m%=%l:%c\\ %p%%
+call plug#begin('~/.config/nvim/plugged')
+{plugin_lines}
+call plug#end()
 "}
-

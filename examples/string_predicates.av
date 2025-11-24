@@ -1,0 +1,11 @@
+# String predicate function examples
+
+let digit_test = if is_digit "12345" then "✓ is_digit works" else "✗ failed" in
+let alpha_test = if is_alpha "abcXYZ" then "✓ is_alpha works" else "✗ failed" in
+let alnum_test = if is_alphanumeric "abc123" then "✓ is_alphanumeric works" else "✗ failed" in
+let space_test = if is_whitespace "   " then "✓ is_whitespace works" else "✗ failed" in
+let upper_test = if is_uppercase "HELLO" then "✓ is_uppercase works" else "✗ failed" in
+let lower_test = if is_lowercase "world" then "✓ is_lowercase works" else "✗ failed" in
+let empty_test = if is_empty "" then "✓ is_empty works" else "✗ failed" in
+
+[digit_test, alpha_test, alnum_test, space_test, upper_test, lower_test, empty_test]

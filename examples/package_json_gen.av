@@ -22,48 +22,48 @@ let test_deps = if include_testing then ["jest","@testing-library/react","vitest
 let lint_deps = if include_linting then ["eslint","prettier","@typescript-eslint/eslint-plugin"] else [] in
 
 # Combine dependencies
-let all_deps = concat (concat (concat core_deps react_deps) ts_deps) test_deps in
-let all_dev_deps = concat lint_deps (if include_testing then test_deps else []) in
+let all_deps = core_deps + react_deps + ts_deps + test_deps in
+let all_dev_deps = lint_deps + (if include_testing then test_deps else []) in
 
 # Generate dependency string
 let format_dep = \d concat "    \"" (concat d "\": \"^1.0.0\"") in
 let dep_lines = map format_dep all_deps in
 
 @/package.json {"
-	{
-	  \"name\": \"{app_name}\",
-	  \"version\": \"{version}\",
-	  \"description\": \"{description}\",
-	  \"author\": \"{author}\",
-	  \"license\": \"{license}\",
-	  \"type\": \"module\",
-	  \"engines\": {
-	    \"node\": \"{node_version}\"
-	  },
-	  \"scripts\": {
-	    \"dev\": \"node --loader tsx src/index.ts\",
-	    \"build\": {if include_typescript then "\"tsc\"" else "\"echo \\\"No build step needed\\\"\""},
-	    \"start\": \"node dist/index.js\",
-	    {if include_testing then "\"test\": \"vitest\"," else ""}
-	    {if include_linting then "\"lint\": \"eslint src --ext .ts\"," else ""}
-	    \"format\": \"prettier --write \\\"src/**/*.ts\\\"\"
-	  },
-	  \"dependencies\": {
-	    {join dep_lines ",\n"}
-	  },
-	  \"devDependencies\": {
-	    \"tsx\": \"^4.0.0\",
-	    {if include_typescript then "\"@types/express\": \"^4.17.0\"," else ""}
-	    {if include_testing then "\"vitest\": \"^1.0.0\"," else ""}
-	    {if include_linting then "\"eslint\": \"^8.0.0\",\n    \"prettier\": \"^3.0.0\"," else ""}
-	    \"nodemon\": \"^3.0.0\"
-	  },
-	  \"keywords\": [
-	    \"awesome\",
-	    \"app\",
-	    \"typescript\",
-	    {if include_react then "\"react\"," else ""}
-	    \"modern\"
-	  ]
-	}
+{{
+  "name": "{app_name}",
+  "version": "{version}",
+  "description": "{description}",
+  "author": "{author}",
+  "license": "{license}",
+  "type": "module",
+  "engines": {{
+    "node": "{node_version}"
+  }},
+  "scripts": {{
+    "dev": "node --loader tsx src/index.ts",
+    "build": {if include_typescript then "\"tsc\"" else "\"echo 'No build step needed'\""},
+    "start": "node dist/index.js",
+    {if include_testing then "\"test\": \"vitest\"," else ""}
+    {if include_linting then "\"lint\": \"eslint src --ext .ts\"," else ""}
+    "format": "prettier --write \"src/**/*.ts\""
+  }},
+  "dependencies": {{
+    {join dep_lines ",\n"}
+  }},
+  "devDependencies": {{
+    "tsx": "^4.0.0",
+    {if include_typescript then "\"@types/express\": \"^4.17.0\"," else ""}
+    {if include_testing then "\"vitest\": \"^1.0.0\"," else ""}
+    {if include_linting then "\"eslint\": \"^8.0.0\",\n    \"prettier\": \"^3.0.0\"," else ""}
+    "nodemon": "^3.0.0"
+  }},
+  "keywords": [
+    "awesome",
+    "app",
+    "typescript",
+    {if include_react then "\"react\"," else ""}
+    "modern"
+  ]
+}}
 "}

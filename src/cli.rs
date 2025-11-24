@@ -4,9 +4,113 @@ use crate::lexer::tokenize;
 use crate::parser::parse;
 use crate::eval::{eval, initial_builtins, apply_function, collect_file_templates, fetch_git_raw};
 
+fn print_builtin_docs() {
+    println!("Avon Builtin Functions Reference");
+    println!("=================================\n");
+
+    // String Operations
+    println!("String Operations:");
+    println!("------------------");
+    println!("  concat       :: String -> String -> String");
+    println!("  upper        :: String -> String");
+    println!("  lower        :: String -> String");
+    println!("  trim         :: String -> String");
+    println!("  split        :: String -> String -> [String]");
+    println!("  join         :: [String] -> String -> String");
+    println!("  replace      :: String -> String -> String -> String");
+    println!("  contains     :: String -> String -> Bool");
+    println!("  starts_with  :: String -> String -> Bool");
+    println!("  ends_with    :: String -> String -> Bool");
+    println!("  length       :: String -> Int  (also works on lists)");
+    println!("  repeat       :: String -> Int -> String");
+    println!("  pad_left     :: String -> Int -> String -> String");
+    println!("  pad_right    :: String -> Int -> String -> String");
+    println!("  indent       :: String -> Int -> String");
+    println!("  is_digit     :: String -> Bool");
+    println!("  is_alpha     :: String -> Bool");
+    println!("  is_alphanumeric :: String -> Bool");
+    println!("  is_whitespace :: String -> Bool");
+    println!("  is_uppercase :: String -> Bool");
+    println!("  is_lowercase :: String -> Bool");
+    println!("  is_empty     :: String -> Bool  (also works on lists)");
+    println!();
+
+    // List Operations
+    println!("List Operations:");
+    println!("----------------");
+    println!("  map          :: (a -> b) -> [a] -> [b]");
+    println!("  filter       :: (a -> Bool) -> [a] -> [a]");
+    println!("  fold         :: (acc -> a -> acc) -> acc -> [a] -> acc");
+    println!("  flatmap      :: (a -> [b]) -> [a] -> [b]");
+    println!("  flatten      :: [[a]] -> [a]");
+    println!("  length       :: [a] -> Int  (also works on strings)");
+    println!();
+
+    // Type Conversion
+    println!("Type Conversion:");
+    println!("----------------");
+    println!("  to_string    :: a -> String");
+    println!("  to_int       :: String -> Int");
+    println!("  to_float     :: String -> Float");
+    println!("  to_bool      :: a -> Bool");
+    println!("  format_int   :: Int -> Int -> String");
+    println!("  format_float :: Float -> Int -> String");
+    println!();
+
+    // HTML Helpers
+    println!("HTML Helpers:");
+    println!("-------------");
+    println!("  html_escape  :: String -> String");
+    println!("  html_tag     :: String -> String -> String");
+    println!("  html_attr    :: String -> String -> String");
+    println!();
+
+    // Markdown Helpers
+    println!("Markdown Helpers:");
+    println!("-----------------");
+    println!("  md_heading   :: Int -> String -> String");
+    println!("  md_link      :: String -> String -> String");
+    println!("  md_code      :: String -> String");
+    println!("  md_list      :: [String] -> String");
+    println!();
+
+    // File Operations
+    println!("File Operations:");
+    println!("----------------");
+    println!("  readfile     :: String -> String");
+    println!("  readlines    :: String -> [String]");
+    println!("  exists       :: String -> Bool");
+    println!("  basename     :: String -> String");
+    println!("  dirname      :: String -> String");
+    println!("  walkdir      :: String -> [String]");
+    println!();
+
+    // Data Utilities
+    println!("Data Utilities:");
+    println!("---------------");
+    println!("  json_parse   :: String -> Value");
+    println!("  import       :: String -> Value");
+    println!();
+
+    // System
+    println!("System:");
+    println!("-------");
+    println!("  os           :: String  (returns \"linux\", \"macos\", or \"windows\")");
+    println!();
+
+    println!("Notes:");
+    println!("------");
+    println!("  • All functions are curried and support partial application");
+    println!("  • Type variables (a, b, acc) represent any type");
+    println!("  • Functions use space-separated arguments: f x y, not f(x, y)");
+    println!();
+    println!("For more examples and tutorials, see: tutorial/TUTORIAL.md");
+}
+
 pub fn run_cli(args: Vec<String>) {
     let mut root_opt: Option<String> = None;
     let mut git_opt: Option<String> = None;
+    let mut debug = false;
     let mut cli_args: Vec<String> = Vec::new();
     let mut i = 1;
     while i < args.len() {
@@ -31,6 +135,11 @@ pub fn run_cli(args: Vec<String>) {
                     return;
                 }
             }
+            "--debug" => {
+                debug = true;
+                i += 1;
+                continue;
+            }
             _ => {}
         }
         cli_args.push(args[i].clone());
@@ -38,28 +147,48 @@ pub fn run_cli(args: Vec<String>) {
     }
 
     if cli_args.len() > 0 {
+        // concise help shown for -h/--help (keep short and readable)
+        let help = r#"avon — evaluate and generate file templates
+
+Usage: avon [options] <command> [args]
+
+Commands:
+  eval <file>        Evaluate a file and print the result
+  --deploy           Deploy generated templates (provide args after --deploy)
+
+Options:
+  --force            Overwrite files during deploy
+  --root <dir>       Prepend <dir> to generated file paths
+  --git <repo/file>  Fetch source from git raw URL
+  --debug            Enable detailed debug output (lexer/parser/eval)
+  --doc              Show all builtin functions (with Haskell-style types)
+  -h, --help         Show this brief help
+"#;
+
         if cli_args[0] == "--help" || cli_args[0] == "-h" {
-            if let Ok(readme) = std::fs::read_to_string("README.md") {
-                println!("{}", readme);
-            } else {
-                println!("Usage: <program> [--deploy args...] [--force]\nCommands:\n  eval <file>   Evaluate a file and print the result\n  --deploy      After evaluating, treat result as a function and apply following args to produce filetemplates\n  --force       Allow overwriting files during deploy\n  --root <dir>  Prepend <dir> to all generated file paths during deploy\n  --help        Show this help");
-            }
+            println!("{}", help);
+            return;
+        }
+
+        if cli_args[0] == "--doc" {
+            print_builtin_docs();
             return;
         }
 
         if cli_args[0] == "eval" {
-            run_eval(cli_args, git_opt);
+            run_eval(cli_args, git_opt, debug);
             return;
         }
 
-        run_deploy_or_eval(cli_args, root_opt, git_opt);
+        run_deploy_or_eval(cli_args, root_opt, git_opt, debug);
         return;
     }
 
-    println!("Usage: <program> [--deploy args...] [--force]\nUse --help for more information");
+    // short usage when no args supplied; keep it minimal
+    println!("Usage: avon <command> — run 'avon --help' for brief help");
 }
 
-fn run_eval(cli_args: Vec<String>, git_opt: Option<String>) {
+fn run_eval(cli_args: Vec<String>, git_opt: Option<String>, debug: bool) {
     if cli_args.len() < 2 {
         eprintln!("eval requires a file path");
         return;
@@ -89,9 +218,23 @@ fn run_eval(cli_args: Vec<String>, git_opt: Option<String>) {
     };
     match file_result {
         Ok(file) => {
+            if debug {
+                eprintln!("[DEBUG] Starting lexer...");
+            }
             match tokenize(file.clone()) {
                 Ok(tokens) => {
+                    if debug {
+                        eprintln!("[DEBUG] Lexer produced {} tokens", tokens.len());
+                        for (i, tok) in tokens.iter().enumerate() {
+                            eprintln!("[DEBUG]   Token {}: {:?}", i, tok);
+                        }
+                        eprintln!("[DEBUG] Starting parser...");
+                    }
                     let ast = parse(tokens);
+                    if debug {
+                        eprintln!("[DEBUG] Parser produced AST: {:?}", ast);
+                        eprintln!("[DEBUG] Starting evaluator...");
+                    }
                     let mut symbols = initial_builtins();
                     match eval(ast.program, &mut symbols, &file) {
                         Ok(mut v) => {
@@ -155,7 +298,7 @@ fn run_eval(cli_args: Vec<String>, git_opt: Option<String>) {
     }
 }
 
-fn run_deploy_or_eval(cli_args: Vec<String>, root_opt: Option<String>, git_opt: Option<String>) {
+fn run_deploy_or_eval(cli_args: Vec<String>, root_opt: Option<String>, git_opt: Option<String>, debug: bool) {
     let filepath = &cli_args[0];
     let force = cli_args.iter().any(|s| s == "--force");
     let deploy_idx = cli_args.iter().position(|s| s == "--deploy");
@@ -186,9 +329,23 @@ fn run_deploy_or_eval(cli_args: Vec<String>, root_opt: Option<String>, git_opt: 
 
     match file_result {
         Ok(file) => {
+            if debug {
+                eprintln!("[DEBUG] Starting lexer...");
+            }
             match tokenize(file.clone()) {
                 Ok(tokens) => {
+                    if debug {
+                        eprintln!("[DEBUG] Lexer produced {} tokens", tokens.len());
+                        for (i, tok) in tokens.iter().enumerate() {
+                            eprintln!("[DEBUG]   Token {}: {:?}", i, tok);
+                        }
+                        eprintln!("[DEBUG] Starting parser...");
+                    }
                     let ast = parse(tokens);
+                    if debug {
+                        eprintln!("[DEBUG] Parser produced AST: {:?}", ast);
+                        eprintln!("[DEBUG] Starting evaluator...");
+                    }
                     let mut symbols = initial_builtins();
 
                     match eval(ast.program, &mut symbols, &file) {

@@ -5,11 +5,14 @@ use crate::parser::parse;
 
 pub fn initial_builtins() -> HashMap<String, Value> {
     let mut m = HashMap::new();
+    // Core operations
     m.insert("concat".to_string(), Value::Builtin("concat".to_string(), Vec::new()));
     m.insert("map".to_string(), Value::Builtin("map".to_string(), Vec::new()));
     m.insert("filter".to_string(), Value::Builtin("filter".to_string(), Vec::new()));
     m.insert("fold".to_string(), Value::Builtin("fold".to_string(), Vec::new()));
     m.insert("import".to_string(), Value::Builtin("import".to_string(), Vec::new()));
+    
+    // File operations
     m.insert("readfile".to_string(), Value::Builtin("readfile".to_string(), Vec::new()));
     m.insert("exists".to_string(), Value::Builtin("exists".to_string(), Vec::new()));
     m.insert("basename".to_string(), Value::Builtin("basename".to_string(), Vec::new()));
@@ -17,7 +20,8 @@ pub fn initial_builtins() -> HashMap<String, Value> {
     m.insert("readlines".to_string(), Value::Builtin("readlines".to_string(), Vec::new()));
     m.insert("walkdir".to_string(), Value::Builtin("walkdir".to_string(), Vec::new()));
     m.insert("json_parse".to_string(), Value::Builtin("json_parse".to_string(), Vec::new()));
-    m.insert("os".to_string(), Value::String(std::env::consts::OS.to_string()));
+    
+    // String operations
     m.insert("upper".to_string(), Value::Builtin("upper".to_string(), Vec::new()));
     m.insert("lower".to_string(), Value::Builtin("lower".to_string(), Vec::new()));
     m.insert("trim".to_string(), Value::Builtin("trim".to_string(), Vec::new()));
@@ -27,6 +31,46 @@ pub fn initial_builtins() -> HashMap<String, Value> {
     m.insert("contains".to_string(), Value::Builtin("contains".to_string(), Vec::new()));
     m.insert("starts_with".to_string(), Value::Builtin("starts_with".to_string(), Vec::new()));
     m.insert("ends_with".to_string(), Value::Builtin("ends_with".to_string(), Vec::new()));
+    m.insert("length".to_string(), Value::Builtin("length".to_string(), Vec::new()));
+    m.insert("repeat".to_string(), Value::Builtin("repeat".to_string(), Vec::new()));
+    m.insert("pad_left".to_string(), Value::Builtin("pad_left".to_string(), Vec::new()));
+    m.insert("pad_right".to_string(), Value::Builtin("pad_right".to_string(), Vec::new()));
+    m.insert("indent".to_string(), Value::Builtin("indent".to_string(), Vec::new()));
+    
+    // String predicates
+    m.insert("is_digit".to_string(), Value::Builtin("is_digit".to_string(), Vec::new()));
+    m.insert("is_alpha".to_string(), Value::Builtin("is_alpha".to_string(), Vec::new()));
+    m.insert("is_alphanumeric".to_string(), Value::Builtin("is_alphanumeric".to_string(), Vec::new()));
+    m.insert("is_whitespace".to_string(), Value::Builtin("is_whitespace".to_string(), Vec::new()));
+    m.insert("is_uppercase".to_string(), Value::Builtin("is_uppercase".to_string(), Vec::new()));
+    m.insert("is_lowercase".to_string(), Value::Builtin("is_lowercase".to_string(), Vec::new()));
+    m.insert("is_empty".to_string(), Value::Builtin("is_empty".to_string(), Vec::new()));
+    
+    // Type conversion/casting
+    m.insert("to_string".to_string(), Value::Builtin("to_string".to_string(), Vec::new()));
+    m.insert("to_int".to_string(), Value::Builtin("to_int".to_string(), Vec::new()));
+    m.insert("to_float".to_string(), Value::Builtin("to_float".to_string(), Vec::new()));
+    m.insert("to_bool".to_string(), Value::Builtin("to_bool".to_string(), Vec::new()));
+    m.insert("format_int".to_string(), Value::Builtin("format_int".to_string(), Vec::new()));
+    m.insert("format_float".to_string(), Value::Builtin("format_float".to_string(), Vec::new()));
+    
+    // List operations (advanced)
+    m.insert("flatmap".to_string(), Value::Builtin("flatmap".to_string(), Vec::new()));
+    m.insert("flatten".to_string(), Value::Builtin("flatten".to_string(), Vec::new()));
+    
+    // HTML helpers
+    m.insert("html_escape".to_string(), Value::Builtin("html_escape".to_string(), Vec::new()));
+    m.insert("html_tag".to_string(), Value::Builtin("html_tag".to_string(), Vec::new()));
+    m.insert("html_attr".to_string(), Value::Builtin("html_attr".to_string(), Vec::new()));
+    
+    // Markdown helpers
+    m.insert("md_heading".to_string(), Value::Builtin("md_heading".to_string(), Vec::new()));
+    m.insert("md_link".to_string(), Value::Builtin("md_link".to_string(), Vec::new()));
+    m.insert("md_code".to_string(), Value::Builtin("md_code".to_string(), Vec::new()));
+    m.insert("md_list".to_string(), Value::Builtin("md_list".to_string(), Vec::new()));
+    
+    // System
+    m.insert("os".to_string(), Value::String(std::env::consts::OS.to_string()));
     m
 }
 
@@ -365,6 +409,33 @@ pub fn apply_function(func: &Value, arg: Value, source: &str) -> Result<Value, E
                 "contains" => 2,
                 "starts_with" => 2,
                 "ends_with" => 2,
+                "length" => 1,
+                "repeat" => 2,
+                "pad_left" => 3,
+                "pad_right" => 3,
+                "indent" => 2,
+                "is_digit" => 1,
+                "is_alpha" => 1,
+                "is_alphanumeric" => 1,
+                "is_whitespace" => 1,
+                "is_uppercase" => 1,
+                "is_lowercase" => 1,
+                "is_empty" => 1,
+                "html_escape" => 1,
+                "html_tag" => 2,
+                "html_attr" => 2,
+                "md_heading" => 2,
+                "md_link" => 2,
+                "md_code" => 1,
+                "md_list" => 1,
+                "to_string" => 1,
+                "to_int" => 1,
+                "to_float" => 1,
+                "to_bool" => 1,
+                "format_int" => 2,
+                "format_float" => 2,
+                "flatmap" => 2,
+                "flatten" => 1,
                 _ => 1,
             };
 
@@ -625,6 +696,315 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Ok(Value::String(d))
             } else {
                 Err(EvalError::type_mismatch("string", pathv.to_string(source), find_line_for_symbol("", source)))
+            }
+        }
+        "length" => {
+            let val = &args[0];
+            match val {
+                Value::String(s) => Ok(Value::Number(Number::Int(s.len() as i64))),
+                Value::List(items) => Ok(Value::Number(Number::Int(items.len() as i64))),
+                other => Err(EvalError::type_mismatch("string or list", other.to_string(source), find_line_for_symbol("", source)))
+            }
+        }
+        "repeat" => {
+            let s = &args[0];
+            let n = &args[1];
+            if let (Value::String(st), Value::Number(Number::Int(count))) = (s, n) {
+                Ok(Value::String(st.repeat(*count as usize)))
+            } else {
+                Err(EvalError::type_mismatch("string, number", format!("{}, {}", s.to_string(source), n.to_string(source)), find_line_for_symbol("", source)))
+            }
+        }
+        "pad_left" => {
+            let s = &args[0];
+            let width = &args[1];
+            let pad = &args[2];
+            if let (Value::String(st), Value::Number(Number::Int(w)), Value::String(pc)) = (s, width, pad) {
+                let pad_char = pc.chars().next().unwrap_or(' ');
+                let result = format!("{:>width$}", st, width = *w as usize).replace(' ', &pad_char.to_string());
+                Ok(Value::String(result))
+            } else {
+                Err(EvalError::type_mismatch("string, number, string", format!("{}, {}, {}", s.to_string(source), width.to_string(source), pad.to_string(source)), find_line_for_symbol("", source)))
+            }
+        }
+        "pad_right" => {
+            let s = &args[0];
+            let width = &args[1];
+            let pad = &args[2];
+            if let (Value::String(st), Value::Number(Number::Int(w)), Value::String(pc)) = (s, width, pad) {
+                let pad_char = pc.chars().next().unwrap_or(' ');
+                let result = format!("{:<width$}", st, width = *w as usize).replace(' ', &pad_char.to_string());
+                Ok(Value::String(result))
+            } else {
+                Err(EvalError::type_mismatch("string, number, string", format!("{}, {}, {}", s.to_string(source), width.to_string(source), pad.to_string(source)), find_line_for_symbol("", source)))
+            }
+        }
+        "indent" => {
+            let s = &args[0];
+            let spaces = &args[1];
+            if let (Value::String(st), Value::Number(Number::Int(n))) = (s, spaces) {
+                let indent_str = " ".repeat(*n as usize);
+                let lines: Vec<String> = st.lines().map(|line| format!("{}{}", indent_str, line)).collect();
+                Ok(Value::String(lines.join("\n")))
+            } else {
+                Err(EvalError::type_mismatch("string, number", format!("{}, {}", s.to_string(source), spaces.to_string(source)), find_line_for_symbol("", source)))
+            }
+        }
+        "is_digit" => {
+            let s = &args[0];
+            if let Value::String(st) = s {
+                Ok(Value::Bool(!st.is_empty() && st.chars().all(|c| c.is_ascii_digit())))
+            } else {
+                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+            }
+        }
+        "is_alpha" => {
+            let s = &args[0];
+            if let Value::String(st) = s {
+                Ok(Value::Bool(!st.is_empty() && st.chars().all(|c| c.is_alphabetic())))
+            } else {
+                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+            }
+        }
+        "is_alphanumeric" => {
+            let s = &args[0];
+            if let Value::String(st) = s {
+                Ok(Value::Bool(!st.is_empty() && st.chars().all(|c| c.is_alphanumeric())))
+            } else {
+                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+            }
+        }
+        "is_whitespace" => {
+            let s = &args[0];
+            if let Value::String(st) = s {
+                Ok(Value::Bool(!st.is_empty() && st.chars().all(|c| c.is_whitespace())))
+            } else {
+                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+            }
+        }
+        "is_uppercase" => {
+            let s = &args[0];
+            if let Value::String(st) = s {
+                let letters: Vec<char> = st.chars().filter(|c| c.is_alphabetic()).collect();
+                Ok(Value::Bool(!letters.is_empty() && letters.iter().all(|c| c.is_uppercase())))
+            } else {
+                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+            }
+        }
+        "is_lowercase" => {
+            let s = &args[0];
+            if let Value::String(st) = s {
+                let letters: Vec<char> = st.chars().filter(|c| c.is_alphabetic()).collect();
+                Ok(Value::Bool(!letters.is_empty() && letters.iter().all(|c| c.is_lowercase())))
+            } else {
+                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+            }
+        }
+        "is_empty" => {
+            let s = &args[0];
+            match s {
+                Value::String(st) => Ok(Value::Bool(st.is_empty())),
+                Value::List(items) => Ok(Value::Bool(items.is_empty())),
+                other => Err(EvalError::type_mismatch("string or list", other.to_string(source), find_line_for_symbol("", source)))
+            }
+        }
+        "html_escape" => {
+            let s = &args[0];
+            if let Value::String(st) = s {
+                let escaped = st
+                    .replace('&', "&amp;")
+                    .replace('<', "&lt;")
+                    .replace('>', "&gt;")
+                    .replace('"', "&quot;")
+                    .replace('\'', "&#x27;");
+                Ok(Value::String(escaped))
+            } else {
+                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+            }
+        }
+        "html_tag" => {
+            let tag = &args[0];
+            let content = &args[1];
+            if let (Value::String(t), Value::String(c)) = (tag, content) {
+                Ok(Value::String(format!("<{}>{}</{}>", t, c, t)))
+            } else {
+                Err(EvalError::type_mismatch("string", format!("{}, {}", tag.to_string(source), content.to_string(source)), find_line_for_symbol("", source)))
+            }
+        }
+        "html_attr" => {
+            let name = &args[0];
+            let value = &args[1];
+            if let (Value::String(n), Value::String(v)) = (name, value) {
+                let escaped = v
+                    .replace('&', "&amp;")
+                    .replace('"', "&quot;")
+                    .replace('\'', "&#x27;");
+                Ok(Value::String(format!("{}=\"{}\"", n, escaped)))
+            } else {
+                Err(EvalError::type_mismatch("string", format!("{}, {}", name.to_string(source), value.to_string(source)), find_line_for_symbol("", source)))
+            }
+        }
+        "md_heading" => {
+            let level = &args[0];
+            let text = &args[1];
+            if let (Value::Number(Number::Int(lvl)), Value::String(txt)) = (level, text) {
+                let hashes = "#".repeat((*lvl).max(1).min(6) as usize);
+                Ok(Value::String(format!("{} {}", hashes, txt)))
+            } else {
+                Err(EvalError::type_mismatch("number, string", format!("{}, {}", level.to_string(source), text.to_string(source)), find_line_for_symbol("", source)))
+            }
+        }
+        "md_link" => {
+            let text = &args[0];
+            let url = &args[1];
+            if let (Value::String(txt), Value::String(u)) = (text, url) {
+                Ok(Value::String(format!("[{}]({})", txt, u)))
+            } else {
+                Err(EvalError::type_mismatch("string", format!("{}, {}", text.to_string(source), url.to_string(source)), find_line_for_symbol("", source)))
+            }
+        }
+        "md_code" => {
+            let code = &args[0];
+            if let Value::String(c) = code {
+                Ok(Value::String(format!("`{}`", c)))
+            } else {
+                Err(EvalError::type_mismatch("string", code.to_string(source), find_line_for_symbol("", source)))
+            }
+        }
+        "md_list" => {
+            let items = &args[0];
+            if let Value::List(list) = items {
+                let lines: Vec<String> = list.iter().map(|item| format!("- {}", item.to_string(source))).collect();
+                Ok(Value::String(lines.join("\n")))
+            } else {
+                Err(EvalError::type_mismatch("list", items.to_string(source), find_line_for_symbol("", source)))
+            }
+        }
+        "to_string" => {
+            let val = &args[0];
+            match val {
+                Value::Number(Number::Int(i)) => Ok(Value::String(i.to_string())),
+                Value::Number(Number::Float(f)) => {
+                    // Format float nicely - remove unnecessary trailing zeros
+                    let s = format!("{}", f);
+                    Ok(Value::String(s))
+                }
+                Value::String(s) => Ok(Value::String(s.clone())),
+                Value::Bool(b) => Ok(Value::String(b.to_string())),
+                other => Ok(Value::String(other.to_string(source)))
+            }
+        }
+        "to_int" => {
+            let val = &args[0];
+            match val {
+                Value::Number(Number::Int(i)) => Ok(Value::Number(Number::Int(*i))),
+                Value::Number(Number::Float(f)) => Ok(Value::Number(Number::Int(*f as i64))),
+                Value::String(s) => {
+                    s.trim().parse::<i64>()
+                        .map(|i| Value::Number(Number::Int(i)))
+                        .map_err(|_| EvalError::new(format!("cannot convert '{}' to int", s), None, None, 0))
+                }
+                Value::Bool(b) => Ok(Value::Number(Number::Int(if *b { 1 } else { 0 }))),
+                other => Err(EvalError::new(format!("cannot convert {} to int", other.to_string(source)), None, None, 0))
+            }
+        }
+        "to_float" => {
+            let val = &args[0];
+            match val {
+                Value::Number(Number::Int(i)) => Ok(Value::Number(Number::Float(*i as f64))),
+                Value::Number(Number::Float(f)) => Ok(Value::Number(Number::Float(*f))),
+                Value::String(s) => {
+                    s.trim().parse::<f64>()
+                        .map(|f| Value::Number(Number::Float(f)))
+                        .map_err(|_| EvalError::new(format!("cannot convert '{}' to float", s), None, None, 0))
+                }
+                other => Err(EvalError::new(format!("cannot convert {} to float", other.to_string(source)), None, None, 0))
+            }
+        }
+        "to_bool" => {
+            let val = &args[0];
+            match val {
+                Value::Bool(b) => Ok(Value::Bool(*b)),
+                Value::Number(Number::Int(i)) => Ok(Value::Bool(*i != 0)),
+                Value::Number(Number::Float(f)) => Ok(Value::Bool(*f != 0.0)),
+                Value::String(s) => {
+                    let lower = s.to_lowercase();
+                    match lower.as_str() {
+                        "true" | "yes" | "1" | "on" => Ok(Value::Bool(true)),
+                        "false" | "no" | "0" | "off" | "" => Ok(Value::Bool(false)),
+                        _ => Err(EvalError::new(format!("cannot convert '{}' to bool", s), None, None, 0))
+                    }
+                }
+                Value::List(items) => Ok(Value::Bool(!items.is_empty())),
+                _ => Ok(Value::Bool(true)) // Other values are truthy
+            }
+        }
+        "format_int" => {
+            let val = &args[0];
+            let width = &args[1];
+            if let (Value::Number(num), Value::Number(Number::Int(w))) = (val, width) {
+                let int_val = match num {
+                    Number::Int(i) => *i,
+                    Number::Float(f) => *f as i64,
+                };
+                let formatted = if *w > 0 {
+                    format!("{:0width$}", int_val, width = *w as usize)
+                } else {
+                    format!("{}", int_val)
+                };
+                Ok(Value::String(formatted))
+            } else {
+                Err(EvalError::type_mismatch("number, number", format!("{}, {}", val.to_string(source), width.to_string(source)), find_line_for_symbol("", source)))
+            }
+        }
+        "format_float" => {
+            let val = &args[0];
+            let precision = &args[1];
+            if let (Value::Number(num), Value::Number(Number::Int(p))) = (val, precision) {
+                let float_val = match num {
+                    Number::Int(i) => *i as f64,
+                    Number::Float(f) => *f,
+                };
+                let formatted = if *p >= 0 {
+                    format!("{:.prec$}", float_val, prec = *p as usize)
+                } else {
+                    format!("{}", float_val)
+                };
+                Ok(Value::String(formatted))
+            } else {
+                Err(EvalError::type_mismatch("number, number", format!("{}, {}", val.to_string(source), precision.to_string(source)), find_line_for_symbol("", source)))
+            }
+        }
+        "flatmap" => {
+            let func = &args[0];
+            let list = &args[1];
+            if let Value::List(items) = list {
+                let mut out = Vec::new();
+                for item in items {
+                    let res = apply_function(func, item.clone(), source)?;
+                    match res {
+                        Value::List(sub_items) => out.extend(sub_items),
+                        single => out.push(single),
+                    }
+                }
+                Ok(Value::List(out))
+            } else {
+                Err(EvalError::type_mismatch("list", list.to_string(source), find_line_for_symbol("", source)))
+            }
+        }
+        "flatten" => {
+            let list = &args[0];
+            if let Value::List(items) = list {
+                let mut out = Vec::new();
+                for item in items {
+                    match item {
+                        Value::List(sub_items) => out.extend(sub_items.clone()),
+                        single => out.push(single.clone()),
+                    }
+                }
+                Ok(Value::List(out))
+            } else {
+                Err(EvalError::type_mismatch("list", list.to_string(source), find_line_for_symbol("", source)))
             }
         }
         other => Err(EvalError::new(format!("unimplemented builtin {}", other), None, None, 0)),

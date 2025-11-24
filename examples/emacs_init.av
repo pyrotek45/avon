@@ -21,8 +21,8 @@ let theme_pkgs = if (theme != "") then theme_packages else [] in
 let lsp_pkgs = if enable_lsp then lsp_packages else [] in
 let org_pkgs = if enable_org_mode then org_packages else [] in
 
-let all_packages = concat (concat (concat (concat (concat core_packages theme_pkgs) completion_packages) git_packages) lsp_pkgs) org_pkgs in
-let final_packages = concat all_packages dev_packages in
+let all_packages = core_packages + theme_pkgs + completion_packages + git_packages + lsp_pkgs + org_pkgs in
+let final_packages = all_packages + dev_packages in
 
 # Generate use-package declarations
 let pkg_configs = map (\p concat "(use-package " (concat p "\n  :ensure t)")) final_packages in

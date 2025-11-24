@@ -1,0 +1,53 @@
+# Simple Vim Configuration Generator
+# A minimal, easy-to-understand vim config for beginners
+
+let user = "developer" in
+let tab_width = "4" in
+let line_numbers = true in
+let syntax_on = true in
+
+@/home/{user}/.vimrc {"
+" Simple Vim Configuration
+" Generated with Avon
+
+" Basic Settings
+set nocompatible              " Disable vi compatibility
+filetype plugin indent on     " Enable file type detection
+{if syntax_on then "syntax on" else ""}
+
+" Display
+{if line_numbers then "set number" else ""}
+set ruler                     " Show cursor position
+set showcmd                   " Show command in bottom bar
+set wildmenu                  " Visual autocomplete for command menu
+set showmatch                 " Highlight matching brackets
+
+" Indentation
+set tabstop={tab_width}                 " Number of visual spaces per TAB
+set shiftwidth={tab_width}              " Number of spaces to use for autoindent
+set expandtab                 " Use spaces instead of tabs
+set autoindent                " Copy indent from current line when starting new line
+
+" Search
+set incsearch                 " Search as characters are entered
+set hlsearch                  " Highlight search matches
+set ignorecase                " Case insensitive search
+set smartcase                 " Unless search contains uppercase
+
+" Performance
+set lazyredraw                " Don't redraw while executing macros
+
+" Keybindings
+let mapleader = " "           " Set leader key to space
+nnoremap <leader>w :w<CR>     " Quick save
+nnoremap <leader>q :q<CR>     " Quick quit
+nnoremap <leader><space> :nohlsearch<CR>  " Clear search highlight
+
+" Status line
+set laststatus=2              " Always show status line
+set statusline=%F             " Full file path
+set statusline+=\ %m          " Modified flag
+set statusline+=%=            " Switch to right side
+set statusline+=%l:%c         " Line:column
+set statusline+=\ %p%%        " Percentage through file
+"}

@@ -1,0 +1,23 @@
+# Demonstrating currying with builtin functions
+
+# Partial application of concat
+let add_prefix = concat "Mr. " in
+let names = ["Smith", "Jones", "Brown"] in
+let prefixed = map add_prefix names in
+
+# Partial application of replace - need a wrapper since replace takes 3 args
+let fix_typo = \s replace s "teh" "the" in
+let sentences = ["teh cat", "teh dog", "teh bird"] in
+let fixed = map fix_typo sentences in
+
+# Partial application of pad_left
+let pad5 = \s pad_left s 5 " " in
+let numbers = ["1", "12", "123"] in
+let padded = map pad5 numbers in
+
+# Combining predicates with if expressions
+let validate = \s if is_digit s then concat s " is valid" else concat s " is invalid" in
+let inputs = ["123", "abc", "456"] in
+let results = map validate inputs in
+
+[prefixed, fixed, padded, results]

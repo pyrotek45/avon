@@ -1,0 +1,9 @@
+# Test 3: Mixed interpolation and literal braces
+let name = "test" in
+
+@/test3_mixed.txt {"
+Config {{
+  item: {name}
+  data: {{ nested }}
+}}
+"}

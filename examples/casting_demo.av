@@ -1,0 +1,130 @@
+# Demonstration of type casting and formatting functions
+
+# ========================================
+# TYPE CONVERSION EXAMPLES
+# ========================================
+
+let demo_to_string = [
+  to_string 42,
+  to_string 3.14,
+  to_string (if true then true else false),
+  to_string "already a string"
+] in
+
+let demo_to_int = [
+  to_int 3.7,
+  to_int "123",
+  to_int (if true then true else false),
+  to_int (if false then true else false)
+] in
+
+let demo_to_float = [
+  to_float 42,
+  to_float "3.14159"
+] in
+
+let demo_to_bool = [
+  to_bool 1,
+  to_bool 0,
+  to_bool "yes",
+  to_bool "no"
+] in
+
+# ========================================
+# NUMBER FORMATTING EXAMPLES
+# ========================================
+
+let numbers = [1, 2, 10, 100, 999] in
+let padded_numbers = map (\n format_int n 5) numbers in
+
+let prices = [5.5, 15.99, 100.0, 42.123] in
+let formatted_prices = map (\p concat "$" (format_float p 2)) prices in
+
+# ========================================
+# FLATMAP & FLATTEN EXAMPLES
+# ========================================
+
+let categories = ["doc", "image", "video"] in
+let extensions = flatmap (\cat 
+  if cat == "doc" then [".txt", ".pdf", ".doc"]
+  else if cat == "image" then [".jpg", ".png"]
+  else [".mp4", ".avi"]
+) categories in
+
+let nested_data = [[1, 2], [3, 4, 5], [6]] in
+let flat_data = flatten nested_data in
+
+# ========================================
+# PRACTICAL USE CASES
+# ========================================
+
+# 1. Format configuration values
+let config_values = map (\v format_int v 4) [1, 10, 100, 1000] in
+
+# 2. Parse user input and validate
+let user_inputs = ["42", "100", "7", "999"] in
+let parsed_ints = map (\s to_int s) user_inputs in
+
+# 3. Generate padded IDs
+let ids = [1, 2, 3, 10, 25] in
+let id_strings = map (\id concat "ID-" (format_int id 3)) ids in
+
+# 4. Flatten nested structures
+let matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]] in
+let all_values = flatten matrix in
+
+@/casting_demo.txt {"
+========================================
+TYPE CONVERSION DEMONSTRATIONS
+========================================
+
+to_string examples:
+{join demo_to_string ", "}
+
+to_int examples:
+{join (map to_string demo_to_int) ", "}
+
+to_float examples:
+{join (map to_string demo_to_float) ", "}
+
+to_bool examples:
+{join (map to_string demo_to_bool) ", "}
+
+========================================
+NUMBER FORMATTING
+========================================
+
+Padded numbers (width 5):
+{join padded_numbers ", "}
+
+Formatted prices:
+{join formatted_prices ", "}
+
+========================================
+LIST OPERATIONS
+========================================
+
+File extensions (flatmap):
+{join extensions ", "}
+
+Flattened matrix:
+{join (map to_string flat_data) ", "}
+
+========================================
+PRACTICAL EXAMPLES
+========================================
+
+Config values (padded):
+{join config_values ", "}
+
+Parsed integers:
+{join (map to_string parsed_ints) ", "}
+
+Generated IDs:
+{join id_strings "
+"}
+
+All matrix values: {join (map to_string all_values) ", "}
+
+========================================
+"}

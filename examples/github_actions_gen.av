@@ -24,6 +24,7 @@ let lint_command = if language == "rust" then "cargo clippy -- -D warnings" else
                   if language == "node" then "npm run lint" else
                   "make lint" in
 
+[
 @/.github/workflows/ci.yml {"
 	name: CI
 
@@ -40,7 +41,7 @@ let lint_command = if language == "rust" then "cargo clippy -- -D warnings" else
 
 	env:
 	  REGISTRY: ghcr.io
-	  IMAGE_NAME: \${{ github.repository }}
+	  IMAGE_NAME: ${{{ github.repository }}}
 
 	jobs:
 	  lint:
@@ -108,19 +109,19 @@ let lint_command = if language == "rust" then "cargo clippy -- -D warnings" else
 	      - name: Log in to Container Registry
 	        uses: docker/login-action@v2
 	        with:
-	          registry: \${{ env.REGISTRY }}
-	          username: \${{ github.actor }}
-	          password: \${{ secrets.GITHUB_TOKEN }}
+	          registry: ${{{ env.REGISTRY }}}
+	          username: ${{{ github.actor }}}
+	          password: ${{{ secrets.GITHUB_TOKEN }}}
 	      
 	      - name: Extract metadata
 	        id: meta
 	        uses: docker/metadata-action@v4
 	        with:
-	          images: \${{ env.REGISTRY }}/\${{ env.IMAGE_NAME }}
+	          images: ${{{ env.REGISTRY }}}/${{{ env.IMAGE_NAME }}}
 	          tags: |
 	            type=ref,event=branch
-	            type=semver,pattern=\{\{version\}\}
-	            type=semver,pattern=\{\{major\}\}.\{\{minor\}\}
+	            type=semver,pattern={{{version}}}
+	            type=semver,pattern={{{major}}}.{{{minor}}}
 	            type=sha
 	      
 	      - name: Build and push Docker image
@@ -128,8 +129,8 @@ let lint_command = if language == "rust" then "cargo clippy -- -D warnings" else
 	        with:
 	          context: .
 	          push: true
-	          tags: \${{ steps.meta.outputs.tags }}
-	          labels: \${{ steps.meta.outputs.labels }}
+	          tags: ${{{ steps.meta.outputs.tags }}}
+	          labels: ${{{ steps.meta.outputs.labels }}}
 
 	  deploy-preview:
 	    name: Deploy Preview
@@ -138,14 +139,14 @@ let lint_command = if language == "rust" then "cargo clippy -- -D warnings" else
 	    {if deploy_preview then "" else "# Disabled"}
 	    environment:
 	      name: preview
-	      url: https://preview-\${{ github.sha }}.example.com
+	      url: https://preview-${{{ github.sha }}}.example.com
 	    
 	    steps:
 	      - uses: actions/checkout@v3
 	      
 	      - name: Deploy to preview environment
 	        run: |
-	          echo \"Deploying to preview...\"
+	          echo "Deploying to preview..."
 	          # Add your deployment logic here
 	      
 	      - name: Comment on PR
@@ -153,12 +154,12 @@ let lint_command = if language == "rust" then "cargo clippy -- -D warnings" else
 	        uses: actions/github-script@v6
 	        with:
 	          script: |
-	            github.rest.issues.createComment({
+	            github.rest.issues.createComment({{
 	              issue_number: context.issue.number,
 	              owner: context.repo.owner,
 	              repo: context.repo.repo,
-	              body: '✅ Preview deployment ready: https://preview-\${{ github.sha }}.example.com'
-	            })
+	              body: '✅ Preview deployment ready: https://preview-${{{ github.sha }}}.example.com'
+	            }})
 
 	  security-scan:
 	    name: Security Scanning
@@ -179,7 +180,7 @@ let lint_command = if language == "rust" then "cargo clippy -- -D warnings" else
 	        with:
 	          sarif_file: 'trivy-results.sarif'
 "},
-	@/.github/workflows/release.yml {"
+@/.github/workflows/release.yml {"
 		name: Release
 
 		on:
@@ -193,7 +194,7 @@ let lint_command = if language == "rust" then "cargo clippy -- -D warnings" else
 		    runs-on: ubuntu-latest
 		    
 		    outputs:
-		      upload_url: \${{ steps.create_release.outputs.upload_url }}
+		      upload_url: ${{{ steps.create_release.outputs.upload_url }}}
 		    
 		    steps:
 		      - uses: actions/checkout@v3
@@ -202,10 +203,10 @@ let lint_command = if language == "rust" then "cargo clippy -- -D warnings" else
 		        id: create_release
 		        uses: actions/create-release@v1
 		        env:
-		          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+		          GITHUB_TOKEN: ${{{ secrets.GITHUB_TOKEN }}}
 		        with:
-		          tag_name: \${{ github.ref }}
-		          release_name: Release \${{ github.ref }}
+		          tag_name: ${{{ github.ref }}}
+		          release_name: Release ${{{ github.ref }}}
 		          draft: false
 		          prerelease: false
 
@@ -219,7 +220,7 @@ let lint_command = if language == "rust" then "cargo clippy -- -D warnings" else
 		      
 		      - name: Publish to GitHub Packages
 		        run: |
-		          echo \"Publishing release assets...\"
+		          echo "Publishing release assets..."
 		          # Add publishing logic here
-	"}
+"}
 ]

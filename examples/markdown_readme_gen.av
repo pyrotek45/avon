@@ -1,0 +1,72 @@
+# Generate a markdown README file
+
+let project_name = "My Awesome Project" in
+let version = "1.0.0" in
+let features = ["Fast", "Reliable", "Easy to use"] in
+let commands = [
+  ["install", "npm install my-project"],
+  ["build", "npm run build"],
+  ["test", "npm test"]
+] in
+
+# Extract command data
+let cmd_names = ["install", "build", "test"] in
+let cmd_examples = [
+  "npm install my-project",
+  "npm run build",
+  "npm test"
+] in
+
+# Format commands as code blocks
+let format_cmd = \i 
+  let name = if i == 0 then "install" else if i == 1 then "build" else "test" in
+  let example = if i == 0 then "npm install my-project" else if i == 1 then "npm run build" else "npm test" in
+  concat (md_heading 3 (upper name)) (concat "\n\n" (md_code example)) in
+
+@/README.md {"
+{md_heading 1 project_name}
+
+{md_link "View Documentation" "/docs"}
+
+{md_heading 2 "Features"}
+
+{md_list features}
+
+{md_heading 2 "Installation"}
+
+Install the package using npm:
+
+{md_code "npm install my-project"}
+
+{md_heading 2 "Usage"}
+
+Here's a quick example:
+
+{md_code "const project = require('my-project')"}
+
+{md_heading 2 "Commands"}
+
+{md_heading 3 "INSTALL"}
+
+{md_code "npm install my-project"}
+
+{md_heading 3 "BUILD"}
+
+{md_code "npm run build"}
+
+{md_heading 3 "TEST"}
+
+{md_code "npm test"}
+
+{md_heading 2 "License"}
+
+MIT License - see {md_link "LICENSE" "/LICENSE"} for details.
+
+{md_heading 2 "Version"}
+
+Current version: {md_code version}
+
+---
+
+Generated with ❤️ using Avon
+"}

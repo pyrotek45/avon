@@ -1,0 +1,12 @@
+# Test 2: Nested JSON objects with multiple levels of braces
+let name = "test" in
+
+@/test2_nested.txt {"
+{{
+  "outer": {{
+    "inner": {{
+      "key": "{name}"
+    }}
+  }}
+}}
+"}

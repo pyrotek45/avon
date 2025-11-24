@@ -1,0 +1,8 @@
+# Test GitHub Actions escaping
+let name = "test" in
+
+@/test_gh_actions.yml {"
+name: Test
+env:
+  VAR: ${{{{ github.repository }}}}
+"}

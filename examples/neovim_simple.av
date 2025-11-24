@@ -1,0 +1,75 @@
+# Simple Neovim Configuration Generator
+# A minimal, modern neovim config without plugins
+
+let user = "developer" in
+let tab_size = "2" in
+let color_scheme = "desert" in
+let enable_mouse = true in
+
+@/home/{user}/.config/nvim/init.vim {"
+" Simple Neovim Configuration
+" Generated with Avon
+
+" General Settings
+set number relativenumber     " Relative line numbers
+set mouse={if enable_mouse then "a" else ""}                      " Enable mouse support
+set clipboard=unnamedplus     " Use system clipboard
+set hidden                    " Allow hidden buffers
+set encoding=utf-8            " UTF-8 encoding
+
+" Indentation
+set tabstop={tab_size}                  " Number of spaces per tab
+set shiftwidth={tab_size}               " Spaces for autoindent
+set expandtab                 " Convert tabs to spaces
+set smartindent               " Smart autoindenting
+
+" Search
+set ignorecase                " Case insensitive search
+set smartcase                 " Case sensitive if uppercase present
+set hlsearch                  " Highlight search results
+set incsearch                 " Incremental search
+
+" Appearance
+colorscheme {color_scheme}
+set cursorline                " Highlight current line
+set termguicolors             " True color support
+set signcolumn=yes            " Always show sign column
+
+" Splits
+set splitbelow                " Horizontal split below
+set splitright                " Vertical split to right
+
+" File Settings
+set nobackup                  " No backup files
+set nowritebackup             " No backup before writing
+set undofile                  " Persistent undo
+set undodir=~/.config/nvim/undo
+
+" Leader Key
+let mapleader = " "
+
+" Essential Keybindings
+nnoremap <leader>w :w<CR>
+nnoremap <leader>q :q<CR>
+nnoremap <leader>x :x<CR>
+nnoremap <leader>e :Explore<CR>
+
+" Split navigation
+nnoremap <C-h> <C-w>h
+nnoremap <C-j> <C-w>j
+nnoremap <C-k> <C-w>k
+nnoremap <C-l> <C-w>l
+
+" Clear search highlight
+nnoremap <Esc><Esc> :nohl<CR>
+
+" Better indenting
+vnoremap < <gv
+vnoremap > >gv
+
+" Move lines up/down
+nnoremap <A-j> :m .+1<CR>==
+nnoremap <A-k> :m .-2<CR>==
+vnoremap <A-j> :m '>+1<CR>gv=gv
+vnoremap <A-k> :m '<-2<CR>gv=gv
+"}

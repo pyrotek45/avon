@@ -418,7 +418,7 @@ let join_names = fold (\acc \n (concat acc (concat ", " n))) "" names in
 | `filter pred list` | Keep items where `pred` is truthy |
 | `fold f init list` | Reduce with accumulator |
 | `join list sep` | Join list items with separator |
-| `length list` | Get list length |
+| `length list` | Get number of items in list |
 
 ---
 
@@ -602,10 +602,11 @@ You can embed any expression in a template:
 ```avon
 let x = 10 in
 let y = 20 in
+let items = ["apple", "banana", "cherry"] in
 {"
 Sum: {x + y}
 Max: {if x > y then x else y}
-Count: {length [1,2,3]}
+Items: {join items ", "}
 "}
 ```
 
@@ -700,7 +701,13 @@ Avon comes with a toolkit of built-in functions for common tasks. All builtins a
 | `ends_with s suffix` | `ends_with "hello" "lo"` | `true` |
 | `split s sep` | `split "a,b,c" ","` | `["a", "b", "c"]` |
 | `replace s old new` | `replace "hello" "l" "L"` | `"heLLo"` |
+| `trim s` | `trim "  hello  "` | `"hello"` |
 | `length s` | `length "hello"` | `5` |
+| `repeat s n` | `repeat "ab" 3` | `"ababab"` |
+| `pad_left s width char` | `pad_left "7" 3 "0"` | `"007"` |
+| `pad_right s width char` | `pad_right "hi" 5 " "` | `"hi   "` |
+| `indent s spaces` | `indent "code" 4` | `"    code"` |
+| `str val` | `str 42` | `"42"` |
 
 ### List Operations
 
@@ -721,6 +728,45 @@ Avon comes with a toolkit of built-in functions for common tasks. All builtins a
 | `exists path` | Check if file exists (true/false) |
 | `basename path` | Get filename from path |
 | `dirname path` | Get directory from path |
+
+### HTML Generation Helpers
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `html_escape s` | Escape HTML special characters | `html_escape "<div>"` → `"&lt;div&gt;"` |
+| `html_tag tag content` | Wrap content in HTML tag | `html_tag "p" "text"` → `"<p>text</p>"` |
+| `html_attr name value` | Create HTML attribute | `html_attr "class" "btn"` → `"class=\"btn\""` |
+
+### Markdown Generation Helpers
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `md_heading level text` | Create markdown heading | `md_heading 1 "Title"` → `"# Title"` |
+| `md_link text url` | Create markdown link | `md_link "Click" "/home"` → `"[Click](/home)"` |
+| `md_code code` | Wrap in inline code | `md_code "x = 1"` → `` "`x = 1`" `` |
+| `md_list items` | Convert list to markdown list | `md_list ["a","b"]` → `"- a\n- b"` |
+
+### Type Conversion & Casting
+
+| Function | Description | Example | Result |
+|----------|-------------|---------|--------|
+| `to_string val` | Convert any value to string | `to_string 42` | `"42"` |
+| `to_int val` | Convert to integer | `to_int "42"` | `42` |
+| `to_int val` | Float to int (truncates) | `to_int 3.7` | `3` |
+| `to_float val` | Convert to float | `to_float "3.14"` | `3.14` |
+| `to_bool val` | Convert to boolean | `to_bool "yes"` | `true` |
+| `to_bool val` | Number to bool (0=false) | `to_bool 0` | `false` |
+| `format_int num width` | Format integer with zero-padding | `format_int 7 3` | `"007"` |
+| `format_float num prec` | Format float with precision | `format_float 3.14159 2` | `"3.14"` |
+
+**String to bool conversions:** `"true"`, `"yes"`, `"1"`, `"on"` → `true`; `"false"`, `"no"`, `"0"`, `"off"`, `""` → `false`
+
+### Advanced List Operations
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `flatmap f list` | Map then flatten | `flatmap (\x [x, x]) [1,2]` → `[1,1,2,2]` |
+| `flatten list` | Flatten one level | `flatten [[1,2],[3,4]]` → `[1,2,3,4]` |
 
 ### Data & Utilities
 
@@ -858,13 +904,12 @@ avon program.av --deploy --force
 Indent templates nicely in your source code. Avon's dedent feature handles the indentation:
 
 ```avon
-let config = {"
+@/config.yml {"
 	database:
 	  host: localhost
 	  port: 5432
 	  name: myapp
-"} in
-@/config.yml {config}
+"}
 ```
 
 ### Return Lists for Multiple Files
