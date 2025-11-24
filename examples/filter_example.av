@@ -1,0 +1,1 @@
+filter (\x if true then true else false) ["a","b","c"]

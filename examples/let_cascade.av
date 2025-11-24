@@ -1,0 +1,5 @@
+let a = "Hello" in
+let b = "World" in
+@/tmp/let_cascade.txt {"
+	{a} {b}
+"}

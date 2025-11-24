@@ -1,0 +1,5 @@
+# join and replace example
+let parts = ["a","b","c"] in
+let joined = join parts "-" in
+let replaced = replace joined "b" "B" in
+[joined, replaced]

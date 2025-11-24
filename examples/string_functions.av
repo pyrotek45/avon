@@ -1,0 +1,10 @@
+# String builtin examples
+
+let s = " Hello World " in
+let up = upper s in
+let low = lower s in
+let t = trim s in
+let replaced = replace s "World" "Avon" in
+let parts = split s " " in
+let joined = join parts "|" in
+[up, low, t, replaced, parts, joined]

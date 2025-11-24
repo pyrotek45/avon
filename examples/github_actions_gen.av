@@ -1,0 +1,225 @@
+# GitHub Actions Workflow Generator
+# Demonstrates: conditionals, complex logic, filtering, template generation
+
+let project_name = "my-project" in
+let language = "rust" in
+let run_tests = true in
+let run_lint = true in
+let publish_docker = true in
+let deploy_preview = true in
+
+# Language-specific configuration
+let build_command = if language == "rust" then "cargo build --release" else
+                   if language == "python" then "python -m pip install . && python -m pip install .[dev]" else
+                   if language == "node" then "npm install && npm run build" else
+                   "make build" in
+
+let test_command = if language == "rust" then "cargo test --verbose" else
+                  if language == "python" then "pytest" else
+                  if language == "node" then "npm test" else
+                  "make test" in
+
+let lint_command = if language == "rust" then "cargo clippy -- -D warnings" else
+                  if language == "python" then "flake8 . && black --check ." else
+                  if language == "node" then "npm run lint" else
+                  "make lint" in
+
+@/.github/workflows/ci.yml {"
+	name: CI
+
+	on:
+	  push:
+	    branches:
+	      - main
+	      - develop
+	      - 'feature/**'
+	  pull_request:
+	    branches:
+	      - main
+	      - develop
+
+	env:
+	  REGISTRY: ghcr.io
+	  IMAGE_NAME: \${{ github.repository }}
+
+	jobs:
+	  lint:
+	    name: Lint and Format Check
+	    runs-on: ubuntu-latest
+	    {if run_lint then "" else "# Disabled"}
+	    steps:
+	      - uses: actions/checkout@v3
+	      
+	      - name: Install Rust
+	        uses: dtolnay/rust-toolchain@stable
+	        {if language != "rust" then "" else ""}
+	      
+	      - name: Run linter
+	        run: {lint_command}
+
+	  test:
+	    name: Test Suite
+	    runs-on: ubuntu-latest
+	    {if run_tests then "" else "# Disabled"}
+	    services:
+	      postgres:
+	        image: postgres:14-alpine
+	        env:
+	          POSTGRES_DB: test_db
+	          POSTGRES_PASSWORD: test_pass
+	        options: >-
+	          --health-cmd pg_isready
+	          --health-interval 10s
+	          --health-timeout 5s
+	          --health-retries 5
+	        ports:
+	          - 5432:5432
+	    
+	    steps:
+	      - uses: actions/checkout@v3
+	      
+	      - name: Install dependencies
+	        {if language == "rust" then "uses: dtolnay/rust-toolchain@stable" else "run: echo 'Installing dependencies'"}
+	      
+	      - name: Build
+	        run: {build_command}
+	      
+	      - name: Run tests
+	        run: {test_command}
+	        env:
+	          DATABASE_URL: postgresql://postgres:test_pass@localhost:5432/test_db
+
+	  build:
+	    name: Build Docker Image
+	    needs: [test, lint]
+	    runs-on: ubuntu-latest
+	    {if publish_docker then "" else "# Disabled"}
+	    
+	    permissions:
+	      contents: read
+	      packages: write
+	    
+	    steps:
+	      - uses: actions/checkout@v3
+	      
+	      - name: Set up Docker Buildx
+	        uses: docker/setup-buildx-action@v2
+	      
+	      - name: Log in to Container Registry
+	        uses: docker/login-action@v2
+	        with:
+	          registry: \${{ env.REGISTRY }}
+	          username: \${{ github.actor }}
+	          password: \${{ secrets.GITHUB_TOKEN }}
+	      
+	      - name: Extract metadata
+	        id: meta
+	        uses: docker/metadata-action@v4
+	        with:
+	          images: \${{ env.REGISTRY }}/\${{ env.IMAGE_NAME }}
+	          tags: |
+	            type=ref,event=branch
+	            type=semver,pattern=\{\{version\}\}
+	            type=semver,pattern=\{\{major\}\}.\{\{minor\}\}
+	            type=sha
+	      
+	      - name: Build and push Docker image
+	        uses: docker/build-push-action@v4
+	        with:
+	          context: .
+	          push: true
+	          tags: \${{ steps.meta.outputs.tags }}
+	          labels: \${{ steps.meta.outputs.labels }}
+
+	  deploy-preview:
+	    name: Deploy Preview
+	    needs: build
+	    runs-on: ubuntu-latest
+	    {if deploy_preview then "" else "# Disabled"}
+	    environment:
+	      name: preview
+	      url: https://preview-\${{ github.sha }}.example.com
+	    
+	    steps:
+	      - uses: actions/checkout@v3
+	      
+	      - name: Deploy to preview environment
+	        run: |
+	          echo \"Deploying to preview...\"
+	          # Add your deployment logic here
+	      
+	      - name: Comment on PR
+	        if: github.event_name == 'pull_request'
+	        uses: actions/github-script@v6
+	        with:
+	          script: |
+	            github.rest.issues.createComment({
+	              issue_number: context.issue.number,
+	              owner: context.repo.owner,
+	              repo: context.repo.repo,
+	              body: '✅ Preview deployment ready: https://preview-\${{ github.sha }}.example.com'
+	            })
+
+	  security-scan:
+	    name: Security Scanning
+	    runs-on: ubuntu-latest
+	    steps:
+	      - uses: actions/checkout@v3
+	      
+	      - name: Run Trivy vulnerability scanner
+	        uses: aquasecurity/trivy-action@master
+	        with:
+	          scan-type: 'fs'
+	          scan-ref: '.'
+	          format: 'sarif'
+	          output: 'trivy-results.sarif'
+	      
+	      - name: Upload Trivy results to GitHub Security
+	        uses: github/codeql-action/upload-sarif@v2
+	        with:
+	          sarif_file: 'trivy-results.sarif'
+"},
+	@/.github/workflows/release.yml {"
+		name: Release
+
+		on:
+		  push:
+		    tags:
+		      - 'v*'
+
+		jobs:
+		  create-release:
+		    name: Create GitHub Release
+		    runs-on: ubuntu-latest
+		    
+		    outputs:
+		      upload_url: \${{ steps.create_release.outputs.upload_url }}
+		    
+		    steps:
+		      - uses: actions/checkout@v3
+		      
+		      - name: Create Release
+		        id: create_release
+		        uses: actions/create-release@v1
+		        env:
+		          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+		        with:
+		          tag_name: \${{ github.ref }}
+		          release_name: Release \${{ github.ref }}
+		          draft: false
+		          prerelease: false
+
+		  publish:
+		    name: Publish to registries
+		    needs: create-release
+		    runs-on: ubuntu-latest
+		    
+		    steps:
+		      - uses: actions/checkout@v3
+		      
+		      - name: Publish to GitHub Packages
+		        run: |
+		          echo \"Publishing release assets...\"
+		          # Add publishing logic here
+	"}
+]

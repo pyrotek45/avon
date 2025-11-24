@@ -1,0 +1,17 @@
+# simple GitHub Actions pipeline generator
+let branches = ["main","develop"] in
+map (\b @/.github/workflows/ci-{{b}}.yml {{"
+name: CI ({{b}})
+
+on:
+  push:
+    branches: [ {{b}} ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run linters
+        run: echo "lint for branch {{b}}"
+"}}) branches

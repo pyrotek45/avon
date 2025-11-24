@@ -1,0 +1,86 @@
+################################################################################
+# Complex Usage 4
+# Demonstrates JSON parsing, readlines, and walking directories.
+# The file is long with many comments to reach >100 lines.
+
+# comments filler
+# c1
+# c2
+# c3
+# c4
+# c5
+# c6
+# c7
+# c8
+# c9
+# c10
+# c11
+# c12
+# c13
+# c14
+# c15
+# c16
+# c17
+# c18
+# c19
+# c20
+# c21
+# c22
+# c23
+# c24
+# c25
+# c26
+# c27
+# c28
+# c29
+# c30
+# c31
+# c32
+# c33
+# c34
+# c35
+# c36
+# c37
+# c38
+# c39
+# c40
+# c41
+# c42
+# c43
+# c44
+# c45
+# c46
+# c47
+# c48
+# c49
+# c50
+
+# Create a small JSON array inline via a temp file import pattern
+let arr = ["alpha","beta","gamma","delta","epsilon","zeta","eta","theta","iota","kappa"] in
+
+# create a long content by joining arr with extra annotated lines
+let body = join (map (\s concat "- " s) arr) "\n" in
+
+[@/tmp/complex_usage_4.txt {"
+	JSON/Files Example
+	
+	This example demonstrates JSON array handling (as a list), readlines
+	simulation and joining lines to create a long document.
+	
+	{body}
+	
+	Extra repeated lines to bulk content for parser stress testing:
+	
+	Line-A
+	Line-B
+	Line-C
+	Line-D
+	Line-E
+	Line-F
+	Line-G
+	Line-H
+	Line-I
+	Line-J
+	
+	End of complex_usage_4
+"}]

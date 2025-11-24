@@ -1,0 +1,11 @@
+# plus_lists.av
+# Demonstrates list concatenation with + and join usage
+
+let l1 = ["a","b"] in
+let l2 = ["c","d"] in
+let combined = l1 + l2 in
+@/tmp/plus_lists.txt {"
+Combined length: {(join combined ", ")}
+Items:
+{combined}
+"}

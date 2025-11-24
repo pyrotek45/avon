@@ -1,0 +1,85 @@
+################################################################################
+# Complex Usage 3
+# Demonstrates nested lets, default params and string helpers in a longer file
+# This file is > 100 lines to stress-test parsing and evaluation.
+
+# padding lines
+# pad1
+# pad2
+# pad3
+# pad4
+# pad5
+# pad6
+# pad7
+# pad8
+# pad9
+# pad10
+# pad11
+# pad12
+# pad13
+# pad14
+# pad15
+# pad16
+# pad17
+# pad18
+# pad19
+# pad20
+# pad21
+# pad22
+# pad23
+# pad24
+# pad25
+# pad26
+# pad27
+# pad28
+# pad29
+# pad30
+# pad31
+# pad32
+# pad33
+# pad34
+# pad35
+# pad36
+# pad37
+# pad38
+# pad39
+# pad40
+# pad41
+# pad42
+# pad43
+# pad44
+# pad45
+# pad46
+# pad47
+# pad48
+# pad49
+# pad50
+
+# nested lets and defaults
+let prefix = "Report" in
+let make_report = \name ? "anonymous" @/reports/{name}_Summary.txt {"
+	Summary: {name}
+	
+	Contents:
+	  - prefix: {prefix}
+	  - name uppercase: { (upper name) }
+	
+	Generated report for {name}
+"} in
+
+let make_detailed = \name ? "bob" @/reports/{name}_Detailed.txt {"
+	Detailed Report: {name}
+	
+	Contents:
+	  - prefix: {prefix}
+	
+	Details for {name}
+"} in
+
+# produce two reports
+let r1 = make_report in
+let r2 = make_detailed in
+[
+  r1 "anonymous",
+  r2 "bob"
+]

@@ -1,0 +1,130 @@
+# Docker Compose Generator
+# Demonstrates: complex data structures, nested lets, string manipulation, advanced templates
+
+let project_name = "my-app" in
+let environment = "production" in
+let postgres_version = "14" in
+let redis_version = "7" in
+let node_version = "18" in
+
+# Service configurations
+let services = [
+	["web", "node", node_version, "3000", true],
+	["api", "node", node_version, "5000", true],
+	["postgres", "postgres", postgres_version, "5432", false],
+	["redis", "redis", redis_version, "6379", false],
+	["nginx", "nginx", "latest", "80", false]
+] in
+
+# Generate port mapping for web service
+let port_mapping = \port concat "    - \"" (concat port (concat ":\" " port)))) in
+
+# Generate service entry
+let make_service = \service_info 
+	let name = (filter (\x true) service_info) in
+	let image = name in
+	let version = name in
+	let port = name in
+	concat (concat "  " (concat name ":\n")) "    image: " in
+
+@/docker-compose.yml {"
+	version: '3.9'
+	
+	services:
+		web:
+			image: node:{node_version}-alpine
+			container_name: {project_name}-web
+			ports:
+				- "3000:3000"
+			environment:
+				NODE_ENV: {environment}
+				DATABASE_URL: postgresql://postgres:password@postgres:5432/{project_name}
+				REDIS_URL: redis://redis:6379
+			depends_on:
+				- postgres
+				- redis
+			volumes:
+				- ./src:/app/src
+				- ./package.json:/app/package.json
+			command: npm run dev
+			networks:
+				- {project_name}-network
+		
+		api:
+			image: node:{node_version}-alpine
+			container_name: {project_name}-api
+			ports:
+				- "5000:5000"
+			environment:
+				NODE_ENV: {environment}
+				DATABASE_URL: postgresql://postgres:password@postgres:5432/{project_name}
+				REDIS_URL: redis://redis:6379
+				PORT: 5000
+			depends_on:
+				- postgres
+				- redis
+			volumes:
+				- ./api/src:/app/src
+			command: npm run start
+			networks:
+				- {project_name}-network
+		
+		postgres:
+			image: postgres:{postgres_version}-alpine
+			container_name: {project_name}-db
+			environment:
+				POSTGRES_USER: postgres
+				POSTGRES_PASSWORD: password
+				POSTGRES_DB: {project_name}
+			ports:
+				- "5432:5432"
+			volumes:
+				- postgres_data:/var/lib/postgresql/data
+				- ./init.sql:/docker-entrypoint-initdb.d/init.sql
+			networks:
+				- {project_name}-network
+			healthcheck:
+				test: ["CMD-SHELL", "pg_isready -U postgres"]
+				interval: 10s
+				timeout: 5s
+				retries: 5
+		
+		redis:
+			image: redis:{redis_version}-alpine
+			container_name: {project_name}-redis
+			ports:
+				- "6379:6379"
+			command: redis-server --appendonly yes
+			volumes:
+				- redis_data:/data
+			networks:
+				- {project_name}-network
+			healthcheck:
+				test: ["CMD", "redis-cli", "ping"]
+				interval: 10s
+				timeout: 5s
+				retries: 5
+		
+		nginx:
+			image: nginx:latest
+			container_name: {project_name}-nginx
+			ports:
+				- "80:80"
+				- "443:443"
+			volumes:
+				- ./nginx.conf:/etc/nginx/nginx.conf:ro
+				- ./ssl:/etc/nginx/ssl:ro
+			depends_on:
+				- web
+				- api
+			networks:
+				- {project_name}-network
+	
+	volumes:
+		postgres_data:
+		redis_data:
+	
+	networks:
+		{project_name}-network:
+			driver: bridge
+"}

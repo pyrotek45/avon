@@ -1,0 +1,7 @@
+# complex template with list insertion and conditionals
+let sections = ["Header","Body","Footer"] in
+@/tmp/complex_sections.txt {"
+	Page Sections:
+	{map (\s concat "- " s) sections}
+	End of sections
+"}

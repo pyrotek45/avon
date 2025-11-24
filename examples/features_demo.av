@@ -1,0 +1,4 @@
+# demonstration of several builtins together
+let s = "  Foo Bar  " in
+let parts = split (trim s) " " in
+[ trim s, upper s, lower s, contains s "Foo", join parts "|" ]

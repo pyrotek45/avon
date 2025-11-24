@@ -1,0 +1,1 @@
+map (\x concat x "-") ["a","b","c"]

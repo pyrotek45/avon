@@ -1,0 +1,42 @@
+# Site Generator - Multi-file HTML generation
+# Demonstrates: map, filter, string operations, template interpolation, multi-file output
+
+let site_name = "My Awesome Site" in
+let author = "Developer" in
+let pages = ["index", "features", "about", "contact"] in
+
+# Create navigation menu from pages (excluding home)
+let nav_pages = filter (\p p != "index") pages in
+let nav_links = map (\p concat "<a href=\"/{p}.html\">{p}</a>") nav_pages in
+let navbar = join nav_links " | " in
+
+# Function to generate an HTML page file
+let make_page = \page_name \title \content @/{page_name}.html {"
+	<!DOCTYPE html>
+	<html>
+	<head>
+		<title>{title}</title>
+	</head>
+	<body>
+		<header>
+			<h1>{site_name}</h1>
+			<nav>{navbar}</nav>
+		</header>
+		<main>
+			<h2>{title}</h2>
+			{content}
+		</main>
+		<footer>
+			<p>Copyright 2025 {site_name}. By {author}.</p>
+		</footer>
+	</body>
+	</html>
+"} in
+
+# Generate pages
+[
+	make_page "index" "Home" "<p>Welcome to my site.</p>",
+	make_page "features" "Features" "<p>This site is built with Avon.</p>",
+	make_page "about" "About" "<p>Learn more about us.</p>",
+	make_page "contact" "Contact" "<p>Get in touch with us.</p>"
+]

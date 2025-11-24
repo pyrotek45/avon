@@ -1,0 +1,83 @@
+# Nginx Configuration Generator
+# Demonstrates: escape hatch for templates, conditionals, list operations
+
+let server_name = "api.example.com" in
+let enable_ssl = true in
+let enable_cache = true in
+let workers = 4 in
+
+let upstream_servers = [
+	"localhost:8080",
+	"localhost:8081",
+	"localhost:8082"
+] in
+
+let upstream_list = join upstream_servers "\n\t\tserver " in
+
+# Template body uses {{ and }} to output literal braces for config directives
+let ssl_block = if enable_ssl then "
+\t\tlisten 443 ssl http2;
+\t\tssl_certificate /etc/ssl/certs/cert.pem;
+\t\tssl_certificate_key /etc/ssl/private/key.pem;
+\t\tssl_protocols TLSv1.2 TLSv1.3;
+\t\tssl_ciphers HIGH:!aNULL:!MD5;" else "" in
+
+let cache_block = if enable_cache then "
+\tproxy_cache_path /var/cache/nginx levels=1:2 keys_zone=api_cache:10m max_size=1g;
+\tproxy_cache api_cache;
+\tproxy_cache_valid 200 10m;
+\tproxy_cache_key \"\$scheme\$request_method\$host\$request_uri\";" else "" in
+
+@/nginx.conf {"
+user www-data;
+worker_processes {workers};
+pid /run/nginx.pid;
+
+events {{
+\tworker_connections 2048;
+\tuse epoll;
+}}
+
+http {{
+\tsendfile on;
+\ttcp_nopush on;
+\tkeep_alive_timeout 65;
+\tinclude /etc/nginx/mime.types;
+\tdefault_type application/octet-stream;
+
+\taccess_log /var/log/nginx/access.log combined;
+\terror_log /var/log/nginx/error.log warn;
+
+\tgzip on;
+\tgzip_vary on;
+\tgzip_types text/plain text/css text/xml application/json text/javascript application/javascript application/xml+rss;
+{cache_block}
+
+\tupstream backend {{
+\t\tserver {upstream_list}
+\t}}
+
+\tserver {{
+\t\tlisten 80;
+{ssl_block}
+\t\tserver_name {server_name};
+\t\tclient_max_body_size 10m;
+
+\t\tlocation ~* \\.(jpg|jpeg|png|gif|ico|css|js)$ {{
+\t\t\texpires 30d;
+\t\t\tadd_header Cache-Control "public, immutable";
+\t\t}}
+
+\t\tlocation / {{
+\t\t\tproxy_pass http://backend;
+\t\t\tproxy_set_header Host $host;
+\t\t\tproxy_set_header X-Real-IP $remote_addr;
+\t\t\tproxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+\t\t\tproxy_set_header X-Forwarded-Proto $scheme;
+\t\t\tproxy_connect_timeout 60s;
+\t\t\tproxy_send_timeout 60s;
+\t\t\tproxy_read_timeout 60s;
+\t\t}}
+\t}}
+}}
+"}

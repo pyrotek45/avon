@@ -1,0 +1,13 @@
+# generate a docker-compose for a web + redis service
+@/tmp/docker-compose.yml {"
+version: '3'
+services:
+  web:
+    image: nginx:latest
+    volumes:
+      - ./site:/usr/share/nginx/html:ro
+    ports:
+      - '8080:80'
+  redis:
+    image: redis:alpine
+"}

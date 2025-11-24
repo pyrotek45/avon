@@ -1,0 +1,6 @@
+# create per-user welcome files
+let users = ["alice","bob"] in
+map (\u @/home/{u}/welcome.txt {"
+	Hello {u}
+	Welcome to your home directory
+"}) users

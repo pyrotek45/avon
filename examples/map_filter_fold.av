@@ -1,0 +1,5 @@
+let m = map (\x concat x "-") ["a","b","c"] in
+let f = filter (\x (x != "")) ["", "x"] in
+let s = fold (\acc \item concat acc item) "" ["a","b","c"] in
+[m, f, s]
+

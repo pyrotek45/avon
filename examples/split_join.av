@@ -1,0 +1,4 @@
+# split then join example
+let s = "one,two,three" in
+let parts = split s "," in
+join parts "|"

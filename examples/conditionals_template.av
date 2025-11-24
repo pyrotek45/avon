@@ -1,0 +1,7 @@
+# conditional expressions inside templates
+let name = "" in
+let count = 0 in
+@/tmp/cond_output.txt {"
+	Hello {if name == "" then "stranger" else name},
+	You have {if count > 0 then count else 0} items
+"}

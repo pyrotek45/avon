@@ -1,0 +1,15 @@
+[package]
+name = "avon"
+version = "0.1.0"
+edition = "2021"
+authors = ["Avon Contributors"]
+description = "A modern template language for generating code, configs, and infrastructure"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/pyrotek45/avon"
+readme = "README.md"
+keywords = ["template", "code-generation", "templating", "infrastructure"]
+categories = ["development-tools"]
+
+[dependencies]
+serde_json = "1.0"
+ureq = "2.7"

@@ -1,0 +1,28 @@
+# operators_demo.av
+# Showcases various operators and their results in a template
+
+let s = "X" in
+let a = 10 in
+let b = 3 in
+let nums = ["1","2"] in
+@/tmp/operators_demo.txt {"
+Arithmetic:
+  {a} + {b} = {a + b}
+  {a} - {b} = {a - b}
+  {a} * {b} = {a * b}
+  {a} / {b} = {a / b}
+
+String:
+  "A" + "B" = {("A" + "B")}
+
+List concat:
+  [1] + [2] = { ["1"] + ["2"] }
+
+Comparisons:
+  1 == 1 => {(1 == 1)}
+  1 != 2 => {(1 != 2)}
+  2 > 1 => {(2 > 1)}
+  1 < 2 => {(1 < 2)}
+
+End of demo
+"}
