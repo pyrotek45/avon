@@ -1,0 +1,60 @@
+# Dict Template Interpolation Examples
+# Shows how dicts appear cleanly in templates
+
+# Simple dict
+let config = dict [
+  ["host", "localhost"],
+  ["port", 8080],
+  ["debug", "true"]
+] in
+
+# Empty dict
+let empty = dict [] in
+
+# Nested values in dict
+let server = dict [
+  ["name", "web-server"],
+  ["replicas", 3],
+  ["config", config]
+] in
+
+# Dict with various value types
+let mixed = dict [
+  ["string", "hello"],
+  ["number", 42],
+  ["bool", "true"],
+  ["list", [1, 2, 3]]
+] in
+
+@dict_display_examples.txt {"
+Dict Template Interpolation Examples
+=====================================
+
+1. SIMPLE DICT
+   Direct interpolation: {config}
+   Individual access: host={config.host}, port={config.port}
+
+2. EMPTY DICT
+   Empty dict shows as: {empty}
+
+3. NESTED DICT
+   Outer dict: {server}
+   Access nested: {server.name} has {server.replicas} replicas
+
+4. MIXED VALUE TYPES
+   Dict with various types: {mixed}
+   String value: {mixed.string}
+   Number value: {mixed.number}
+
+5. COMPARISON WITH PAIRS
+   As dict: {config}
+   As pairs: {dict_to_list config}
+
+Visual Clarity:
+- Dicts use curly braces with key: value format
+- String values are quoted for clarity
+- Pairs show as nested lists of 2-element arrays
+
+This makes it immediately clear whether you're working
+with a dict (hash map) or list of pairs!
+"}

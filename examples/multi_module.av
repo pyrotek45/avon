@@ -1,0 +1,20 @@
+# Multiple module imports example
+# Demonstrates namespace isolation with multiple modules
+
+let math = import "examples/math_lib.av" in
+let strings = import "examples/string_lib.av" in
+
+# Use both modules
+let doubled = math.double 21 in
+let quoted = strings.quote "Hello, Modules!" in
+let separator = strings.repeat_str "=" 20 in {"
+  {separator}
+  Module Demo
+  {separator}
+
+  Math: double(21) = {doubled}
+  Strings: quote result = {quoted}
+
+  This demonstrates namespace isolation - 
+  math.double and strings.quote coexist cleanly!
+"}

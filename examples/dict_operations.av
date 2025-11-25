@@ -1,0 +1,75 @@
+# Dictionary Operations - Comprehensive Examples
+# Demonstrates all dict manipulation functions
+
+# Create a simple dictionary
+let person = dict [
+  ["name", "Alice"],
+  ["age", 30],
+  ["city", "San Francisco"],
+  ["role", "Engineer"]
+] in
+
+# Get all keys and values
+let all_keys = dict_keys person in
+let all_values = dict_values person in
+let key_count = length all_keys in
+
+# Check if keys exist
+let has_name = dict_has_key person "name" in
+let has_email = dict_has_key person "email" in
+
+# Get values
+let name = dict_get person "name" in
+let email = dict_get person "email" in  # Returns None
+
+# Update a value (returns new dict)
+let person_older = dict_set person "age" 31 in
+let old_age = dict_get person "age" in  # Still 30
+let new_age = dict_get person_older "age" in  # Now 31
+
+# Add new key-value pair
+let person_with_email = dict_set person "email" "alice@example.com" in
+
+# Remove a key
+let person_no_role = dict_remove person "role" in
+let size_before = dict_size person in
+let size_after = dict_size person_no_role in
+
+# Merge dictionaries
+let extra_info = dict [
+  ["department", "Engineering"],
+  ["level", "Senior"]
+] in
+let complete_person = dict_merge person extra_info in
+let total_keys = dict_size complete_person in
+
+# Convert back to list
+let as_list = dict_to_list person in
+
+# Output results
+{"
+Dictionary Operations Demo
+==========================
+
+Original person dict:
+  Number of keys: {key_count}
+  Name: {name}
+  City: {dict_get person "city"}
+
+Key checks:
+  Has 'name': {has_name}
+  Has 'email': {has_email}
+
+Immutable updates:
+  Original age: {old_age}
+  After dict_set: {new_age}
+
+Size changes:
+  Before remove: {size_before}
+  After remove: {size_after}
+
+Merge operation:
+  Total keys after merge: {total_keys}
+  Department: {dict_get complete_person "department"}
+  Level: {dict_get complete_person "level"}
+"}

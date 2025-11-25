@@ -6,7 +6,8 @@ mod parser;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    cli::run_cli(args);
+    let code = cli::run_cli(args);
+    std::process::exit(code);
 }
 
 #[cfg(test)]
@@ -2439,5 +2440,168 @@ mod tests {
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         assert_eq!(v.to_string(&prog), "List");
+    }
+
+    #[test]
+    fn test_dict_import_returns_dict_type() {
+        // Create a test module file that returns a dict
+        let dir = std::env::temp_dir();
+        let module_path = dir.join("test_module.av");
+        let mut f = fs::File::create(&module_path).expect("create temp file");
+        write!(f, "let double = \\x x * 2 in dict [[\"double\", double]]").expect("write");
+
+        let prog = format!("let m = import \"{}\" in typeof m", module_path.to_string_lossy());
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "Dict");
+        
+        let _ = fs::remove_file(module_path);
+    }
+
+    #[test]
+    fn test_import_returns_actual_value() {
+        // Test that import returns whatever the file evaluates to
+        let dir = std::env::temp_dir();
+        let module_path = dir.join("test_import_value.av");
+        let mut f = fs::File::create(&module_path).expect("create temp file");
+        write!(f, "42").expect("write");
+
+        let prog = format!("import \"{}\"", module_path.to_string_lossy());
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "42");
+        
+        let _ = fs::remove_file(module_path);
+    }
+
+    #[test]
+    fn test_dict_member_access() {
+        // Create a test module file that returns a dict
+        let dir = std::env::temp_dir();
+        let module_path = dir.join("test_math_module.av");
+        let mut f = fs::File::create(&module_path).expect("create temp file");
+        write!(f, "let double = \\x x * 2 in let triple = \\x x * 3 in dict [[\"double\", double], [\"triple\", triple]]").expect("write");
+
+        let prog = format!("let math = import \"{}\" in math.double 5", module_path.to_string_lossy());
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "10");
+        
+        let _ = fs::remove_file(module_path);
+    }
+
+    #[test]
+    fn test_dict_multiple_members() {
+        // Test accessing multiple members from same dict
+        let dir = std::env::temp_dir();
+        let module_path = dir.join("test_multi_module.av");
+        let mut f = fs::File::create(&module_path).expect("create temp file");
+        write!(f, "let add = \\x \\y x + y in let sub = \\x \\y x - y in dict [[\"add\", add], [\"sub\", sub]]").expect("write");
+
+        let prog = format!(
+            "let m = import \"{}\" in let a = m.add 10 5 in let b = m.sub 10 5 in concat (concat (typeof a) \",\") (typeof b)",
+            module_path.to_string_lossy()
+        );
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "Number,Number");
+        
+        let _ = fs::remove_file(module_path);
+    }
+
+    #[test]
+    fn test_dict_namespace_isolation() {
+        // Test that two dicts can have same-named keys without conflict
+        let dir = std::env::temp_dir();
+        let module1_path = dir.join("test_ns1.av");
+        let module2_path = dir.join("test_ns2.av");
+        
+        let mut f1 = fs::File::create(&module1_path).expect("create temp file 1");
+        write!(f1, "let func = \\x x * 2 in dict [[\"func\", func]]").expect("write");
+        
+        let mut f2 = fs::File::create(&module2_path).expect("create temp file 2");
+        write!(f2, "let func = \\x x * 3 in dict [[\"func\", func]]").expect("write");
+
+        let prog = format!(
+            "let m1 = import \"{}\" in let m2 = import \"{}\" in let r1 = m1.func 5 in let r2 = m2.func 5 in r1 + r2",
+            module1_path.to_string_lossy(),
+            module2_path.to_string_lossy()
+        );
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        // m1.func 5 = 10, m2.func 5 = 15, total = 25
+        assert_eq!(v.to_string(&prog), "25");
+        
+        let _ = fs::remove_file(module1_path);
+        let _ = fs::remove_file(module2_path);
+    }
+
+    #[test]
+    fn test_is_dict_predicate() {
+        // Test is_dict predicate works correctly
+        let prog = "is_dict (dict [[\"key\", \"value\"]])".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Bool(true) => {},
+            other => panic!("Expected true, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_is_dict_returns_false_for_non_dicts() {
+        // Test is_dict returns false for other types
+        let tests = vec![
+            ("is_dict 42", "number"),
+            ("is_dict \"string\"", "string"),
+            ("is_dict [1, 2, 3]", "list"),
+            ("is_dict (\\x x)", "function"),
+        ];
+        
+        for (test_prog, desc) in tests {
+            let prog = test_prog.to_string();
+            let tokens = tokenize(prog.clone()).expect("tokenize");
+            let ast = parse(tokens);
+            let mut symbols = initial_builtins();
+            let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+            match v {
+                Value::Bool(false) => {},
+                other => panic!("Expected false for {} ('{}'), got {:?}", desc, test_prog, other),
+            }
+        }
+    }
+
+    #[test]
+    fn test_dict_creation_and_access() {
+        // Test creating a dict and accessing members
+        let prog = "let d = dict [[\"name\", \"Alice\"], [\"age\", 30]] in d.name".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "Alice");
+    }
+
+    #[test]
+    fn test_dict_with_functions() {
+        // Test dict containing functions
+        let prog = "let d = dict [[\"double\", \\x x * 2], [\"triple\", \\x x * 3]] in d.double 5".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "10");
     }
 }

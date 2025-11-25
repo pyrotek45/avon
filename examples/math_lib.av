@@ -1,0 +1,16 @@
+# Math library with utility functions
+
+let double = \x x * 2 in
+let triple = \x x * 3 in
+let square = \x x * x in
+let add = \x \y x + y in
+let multiply = \x \y x * y in
+
+# Return a dict with all functions
+dict [
+  ["double", double],
+  ["triple", triple],
+  ["square", square],
+  ["add", add],
+  ["multiply", multiply]
+]

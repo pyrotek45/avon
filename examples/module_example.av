@@ -1,0 +1,18 @@
+# Example: Module system with namespace access
+# Import a module and access its members with dot notation
+
+let math = import "examples/math_lib.av" in
+
+# Use functions from the module
+let result_double = math.double 5 in
+let result_triple = math.triple 7 in
+let result_square = math.square 4 in
+let result_add = math.add 10 20 in
+let result_multiply = math.multiply 3 7 in {"
+  Results from math module:
+    double(5) = {result_double}
+    triple(7) = {result_triple}
+    square(4) = {result_square}
+    add(10, 20) = {result_add}
+    multiply(3, 7) = {result_multiply}
+"}

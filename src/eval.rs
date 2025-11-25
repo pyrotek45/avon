@@ -293,6 +293,49 @@ pub fn initial_builtins() -> HashMap<String, Value> {
         Value::Builtin("md_list".to_string(), Vec::new()),
     );
 
+    // Data structures
+    m.insert(
+        "dict".to_string(),
+        Value::Builtin("dict".to_string(), Vec::new()),
+    );
+    // Dict operations
+    m.insert(
+        "dict_get".to_string(),
+        Value::Builtin("dict_get".to_string(), Vec::new()),
+    );
+    m.insert(
+        "dict_set".to_string(),
+        Value::Builtin("dict_set".to_string(), Vec::new()),
+    );
+    m.insert(
+        "dict_has_key".to_string(),
+        Value::Builtin("dict_has_key".to_string(), Vec::new()),
+    );
+    m.insert(
+        "dict_keys".to_string(),
+        Value::Builtin("dict_keys".to_string(), Vec::new()),
+    );
+    m.insert(
+        "dict_values".to_string(),
+        Value::Builtin("dict_values".to_string(), Vec::new()),
+    );
+    m.insert(
+        "dict_remove".to_string(),
+        Value::Builtin("dict_remove".to_string(), Vec::new()),
+    );
+    m.insert(
+        "dict_merge".to_string(),
+        Value::Builtin("dict_merge".to_string(), Vec::new()),
+    );
+    m.insert(
+        "dict_size".to_string(),
+        Value::Builtin("dict_size".to_string(), Vec::new()),
+    );
+    m.insert(
+        "dict_to_list".to_string(),
+        Value::Builtin("dict_to_list".to_string(), Vec::new()),
+    );
+
     // System
     m.insert(
         "os".to_string(),
@@ -331,6 +374,10 @@ pub fn initial_builtins() -> HashMap<String, Value> {
     m.insert(
         "is_function".to_string(),
         Value::Builtin("is_function".to_string(), Vec::new()),
+    );
+    m.insert(
+        "is_dict".to_string(),
+        Value::Builtin("is_dict".to_string(), Vec::new()),
     );
 
     // Type assertions
@@ -404,6 +451,10 @@ impl Value {
             }
             Value::Function { .. } => "<function>".to_string(),
             Value::Builtin(name, _collected) => format!("<builtin:{}>", name),
+            Value::Dict(map) => {
+                let keys: Vec<String> = map.keys().cloned().collect();
+                format!("{{dict: [{}]}}", keys.join(", "))
+            }
         }
     }
 }
@@ -879,6 +930,28 @@ pub fn eval(
             }
             Ok(Value::List(evaluated))
         }
+        Expr::Member { object, field } => {
+            let obj_val = eval(*object, symbols, source)?;
+            match obj_val {
+                Value::Dict(map) => {
+                    map.get(&field).cloned().ok_or_else(|| {
+                        let available: Vec<String> = map.keys().cloned().collect();
+                        EvalError::new(
+                            format!("dict has no key '{}'", field),
+                            Some(format!("one of: {}", available.join(", "))),
+                            Some(field.clone()),
+                            find_line_for_symbol(&field, source),
+                        )
+                        .with_hint(format!("Available keys: {}", available.join(", ")))
+                    })
+                }
+                other => Err(EvalError::type_mismatch(
+                    "Dict",
+                    other.to_string(source),
+                    find_line_for_symbol(".", source),
+                ).with_hint("Only dicts support member access with '.' notation".to_string()))
+            }
+        }
         Expr::FileTemplate { path, template } => Ok(Value::FileTemplate {
             path: (path, symbols.clone()),
             template: (template, symbols.clone()),
@@ -941,6 +1014,16 @@ pub fn apply_function(func: &Value, arg: Value, source: &str) -> Result<Value, E
                 "md_link" => 2,
                 "md_code" => 1,
                 "md_list" => 1,
+                "dict" => 1,
+                "dict_get" => 2,
+                "dict_set" => 3,
+                "dict_has_key" => 2,
+                "dict_keys" => 1,
+                "dict_values" => 1,
+                "dict_remove" => 2,
+                "dict_merge" => 2,
+                "dict_size" => 1,
+                "dict_to_list" => 1,
                 "to_string" => 1,
                 "to_int" => 1,
                 "to_float" => 1,
@@ -976,6 +1059,7 @@ pub fn apply_function(func: &Value, arg: Value, source: &str) -> Result<Value, E
                 "is_list" => 1,
                 "is_bool" => 1,
                 "is_function" => 1,
+                "is_dict" => 1,
                 // Type assertions
                 "assert_string" => 1,
                 "assert_number" => 1,
@@ -2120,6 +2204,176 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 ))
             }
         }
+        "dict" => {
+            // dict :: [[String, a]] -> Dict
+            // Converts a list of [key, value] pairs to a dictionary
+            // Usage: dict [["name", "alice"], ["age", 30]]
+            let list = &args[0];
+            if let Value::List(pairs) = list {
+                let mut map = HashMap::new();
+                for pair in pairs {
+                    if let Value::List(kv) = pair {
+                        if kv.len() != 2 {
+                            return Err(EvalError::new(
+                                format!("dict: each pair must have exactly 2 elements [key, value], got {}", kv.len()),
+                                Some("[key, value]".to_string()),
+                                Some(format!("list of length {}", kv.len())),
+                                find_line_for_symbol("dict", source),
+                            ));
+                        }
+                        if let Value::String(key) = &kv[0] {
+                            map.insert(key.clone(), kv[1].clone());
+                        } else {
+                            return Err(EvalError::type_mismatch(
+                                "string (for dict key)",
+                                kv[0].to_string(source),
+                                find_line_for_symbol("dict", source),
+                            ));
+                        }
+                    } else {
+                        return Err(EvalError::type_mismatch(
+                            "list of [key, value] pairs",
+                            pair.to_string(source),
+                            find_line_for_symbol("dict", source),
+                        ));
+                    }
+                }
+                Ok(Value::Dict(map))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list of [key, value] pairs",
+                    list.to_string(source),
+                    find_line_for_symbol("dict", source),
+                ))
+            }
+        }
+        "dict_get" => {
+            let dict = &args[0];
+            let key = &args[1];
+            if let (Value::Dict(map), Value::String(k)) = (dict, key) {
+                Ok(map.get(k).cloned().unwrap_or(Value::None))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "Dict and String key",
+                    format!("{}, {}", dict.to_string(source), key.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
+            }
+        }
+        "dict_set" => {
+            let dict = &args[0];
+            let key = &args[1];
+            let value = &args[2];
+            if let (Value::Dict(map), Value::String(k)) = (dict, key) {
+                let mut new_map = map.clone();
+                new_map.insert(k.clone(), value.clone());
+                Ok(Value::Dict(new_map))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "Dict, String key, and value",
+                    format!("{}, {}, {}", dict.to_string(source), key.to_string(source), value.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
+            }
+        }
+        "dict_has_key" => {
+            let dict = &args[0];
+            let key = &args[1];
+            if let (Value::Dict(map), Value::String(k)) = (dict, key) {
+                Ok(Value::Bool(map.contains_key(k)))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "Dict and String key",
+                    format!("{}, {}", dict.to_string(source), key.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
+            }
+        }
+        "dict_keys" => {
+            let dict = &args[0];
+            if let Value::Dict(map) = dict {
+                let keys: Vec<Value> = map.keys().cloned().map(Value::String).collect();
+                Ok(Value::List(keys))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "Dict",
+                    dict.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
+            }
+        }
+        "dict_values" => {
+            let dict = &args[0];
+            if let Value::Dict(map) = dict {
+                let vals: Vec<Value> = map.values().cloned().collect();
+                Ok(Value::List(vals))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "Dict",
+                    dict.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
+            }
+        }
+        "dict_remove" => {
+            let dict = &args[0];
+            let key = &args[1];
+            if let (Value::Dict(map), Value::String(k)) = (dict, key) {
+                let mut new_map = map.clone();
+                new_map.remove(k);
+                Ok(Value::Dict(new_map))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "Dict and String key",
+                    format!("{}, {}", dict.to_string(source), key.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
+            }
+        }
+        "dict_merge" => {
+            let d1 = &args[0];
+            let d2 = &args[1];
+            if let (Value::Dict(a), Value::Dict(b)) = (d1, d2) {
+                let mut out = a.clone();
+                for (k, v) in b.iter() {
+                    out.insert(k.clone(), v.clone());
+                }
+                Ok(Value::Dict(out))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "Dict, Dict",
+                    format!("{}, {}", d1.to_string(source), d2.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
+            }
+        }
+        "dict_size" => {
+            let dict = &args[0];
+            if let Value::Dict(map) = dict {
+                Ok(Value::Number(Number::Int(map.len() as i64)))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "Dict",
+                    dict.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
+            }
+        }
+        "dict_to_list" => {
+            let dict = &args[0];
+            if let Value::Dict(map) = dict {
+                let pairs: Vec<Value> = map.iter()
+                    .map(|(k, v)| Value::List(vec![Value::String(k.clone()), v.clone()]))
+                    .collect();
+                Ok(Value::List(pairs))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "Dict",
+                    dict.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
+            }
+        }
         "get" => {
             // get :: [[String, a]] -> String -> a | None
             // Usage: get [["name", "alice"], ["age", "30"]] "name" => "alice"
@@ -2291,6 +2545,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Value::FileTemplate { .. } => "FileTemplate",
                 Value::Template(_, _) => "Template",
                 Value::Path(_, _) => "Path",
+                Value::Dict(_) => "Dict",
                 Value::None => "None",
             };
             Ok(Value::String(type_name.to_string()))
@@ -2324,6 +2579,10 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
         "is_function" => {
             // is_function :: a -> Bool
             Ok(Value::Bool(matches!(args[0], Value::Function { .. } | Value::Builtin(_, _))))
+        }
+        "is_dict" => {
+            // is_dict :: a -> Bool
+            Ok(Value::Bool(matches!(args[0], Value::Dict(_))))
         }
 
         // Type assertions

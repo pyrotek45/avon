@@ -4,6 +4,28 @@ use std::slice::Iter;
 
 type ParseResult<T> = Result<T, EvalError>;
 
+pub fn parse_postfix(stream: &mut Peekable<Iter<Token>>) -> Expr {
+    let mut expr = parse_atom(stream);
+    
+    // Handle member access (dot notation)
+    while let Some(Token::Dot) = stream.peek() {
+        stream.next(); // consume the dot
+        if let Some(Token::Identifier(field)) = stream.peek() {
+            let field_name = field.clone();
+            stream.next(); // consume the identifier
+            expr = Expr::Member {
+                object: Box::new(expr),
+                field: field_name,
+            };
+        } else {
+            eprintln!("Parse error: expected identifier after '.'");
+            return Expr::None;
+        }
+    }
+    
+    expr
+}
+
 pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
     match stream.next() {
         Some(atom) => match atom {
@@ -60,7 +82,7 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
 }
 
 pub fn parse_factor(stream: &mut Peekable<Iter<Token>>) -> Expr {
-    let mut lhs = parse_atom(stream);
+    let mut lhs = parse_postfix(stream);
 
     while let Some(peek) = stream.peek() {
         if !peek.is_factor_op() {
@@ -68,7 +90,7 @@ pub fn parse_factor(stream: &mut Peekable<Iter<Token>>) -> Expr {
         }
         // Safe: we just peeked and confirmed there's a token
         let op = stream.next().expect("token exists after peek").clone();
-        let rhs = parse_atom(stream);
+        let rhs = parse_postfix(stream);
         lhs = Expr::Binary {
             lhs: Box::new(lhs),
             op,
@@ -272,6 +294,13 @@ fn try_parse_expr(stream: &mut Peekable<Iter<Token>>) -> ParseResult<Expr> {
     let mut lhs = lhs;
     loop {
         match stream.peek() {
+            Some(Token::Identifier(id)) if id != "in" && id != "then" && id != "else" => {
+                let rhs = parse_term(stream);
+                lhs = Expr::Application {
+                    lhs: Box::new(lhs),
+                    rhs: Box::new(rhs),
+                };
+            }
             Some(Token::Int(_))
             | Some(Token::Float(_))
             | Some(Token::String(_))

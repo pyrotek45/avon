@@ -1,0 +1,44 @@
+# Dictionary (Dict) examples - first-class hash maps with dot notation
+
+# Create a simple dict
+let person = dict [
+  ["name", "Alice"],
+  ["age", 30],
+  ["city", "San Francisco"]
+] in
+
+# Access members with dot notation
+let greeting = {"Hello, {person.name}! You are {person.age} years old."} in
+
+# Dicts can contain functions
+let math = dict [
+  ["add", \x \y x + y],
+  ["multiply", \x \y x * y]
+] in
+
+let sum = math.add 10 20 in
+let product = math.multiply 6 7 in
+
+# Dicts are perfect for configuration
+let config = dict [
+  ["debug", "true"],
+  ["port", 8080],
+  ["host", "localhost"],
+  ["workers", 4]
+] in
+
+# Use with import for namespace management
+# See math_lib.av and string_lib.av for examples
+
+{"
+{greeting}
+
+Math operations:
+  10 + 20 = {sum}
+  6 * 7 = {product}
+
+Configuration:
+  Debug: {config.debug}
+  Server: {config.host}:{config.port}
+  Workers: {config.workers}
+"}

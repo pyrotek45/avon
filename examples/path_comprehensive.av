@@ -11,7 +11,8 @@ let test_file = @examples/test.av in
 let template_content = readfile template_file in
 let test_lines = readlines test_file in
 let template_exists = exists template_file in
-let missing_exists = exists @examples/missing.txt in
+let missing_path = @examples/missing.txt in
+let missing_exists = exists missing_path in
 
 # 3. Path manipulation functions
 let file_name = basename template_file in

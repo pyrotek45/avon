@@ -149,6 +149,10 @@ pub enum Expr {
         op: Token,
         rhs: Box<Expr>,
     },
+    Member {
+        object: Box<Expr>,
+        field: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -172,6 +176,7 @@ pub enum Value {
         template: (Vec<Chunk>, HashMap<String, Value>),
     },
     List(Vec<Value>),
+    Dict(HashMap<String, Value>),
 }
 
 #[derive(Debug, Clone)]

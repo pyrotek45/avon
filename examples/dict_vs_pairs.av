@@ -1,0 +1,102 @@
+# Demonstrating the Difference: Dict vs List of Pairs
+# This example clarifies when you have a dict vs a list of key-value pairs
+
+# 1. List of Pairs - Just a regular list containing 2-element lists
+let pairs = [
+  ["name", "Alice"],
+  ["age", 30],
+  ["city", "San Francisco"]
+] in
+
+# 2. Dict - A first-class hash map type created from pairs
+let person = dict pairs in
+
+# Key Differences:
+
+# Access: Lists are accessed by iteration, Dicts use dot notation or dict_get
+let person_name = person.name in  # Gets "Alice" directly via dot notation
+let person_age_alt = dict_get person "age" in  # Gets 30 via dict_get
+
+# Type checking
+let pairs_is_list = is_list pairs in
+let pairs_is_dict = is_dict pairs in
+let person_is_dict = is_dict person in
+
+# String representation in templates shows the difference
+@display_comparison.txt {"
+==============================================
+  Dicts vs Lists of Pairs - Key Differences
+==============================================
+
+1. DATA STRUCTURE
+   List of pairs: {pairs}
+   Dict:          {person}
+
+2. TYPE CHECKING
+   pairs -> is_list: {pairs_is_list}, is_dict: {pairs_is_dict}
+   person -> is_dict: {person_is_dict}
+
+3. ACCESS PATTERNS
+   
+   List of Pairs (iteration-based):
+   - Iterate with map, filter, fold
+   - Access via list functions
+   - Good for: ordered data, sequential processing
+   
+   Dict (key-based):
+   - person.name = {person_name}
+   - person.age = {person.age}
+   - Access via dot notation or dict_get
+   - Good for: lookup tables, structured data
+
+4. AVAILABLE OPERATIONS
+   
+   List operations on pairs:
+   - map, filter, fold
+   - length pairs = {length pairs}
+   - Can append, prepend, transform
+   
+   Dict operations on person:
+   - dict_keys: {dict_keys person}
+   - dict_values: {dict_values person}
+   - dict_has_key person \"email\": {dict_has_key person "email"}
+   - dict_size: {dict_size person}
+
+5. WHEN TO USE EACH
+   
+   Use List of Pairs when:
+   - You need to maintain order
+   - You want to iterate sequentially
+   - You might have duplicate keys
+   - You're building data before creating dict
+   
+   Use Dict when:
+   - You need fast key lookup
+   - You want dot notation access
+   - Keys are unique
+   - You're modeling structured configuration
+
+6. CONVERSION
+   
+   Pairs to Dict:  dict pairs
+   Dict to Pairs:  dict_to_list person
+   
+   Round trip test:
+   Original pairs: {pairs}
+   After dict conversion and back: {dict_to_list person}
+
+7. PRACTICAL EXAMPLE
+   
+   Configuration workflow:
+   Step 1: Build as pairs [['host', 'localhost'], ['port', 8080]]
+   Step 2: Convert to dict for easy access
+   Step 3: Use dot notation: config.host, config.port
+   
+   Result: Fast lookups with clean syntax!
+
+==============================================
+  Summary: Dicts are optimized hash maps,
+  pairs are ordered lists - choose based on
+  your access patterns and use case!
+==============================================
+"}

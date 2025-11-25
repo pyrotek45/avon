@@ -175,7 +175,7 @@ fn print_builtin_docs() {
     println!("For more examples and tutorials, see: tutorial/TUTORIAL.md");
 }
 
-pub fn run_cli(args: Vec<String>) {
+pub fn run_cli(args: Vec<String>) -> i32 {
     let mut root_opt: Option<String> = None;
     let mut git_opt: Option<String> = None;
     let mut git_eval_opt: Option<String> = None;
@@ -192,7 +192,7 @@ pub fn run_cli(args: Vec<String>) {
                     continue;
                 } else {
                     eprintln!("--root requires a directory argument");
-                    return;
+                    return 1;
                 }
             }
             "--git" => {
@@ -202,7 +202,7 @@ pub fn run_cli(args: Vec<String>) {
                     continue;
                 } else {
                     eprintln!("--git requires a repo/file argument");
-                    return;
+                    return 1;
                 }
             }
             "--git-eval" => {
@@ -212,7 +212,7 @@ pub fn run_cli(args: Vec<String>) {
                     continue;
                 } else {
                     eprintln!("--git-eval requires a repo/file argument");
-                    return;
+                    return 1;
                 }
             }
             "--eval-input" => {
@@ -222,7 +222,7 @@ pub fn run_cli(args: Vec<String>) {
                     continue;
                 } else {
                     eprintln!("--eval-input requires a code string argument");
-                    return;
+                    return 1;
                 }
             }
             "--debug" => {
@@ -238,8 +238,7 @@ pub fn run_cli(args: Vec<String>) {
 
     // Handle --eval-input before other processing
     if let Some(code) = eval_input_opt {
-        run_eval_string(code, debug);
-        return;
+        return run_eval_string(code, debug);
     }
 
     if cli_args.len() > 0 {
@@ -275,57 +274,53 @@ Examples:
 
         if cli_args[0] == "--help" || cli_args[0] == "-h" {
             println!("{}", help);
-            return;
+            return 0;
         }
 
         if cli_args[0] == "--doc" {
             print_builtin_docs();
-            return;
+            return 0;
         }
 
         if cli_args[0] == "eval" {
-            run_eval(cli_args, git_eval_opt.or(git_opt.clone()), debug);
-            return;
+            return run_eval(cli_args, git_eval_opt.or(git_opt.clone()), debug);
         }
 
         // If --git is present, ensure we're in deploy mode
         if git_opt.is_some() && !cli_args.contains(&"--deploy".to_string()) {
             let mut deploy_args = vec!["dummy.av".to_string(), "--deploy".to_string()];
             deploy_args.extend(cli_args);
-            run_deploy_or_eval(deploy_args, root_opt, git_opt, debug);
-            return;
+            return run_deploy_or_eval(deploy_args, root_opt, git_opt, debug);
         }
 
-        run_deploy_or_eval(cli_args, root_opt, git_opt, debug);
-        return;
+        return run_deploy_or_eval(cli_args, root_opt, git_opt, debug);
     }
 
     // Handle --git-eval without additional commands
     if git_eval_opt.is_some() {
-        run_eval(
+        return run_eval(
             vec!["eval".to_string(), "dummy.av".to_string()],
             git_eval_opt,
             debug,
         );
-        return;
     }
 
     // Handle --git without additional commands (defaults to deploy)
     if git_opt.is_some() {
-        run_deploy_or_eval(
+        return run_deploy_or_eval(
             vec!["dummy.av".to_string(), "--deploy".to_string()],
             root_opt,
             git_opt,
             debug,
         );
-        return;
     }
 
     // short usage when no args supplied; keep it minimal
     println!("Usage: avon <command> — run 'avon --help' for brief help");
+    0
 }
 
-fn run_eval_string(code: String, debug: bool) {
+fn run_eval_string(code: String, debug: bool) -> i32 {
     if debug {
         eprintln!("[DEBUG] Starting lexer...");
     }
@@ -355,18 +350,25 @@ fn run_eval_string(code: String, debug: bool) {
                         }
                         Err(_) => println!("{}", v.to_string(&code)),
                     }
+                    0
                 }
-                Err(e) => eprintln!("{}", e.pretty(&code)),
+                Err(e) => {
+                    eprintln!("{}", e.pretty(&code));
+                    1
+                }
             }
         }
-        Err(e) => eprintln!("{}", e.pretty(&code)),
+        Err(e) => {
+            eprintln!("{}", e.pretty(&code));
+            1
+        }
     }
 }
 
-fn run_eval(cli_args: Vec<String>, git_opt: Option<String>, debug: bool) {
+fn run_eval(cli_args: Vec<String>, git_opt: Option<String>, debug: bool) -> i32 {
     if cli_args.len() < 2 {
         eprintln!("eval requires a file path");
-        return;
+        return 1;
     }
     let filepath = &cli_args[1];
     let filepath_str = filepath.clone();
@@ -381,6 +383,7 @@ fn run_eval(cli_args: Vec<String>, git_opt: Option<String>, debug: bool) {
                     eval_named.insert(key, val.clone());
                 } else {
                     eprintln!("named argument {} missing value", key);
+                    return 1;
                 }
             } else {
                 eval_pos.push(tok.clone());
@@ -433,7 +436,7 @@ fn run_eval(cli_args: Vec<String>, git_opt: Option<String>, debug: bool) {
                                                     }
                                                     Err(e) => {
                                                         eprintln!("{}", e.pretty_with_file(&file, Some(&filepath_str)));
-                                                        break;
+                                                        return 1;
                                                     }
                                                 }
                                             } else if pos_idx < eval_pos.len() {
@@ -449,7 +452,7 @@ fn run_eval(cli_args: Vec<String>, git_opt: Option<String>, debug: bool) {
                                                     }
                                                     Err(e) => {
                                                         eprintln!("{}", e.pretty_with_file(&file, Some(&filepath_str)));
-                                                        break;
+                                                        return 1;
                                                     }
                                                 }
                                             } else if let Some(def_box) = default {
@@ -461,12 +464,12 @@ fn run_eval(cli_args: Vec<String>, git_opt: Option<String>, debug: bool) {
                                                     }
                                                     Err(e) => {
                                                         eprintln!("{}", e.pretty_with_file(&file, Some(&filepath_str)));
-                                                        break;
+                                                        return 1;
                                                     }
                                                 }
                                             } else {
                                                 eprintln!("missing argument for {}", ident);
-                                                break;
+                                                return 1;
                                             }
                                         }
                                         Value::Builtin(_, _) => {
@@ -483,7 +486,7 @@ fn run_eval(cli_args: Vec<String>, git_opt: Option<String>, debug: bool) {
                                                     }
                                                     Err(e) => {
                                                         eprintln!("{}", e.pretty_with_file(&file, Some(&filepath_str)));
-                                                        break;
+                                                        return 1;
                                                     }
                                                 }
                                             } else {
@@ -504,15 +507,26 @@ fn run_eval(cli_args: Vec<String>, git_opt: Option<String>, debug: bool) {
                                 }
                                 Err(_) => println!("{}", v.to_string(&file)),
                             }
+                            return 0;
                         }
-                        Err(e) => eprintln!("{}", e.pretty_with_file(&file, Some(&filepath_str))),
+                        Err(e) => {
+                            eprintln!("{}", e.pretty_with_file(&file, Some(&filepath_str)));
+                            return 1;
+                        }
                     }
                 }
-                Err(e) => eprintln!("{}", e.pretty_with_file(&file, Some(&filepath_str))),
+                Err(e) => {
+                    eprintln!("{}", e.pretty_with_file(&file, Some(&filepath_str)));
+                    return 1;
+                }
             }
         }
-        Err(e) => eprintln!("{}", e.pretty("")),
+        Err(e) => {
+            eprintln!("{}", e.pretty(""));
+            return 1;
+        }
     }
+    0
 }
 
 fn run_deploy_or_eval(
@@ -520,7 +534,7 @@ fn run_deploy_or_eval(
     root_opt: Option<String>,
     git_opt: Option<String>,
     debug: bool,
-) {
+) -> i32 {
     let filepath = &cli_args[0];
     let force = cli_args.iter().any(|s| s == "--force");
     let append = cli_args.iter().any(|s| s == "--append");
@@ -529,6 +543,7 @@ fn run_deploy_or_eval(
     let deploy_mode = deploy_idx.is_some();
     let mut deploy_pos: Vec<String> = vec![];
     let mut deploy_named: HashMap<String, String> = HashMap::new();
+    let mut bad_named_arg = false;
     if let Some(idx) = deploy_idx {
         let mut it = cli_args
             .iter()
@@ -541,11 +556,15 @@ fn run_deploy_or_eval(
                     deploy_named.insert(key, val.clone());
                 } else {
                     eprintln!("named argument {} missing value", key);
+                    bad_named_arg = true;
                 }
             } else {
                 deploy_pos.push(tok.clone());
             }
         }
+    }
+    if bad_named_arg {
+        return 1;
     }
 
     let file_result = if let Some(gspec) = git_opt.as_ref() {
@@ -723,25 +742,43 @@ fn run_deploy_or_eval(
                                 match res {
                                     Ok(Ok(())) => {}
                                     Ok(Err(e)) => {
-                                        eprintln!("Deployment error: {}", e.pretty(&file))
+                                        eprintln!("Deployment error: {}", e.pretty(&file));
+                                        return 1;
                                     }
-                                    Err(_) => eprintln!("Deployment panicked"),
+                                    Err(_) => {
+                                        eprintln!("Deployment panicked");
+                                        return 1;
+                                    }
                                 }
                             } else {
                                 match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                                     v.to_string(&file)
                                 })) {
                                     Ok(s) => println!("{}", s),
-                                    Err(_) => eprintln!("Printing result panicked"),
+                                    Err(_) => {
+                                        eprintln!("Printing result panicked");
+                                        return 1;
+                                    }
                                 }
                             }
+                            return 0;
                         }
-                        Err(err) => eprintln!("{}", err.pretty(&file)),
+                        Err(err) => {
+                            eprintln!("{}", err.pretty(&file));
+                            return 1;
+                        }
                     }
                 }
-                Err(e) => eprintln!("{}", e.pretty(&file)),
+                Err(e) => {
+                    eprintln!("{}", e.pretty(&file));
+                    return 1;
+                }
             }
         }
-        Err(err) => eprintln!("{}", err.pretty("")),
+        Err(err) => {
+            eprintln!("{}", err.pretty(""));
+            return 1;
+        }
     }
+    0
 }

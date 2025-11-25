@@ -1,0 +1,27 @@
+# String utility library
+
+let uppercase_first = \s
+    let len = length s in
+    if len == 0 then s
+    else let first = substring s 0 1 in
+         let rest = substring s 1 len in
+         concat (upper first) rest in
+
+let repeat_str = \s \n
+    # Create a list of n items and fold over it
+    let nums = map (\x x) [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] in
+    let limited = filter (\x x <= n) nums in
+    fold (\acc \_ concat acc s) "" limited in
+
+let surround = \s \left \right
+    concat (concat left s) right in
+
+let quote = \s surround s "\"" "\"" in
+
+# Return functions as a dict
+dict [
+  ["uppercase_first", uppercase_first],
+  ["repeat_str", repeat_str],
+  ["surround", surround],
+  ["quote", quote]
+]

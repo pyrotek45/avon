@@ -8,120 +8,121 @@ let instance_type = "t3.medium" in
 let instance_names = ["web-1", "web-2", "web-3"] in
 
 # Helper to generate instance resource
-let make_instance = \name concat "
-resource \"aws_instance\" \"{name}\" {
+let make_instance = \name {{"
+resource "aws_instance" "{{name}}" {
   ami             = data.aws_ami.ubuntu.id
-  instance_type   = \"{instance_type}\"
+  instance_type   = "{{instance_type}}"
   subnet_id       = aws_subnet.app.id
   security_groups = [aws_security_group.app.id]
 
   tags = {
-    Name        = \"{name}\"
-    Environment = \"{environment}\"
+    Name        = "{{name}}"
+    Environment = "{{environment}}"
   }
-}" in
+}
+"}} in
 
 let all_instances = map make_instance instance_names in
 let instances_block = join all_instances "\n\n" in
 
 [
-  @/terraform/variables.tf {
-"variable \"environment\" {
-  type    = string
-  default = \"{environment}\"
-}
+  @/terraform/variables.tf {{"
+  variable "environment" {
+    type    = string
+    default = "{{environment}}"
+  }
 
-variable \"region\" {
-  type    = string
-  default = \"{region}\"
-}
+  variable "region" {
+    type    = string
+    default = "{{region}}"
+  }
 
-variable \"instance_type\" {
-  type    = string
-  default = \"{instance_type}\"
-}
-"},
+  variable "instance_type" {
+    type    = string
+    default = "{{instance_type}}"
+  }
+  "}},
 
-  @/terraform/main.tf {
-"terraform {
-  required_version = \">= 1.0\"
-  required_providers {
-    aws = {
-      source  = \"hashicorp/aws\"
-      version = \"~> 5.0\"
+  @/terraform/main.tf {{"
+  terraform {
+    required_version = ">= 1.0"
+    required_providers {
+      aws = {
+        source  = "hashicorp/aws"
+        version = "~> 5.0"
+      }
     }
   }
-}
 
-provider \"aws\" {
-  region = var.region
-}
-
-data \"aws_ami\" \"ubuntu\" {
-  most_recent = true
-  owners      = [\"099720109477\"]
-
-  filter {
-    name   = \"name\"
-    values = [\"ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*\"]
-  }
-}
-
-resource \"aws_vpc\" \"main\" {
-  cidr_block           = \"10.0.0.0/16\"
-  enable_dns_hostnames = true
-
-  tags = {
-    Name = \"{environment}-vpc\"
-  }
-}
-
-resource \"aws_subnet\" \"app\" {
-  vpc_id     = aws_vpc.main.id
-  cidr_block = \"10.0.1.0/24\"
-
-  tags = {
-    Name = \"{environment}-subnet\"
-  }
-}
-
-resource \"aws_security_group\" \"app\" {
-  name        = \"{environment}-sg\"
-  description = \"Application security group\"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = \"tcp\"
-    cidr_blocks = [\"0.0.0.0/0\"]
+  provider "aws" {
+    region = var.region
   }
 
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = \"tcp\"
-    cidr_blocks = [\"0.0.0.0/0\"]
+  data "aws_ami" "ubuntu" {
+    most_recent = true
+    owners      = ["099720109477"]
+
+    filter {
+      name   = "name"
+      values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+    }
   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = \"-1\"
-    cidr_blocks = [\"0.0.0.0/0\"]
+  resource "aws_vpc" "main" {
+    cidr_block           = "10.0.0.0/16"
+    enable_dns_hostnames = true
+
+    tags = {
+      Name = "{{environment}}-vpc"
+    }
   }
 
-  tags = {
-    Environment = \"{environment}\"
+  resource "aws_subnet" "app" {
+    vpc_id     = aws_vpc.main.id
+    cidr_block = "10.0.1.0/24"
+
+    tags = {
+      Name = "{{environment}}-subnet"
+    }
   }
-}
 
-{instances_block}
-"},
+  resource "aws_security_group" "app" {
+    name        = "{{environment}}-sg"
+    description = "Application security group"
+    vpc_id      = aws_vpc.main.id
 
-  @/terraform/terraform.tfvars {
-"environment   = \"{environment}\"
-region        = \"{region}\"
-instance_type = \"{instance_type}\"
-"}
+    ingress {
+      from_port   = 80
+      to_port     = 80
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    ingress {
+      from_port   = 443
+      to_port     = 443
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    egress {
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    tags = {
+      Environment = "{{environment}}"
+    }
+  }
+
+  {{instances_block}}
+  "}},
+
+  @/terraform/terraform.tfvars {{"
+  environment   = "{{environment}}"
+  region        = "{{region}}"
+  instance_type = "{{instance_type}}"
+  "}}
 ]

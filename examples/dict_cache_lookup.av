@@ -1,0 +1,111 @@
+# Memoization Cache Using Dicts
+# Demonstrates dict as lookup table for performance optimization
+
+# Expensive computation (simulated with description)
+let fibonacci = \n
+  if n == 0 then 0
+  else if n == 1 then 1
+  else (fibonacci (n - 1)) + (fibonacci (n - 2))
+in
+
+# Build a cache of precomputed fibonacci numbers
+let fib_cache = dict [
+  ["0", 0],
+  ["1", 1],
+  ["2", 1],
+  ["3", 2],
+  ["4", 3],
+  ["5", 5],
+  ["6", 8],
+  ["7", 13],
+  ["8", 21],
+  ["9", 34],
+  ["10", 55]
+] in
+
+# Lookup table for mathematical constants
+let math_constants = dict [
+  ["pi", 3.14159],
+  ["e", 2.71828],
+  ["phi", 1.61803],
+  ["sqrt2", 1.41421]
+] in
+
+# Translation dictionary (string mapping)
+let status_codes = dict [
+  ["200", "OK"],
+  ["201", "Created"],
+  ["400", "Bad Request"],
+  ["401", "Unauthorized"],
+  ["404", "Not Found"],
+  ["500", "Internal Server Error"]
+] in
+
+# Configuration lookup by environment
+let db_configs = dict [
+  ["dev", "localhost:5432"],
+  ["staging", "staging-db.example.com:5432"],
+  ["prod", "prod-db.example.com:5432"]
+] in
+
+# Helper to safely get with default
+let get_or_default = \cache \key \default
+  if dict_has_key cache key then
+    dict_get cache key
+  else
+    default
+in
+
+# Function that uses cache
+let cached_fib = \n
+  let key = to_string n in
+  get_or_default fib_cache key "not cached"
+in
+
+# HTTP status lookup
+let status_message = \code
+  get_or_default status_codes code "Unknown Status"
+in
+
+# Database connection string lookup
+let db_connection = \env
+  get_or_default db_configs env "localhost:5432"
+in
+
+# Generate cache statistics report
+@cache_report.txt {"
+Cache and Lookup Table Examples
+================================
+
+Fibonacci Cache:
+  - Size: {dict_size fib_cache} entries
+  
+  Lookups:
+    fib(5) = {cached_fib 5}
+    fib(10) = {cached_fib 10}
+    fib(15) = {cached_fib 15} (not in cache)
+
+Math Constants Cache:
+  - Total constants: {dict_size math_constants}
+  - π ≈ {dict_get math_constants "pi"}
+  - e ≈ {dict_get math_constants "e"}
+  - φ ≈ {dict_get math_constants "phi"}
+
+HTTP Status Code Translations:
+  - {status_message "200"}
+  - {status_message "404"}
+  - {status_message "500"}
+  - {status_message "999"} (unknown code)
+
+Database Connection Strings:
+  - dev: {db_connection "dev"}
+  - staging: {db_connection "staging"}
+  - prod: {db_connection "prod"}
+  - test: {db_connection "test"} (fallback to default)
+
+Cache Statistics:
+  - Total caches: 4
+  - Total cached items: {(((dict_size fib_cache) + (dict_size math_constants)) + (dict_size status_codes)) + (dict_size db_configs)}
+  - Fib cache size: {dict_size fib_cache}
+  - Status codes: {dict_size status_codes}
+"}

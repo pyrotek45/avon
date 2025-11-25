@@ -1,0 +1,76 @@
+# Data Transformation Pipeline Using Dicts
+# Shows dict as structured data container with transformation functions
+
+# Sample data: list of user records as dicts
+let users = [
+  dict [["id", 1], ["name", "Alice"], ["age", 30], ["role", "admin"]],
+  dict [["id", 2], ["name", "Bob"], ["age", 25], ["role", "user"]],
+  dict [["id", 3], ["name", "Charlie"], ["age", 35], ["role", "user"]],
+  dict [["id", 4], ["name", "Diana"], ["age", 28], ["role", "moderator"]]
+] in
+
+# Transform user by adding a new field
+let add_status = \user 
+  dict_set user "status" "active"
+in
+
+# Filter function: check if user has specific role
+let is_admin = \user 
+  let role = dict_get user "role" in
+  role == "admin"
+in
+
+# Extract specific fields to create a summary dict
+let to_summary = \user 
+  dict [
+    ["name", dict_get user "name"],
+    ["role", dict_get user "role"]
+  ]
+in
+
+# Calculate average age from user list
+let avg_age = \user_list
+  let ages = map (\u dict_get u "age") user_list in
+  let total = fold (\sum \age sum + age) 0 ages in
+  let count = length user_list in
+  total / count
+in
+
+# Pipeline: transform all users with status
+let active_users = map add_status users in
+
+# Get admin summaries
+let admin_summaries = 
+  let admins = filter is_admin active_users in
+  map to_summary admins
+in
+
+# Build analytics dict
+let analytics = dict [
+  ["total_users", length users],
+  ["active_users", length active_users],
+  ["admin_count", length admin_summaries],
+  ["average_age", avg_age users],
+  ["roles", ["admin", "user", "moderator"]]
+] in
+
+# Generate report
+@report.txt {"
+User Analytics Report
+=====================
+
+Total Users: {dict_get analytics "total_users"}
+Active Users: {dict_get analytics "active_users"}
+Admin Count: {dict_get analytics "admin_count"}
+Average Age: {dict_get analytics "average_age"}
+
+Total Roles in System: {length (dict_get analytics "roles")}
+
+Data Pipeline Demonstration:
+- Transformed {length users} user records
+- Filtered admins: {length admin_summaries} found
+- Added 'status' field to all users
+- Calculated average age across dataset
+
+Pipeline Successfully Completed!
+"}
