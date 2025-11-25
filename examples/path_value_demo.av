@@ -1,0 +1,31 @@
+# Path Value Demo - showing @paths as first-class values
+
+# Store a path in a variable
+let my_path = @examples/email_template.txt in
+
+# Use path with readfile
+let content = readfile my_path in
+
+# Create another path with interpolation
+let name = "test" in
+let template_path = @examples/{name}.av in
+
+# Check if template exists
+let exists_result = exists template_path in
+
+# Get basename and dirname of a path
+let base = basename my_path in
+let dir = dirname my_path in
+
+# Output results
+{"
+Path Value Demo Results
+=======================
+
+Content from path: {content}
+
+Template path: {template_path}
+Exists: {exists_result}
+Basename: {base}
+Dirname: {dir}
+"}

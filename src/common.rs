@@ -188,7 +188,12 @@ pub struct EvalError {
 }
 
 impl EvalError {
-    pub fn new(message: impl Into<String>, expected: Option<String>, found: Option<String>, line: usize) -> Self {
+    pub fn new(
+        message: impl Into<String>,
+        expected: Option<String>,
+        found: Option<String>,
+        line: usize,
+    ) -> Self {
         Self {
             message: message.into(),
             expected,
@@ -201,8 +206,17 @@ impl EvalError {
         Self::new(format!("unknown symbol {}", sym.into()), None, None, line)
     }
 
-    pub fn type_mismatch(expected: impl Into<String>, found: impl Into<String>, line: usize) -> Self {
-        Self::new("type mismatch", Some(expected.into()), Some(found.into()), line)
+    pub fn type_mismatch(
+        expected: impl Into<String>,
+        found: impl Into<String>,
+        line: usize,
+    ) -> Self {
+        Self::new(
+            "type mismatch",
+            Some(expected.into()),
+            Some(found.into()),
+            line,
+        )
     }
 
     pub fn pretty(&self, source: &str) -> String {
@@ -225,7 +239,11 @@ impl EvalError {
 impl std::fmt::Display for EvalError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let (Some(exp), Some(found)) = (self.expected.as_ref(), self.found.as_ref()) {
-            write!(f, "{}: expected {}, found {} (line {})", self.message, exp, found, self.line)
+            write!(
+                f,
+                "{}: expected {}, found {} (line {})",
+                self.message, exp, found, self.line
+            )
         } else {
             write!(f, "{} (line {})", self.message, self.line)
         }

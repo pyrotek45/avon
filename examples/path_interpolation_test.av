@@ -1,0 +1,6 @@
+# Path with interpolation test
+
+\name ? "email_template"
+
+let p = @examples/{name}.txt in
+readfile p

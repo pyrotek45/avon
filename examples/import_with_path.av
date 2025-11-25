@@ -1,0 +1,7 @@
+# Example: Using path values with import
+
+# Store the path to import
+let module_path = @./examples/import_target.av in
+
+# Import using the path value
+import module_path

@@ -1,6 +1,6 @@
+use crate::common::{Chunk, EvalError, Token};
 use std::iter::Peekable;
 use std::str::Chars;
-use crate::common::{Chunk, Token, EvalError};
 
 pub fn identifier(next: char, stream: &mut Peekable<Chars<'_>>) -> Token {
     let mut ident = String::new();
@@ -36,7 +36,14 @@ pub fn string(stream: &mut Peekable<Chars<'_>>) -> Result<Token, EvalError> {
                         string.push('\\');
                         string.push(c);
                     }
-                    None => return Err(EvalError::new("unterminated string (backslash at end)", None, None, 0)),
+                    None => {
+                        return Err(EvalError::new(
+                            "unterminated string (backslash at end)",
+                            None,
+                            None,
+                            0,
+                        ))
+                    }
                 }
             }
             Some('"') => break,
@@ -59,7 +66,14 @@ pub fn chunk(stream: &mut Peekable<Chars<'_>>) -> Result<Token, EvalError> {
 
     match stream.next() {
         Some('"') => {}
-        _ => return Err(EvalError::new("expected '\"' after opening braces", None, None, 0)),
+        _ => {
+            return Err(EvalError::new(
+                "expected '\"' after opening braces",
+                None,
+                None,
+                0,
+            ))
+        }
     }
 
     let mut chunks = Vec::<Chunk>::new();
@@ -77,7 +91,7 @@ pub fn chunk(stream: &mut Peekable<Chars<'_>>) -> Result<Token, EvalError> {
                     break;
                 }
             }
-            
+
             // Only close the template if we found all the required braces
             if matched_braces == open_count {
                 if !cur.is_empty() {
@@ -135,7 +149,14 @@ pub fn chunk(stream: &mut Peekable<Chars<'_>>) -> Result<Token, EvalError> {
                                 expr.push(c2);
                             }
                         }
-                        None => return Err(EvalError::new("unexpected EOF inside template interpolation", None, None, 0)),
+                        None => {
+                            return Err(EvalError::new(
+                                "unexpected EOF inside template interpolation",
+                                None,
+                                None,
+                                0,
+                            ))
+                        }
                     }
                 }
                 chunks.push(Chunk::Expr(expr));
@@ -179,7 +200,9 @@ pub fn chunk(stream: &mut Peekable<Chars<'_>>) -> Result<Token, EvalError> {
                 cur.push('}');
                 continue;
             } else {
-                for _ in 0..brace_count { cur.push('}'); }
+                for _ in 0..brace_count {
+                    cur.push('}');
+                }
                 continue;
             }
         }
@@ -187,7 +210,12 @@ pub fn chunk(stream: &mut Peekable<Chars<'_>>) -> Result<Token, EvalError> {
         cur.push(ch);
     }
 
-    Err(EvalError::new("unexpected EOF inside template", None, None, 0))
+    Err(EvalError::new(
+        "unexpected EOF inside template",
+        None,
+        None,
+        0,
+    ))
 }
 
 pub fn path(stream: &mut Peekable<Chars<'_>>) -> Result<Token, EvalError> {
@@ -220,7 +248,14 @@ pub fn path(stream: &mut Peekable<Chars<'_>>) -> Result<Token, EvalError> {
                     let mut expr = String::new();
                     loop {
                         match stream.next() {
-                            None => return Err(EvalError::new("EOF in path interpolation", None, None, 0)),
+                            None => {
+                                return Err(EvalError::new(
+                                    "EOF in path interpolation",
+                                    None,
+                                    None,
+                                    0,
+                                ))
+                            }
                             Some(ch2) => {
                                 if ch2 == '}' {
                                     break;
@@ -332,7 +367,9 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, EvalError> {
             '#' => {
                 while let Some(&c) = stream.peek() {
                     stream.next();
-                    if c == '\n' { break; }
+                    if c == '\n' {
+                        break;
+                    }
                 }
                 continue;
             }

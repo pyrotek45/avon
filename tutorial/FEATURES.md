@@ -173,6 +173,42 @@ local settings = {
 
 See `examples/escape_hatch.av` for comprehensive single and double-brace demonstrations with both interpolation and literal brace sequences.
 
+### Path Values
+Paths are first-class values that can be stored in variables, passed to functions, and interpolated with variables.
+
+**Syntax:** Use `@` prefix to create a path value:
+```avon
+# Store a path in a variable
+let config_path = @config/production.json in
+
+# Use with file operations
+let content = readfile config_path in
+let exists = exists config_path in
+
+# Path interpolation
+let env = "staging" in
+let app = "myapp" in
+let dynamic_path = @config/{env}/{app}.yml in
+
+# Use paths with any file function
+let lines = readlines dynamic_path in
+let base = basename dynamic_path in
+let dir = dirname dynamic_path in
+```
+
+**Benefits:**
+- **Reusability:** Define a path once, use it multiple times
+- **Composition:** Pass paths as function arguments
+- **Type safety:** Paths are distinct from strings
+- **Interpolation:** Dynamic path construction with variables
+
+**Supported Functions:** All file operations accept path values:
+- `readfile`, `readlines`, `import`
+- `fill_template`, `walkdir`
+- `exists`, `basename`, `dirname`
+
+**Examples:** `examples/path_value_demo.av`, `examples/simple_path_test.av`, `examples/path_interpolation_test.av`, `examples/fill_with_path.av`
+
 ### File Templates
 Combine paths with templates for file generation:
 
@@ -181,6 +217,12 @@ Combine paths with templates for file generation:
     environment: prod
     debug: false
 "}
+```
+
+Paths in file templates can also be stored in variables:
+```avon
+let output_file = @/tmp/report.txt in
+output_file {"Generated report content"}
 ```
 
 When deployed, this writes the template content to the specified file.
@@ -245,10 +287,19 @@ When deployed, this writes the template content to the specified file.
 |----------|-------|---------|
 | `readfile` | 1 | Read entire file as string |
 | `readlines` | 1 | Read file lines as list |
+| `fill_template` | 2 | Read file and fill `{placeholders}` with values |
 | `exists` | 1 | Check if file exists |
 | `basename` | 1 | Extract filename from path |
 | `dirname` | 1 | Extract directory from path |
 | `walkdir` | 1 | List all files in directory recursively |
+
+**Example - fill_template:**
+```avon
+# template.txt contains: "Hello, {name}! Email: {email}"
+let subs = [["name", "Alice"], ["email", "alice@example.com"]] in
+fill_template "template.txt" subs
+# Result: "Hello, Alice! Email: alice@example.com"
+```
 
 ### 🌐 HTML Generation
 

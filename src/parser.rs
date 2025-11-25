@@ -1,6 +1,6 @@
+use crate::common::{Ast, Expr, Token};
 use std::iter::Peekable;
 use std::slice::Iter;
-use crate::common::{Token, Expr, Ast};
 
 pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
     match stream.next() {
@@ -94,10 +94,19 @@ pub fn parse_cmp(stream: &mut Peekable<Iter<Token>>) -> Expr {
 
     loop {
         match stream.peek() {
-            Some(Token::DoubleEqual) | Some(Token::NotEqual) | Some(Token::Greater) | Some(Token::Less) | Some(Token::GreaterEqual) | Some(Token::LessEqual) => {
+            Some(Token::DoubleEqual)
+            | Some(Token::NotEqual)
+            | Some(Token::Greater)
+            | Some(Token::Less)
+            | Some(Token::GreaterEqual)
+            | Some(Token::LessEqual) => {
                 let op = stream.next().unwrap().clone();
                 let rhs = parse_term(stream);
-                lhs = Expr::Binary { lhs: Box::new(lhs), op, rhs: Box::new(rhs) };
+                lhs = Expr::Binary {
+                    lhs: Box::new(lhs),
+                    op,
+                    rhs: Box::new(rhs),
+                };
                 continue;
             }
             _ => break,

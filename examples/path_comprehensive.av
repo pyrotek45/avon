@@ -1,0 +1,66 @@
+# Comprehensive Path Value Example
+# This demonstrates that @path syntax creates first-class path values
+# that can be stored in variables, passed to functions, and interpolated
+
+# 1. Store paths in variables
+let config_dir = @examples in
+let template_file = @examples/email_template.txt in
+let test_file = @examples/test.av in
+
+# 2. Use paths with file operations
+let template_content = readfile template_file in
+let test_lines = readlines test_file in
+let template_exists = exists template_file in
+let missing_exists = exists @examples/missing.txt in
+
+# 3. Path manipulation functions
+let file_name = basename template_file in
+let dir_name = dirname template_file in
+
+# 4. Dynamic path construction with interpolation
+let env = "prod" in
+let app_name = "myapp" in
+let config_path = @config/{env}/{app_name}.yml in
+
+# 5. Using paths with fill_template
+let subs = [["name", "Bob"], ["email", "bob@test.com"], ["subject", "Hello"], ["sender", "Team"]] in
+let filled = fill_template template_file subs in
+
+# 6. Multiple file generation with dynamic paths
+let environments = ["dev", "staging", "prod"] in
+let make_config = \e @/tmp/config-{e}.txt {"
+Environment: {e}
+Debug: {if e == "prod" then "false" else "true"}
+"} in
+
+# Generate files and output summary
+let summary = {"
+Path Value Feature Demo
+=======================
+
+1. Stored Path Variables:
+   - config_dir: (path value)
+   - template_file: (path value)
+   - test_file: (path value)
+
+2. File Operations with Paths:
+   - Template exists: {template_exists}
+   - Missing exists: {missing_exists}
+   - Basename: {file_name}
+   - Dirname: {dir_name}
+   - Lines in test.av: {length test_lines}
+
+3. Dynamic Path Construction:
+   - Config path: {config_path}
+
+4. Fill Template Works:
+   Filled template successfully
+
+5. Generating multiple config files...
+"} in
+
+let files = map make_config environments in
+let summary_file = @/tmp/path_summary.txt {"{summary}"} in
+
+# Return both summary and generated configs
+[summary_file] + files

@@ -226,7 +226,7 @@ fi
 # test overwrite protection
 echo "Test: overwrite protection"
 cargo run --quiet -- examples/test.av --deploy alice --root "$root" 2> /tmp/stderr.txt || true
-if grep -q "refusing to overwrite" /tmp/stderr.txt; then
+if grep -q "already exists and was NOT written" /tmp/stderr.txt; then
   echo "OK (refused overwrite)"
 else
   echo "WARN: second deploy did not refuse overwrite (expected message)"; fail=1

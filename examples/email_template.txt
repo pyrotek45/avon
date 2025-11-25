@@ -1,0 +1,8 @@
+Hello, {name}!
+
+Thank you for contacting us. Your message about {subject} has been received.
+
+We will respond to {email} within 24 hours.
+
+Best regards,
+{sender}

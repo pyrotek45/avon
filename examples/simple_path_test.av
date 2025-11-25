@@ -1,0 +1,7 @@
+# Simple path value test
+
+# Store a path in a variable
+let my_path = @examples/email_template.txt in
+
+# Use path with readfile
+readfile my_path

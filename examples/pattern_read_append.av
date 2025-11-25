@@ -1,0 +1,28 @@
+# Demonstration: Simulating Path Mutation with Current Avon
+# Shows what can be done today and limitations
+
+# Example 1: Read and append pattern
+let base_content = "# Configuration File\nversion = 1.0\n" in
+let append_section = "\n# Additional Settings\ndebug = true\n" in
+let final_content = concat base_content append_section in
+
+@/tmp/avon_config.txt {"{final_content}"}
+
+# Example 2: Building content incrementally with let bindings
+let header = "=== Report ===" in
+let body = "Status: OK" in
+let footer = "=== End ===" in
+let full_report = join [header, body, footer] "\n" in
+
+@/tmp/avon_report.txt {"{full_report}"}
+
+# Example 3: Multiple files, where one reads from another
+# (requires two separate Avon runs currently)
+
+# Run 1: Create base file
+# @/tmp/base.txt {"Hello, World!"}
+
+# Run 2: Read and extend it
+# let original = readfile "/tmp/base.txt" in
+# let extended = concat original "\nGoodbye!" in
+# @/tmp/extended.txt {"{extended}"}

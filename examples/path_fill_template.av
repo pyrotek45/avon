@@ -1,0 +1,19 @@
+# Demo: Using Path values with fill_template
+
+# Define template path with interpolation
+let env = "email" in
+let template_path = @examples/{env}_template.txt in
+
+# Define substitutions
+let subs = [
+    ["name", "Alice Smith"],
+    ["subject", "Project Update"],
+    ["email", "alice@example.com"],
+    ["sender", "Support Team"]
+] in
+
+# Use path with fill_template
+let filled = fill_template template_path subs in
+
+# Generate output file with the filled template
+@/tmp/path_demo_output.txt {"{filled}"}

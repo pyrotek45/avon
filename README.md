@@ -71,6 +71,26 @@ Deploy this and get three config files automatically!
 
 ## Core Features
 
+### Path Values
+
+Paths are first-class values in Avon. Use `@` to create a path that can be stored, passed, and interpolated:
+
+```avon
+# Store and reuse paths
+let config_path = @config/production.json in
+let content = readfile config_path in
+
+# Dynamic path construction
+let env = "staging" in
+let app = "myapp" in
+let path = @config/{env}/{app}.yml in
+
+# All file functions accept paths
+exists path
+basename path
+dirname path
+```
+
 ### Template Syntax
 
 Avon templates support interpolation with the `{...}` syntax:
@@ -123,9 +143,17 @@ Or for complex cases, use double-brace templates:
 
 **Lists:** `map`, `filter`, `fold`, `length`
 
-**Files:** `readfile`, `readlines`, `exists`, `basename`, `dirname`
+**Files:** `readfile`, `readlines`, `fill_template`, `exists`, `basename`, `dirname`
 
 **Data:** `import`, `json_parse`
+
+**Template Filling:**
+```avon
+# External file: template.txt contains "Hello, {name}!"
+let subs = [["name", "World"]] in
+fill_template "template.txt" subs
+# Output: "Hello, World!"
+```
 
 **System:** `os` (returns "linux", "macos", or "windows")
 
@@ -249,7 +277,7 @@ scripts/        — Build and test scripts
 
 ## Tested Examples
 
-All examples pass automated tests:
+All 73 examples pass automated tests:
 
 ```
 ✅ site_generator.av
@@ -259,7 +287,10 @@ All examples pass automated tests:
 ✅ neovim_init.av
 ✅ emacs_init.av
 ✅ escape_hatch.av
-... and 15+ more
+✅ path_fill_template.av     — Path values with fill_template
+✅ simple_path_test.av       — Basic path storage and usage
+✅ import_with_path.av       — Import using path values
+... and 60+ more
 ```
 
 ## Design Philosophy

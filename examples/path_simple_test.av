@@ -1,0 +1,3 @@
+let p = @examples/test.av in
+let lines = readlines p in
+length lines

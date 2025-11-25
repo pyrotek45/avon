@@ -1,8 +1,8 @@
+mod cli;
 mod common;
+mod eval;
 mod lexer;
 mod parser;
-mod eval;
-mod cli;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -11,11 +11,11 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
     use crate::common::*;
+    use crate::eval::{apply_function, collect_file_templates, eval, initial_builtins};
     use crate::lexer::tokenize;
     use crate::parser::parse;
-    use crate::eval::{eval, initial_builtins, apply_function, collect_file_templates};
+    use std::collections::HashMap;
     use std::fs;
     use std::io::Write;
 
@@ -68,30 +68,331 @@ mod tests {
     }
 
     #[test]
+    fn test_fill_template_builtin() {
+        use std::io::Write;
+        let dir = std::env::temp_dir();
+        let template_path = dir.join("avon_test_template.txt");
+        
+        // Create a template file with placeholders
+        let mut f = fs::File::create(&template_path).expect("create temp template");
+        write!(f, "Hello, {{name}}! Your email is {{email}}.").expect("write");
+        drop(f);
+
+        // Test fill_template with substitutions
+        let prog = format!(
+            "fill_template \"{}\" [[\"name\", \"Alice\"], [\"email\", \"alice@example.com\"]]",
+            template_path.to_string_lossy()
+        );
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        
+        match v {
+            Value::String(s) => {
+                assert_eq!(s, "Hello, Alice! Your email is alice@example.com.");
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+        
+        let _ = fs::remove_file(template_path);
+    }
+
+    #[test]
+    fn test_path_as_value() {
+        use std::io::Write;
+        let dir = std::env::temp_dir();
+        let file_path = dir.join("avon_test_path.txt");
+        
+        // Create a test file
+        let mut f = fs::File::create(&file_path).expect("create temp file");
+        write!(f, "content-from-path").expect("write");
+        drop(f);
+
+        // Test: store path in variable and use with readfile
+        let prog = format!(
+            "let p = @{} in readfile p",
+            file_path.to_string_lossy()
+        );
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        
+        match v {
+            Value::String(s) => {
+                assert_eq!(s, "content-from-path");
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+        
+        // Test: path with interpolation
+        let dir_str = dir.to_string_lossy().to_string().replace("\\", "/");
+        let prog2 = format!(
+            "let name = \"avon_test_path\" in let p = @{}/{{name}}.txt in readfile p",
+            dir_str
+        );
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        
+        match v2 {
+            Value::String(s) => {
+                assert_eq!(s, "content-from-path");
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+        
+        // Test: path with exists, basename, dirname
+        let prog3 = format!("let p = @{} in exists p", file_path.to_string_lossy());
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        
+        match v3 {
+            Value::Bool(b) => assert!(b),
+            other => panic!("expected bool, got {:?}", other),
+        }
+        
+        let _ = fs::remove_file(file_path);
+    }
+
+    #[test]
+    fn test_path_with_readlines() {
+        use std::io::Write;
+        let dir = std::env::temp_dir();
+        let file_path = dir.join("avon_test_readlines.txt");
+        
+        // Create a multi-line test file
+        let mut f = fs::File::create(&file_path).expect("create temp file");
+        write!(f, "line1\nline2\nline3").expect("write");
+        drop(f);
+
+        // Test: path with readlines
+        let prog = format!(
+            "let p = @{} in readlines p",
+            file_path.to_string_lossy()
+        );
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        
+        match v {
+            Value::List(lines) => {
+                assert_eq!(lines.len(), 3);
+                assert_eq!(lines[0].to_string(&prog), "line1");
+                assert_eq!(lines[1].to_string(&prog), "line2");
+                assert_eq!(lines[2].to_string(&prog), "line3");
+            }
+            other => panic!("expected list, got {:?}", other),
+        }
+        
+        let _ = fs::remove_file(file_path);
+    }
+
+    #[test]
+    fn test_path_with_basename_dirname() {
+        // Test: basename with path value
+        let prog = "let p = @/home/user/config.json in basename p";
+        let tokens = tokenize(prog.to_string()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, prog).expect("eval");
+        
+        match v {
+            Value::String(s) => {
+                assert_eq!(s, "config.json");
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+
+        // Test: dirname with path value
+        let prog2 = "let p = @/home/user/config.json in dirname p";
+        let tokens2 = tokenize(prog2.to_string()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, prog2).expect("eval");
+        
+        match v2 {
+            Value::String(s) => {
+                assert!(s.contains("home") || s.contains("user"));
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_path_with_exists() {
+        use std::io::Write;
+        let dir = std::env::temp_dir();
+        let existing_file = dir.join("avon_test_exists_true.txt");
+        let missing_file = dir.join("avon_test_exists_false_missing.txt");
+        
+        // Create one file
+        let mut f = fs::File::create(&existing_file).expect("create temp file");
+        write!(f, "exists").expect("write");
+        drop(f);
+        
+        // Ensure the other doesn't exist
+        let _ = fs::remove_file(&missing_file);
+
+        // Test: exists returns true for existing file
+        let prog = format!(
+            "let p = @{} in exists p",
+            existing_file.to_string_lossy()
+        );
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        
+        match v {
+            Value::Bool(b) => assert!(b, "expected true for existing file"),
+            other => panic!("expected bool, got {:?}", other),
+        }
+
+        // Test: exists returns false for missing file
+        let prog2 = format!(
+            "let p = @{} in exists p",
+            missing_file.to_string_lossy()
+        );
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        
+        match v2 {
+            Value::Bool(b) => assert!(!b, "expected false for missing file"),
+            other => panic!("expected bool, got {:?}", other),
+        }
+        
+        let _ = fs::remove_file(existing_file);
+    }
+
+    #[test]
+    fn test_path_with_fill_template() {
+        use std::io::Write;
+        let dir = std::env::temp_dir();
+        let template_path = dir.join("avon_test_fill_path.txt");
+        
+        // Create a template with placeholders
+        let mut f = fs::File::create(&template_path).expect("create temp file");
+        write!(f, "Hello {{name}}, you are {{age}} years old.").expect("write");
+        drop(f);
+
+        // Test: fill_template with path value
+        let prog = format!(
+            "let p = @{} in fill_template p [[\"name\", \"Bob\"], [\"age\", \"25\"]]",
+            template_path.to_string_lossy()
+        );
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        
+        match v {
+            Value::String(s) => {
+                assert_eq!(s, "Hello Bob, you are 25 years old.");
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+        
+        let _ = fs::remove_file(template_path);
+    }
+
+    #[test]
+    fn test_path_with_import() {
+        use std::io::Write;
+        let dir = std::env::temp_dir();
+        let module_path = dir.join("avon_test_import_module.av");
+        
+        // Create a module file that returns a value
+        let mut f = fs::File::create(&module_path).expect("create temp file");
+        write!(f, "[\"imported\", \"data\"]").expect("write");
+        drop(f);
+
+        // Test: import with path value
+        let prog = format!(
+            "let p = @{} in import p",
+            module_path.to_string_lossy()
+        );
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        
+        match v {
+            Value::List(items) => {
+                assert_eq!(items.len(), 2);
+                assert_eq!(items[0].to_string(&prog), "imported");
+                assert_eq!(items[1].to_string(&prog), "data");
+            }
+            other => panic!("expected list, got {:?}", other),
+        }
+        
+        let _ = fs::remove_file(module_path);
+    }
+
+    #[test]
+    fn test_path_interpolation_multiple_vars() {
+        use std::io::Write;
+        let dir = std::env::temp_dir();
+        let dir_str = dir.to_string_lossy().to_string().replace("\\", "/");
+        
+        // Create a test file with specific name pattern
+        let file_path = dir.join("config_prod_app.json");
+        let mut f = fs::File::create(&file_path).expect("create temp file");
+        write!(f, "{{\"env\":\"production\"}}").expect("write");
+        drop(f);
+
+        // Test: path with multiple variable interpolations
+        let prog = format!(
+            "let env = \"prod\" in let name = \"app\" in let p = @{}/config_{{env}}_{{name}}.json in readfile p",
+            dir_str
+        );
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        
+        match v {
+            Value::String(s) => {
+                assert!(s.contains("production"));
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+        
+        let _ = fs::remove_file(file_path);
+    }
+
+    #[test]
     fn test_examples_map_fold() {
         // map example
-    let data = fs::read_to_string("examples/map_example.av").expect("read example");
+        let data = fs::read_to_string("examples/map_example.av").expect("read example");
         let tokens = tokenize(data.clone()).expect("tokenize");
-    let ast = parse(tokens);
+        let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &data).expect("eval");
         assert_eq!(v.to_string(&data), "[a-, b-, c-]");
 
         // fold example
-    let data2 = fs::read_to_string("examples/fold_example.av").expect("read example");
+        let data2 = fs::read_to_string("examples/fold_example.av").expect("read example");
         let tokens2 = tokenize(data2.clone()).expect("tokenize");
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
         let v2 = eval(ast2.program, &mut symbols2, &data2).expect("eval");
         // fold result should be a string concatenation
-        assert!(v2.to_string(&data2).contains("a") );
+        assert!(v2.to_string(&data2).contains("a"));
     }
 
     #[test]
     fn test_let_cascade_and_filetemplate_collection() {
-    let data = fs::read_to_string("examples/let_cascade.av").expect("read example");
-    let tokens = tokenize(data.clone()).expect("tokenize");
-    let ast = parse(tokens);
+        let data = fs::read_to_string("examples/let_cascade.av").expect("read example");
+        let tokens = tokenize(data.clone()).expect("tokenize");
+        let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &data).expect("eval");
         // collect_file_templates should accept a single FileTemplate from nested lets
@@ -127,8 +428,8 @@ mod tests {
 
     #[test]
     fn test_deploy_uses_defaults() {
-    // examples/deploy_list.av has a default for `name` => should produce two filetemplates when evaluated and defaults applied
-    let data = fs::read_to_string("examples/deploy_list.av").expect("read example");
+        // examples/deploy_list.av has a default for `name` => should produce two filetemplates when evaluated and defaults applied
+        let data = fs::read_to_string("examples/deploy_list.av").expect("read example");
         let tokens = tokenize(data.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -137,7 +438,9 @@ mod tests {
         // emulate the deploy application loop: apply defaults when present
         loop {
             match &v {
-                Value::Function { ident: _, default, .. } => {
+                Value::Function {
+                    ident: _, default, ..
+                } => {
                     if let Some(def) = default {
                         v = apply_function(&v, (**def).clone(), &data).expect("apply default");
                         continue;
@@ -187,7 +490,7 @@ mod tests {
         // json_parse object (currently stringified)
         let json_obj_path = dir.join("avon_test_json_obj.json");
         let mut jo = fs::File::create(&json_obj_path).expect("create json obj");
-    write!(jo, "{}", r#"{"k": "v"}"#).expect("write json obj");
+        write!(jo, "{}", r#"{"k": "v"}"#).expect("write json obj");
         let progo = format!("json_parse \"{}\"", json_obj_path.to_string_lossy());
         let tokens = tokenize(progo.clone()).expect("tokenize");
         let ast = parse(tokens);
@@ -248,24 +551,27 @@ mod tests {
         let v = eval(ast.program, &mut symbols, &progf).expect("eval");
         assert_eq!(v.to_string(&progf), "[x]");
 
-    // fold: concatenate
-    let progd = "fold (\\a \\b concat a b) \"\" [\"a\",\"b\"]".to_string();
+        // fold: concatenate
+        let progd = "fold (\\a \\b concat a b) \"\" [\"a\",\"b\"]".to_string();
         let tokens = tokenize(progd.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &progd).expect("eval");
         assert!(v.to_string(&progd).contains("ab"));
 
-    // template list interpolation
-    // Harder to craft template tokens directly; instead use an example file that contains template interpolation
-    let data = fs::read_to_string("examples/list_insert.av").expect("read example");
+        // template list interpolation
+        // Harder to craft template tokens directly; instead use an example file that contains template interpolation
+        let data = fs::read_to_string("examples/list_insert.av").expect("read example");
         let tokens = tokenize(data.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &data).expect("eval");
         // result should be a FileTemplate (from examples) or at least a Template
         match v {
-            Value::FileTemplate { .. } | Value::Template(_, _) | Value::List(_) | Value::Function { .. } => {}
+            Value::FileTemplate { .. }
+            | Value::Template(_, _)
+            | Value::List(_)
+            | Value::Function { .. } => {}
             other => panic!("unexpected template eval result: {:?}", other),
         }
     }
@@ -273,7 +579,9 @@ mod tests {
     #[test]
     fn test_default_params_apply_on_deploy_emulation() {
         // Function with defaults for name and age; emulated deploy should apply defaults
-        let prog = r#"\name ? "alice" \age ? "30" @/tmp/{name}_{age}.txt {"Name: {name}\nAge: {age}\n"}"#.to_string();
+        let prog =
+            r#"\name ? "alice" \age ? "30" @/tmp/{name}_{age}.txt {"Name: {name}\nAge: {age}\n"}"#
+                .to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -282,7 +590,9 @@ mod tests {
         // emulate deploy application loop: apply defaults when present
         loop {
             match &v {
-                Value::Function { ident: _, default, .. } => {
+                Value::Function {
+                    ident: _, default, ..
+                } => {
                     if let Some(def) = default {
                         v = apply_function(&v, (**def).clone(), &prog).expect("apply default");
                         continue;
@@ -301,7 +611,7 @@ mod tests {
     #[test]
     fn test_named_deploy_arg_binds_by_parameter_name() {
         // Function expecting named params; simulate supplying a named arg during deploy
-    let prog = r#"\name \age ? "99" @/tmp/{name}_{age}.txt {"N:{name} A:{age}"}"#.to_string();
+        let prog = r#"\name \age ? "99" @/tmp/{name}_{age}.txt {"N:{name} A:{age}"}"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -316,7 +626,8 @@ mod tests {
             match &v {
                 Value::Function { ident, default, .. } => {
                     if let Some(named_val) = deploy_named.remove(ident) {
-                        v = apply_function(&v, Value::String(named_val), &prog).expect("apply named");
+                        v = apply_function(&v, Value::String(named_val), &prog)
+                            .expect("apply named");
                         continue;
                     } else if let Some(def) = default {
                         // if default present (not in this test), it would be applied
@@ -332,13 +643,17 @@ mod tests {
 
         let files = collect_file_templates(&v, &prog).expect("collect");
         // ensure the produced path contains the supplied named value
-        assert!(files.iter().any(|(p, _)| p.contains("bob")), "expected output path to contain 'bob'");
+        assert!(
+            files.iter().any(|(p, _)| p.contains("bob")),
+            "expected output path to contain 'bob'"
+        );
     }
 
     #[test]
     fn test_dedent_removes_common_indentation_for_templates() {
         // create a template with leading indentation in the source; dedent should remove it
-        let prog = "@/tmp/dedent_test.txt {\"\n        line1\n            line2\n        \"}".to_string();
+        let prog =
+            "@/tmp/dedent_test.txt {\"\n        line1\n            line2\n        \"}".to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -386,7 +701,8 @@ mod tests {
     #[test]
     fn test_dedent_preserves_relative_indentation() {
         // nested indentation: level1 (4 spaces), level2 (8 spaces)
-        let prog = "@/tmp/dedent_rel.txt {\"\n    level1\n        level2\n    level1b\n\"}".to_string();
+        let prog =
+            "@/tmp/dedent_rel.txt {\"\n    level1\n        level2\n    level1b\n\"}".to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -397,11 +713,18 @@ mod tests {
         let mut found_level1 = false;
         let mut found_level2 = false;
         for line in content.lines() {
-            if line == "level1" { found_level1 = true; }
-            if line == "    level2" { found_level2 = true; }
+            if line == "level1" {
+                found_level1 = true;
+            }
+            if line == "    level2" {
+                found_level2 = true;
+            }
         }
         assert!(found_level1, "level1 missing");
-        assert!(found_level2, "level2 should be indented 4 spaces relative to dedented base");
+        assert!(
+            found_level2,
+            "level2 should be indented 4 spaces relative to dedented base"
+        );
     }
 
     #[test]
@@ -420,7 +743,10 @@ mod tests {
         assert!(lines.len() >= 3);
         assert_eq!(lines[0], "foo");
         // the 'bar' line should start with one tab preserved
-        assert!(lines[1].starts_with("\t"), "bar should preserve its extra tab");
+        assert!(
+            lines[1].starts_with("\t"),
+            "bar should preserve its extra tab"
+        );
     }
 
     #[test]
@@ -641,7 +967,10 @@ mod tests {
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        assert_eq!(v.to_string(&prog), "script: func(){ return { key: 'val' }; }");
+        assert_eq!(
+            v.to_string(&prog),
+            "script: func(){ return { key: 'val' }; }"
+        );
     }
 
     #[test]
@@ -652,7 +981,10 @@ mod tests {
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        assert_eq!(v.to_string(&prog), r#"{ "outer": { "inner": { "key": "value" } } }"#);
+        assert_eq!(
+            v.to_string(&prog),
+            r#"{ "outer": { "inner": { "key": "value" } } }"#
+        );
     }
 
     #[test]
@@ -686,7 +1018,10 @@ mod tests {
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         // {{->{ {{{->{{ {{{{->{{{ {{{{{->{{{{
-        assert_eq!(v.to_string(&prog), "one: {, two: {{, three: {{{, four: {{{{");
+        assert_eq!(
+            v.to_string(&prog),
+            "one: {, two: {{, three: {{{, four: {{{{"
+        );
     }
 
     #[test]
@@ -1182,7 +1517,10 @@ mod tests {
             (r#"if is_empty "" then "yes" else "no""#, "yes"),
             (r#"if is_empty [] then "yes" else "no""#, "yes"),
             (r#"if contains "hello" "ell" then "yes" else "no""#, "yes"),
-            (r#"if starts_with "hello" "hel" then "yes" else "no""#, "yes"),
+            (
+                r#"if starts_with "hello" "hel" then "yes" else "no""#,
+                "yes",
+            ),
             (r#"if ends_with "hello" "lo" then "yes" else "no""#, "yes"),
         ];
 
@@ -1207,7 +1545,8 @@ mod tests {
         assert_eq!(v.to_string(&prog), " worldhello");
 
         // Test currying with replace
-        let prog2 = r#"let replace_world = replace "hello world" "world" in replace_world "avon""#.to_string();
+        let prog2 = r#"let replace_world = replace "hello world" "world" in replace_world "avon""#
+            .to_string();
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
@@ -1239,5 +1578,70 @@ mod tests {
             other => panic!("expected list, got {:?}", other),
         }
     }
-    
+
+    // test that test all builtin functions work without error
+    #[test]
+    fn test_all_builtins_no_error_and_correct_output() {
+        let builtins = vec![
+            ("is_digit \"123\"", "true"),
+            ("is_alpha \"abc\"", "true"),
+            ("is_alphanumeric \"abc123\"", "true"),
+            ("is_whitespace \" \\t\\n\"", "true"),
+            ("is_uppercase \"HELLO\"", "true"),
+            ("is_lowercase \"hello\"", "true"),
+            ("is_empty \"\"", "true"),
+            ("concat \"hello\" \" world\"", "hello world"),
+            ("upper \"hello\"", "HELLO"),
+            ("lower \"WORLD\"", "world"),
+            ("trim \"  hello  \"", "hello"),
+            ("split \"a,b,c\" \",\"", "[a, b, c]"),
+            ("join [\"x\", \"y\", \"z\"] \"-\"", "x-y-z"),
+            ("replace \"hello world\" \"world\" \"avon\"", "hello avon"),
+            ("contains \"hello world\" \"wor\"", "true"),
+            ("starts_with \"hello\" \"hel\"", "true"),
+            ("ends_with \"hello\" \"lo\"", "true"),
+            ("length \"hello\"", "5"),
+            ("repeat \"ab\" 3", "ababab"),
+            ("pad_left \"hi\" 5 \" \"", "   hi"),
+            ("pad_right \"hi\" 5 \" \"", "hi   "),
+            ("indent \"line1\\nline2\" 2", "  line1\n  line2"),
+            ("map (\\x concat x \"!\") [\"a\", \"b\", \"c\"]", "[a!, b!, c!]"),
+            ("filter (\\x x > 5) [3, 7, 2, 9, 4]", "[7, 9]"),
+            ("fold (\\acc \\x acc + x) 0 [1, 2, 3, 4]", "10"),
+            ("flatmap (\\x [x, x]) [1, 2, 3]", "[1, 1, 2, 2, 3, 3]"),
+            ("flatten [[1, 2], [3, 4], [5]]", "[1, 2, 3, 4, 5]"),
+            ("length [1, 2, 3, 4, 5]", "5"),
+            ("basename \"/path/to/file.txt\"", "file.txt"),
+            ("dirname \"/path/to/file.txt\"", "/path/to"),
+            ("html_escape \"<div>\"", "&lt;div&gt;"),
+            ("html_tag \"div\" \"Hello\"", "<div>Hello</div>"),
+            ("html_attr \"class\" \"btn\"", "class=\"btn\""),
+            ("os", "linux|macos|windows"), // OS-specific output
+        ];
+        for (prog_str, expected_output) in builtins {
+            let prog = prog_str.to_string();
+            let tokens = tokenize(prog.clone()).expect("tokenize");
+            let ast = parse(tokens);
+            let mut symbols = initial_builtins();
+            let r = eval(ast.program, &mut symbols, &prog);
+            assert!(r.is_ok(), "builtin '{}' failed to eval", prog_str);
+            let output = r.unwrap().to_string(&prog);
+            if expected_output.contains('|') {
+                // Handle OS-specific output
+                let options: Vec<&str> = expected_output.split('|').collect();
+                assert!(
+                    options.contains(&output.as_str()),
+                    "builtin '{}' produced unexpected output '{}'",
+                    prog_str,
+                    output
+                );
+            } else {
+                assert_eq!(
+                    output, expected_output,
+                    "builtin '{}' produced unexpected output '{}'",
+                    prog_str, output
+                );
+            }
+        }
+    }
 }

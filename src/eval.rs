@@ -1,76 +1,227 @@
-use std::collections::HashMap;
-use crate::common::{Expr, Value, Token, Chunk, Number, EvalError};
+use crate::common::{Chunk, EvalError, Expr, Number, Token, Value};
 use crate::lexer::tokenize;
 use crate::parser::parse;
+use std::collections::HashMap;
 
 pub fn initial_builtins() -> HashMap<String, Value> {
     let mut m = HashMap::new();
     // Core operations
-    m.insert("concat".to_string(), Value::Builtin("concat".to_string(), Vec::new()));
-    m.insert("map".to_string(), Value::Builtin("map".to_string(), Vec::new()));
-    m.insert("filter".to_string(), Value::Builtin("filter".to_string(), Vec::new()));
-    m.insert("fold".to_string(), Value::Builtin("fold".to_string(), Vec::new()));
-    m.insert("import".to_string(), Value::Builtin("import".to_string(), Vec::new()));
-    
+    m.insert(
+        "concat".to_string(),
+        Value::Builtin("concat".to_string(), Vec::new()),
+    );
+    m.insert(
+        "map".to_string(),
+        Value::Builtin("map".to_string(), Vec::new()),
+    );
+    m.insert(
+        "filter".to_string(),
+        Value::Builtin("filter".to_string(), Vec::new()),
+    );
+    m.insert(
+        "fold".to_string(),
+        Value::Builtin("fold".to_string(), Vec::new()),
+    );
+    m.insert(
+        "import".to_string(),
+        Value::Builtin("import".to_string(), Vec::new()),
+    );
+
     // File operations
-    m.insert("readfile".to_string(), Value::Builtin("readfile".to_string(), Vec::new()));
-    m.insert("exists".to_string(), Value::Builtin("exists".to_string(), Vec::new()));
-    m.insert("basename".to_string(), Value::Builtin("basename".to_string(), Vec::new()));
-    m.insert("dirname".to_string(), Value::Builtin("dirname".to_string(), Vec::new()));
-    m.insert("readlines".to_string(), Value::Builtin("readlines".to_string(), Vec::new()));
-    m.insert("walkdir".to_string(), Value::Builtin("walkdir".to_string(), Vec::new()));
-    m.insert("json_parse".to_string(), Value::Builtin("json_parse".to_string(), Vec::new()));
-    
+    m.insert(
+        "readfile".to_string(),
+        Value::Builtin("readfile".to_string(), Vec::new()),
+    );
+    m.insert(
+        "exists".to_string(),
+        Value::Builtin("exists".to_string(), Vec::new()),
+    );
+    m.insert(
+        "basename".to_string(),
+        Value::Builtin("basename".to_string(), Vec::new()),
+    );
+    m.insert(
+        "dirname".to_string(),
+        Value::Builtin("dirname".to_string(), Vec::new()),
+    );
+    m.insert(
+        "readlines".to_string(),
+        Value::Builtin("readlines".to_string(), Vec::new()),
+    );
+    m.insert(
+        "walkdir".to_string(),
+        Value::Builtin("walkdir".to_string(), Vec::new()),
+    );
+    m.insert(
+        "json_parse".to_string(),
+        Value::Builtin("json_parse".to_string(), Vec::new()),
+    );
+    m.insert(
+        "fill_template".to_string(),
+        Value::Builtin("fill_template".to_string(), Vec::new()),
+    );
+
     // String operations
-    m.insert("upper".to_string(), Value::Builtin("upper".to_string(), Vec::new()));
-    m.insert("lower".to_string(), Value::Builtin("lower".to_string(), Vec::new()));
-    m.insert("trim".to_string(), Value::Builtin("trim".to_string(), Vec::new()));
-    m.insert("split".to_string(), Value::Builtin("split".to_string(), Vec::new()));
-    m.insert("join".to_string(), Value::Builtin("join".to_string(), Vec::new()));
-    m.insert("replace".to_string(), Value::Builtin("replace".to_string(), Vec::new()));
-    m.insert("contains".to_string(), Value::Builtin("contains".to_string(), Vec::new()));
-    m.insert("starts_with".to_string(), Value::Builtin("starts_with".to_string(), Vec::new()));
-    m.insert("ends_with".to_string(), Value::Builtin("ends_with".to_string(), Vec::new()));
-    m.insert("length".to_string(), Value::Builtin("length".to_string(), Vec::new()));
-    m.insert("repeat".to_string(), Value::Builtin("repeat".to_string(), Vec::new()));
-    m.insert("pad_left".to_string(), Value::Builtin("pad_left".to_string(), Vec::new()));
-    m.insert("pad_right".to_string(), Value::Builtin("pad_right".to_string(), Vec::new()));
-    m.insert("indent".to_string(), Value::Builtin("indent".to_string(), Vec::new()));
-    
+    m.insert(
+        "upper".to_string(),
+        Value::Builtin("upper".to_string(), Vec::new()),
+    );
+    m.insert(
+        "lower".to_string(),
+        Value::Builtin("lower".to_string(), Vec::new()),
+    );
+    m.insert(
+        "trim".to_string(),
+        Value::Builtin("trim".to_string(), Vec::new()),
+    );
+    m.insert(
+        "split".to_string(),
+        Value::Builtin("split".to_string(), Vec::new()),
+    );
+    m.insert(
+        "join".to_string(),
+        Value::Builtin("join".to_string(), Vec::new()),
+    );
+    m.insert(
+        "replace".to_string(),
+        Value::Builtin("replace".to_string(), Vec::new()),
+    );
+    m.insert(
+        "contains".to_string(),
+        Value::Builtin("contains".to_string(), Vec::new()),
+    );
+    m.insert(
+        "starts_with".to_string(),
+        Value::Builtin("starts_with".to_string(), Vec::new()),
+    );
+    m.insert(
+        "ends_with".to_string(),
+        Value::Builtin("ends_with".to_string(), Vec::new()),
+    );
+    m.insert(
+        "length".to_string(),
+        Value::Builtin("length".to_string(), Vec::new()),
+    );
+    m.insert(
+        "repeat".to_string(),
+        Value::Builtin("repeat".to_string(), Vec::new()),
+    );
+    m.insert(
+        "pad_left".to_string(),
+        Value::Builtin("pad_left".to_string(), Vec::new()),
+    );
+    m.insert(
+        "pad_right".to_string(),
+        Value::Builtin("pad_right".to_string(), Vec::new()),
+    );
+    m.insert(
+        "indent".to_string(),
+        Value::Builtin("indent".to_string(), Vec::new()),
+    );
+
     // String predicates
-    m.insert("is_digit".to_string(), Value::Builtin("is_digit".to_string(), Vec::new()));
-    m.insert("is_alpha".to_string(), Value::Builtin("is_alpha".to_string(), Vec::new()));
-    m.insert("is_alphanumeric".to_string(), Value::Builtin("is_alphanumeric".to_string(), Vec::new()));
-    m.insert("is_whitespace".to_string(), Value::Builtin("is_whitespace".to_string(), Vec::new()));
-    m.insert("is_uppercase".to_string(), Value::Builtin("is_uppercase".to_string(), Vec::new()));
-    m.insert("is_lowercase".to_string(), Value::Builtin("is_lowercase".to_string(), Vec::new()));
-    m.insert("is_empty".to_string(), Value::Builtin("is_empty".to_string(), Vec::new()));
-    
+    m.insert(
+        "is_digit".to_string(),
+        Value::Builtin("is_digit".to_string(), Vec::new()),
+    );
+    m.insert(
+        "is_alpha".to_string(),
+        Value::Builtin("is_alpha".to_string(), Vec::new()),
+    );
+    m.insert(
+        "is_alphanumeric".to_string(),
+        Value::Builtin("is_alphanumeric".to_string(), Vec::new()),
+    );
+    m.insert(
+        "is_whitespace".to_string(),
+        Value::Builtin("is_whitespace".to_string(), Vec::new()),
+    );
+    m.insert(
+        "is_uppercase".to_string(),
+        Value::Builtin("is_uppercase".to_string(), Vec::new()),
+    );
+    m.insert(
+        "is_lowercase".to_string(),
+        Value::Builtin("is_lowercase".to_string(), Vec::new()),
+    );
+    m.insert(
+        "is_empty".to_string(),
+        Value::Builtin("is_empty".to_string(), Vec::new()),
+    );
+
     // Type conversion/casting
-    m.insert("to_string".to_string(), Value::Builtin("to_string".to_string(), Vec::new()));
-    m.insert("to_int".to_string(), Value::Builtin("to_int".to_string(), Vec::new()));
-    m.insert("to_float".to_string(), Value::Builtin("to_float".to_string(), Vec::new()));
-    m.insert("to_bool".to_string(), Value::Builtin("to_bool".to_string(), Vec::new()));
-    m.insert("format_int".to_string(), Value::Builtin("format_int".to_string(), Vec::new()));
-    m.insert("format_float".to_string(), Value::Builtin("format_float".to_string(), Vec::new()));
-    
+    m.insert(
+        "to_string".to_string(),
+        Value::Builtin("to_string".to_string(), Vec::new()),
+    );
+    m.insert(
+        "to_int".to_string(),
+        Value::Builtin("to_int".to_string(), Vec::new()),
+    );
+    m.insert(
+        "to_float".to_string(),
+        Value::Builtin("to_float".to_string(), Vec::new()),
+    );
+    m.insert(
+        "to_bool".to_string(),
+        Value::Builtin("to_bool".to_string(), Vec::new()),
+    );
+    m.insert(
+        "format_int".to_string(),
+        Value::Builtin("format_int".to_string(), Vec::new()),
+    );
+    m.insert(
+        "format_float".to_string(),
+        Value::Builtin("format_float".to_string(), Vec::new()),
+    );
+
     // List operations (advanced)
-    m.insert("flatmap".to_string(), Value::Builtin("flatmap".to_string(), Vec::new()));
-    m.insert("flatten".to_string(), Value::Builtin("flatten".to_string(), Vec::new()));
-    
+    m.insert(
+        "flatmap".to_string(),
+        Value::Builtin("flatmap".to_string(), Vec::new()),
+    );
+    m.insert(
+        "flatten".to_string(),
+        Value::Builtin("flatten".to_string(), Vec::new()),
+    );
+
     // HTML helpers
-    m.insert("html_escape".to_string(), Value::Builtin("html_escape".to_string(), Vec::new()));
-    m.insert("html_tag".to_string(), Value::Builtin("html_tag".to_string(), Vec::new()));
-    m.insert("html_attr".to_string(), Value::Builtin("html_attr".to_string(), Vec::new()));
-    
+    m.insert(
+        "html_escape".to_string(),
+        Value::Builtin("html_escape".to_string(), Vec::new()),
+    );
+    m.insert(
+        "html_tag".to_string(),
+        Value::Builtin("html_tag".to_string(), Vec::new()),
+    );
+    m.insert(
+        "html_attr".to_string(),
+        Value::Builtin("html_attr".to_string(), Vec::new()),
+    );
+
     // Markdown helpers
-    m.insert("md_heading".to_string(), Value::Builtin("md_heading".to_string(), Vec::new()));
-    m.insert("md_link".to_string(), Value::Builtin("md_link".to_string(), Vec::new()));
-    m.insert("md_code".to_string(), Value::Builtin("md_code".to_string(), Vec::new()));
-    m.insert("md_list".to_string(), Value::Builtin("md_list".to_string(), Vec::new()));
-    
+    m.insert(
+        "md_heading".to_string(),
+        Value::Builtin("md_heading".to_string(), Vec::new()),
+    );
+    m.insert(
+        "md_link".to_string(),
+        Value::Builtin("md_link".to_string(), Vec::new()),
+    );
+    m.insert(
+        "md_code".to_string(),
+        Value::Builtin("md_code".to_string(), Vec::new()),
+    );
+    m.insert(
+        "md_list".to_string(),
+        Value::Builtin("md_list".to_string(), Vec::new()),
+    );
+
     // System
-    m.insert("os".to_string(), Value::String(std::env::consts::OS.to_string()));
+    m.insert(
+        "os".to_string(),
+        Value::String(std::env::consts::OS.to_string()),
+    );
     m
 }
 
@@ -83,15 +234,21 @@ impl Value {
             Value::Number(Number::Float(v)) => v.to_string(),
             Value::String(s) => s.clone(),
             Value::Template(chunks, symbols) => {
-                let raw = render_chunks_to_string(chunks, symbols, source).unwrap_or_else(|e| format!("<eval error: {}>", e));
+                let raw = render_chunks_to_string(chunks, symbols, source)
+                    .unwrap_or_else(|e| format!("<eval error: {}>", e));
                 dedent(&raw)
             }
             Value::Path(chunks, symbols) => {
-                let raw = render_chunks_to_string(chunks, symbols, source).unwrap_or_else(|e| format!("<eval error: {}>", e));
+                let raw = render_chunks_to_string(chunks, symbols, source)
+                    .unwrap_or_else(|e| format!("<eval error: {}>", e));
                 dedent(&raw)
             }
-            Value::FileTemplate { path: _p, template: t } => {
-                let raw = render_chunks_to_string(&t.0, &t.1, source).unwrap_or_else(|e| format!("<eval error: {}>", e));
+            Value::FileTemplate {
+                path: _p,
+                template: t,
+            } => {
+                let raw = render_chunks_to_string(&t.0, &t.1, source)
+                    .unwrap_or_else(|e| format!("<eval error: {}>", e));
                 dedent(&raw)
             }
             Value::List(items) => {
@@ -101,6 +258,21 @@ impl Value {
             Value::Function { .. } => "<function>".to_string(),
             Value::Builtin(name, _collected) => format!("<builtin:{}>", name),
         }
+    }
+}
+
+// Helper function to extract a file path from either a String or Path value
+pub fn value_to_path_string(val: &Value, source: &str) -> Result<String, EvalError> {
+    match val {
+        Value::String(s) => Ok(s.clone()),
+        Value::Path(chunks, symbols) => {
+            render_chunks_to_string(chunks, symbols, source)
+        }
+        _ => Err(EvalError::type_mismatch(
+            "string or path",
+            val.to_string(source),
+            0,
+        ))
     }
 }
 
@@ -120,9 +292,13 @@ pub fn render_chunks_to_string(
                 let v = eval(ast.program, &mut env, source)?;
                 match v {
                     Value::List(ref items) => {
-                        let items_str: Vec<String> = items.iter().map(|it| it.to_string(source)).collect();
+                        let items_str: Vec<String> =
+                            items.iter().map(|it| it.to_string(source)).collect();
                         let indent = out.rsplit('\n').next().unwrap_or("");
-                        let indent_prefix: String = indent.chars().take_while(|c| *c == ' ' || *c == '\t').collect();
+                        let indent_prefix: String = indent
+                            .chars()
+                            .take_while(|c| *c == ' ' || *c == '\t')
+                            .collect();
 
                         let mut first_item = true;
                         for item_s in items_str.iter() {
@@ -188,7 +364,11 @@ pub fn find_line_for_symbol(sym: &str, source: &str) -> usize {
     0
 }
 
-pub fn eval(expr: Expr, symbols: &mut HashMap<String, Value>, source: &str) -> Result<Value, EvalError> {
+pub fn eval(
+    expr: Expr,
+    symbols: &mut HashMap<String, Value>,
+    source: &str,
+) -> Result<Value, EvalError> {
     match expr {
         Expr::Number(value) => Ok(Value::Number(value)),
         Expr::String(value) => Ok(Value::String(value)),
@@ -197,30 +377,44 @@ pub fn eval(expr: Expr, symbols: &mut HashMap<String, Value>, source: &str) -> R
             let r_eval = eval(*rhs.clone(), symbols, source)?;
 
             match op {
-                Token::Add => {
-                    match (l_eval.clone(), r_eval.clone()) {
-                        (Value::Number(ln), Value::Number(rn)) => Ok(Value::Number(ln.add(rn))),
-                        (Value::String(ls), Value::String(rs)) => {
-                            let mut out = ls.clone();
-                            out.push_str(&rs);
-                            Ok(Value::String(out))
-                        }
-                        (Value::List(mut la), Value::List(lb)) => {
-                            la.extend(lb.into_iter());
-                            Ok(Value::List(la))
-                        }
-                        (a, b) => Err(EvalError::type_mismatch("number/string/list", format!("{}, {}", a.to_string(source), b.to_string(source)), find_line_for_symbol("", source))),
+                Token::Add => match (l_eval.clone(), r_eval.clone()) {
+                    (Value::Number(ln), Value::Number(rn)) => Ok(Value::Number(ln.add(rn))),
+                    (Value::String(ls), Value::String(rs)) => {
+                        let mut out = ls.clone();
+                        out.push_str(&rs);
+                        Ok(Value::String(out))
                     }
-                }
+                    (Value::List(mut la), Value::List(lb)) => {
+                        la.extend(lb.into_iter());
+                        Ok(Value::List(la))
+                    }
+                    (a, b) => Err(EvalError::type_mismatch(
+                        "number/string/list",
+                        format!("{}, {}", a.to_string(source), b.to_string(source)),
+                        find_line_for_symbol("", source),
+                    )),
+                },
                 Token::Mul | Token::Div | Token::Sub => {
                     let lnumber = match l_eval {
                         Value::Number(n) => n,
-                        other => return Err(EvalError::type_mismatch("number", other.to_string(source), find_line_for_symbol("", source))),
+                        other => {
+                            return Err(EvalError::type_mismatch(
+                                "number",
+                                other.to_string(source),
+                                find_line_for_symbol("", source),
+                            ))
+                        }
                     };
 
                     let rnumber = match r_eval {
                         Value::Number(n) => n,
-                        other => return Err(EvalError::type_mismatch("number", other.to_string(source), find_line_for_symbol("", source))),
+                        other => {
+                            return Err(EvalError::type_mismatch(
+                                "number",
+                                other.to_string(source),
+                                find_line_for_symbol("", source),
+                            ))
+                        }
                     };
 
                     let res = match op {
@@ -231,11 +425,22 @@ pub fn eval(expr: Expr, symbols: &mut HashMap<String, Value>, source: &str) -> R
                     };
                     Ok(res)
                 }
-                Token::DoubleEqual | Token::NotEqual | Token::Greater | Token::Less | Token::GreaterEqual | Token::LessEqual => {
+                Token::DoubleEqual
+                | Token::NotEqual
+                | Token::Greater
+                | Token::Less
+                | Token::GreaterEqual
+                | Token::LessEqual => {
                     let eq = match (&l_eval, &r_eval) {
                         (Value::Number(ln), Value::Number(rn)) => {
-                            let lval = match ln { Number::Int(i) => *i as f64, Number::Float(f) => *f };
-                            let rval = match rn { Number::Int(i) => *i as f64, Number::Float(f) => *f };
+                            let lval = match ln {
+                                Number::Int(i) => *i as f64,
+                                Number::Float(f) => *f,
+                            };
+                            let rval = match rn {
+                                Number::Int(i) => *i as f64,
+                                Number::Float(f) => *f,
+                            };
                             match op {
                                 Token::DoubleEqual => lval == rval,
                                 Token::NotEqual => lval != rval,
@@ -246,24 +451,27 @@ pub fn eval(expr: Expr, symbols: &mut HashMap<String, Value>, source: &str) -> R
                                 _ => false,
                             }
                         }
-                        (Value::String(ls), Value::String(rs)) => {
-                            match op {
-                                Token::DoubleEqual => ls == rs,
-                                Token::NotEqual => ls != rs,
-                                Token::Greater => ls > rs,
-                                Token::Less => ls < rs,
-                                Token::GreaterEqual => ls >= rs,
-                                Token::LessEqual => ls <= rs,
-                                _ => false,
+                        (Value::String(ls), Value::String(rs)) => match op {
+                            Token::DoubleEqual => ls == rs,
+                            Token::NotEqual => ls != rs,
+                            Token::Greater => ls > rs,
+                            Token::Less => ls < rs,
+                            Token::GreaterEqual => ls >= rs,
+                            Token::LessEqual => ls <= rs,
+                            _ => false,
+                        },
+                        (Value::Bool(lb), Value::Bool(rb)) => match op {
+                            Token::DoubleEqual => lb == rb,
+                            Token::NotEqual => lb != rb,
+                            _ => {
+                                return Err(EvalError::new(
+                                    "invalid comparison for bool",
+                                    None,
+                                    None,
+                                    0,
+                                ))
                             }
-                        }
-                        (Value::Bool(lb), Value::Bool(rb)) => {
-                            match op {
-                                Token::DoubleEqual => lb == rb,
-                                Token::NotEqual => lb != rb,
-                                _ => return Err(EvalError::new("invalid comparison for bool", None, None, 0)),
-                            }
-                        }
+                        },
                         (a, b) => {
                             let sa = a.to_string(source);
                             let sb = b.to_string(source);
@@ -287,7 +495,10 @@ pub fn eval(expr: Expr, symbols: &mut HashMap<String, Value>, source: &str) -> R
             if let Some(value) = symbols.get(&ident) {
                 Ok(value.clone())
             } else {
-                Err(EvalError::unknown_symbol(ident.clone(), find_line_for_symbol(&ident, source)))
+                Err(EvalError::unknown_symbol(
+                    ident.clone(),
+                    find_line_for_symbol(&ident, source),
+                ))
             }
         }
         Expr::Let { ident, value, expr } => {
@@ -295,40 +506,60 @@ pub fn eval(expr: Expr, symbols: &mut HashMap<String, Value>, source: &str) -> R
             symbols.insert(ident, evalue.clone());
             eval(*expr, symbols, source)
         }
-        Expr::Function { ident, default, expr } => {
+        Expr::Function {
+            ident,
+            default,
+            expr,
+        } => {
             let default_val = if let Some(def_expr_box) = default {
                 Some(Box::new(eval(*def_expr_box, symbols, source)?))
             } else {
                 None
             };
-            Ok(Value::Function { ident, default: default_val, expr, env: symbols.clone() })
+            Ok(Value::Function {
+                ident,
+                default: default_val,
+                expr,
+                env: symbols.clone(),
+            })
         }
         Expr::Application { lhs, rhs } => {
             let lhs_eval = eval(*lhs, symbols, source)?;
             let arg_val = eval(*rhs, symbols, source)?;
             match lhs_eval {
-                Value::Function { ident, expr, env, .. } => {
+                Value::Function {
+                    ident, expr, env, ..
+                } => {
                     let mut new_env = env.clone();
                     new_env.insert(ident, arg_val);
                     eval(*expr, &mut new_env, source)
                 }
                 builtin @ Value::Builtin(_, _) => apply_function(&builtin, arg_val, source),
-                other => Err(EvalError::new(format!("Tried to call a Non-Function {:?}", other), None, None, 0)),
+                other => Err(EvalError::new(
+                    format!("Tried to call a Non-Function {:?}", other),
+                    None,
+                    None,
+                    0,
+                )),
             }
         }
         Expr::None => Ok(Value::None),
         Expr::Template(chunks) => Ok(Value::Template(chunks, symbols.clone())),
         Expr::Builtin(function, args) => match function.as_str() {
             "concat" => {
-                let arg1 = symbols
-                    .get(&args[0])
-                    .cloned()
-                    .ok_or_else(|| EvalError::unknown_symbol(args[0].clone(), find_line_for_symbol(&args[0], source)))?;
+                let arg1 = symbols.get(&args[0]).cloned().ok_or_else(|| {
+                    EvalError::unknown_symbol(
+                        args[0].clone(),
+                        find_line_for_symbol(&args[0], source),
+                    )
+                })?;
 
-                let arg2 = symbols
-                    .get(&args[1])
-                    .cloned()
-                    .ok_or_else(|| EvalError::unknown_symbol(args[1].clone(), find_line_for_symbol(&args[1], source)))?;
+                let arg2 = symbols.get(&args[1]).cloned().ok_or_else(|| {
+                    EvalError::unknown_symbol(
+                        args[1].clone(),
+                        find_line_for_symbol(&args[1], source),
+                    )
+                })?;
 
                 match (arg1, arg2) {
                     (Value::String(mut lhs), Value::String(rhs)) => {
@@ -378,7 +609,9 @@ pub fn eval(expr: Expr, symbols: &mut HashMap<String, Value>, source: &str) -> R
 
 pub fn apply_function(func: &Value, arg: Value, source: &str) -> Result<Value, EvalError> {
     match func {
-        Value::Function { ident, expr, env, .. } => {
+        Value::Function {
+            ident, expr, env, ..
+        } => {
             let mut new_env = env.clone();
             new_env.insert(ident.clone(), arg);
             eval(*expr.clone(), &mut new_env, source)
@@ -397,6 +630,7 @@ pub fn apply_function(func: &Value, arg: Value, source: &str) -> Result<Value, E
                 "readlines" => 1,
                 "walkdir" => 1,
                 "json_parse" => 1,
+                "fill_template" => 2,
                 "exists" => 1,
                 "basename" => 1,
                 "dirname" => 1,
@@ -446,7 +680,12 @@ pub fn apply_function(func: &Value, arg: Value, source: &str) -> Result<Value, E
             // execute builtin (implementation continues in cli module or separate file)
             execute_builtin(name, &new_collected, source)
         }
-        other => Err(EvalError::new(format!("Tried to call a Non-Function {:?}", other), None, None, 0)),
+        other => Err(EvalError::new(
+            format!("Tried to call a Non-Function {:?}", other),
+            None,
+            None,
+            0,
+        )),
     }
 }
 
@@ -460,7 +699,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 out.push_str(sb);
                 Ok(Value::String(out))
             } else {
-                Err(EvalError::type_mismatch("string", format!("{}, {}", a.to_string(source), b.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    format!("{}, {}", a.to_string(source), b.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "map" => {
@@ -474,7 +717,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 }
                 Ok(Value::List(out))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "filter" => {
@@ -487,12 +734,22 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                     match res {
                         Value::Bool(true) => out.push(item.clone()),
                         Value::Bool(false) => {}
-                        other => return Err(EvalError::type_mismatch("bool", other.to_string(source), find_line_for_symbol("", source))),
+                        other => {
+                            return Err(EvalError::type_mismatch(
+                                "bool",
+                                other.to_string(source),
+                                find_line_for_symbol("", source),
+                            ))
+                        }
                     }
                 }
                 Ok(Value::List(out))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "fold" => {
@@ -506,29 +763,80 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 }
                 Ok(acc)
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "import" => {
             let pathv = &args[0];
-            if let Value::String(p) = pathv {
-                let data = std::fs::read_to_string(p).map_err(|e| EvalError::new(format!("failed to import {}: {}", p, e), None, None, 0))?;
-                let tokens = tokenize(data.clone())?;
-                let ast = parse(tokens);
-                let mut env = initial_builtins();
-                let val = eval(ast.program, &mut env, &data)?;
-                Ok(val)
-            } else {
-                Err(EvalError::type_mismatch("string", pathv.to_string(source), find_line_for_symbol("", source)))
-            }
+            let p = value_to_path_string(pathv, source)?;
+            let data = std::fs::read_to_string(&p).map_err(|e| {
+                EvalError::new(format!("failed to import {}: {}", p, e), None, None, 0)
+            })?;
+            let tokens = tokenize(data.clone())?;
+            let ast = parse(tokens);
+            let mut env = initial_builtins();
+            let val = eval(ast.program, &mut env, &data)?;
+            Ok(val)
         }
         "readfile" => {
             let pathv = &args[0];
-            if let Value::String(p) = pathv {
-                let data = std::fs::read_to_string(p).map_err(|e| EvalError::new(format!("failed to read {}: {}", p, e), None, None, 0))?;
-                Ok(Value::String(data))
+            let p = value_to_path_string(pathv, source)?;
+            let data = std::fs::read_to_string(&p).map_err(|e| {
+                EvalError::new(format!("failed to read {}: {}", p, e), None, None, 0)
+            })?;
+            Ok(Value::String(data))
+        }
+        "fill_template" => {
+            // Args: filename (string or path), substitutions (list of [key, value] pairs)
+            let pathv = &args[0];
+            let subsv = &args[1];
+            
+            let filename = value_to_path_string(pathv, source)?;
+            // Read the template file
+            let mut template = std::fs::read_to_string(&filename).map_err(|e| {
+                EvalError::new(format!("failed to read template {}: {}", filename, e), None, None, 0)
+            })?;
+            
+            // Process substitutions
+            if let Value::List(pairs) = subsv {
+                for pair in pairs {
+                    if let Value::List(kv) = pair {
+                        if kv.len() != 2 {
+                            return Err(EvalError::new(
+                                format!("fill_template: each substitution must be [key, value], got list of length {}", kv.len()),
+                                None, None, 0
+                            ));
+                        }
+                        
+                        let key = match &kv[0] {
+                            Value::String(s) => s.clone(),
+                            other => return Err(EvalError::new(
+                                format!("fill_template: key must be string, got {}", other.to_string(source)),
+                                None, None, 0
+                            ))
+                        };
+                        
+                        let val = kv[1].to_string(source);
+                        let placeholder = format!("{{{}}}", key);
+                        template = template.replace(&placeholder, &val);
+                    } else {
+                        return Err(EvalError::new(
+                            format!("fill_template: each substitution must be a list [key, value], got {}", pair.to_string(source)),
+                            None, None, 0
+                        ));
+                    }
+                }
+                Ok(Value::String(template))
             } else {
-                Err(EvalError::type_mismatch("string", pathv.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "list of [key, value] pairs",
+                    subsv.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "upper" => {
@@ -536,7 +844,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             if let Value::String(st) = s {
                 Ok(Value::String(st.to_uppercase()))
             } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    s.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "lower" => {
@@ -544,7 +856,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             if let Value::String(st) = s {
                 Ok(Value::String(st.to_lowercase()))
             } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    s.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "trim" => {
@@ -552,7 +868,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             if let Value::String(st) = s {
                 Ok(Value::String(st.trim().to_string()))
             } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    s.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "contains" => {
@@ -561,7 +881,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             if let (Value::String(sa), Value::String(sb)) = (a, b) {
                 Ok(Value::Bool(sa.contains(sb)))
             } else {
-                Err(EvalError::type_mismatch("string", format!("{}, {}", a.to_string(source), b.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    format!("{}, {}", a.to_string(source), b.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "starts_with" => {
@@ -570,7 +894,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             if let (Value::String(sa), Value::String(sb)) = (a, b) {
                 Ok(Value::Bool(sa.starts_with(sb)))
             } else {
-                Err(EvalError::type_mismatch("string", format!("{}, {}", a.to_string(source), b.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    format!("{}, {}", a.to_string(source), b.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "ends_with" => {
@@ -579,17 +907,26 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             if let (Value::String(sa), Value::String(sb)) = (a, b) {
                 Ok(Value::Bool(sa.ends_with(sb)))
             } else {
-                Err(EvalError::type_mismatch("string", format!("{}, {}", a.to_string(source), b.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    format!("{}, {}", a.to_string(source), b.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "split" => {
             let a = &args[0];
             let b = &args[1];
             if let (Value::String(sa), Value::String(sb)) = (a, b) {
-                let parts: Vec<Value> = sa.split(sb).map(|s| Value::String(s.to_string())).collect();
+                let parts: Vec<Value> =
+                    sa.split(sb).map(|s| Value::String(s.to_string())).collect();
                 Ok(Value::List(parts))
             } else {
-                Err(EvalError::type_mismatch("string", format!("{}, {}", a.to_string(source), b.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    format!("{}, {}", a.to_string(source), b.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "join" => {
@@ -599,7 +936,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 let parts: Vec<String> = list.iter().map(|it| it.to_string(source)).collect();
                 Ok(Value::String(parts.join(sep)))
             } else {
-                Err(EvalError::type_mismatch("list/string", format!("{}, {}", a.to_string(source), b.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "list/string",
+                    format!("{}, {}", a.to_string(source), b.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "replace" => {
@@ -609,101 +950,128 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             if let (Value::String(sa), Value::String(sb), Value::String(sc)) = (a, b, c) {
                 Ok(Value::String(sa.replace(sb, sc)))
             } else {
-                Err(EvalError::type_mismatch("string", format!("{}, {}, {}", a.to_string(source), b.to_string(source), c.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    format!(
+                        "{}, {}, {}",
+                        a.to_string(source),
+                        b.to_string(source),
+                        c.to_string(source)
+                    ),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "readlines" => {
             let pathv = &args[0];
-            if let Value::String(p) = pathv {
-                let data = std::fs::read_to_string(p).map_err(|e| EvalError::new(format!("failed to read {}: {}", p, e), None, None, 0))?;
-                let lines: Vec<Value> = data.lines().map(|s| Value::String(s.to_string())).collect();
-                Ok(Value::List(lines))
-            } else {
-                Err(EvalError::type_mismatch("string", pathv.to_string(source), find_line_for_symbol("", source)))
-            }
+            let p = value_to_path_string(pathv, source)?;
+            let data = std::fs::read_to_string(&p).map_err(|e| {
+                EvalError::new(format!("failed to read {}: {}", p, e), None, None, 0)
+            })?;
+            let lines: Vec<Value> =
+                data.lines().map(|s| Value::String(s.to_string())).collect();
+            Ok(Value::List(lines))
         }
         "walkdir" => {
             let pathv = &args[0];
-            if let Value::String(p) = pathv {
-                let mut out = Vec::new();
-                let base = std::path::Path::new(p);
-                if base.exists() {
-                    let mut stack = vec![base.to_path_buf()];
-                    while let Some(cur) = stack.pop() {
-                        if let Ok(md) = std::fs::read_dir(&cur) {
-                            for e in md.flatten() {
-                                let pth = e.path();
-                                out.push(Value::String(pth.to_string_lossy().to_string()));
-                                if pth.is_dir() {
-                                    stack.push(pth);
-                                }
+            let p = value_to_path_string(pathv, source)?;
+            let mut out = Vec::new();
+            let base = std::path::Path::new(&p);
+            if base.exists() {
+                let mut stack = vec![base.to_path_buf()];
+                while let Some(cur) = stack.pop() {
+                    if let Ok(md) = std::fs::read_dir(&cur) {
+                        for e in md.flatten() {
+                            let pth = e.path();
+                            out.push(Value::String(pth.to_string_lossy().to_string()));
+                            if pth.is_dir() {
+                                stack.push(pth);
                             }
                         }
                     }
                 }
-                Ok(Value::List(out))
-            } else {
-                Err(EvalError::type_mismatch("string", pathv.to_string(source), find_line_for_symbol("", source)))
             }
+            Ok(Value::List(out))
         }
         "json_parse" => {
             let pathv = &args[0];
             if let Value::String(p) = pathv {
-                let data = std::fs::read_to_string(p).map_err(|e| EvalError::new(format!("failed to read {}: {}", p, e), None, None, 0))?;
-                let jr: serde_json::Value = serde_json::from_str(&data).map_err(|e| EvalError::new(format!("json parse error: {}", e), None, None, 0))?;
+                let data = std::fs::read_to_string(p).map_err(|e| {
+                    EvalError::new(format!("failed to read {}: {}", p, e), None, None, 0)
+                })?;
+                let jr: serde_json::Value = serde_json::from_str(&data).map_err(|e| {
+                    EvalError::new(format!("json parse error: {}", e), None, None, 0)
+                })?;
                 fn conv(j: &serde_json::Value) -> Value {
                     match j {
                         serde_json::Value::Null => Value::None,
                         serde_json::Value::Bool(b) => Value::Bool(*b),
                         serde_json::Value::Number(n) => {
-                            if let Some(i) = n.as_i64() { Value::Number(Number::Int(i)) } else if let Some(f) = n.as_f64() { Value::Number(Number::Float(f)) } else { Value::None }
+                            if let Some(i) = n.as_i64() {
+                                Value::Number(Number::Int(i))
+                            } else if let Some(f) = n.as_f64() {
+                                Value::Number(Number::Float(f))
+                            } else {
+                                Value::None
+                            }
                         }
                         serde_json::Value::String(s) => Value::String(s.clone()),
-                        serde_json::Value::Array(a) => Value::List(a.iter().map(|it| conv(it)).collect()),
+                        serde_json::Value::Array(a) => {
+                            Value::List(a.iter().map(|it| conv(it)).collect())
+                        }
                         serde_json::Value::Object(o) => {
                             let mut m = std::collections::HashMap::new();
-                            for (k,v) in o.iter() { m.insert(k.clone(), conv(v)); }
+                            for (k, v) in o.iter() {
+                                m.insert(k.clone(), conv(v));
+                            }
                             Value::String(serde_json::to_string(o).unwrap_or_default())
                         }
                     }
                 }
                 Ok(conv(&jr))
             } else {
-                Err(EvalError::type_mismatch("string", pathv.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    pathv.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "exists" => {
             let pathv = &args[0];
-            if let Value::String(p) = pathv {
-                Ok(Value::Bool(std::path::Path::new(p).exists()))
-            } else {
-                Err(EvalError::type_mismatch("string", pathv.to_string(source), find_line_for_symbol("", source)))
-            }
+            let p = value_to_path_string(pathv, source)?;
+            Ok(Value::Bool(std::path::Path::new(&p).exists()))
         }
         "basename" => {
             let pathv = &args[0];
-            if let Value::String(p) = pathv {
-                let b = std::path::Path::new(p).file_name().and_then(|s| s.to_str()).unwrap_or("").to_string();
-                Ok(Value::String(b))
-            } else {
-                Err(EvalError::type_mismatch("string", pathv.to_string(source), find_line_for_symbol("", source)))
-            }
+            let p = value_to_path_string(pathv, source)?;
+            let b = std::path::Path::new(&p)
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+                .to_string();
+            Ok(Value::String(b))
         }
         "dirname" => {
             let pathv = &args[0];
-            if let Value::String(p) = pathv {
-                let d = std::path::Path::new(p).parent().and_then(|s| s.to_str()).unwrap_or("").to_string();
-                Ok(Value::String(d))
-            } else {
-                Err(EvalError::type_mismatch("string", pathv.to_string(source), find_line_for_symbol("", source)))
-            }
+            let p = value_to_path_string(pathv, source)?;
+            let d = std::path::Path::new(&p)
+                .parent()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+                .to_string();
+            Ok(Value::String(d))
         }
         "length" => {
             let val = &args[0];
             match val {
                 Value::String(s) => Ok(Value::Number(Number::Int(s.len() as i64))),
                 Value::List(items) => Ok(Value::Number(Number::Int(items.len() as i64))),
-                other => Err(EvalError::type_mismatch("string or list", other.to_string(source), find_line_for_symbol("", source)))
+                other => Err(EvalError::type_mismatch(
+                    "string or list",
+                    other.to_string(source),
+                    find_line_for_symbol("", source),
+                )),
             }
         }
         "repeat" => {
@@ -712,31 +1080,59 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             if let (Value::String(st), Value::Number(Number::Int(count))) = (s, n) {
                 Ok(Value::String(st.repeat(*count as usize)))
             } else {
-                Err(EvalError::type_mismatch("string, number", format!("{}, {}", s.to_string(source), n.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string, number",
+                    format!("{}, {}", s.to_string(source), n.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "pad_left" => {
             let s = &args[0];
             let width = &args[1];
             let pad = &args[2];
-            if let (Value::String(st), Value::Number(Number::Int(w)), Value::String(pc)) = (s, width, pad) {
+            if let (Value::String(st), Value::Number(Number::Int(w)), Value::String(pc)) =
+                (s, width, pad)
+            {
                 let pad_char = pc.chars().next().unwrap_or(' ');
-                let result = format!("{:>width$}", st, width = *w as usize).replace(' ', &pad_char.to_string());
+                let result = format!("{:>width$}", st, width = *w as usize)
+                    .replace(' ', &pad_char.to_string());
                 Ok(Value::String(result))
             } else {
-                Err(EvalError::type_mismatch("string, number, string", format!("{}, {}, {}", s.to_string(source), width.to_string(source), pad.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string, number, string",
+                    format!(
+                        "{}, {}, {}",
+                        s.to_string(source),
+                        width.to_string(source),
+                        pad.to_string(source)
+                    ),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "pad_right" => {
             let s = &args[0];
             let width = &args[1];
             let pad = &args[2];
-            if let (Value::String(st), Value::Number(Number::Int(w)), Value::String(pc)) = (s, width, pad) {
+            if let (Value::String(st), Value::Number(Number::Int(w)), Value::String(pc)) =
+                (s, width, pad)
+            {
                 let pad_char = pc.chars().next().unwrap_or(' ');
-                let result = format!("{:<width$}", st, width = *w as usize).replace(' ', &pad_char.to_string());
+                let result = format!("{:<width$}", st, width = *w as usize)
+                    .replace(' ', &pad_char.to_string());
                 Ok(Value::String(result))
             } else {
-                Err(EvalError::type_mismatch("string, number, string", format!("{}, {}, {}", s.to_string(source), width.to_string(source), pad.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string, number, string",
+                    format!(
+                        "{}, {}, {}",
+                        s.to_string(source),
+                        width.to_string(source),
+                        pad.to_string(source)
+                    ),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "indent" => {
@@ -744,60 +1140,103 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             let spaces = &args[1];
             if let (Value::String(st), Value::Number(Number::Int(n))) = (s, spaces) {
                 let indent_str = " ".repeat(*n as usize);
-                let lines: Vec<String> = st.lines().map(|line| format!("{}{}", indent_str, line)).collect();
+                let lines: Vec<String> = st
+                    .lines()
+                    .map(|line| format!("{}{}", indent_str, line))
+                    .collect();
                 Ok(Value::String(lines.join("\n")))
             } else {
-                Err(EvalError::type_mismatch("string, number", format!("{}, {}", s.to_string(source), spaces.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string, number",
+                    format!("{}, {}", s.to_string(source), spaces.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "is_digit" => {
             let s = &args[0];
             if let Value::String(st) = s {
-                Ok(Value::Bool(!st.is_empty() && st.chars().all(|c| c.is_ascii_digit())))
+                Ok(Value::Bool(
+                    !st.is_empty() && st.chars().all(|c| c.is_ascii_digit()),
+                ))
             } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    s.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "is_alpha" => {
             let s = &args[0];
             if let Value::String(st) = s {
-                Ok(Value::Bool(!st.is_empty() && st.chars().all(|c| c.is_alphabetic())))
+                Ok(Value::Bool(
+                    !st.is_empty() && st.chars().all(|c| c.is_alphabetic()),
+                ))
             } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    s.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "is_alphanumeric" => {
             let s = &args[0];
             if let Value::String(st) = s {
-                Ok(Value::Bool(!st.is_empty() && st.chars().all(|c| c.is_alphanumeric())))
+                Ok(Value::Bool(
+                    !st.is_empty() && st.chars().all(|c| c.is_alphanumeric()),
+                ))
             } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    s.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "is_whitespace" => {
             let s = &args[0];
             if let Value::String(st) = s {
-                Ok(Value::Bool(!st.is_empty() && st.chars().all(|c| c.is_whitespace())))
+                Ok(Value::Bool(
+                    !st.is_empty() && st.chars().all(|c| c.is_whitespace()),
+                ))
             } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    s.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "is_uppercase" => {
             let s = &args[0];
             if let Value::String(st) = s {
                 let letters: Vec<char> = st.chars().filter(|c| c.is_alphabetic()).collect();
-                Ok(Value::Bool(!letters.is_empty() && letters.iter().all(|c| c.is_uppercase())))
+                Ok(Value::Bool(
+                    !letters.is_empty() && letters.iter().all(|c| c.is_uppercase()),
+                ))
             } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    s.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "is_lowercase" => {
             let s = &args[0];
             if let Value::String(st) = s {
                 let letters: Vec<char> = st.chars().filter(|c| c.is_alphabetic()).collect();
-                Ok(Value::Bool(!letters.is_empty() && letters.iter().all(|c| c.is_lowercase())))
+                Ok(Value::Bool(
+                    !letters.is_empty() && letters.iter().all(|c| c.is_lowercase()),
+                ))
             } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    s.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "is_empty" => {
@@ -805,7 +1244,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             match s {
                 Value::String(st) => Ok(Value::Bool(st.is_empty())),
                 Value::List(items) => Ok(Value::Bool(items.is_empty())),
-                other => Err(EvalError::type_mismatch("string or list", other.to_string(source), find_line_for_symbol("", source)))
+                other => Err(EvalError::type_mismatch(
+                    "string or list",
+                    other.to_string(source),
+                    find_line_for_symbol("", source),
+                )),
             }
         }
         "html_escape" => {
@@ -819,7 +1262,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                     .replace('\'', "&#x27;");
                 Ok(Value::String(escaped))
             } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    s.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "html_tag" => {
@@ -828,7 +1275,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             if let (Value::String(t), Value::String(c)) = (tag, content) {
                 Ok(Value::String(format!("<{}>{}</{}>", t, c, t)))
             } else {
-                Err(EvalError::type_mismatch("string", format!("{}, {}", tag.to_string(source), content.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    format!("{}, {}", tag.to_string(source), content.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "html_attr" => {
@@ -841,7 +1292,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                     .replace('\'', "&#x27;");
                 Ok(Value::String(format!("{}=\"{}\"", n, escaped)))
             } else {
-                Err(EvalError::type_mismatch("string", format!("{}, {}", name.to_string(source), value.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    format!("{}, {}", name.to_string(source), value.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "md_heading" => {
@@ -851,7 +1306,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 let hashes = "#".repeat((*lvl).max(1).min(6) as usize);
                 Ok(Value::String(format!("{} {}", hashes, txt)))
             } else {
-                Err(EvalError::type_mismatch("number, string", format!("{}, {}", level.to_string(source), text.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "number, string",
+                    format!("{}, {}", level.to_string(source), text.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "md_link" => {
@@ -860,7 +1319,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             if let (Value::String(txt), Value::String(u)) = (text, url) {
                 Ok(Value::String(format!("[{}]({})", txt, u)))
             } else {
-                Err(EvalError::type_mismatch("string", format!("{}, {}", text.to_string(source), url.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    format!("{}, {}", text.to_string(source), url.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "md_code" => {
@@ -868,16 +1331,27 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             if let Value::String(c) = code {
                 Ok(Value::String(format!("`{}`", c)))
             } else {
-                Err(EvalError::type_mismatch("string", code.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    code.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "md_list" => {
             let items = &args[0];
             if let Value::List(list) = items {
-                let lines: Vec<String> = list.iter().map(|item| format!("- {}", item.to_string(source))).collect();
+                let lines: Vec<String> = list
+                    .iter()
+                    .map(|item| format!("- {}", item.to_string(source)))
+                    .collect();
                 Ok(Value::String(lines.join("\n")))
             } else {
-                Err(EvalError::type_mismatch("list", items.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    items.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "to_string" => {
@@ -891,7 +1365,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 }
                 Value::String(s) => Ok(Value::String(s.clone())),
                 Value::Bool(b) => Ok(Value::String(b.to_string())),
-                other => Ok(Value::String(other.to_string(source)))
+                other => Ok(Value::String(other.to_string(source))),
             }
         }
         "to_int" => {
@@ -899,13 +1373,20 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             match val {
                 Value::Number(Number::Int(i)) => Ok(Value::Number(Number::Int(*i))),
                 Value::Number(Number::Float(f)) => Ok(Value::Number(Number::Int(*f as i64))),
-                Value::String(s) => {
-                    s.trim().parse::<i64>()
-                        .map(|i| Value::Number(Number::Int(i)))
-                        .map_err(|_| EvalError::new(format!("cannot convert '{}' to int", s), None, None, 0))
-                }
+                Value::String(s) => s
+                    .trim()
+                    .parse::<i64>()
+                    .map(|i| Value::Number(Number::Int(i)))
+                    .map_err(|_| {
+                        EvalError::new(format!("cannot convert '{}' to int", s), None, None, 0)
+                    }),
                 Value::Bool(b) => Ok(Value::Number(Number::Int(if *b { 1 } else { 0 }))),
-                other => Err(EvalError::new(format!("cannot convert {} to int", other.to_string(source)), None, None, 0))
+                other => Err(EvalError::new(
+                    format!("cannot convert {} to int", other.to_string(source)),
+                    None,
+                    None,
+                    0,
+                )),
             }
         }
         "to_float" => {
@@ -913,12 +1394,19 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             match val {
                 Value::Number(Number::Int(i)) => Ok(Value::Number(Number::Float(*i as f64))),
                 Value::Number(Number::Float(f)) => Ok(Value::Number(Number::Float(*f))),
-                Value::String(s) => {
-                    s.trim().parse::<f64>()
-                        .map(|f| Value::Number(Number::Float(f)))
-                        .map_err(|_| EvalError::new(format!("cannot convert '{}' to float", s), None, None, 0))
-                }
-                other => Err(EvalError::new(format!("cannot convert {} to float", other.to_string(source)), None, None, 0))
+                Value::String(s) => s
+                    .trim()
+                    .parse::<f64>()
+                    .map(|f| Value::Number(Number::Float(f)))
+                    .map_err(|_| {
+                        EvalError::new(format!("cannot convert '{}' to float", s), None, None, 0)
+                    }),
+                other => Err(EvalError::new(
+                    format!("cannot convert {} to float", other.to_string(source)),
+                    None,
+                    None,
+                    0,
+                )),
             }
         }
         "to_bool" => {
@@ -932,11 +1420,16 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                     match lower.as_str() {
                         "true" | "yes" | "1" | "on" => Ok(Value::Bool(true)),
                         "false" | "no" | "0" | "off" | "" => Ok(Value::Bool(false)),
-                        _ => Err(EvalError::new(format!("cannot convert '{}' to bool", s), None, None, 0))
+                        _ => Err(EvalError::new(
+                            format!("cannot convert '{}' to bool", s),
+                            None,
+                            None,
+                            0,
+                        )),
                     }
                 }
                 Value::List(items) => Ok(Value::Bool(!items.is_empty())),
-                _ => Ok(Value::Bool(true)) // Other values are truthy
+                _ => Ok(Value::Bool(true)), // Other values are truthy
             }
         }
         "format_int" => {
@@ -954,7 +1447,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 };
                 Ok(Value::String(formatted))
             } else {
-                Err(EvalError::type_mismatch("number, number", format!("{}, {}", val.to_string(source), width.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "number, number",
+                    format!("{}, {}", val.to_string(source), width.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "format_float" => {
@@ -972,7 +1469,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 };
                 Ok(Value::String(formatted))
             } else {
-                Err(EvalError::type_mismatch("number, number", format!("{}, {}", val.to_string(source), precision.to_string(source)), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "number, number",
+                    format!("{}, {}", val.to_string(source), precision.to_string(source)),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "flatmap" => {
@@ -989,7 +1490,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 }
                 Ok(Value::List(out))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
         "flatten" => {
@@ -1004,16 +1509,28 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 }
                 Ok(Value::List(out))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), find_line_for_symbol("", source)))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    find_line_for_symbol("", source),
+                ))
             }
         }
-        other => Err(EvalError::new(format!("unimplemented builtin {}", other), None, None, 0)),
+        other => Err(EvalError::new(
+            format!("unimplemented builtin {}", other),
+            None,
+            None,
+            0,
+        )),
     }
 }
 
 pub fn collect_file_templates(v: &Value, source: &str) -> Result<Vec<(String, String)>, EvalError> {
     match v {
-        Value::FileTemplate { path: (pchunks, penv), template: (tchunks, tenv) } => {
+        Value::FileTemplate {
+            path: (pchunks, penv),
+            template: (tchunks, tenv),
+        } => {
             let path = render_chunks_to_string(pchunks, penv, source)?;
             let raw = render_chunks_to_string(tchunks, tenv, source)?;
             let content = dedent(&raw);
@@ -1027,24 +1544,46 @@ pub fn collect_file_templates(v: &Value, source: &str) -> Result<Vec<(String, St
             }
             Ok(out)
         }
-        _ => Err(EvalError::new("expected filetemplate or list of filetemplates", None, None, 0)),
+        _ => Err(EvalError::new(
+            "expected filetemplate or list of filetemplates",
+            None,
+            None,
+            0,
+        )),
     }
 }
 
 pub fn fetch_git_raw(spec: &str) -> Result<String, EvalError> {
     let parts: Vec<&str> = spec.split('/').collect();
     if parts.len() < 3 {
-        return Err(EvalError::new("invalid git spec (expected owner/repo/path)", None, None, 0));
+        return Err(EvalError::new(
+            "invalid git spec (expected owner/repo/path)",
+            None,
+            None,
+            0,
+        ));
     }
     let owner = parts[0];
     let repo = parts[1];
     let path = parts[2..].join("/");
-    let url = format!("https://raw.githubusercontent.com/{}/{}/main/{}", owner, repo, path);
-    let resp = ureq::get(&url).call().map_err(|e| EvalError::new(format!("failed to fetch {}: {}", url, e), None, None, 0))?;
+    let url = format!(
+        "https://raw.githubusercontent.com/{}/{}/main/{}",
+        owner, repo, path
+    );
+    let resp = ureq::get(&url)
+        .call()
+        .map_err(|e| EvalError::new(format!("failed to fetch {}: {}", url, e), None, None, 0))?;
     let status = resp.status();
     if status >= 400 {
-        return Err(EvalError::new(format!("failed to fetch {}: status {}", url, status), None, None, 0));
+        return Err(EvalError::new(
+            format!("failed to fetch {}: status {}", url, status),
+            None,
+            None,
+            0,
+        ));
     }
-    let text = resp.into_string().map_err(|e| EvalError::new(format!("failed to read response: {}", e), None, None, 0))?;
+    let text = resp
+        .into_string()
+        .map_err(|e| EvalError::new(format!("failed to read response: {}", e), None, None, 0))?;
     Ok(text)
 }
