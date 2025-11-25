@@ -467,14 +467,18 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, EvalError> {
                 if let Some('&') = stream.peek() {
                     stream.next();
                     output.push(Token::And);
-                    continue;
+                    } else {
+                        // Single & is not supported - skip with warning
+                        eprintln!("Warning: single '&' is not a valid token");
                 }
             }
             '|' => {
                 if let Some('|') = stream.peek() {
                     stream.next();
                     output.push(Token::Or);
-                    continue;
+                    } else {
+                        // Single | is not supported - skip with warning  
+                        eprintln!("Warning: single '|' is not a valid token");
                 }
             }
             '-' => {

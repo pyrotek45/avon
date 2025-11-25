@@ -49,11 +49,6 @@ fn print_builtin_docs() {
     // Map/Dictionary Operations
     println!("Map/Dictionary Operations:");
     println!("--------------------------");
-    println!("  dict_keys    :: Dict -> [String]                 (get all keys)");
-    println!("  dict_values  :: Dict -> [a]                      (get all values)");
-    println!("  dict_size    :: Dict -> Int                      (count entries)");
-    println!("  dict_to_list :: Dict -> [[String, a]]            (convert to pairs)");
-    println!("  dict_merge   :: Dict -> Dict -> Dict             (merge two dicts)");
     println!("  dict_get     :: Dict -> String -> a | None       (get value by key - deprecated, use dot notation)");
     println!("  get          :: (Dict|Pairs) -> String -> a | None");
     println!("  set          :: (Dict|Pairs) -> String -> a -> (Dict|Pairs)");
@@ -67,7 +62,7 @@ fn print_builtin_docs() {
     println!();
     println!("  Modern syntax: let config = {{host: \"localhost\", port: 8080}} in");
     println!("                 config.host  # Access with dot notation!");
-    println!("  Shorthand: dict_keys/values/size/to_list work with dicts");
+    println!("  Tip: Use keys/values/length with dicts and pairs for generic dict operations");
     println!("  Legacy: get/set/keys/values/has_key work with both dicts and [[k,v]] pairs");
     println!();
 
@@ -78,6 +73,7 @@ fn print_builtin_docs() {
     println!("  to_int       :: String -> Int");
     println!("  to_float     :: String -> Float");
     println!("  to_bool      :: a -> Bool");
+    println!("  neg          :: Number -> Number                      (negate a number)");
     println!();
 
     // Formatting Functions
@@ -153,11 +149,11 @@ fn print_builtin_docs() {
     println!("  is_function  :: a -> Bool");
     println!();
     println!("  assert       :: Bool -> a -> a                   (returns value if condition true, errors with debug info otherwise)");
-    println!("  assert_string :: a -> a                          (returns value if string, errors otherwise)");
-    println!("  assert_number :: a -> a                          (returns value if number, errors otherwise)");
-    println!("  assert_int    :: a -> a                          (returns value if int, errors otherwise)");
-    println!("  assert_list   :: a -> a                          (returns value if list, errors otherwise)");
-    println!("  assert_bool   :: a -> a                          (returns value if bool, errors otherwise)");
+    println!();
+    println!("  Usage Examples:");
+    println!("    assert (is_number x) x              # Assert x is a number, return x");
+    println!("    assert (x > 0) x                    # Assert x is positive, return x");
+    println!("    assert (is_string s) s              # Assert s is a string, return s");
     println!();
 
     // Debug & Error Handling
@@ -281,9 +277,10 @@ Options:
   -h, --help         Show this brief help
 
 Debugging Tools:
-  trace "label" value    Print labeled value to stderr, return value unchanged
-  debug value            Print internal structure to stderr
-  assert_string/number/list/bool value    Type validation with early failure
+  trace "label" value        Print labeled value to stderr, return value unchanged
+  debug value                Print internal structure to stderr
+  assert (test) value        Assert test is true, return value or error with debug info
+  Use with is_* predicates: assert (is_number x) x, assert (x > 0) x
   See tutorial/DEBUGGING_GUIDE.md for complete debugging guide
 
 Examples:

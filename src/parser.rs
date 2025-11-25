@@ -157,6 +157,7 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
             Token::Identifier(value) if value != "in" && value != "let" => match value.as_str() {
                 "true" => Expr::Bool(true),
                 "false" => Expr::Bool(false),
+                "none" => Expr::None,
                 _ => Expr::Ident(value.clone()),
             },
             Token::LParen => {
@@ -241,15 +242,16 @@ pub fn parse_cmp(stream: &mut Peekable<Iter<Token>>) -> Expr {
 }
 
 
-pub fn parse_logic(stream: &mut Peekable<Iter<Token>>) -> Expr {
-    let mut lhs = parse_cmp(stream);
+// parse_and: handles && (logical AND) - higher precedence than OR
+pub fn parse_and(stream: &mut Peekable<Iter<Token>>) -> Expr {
+    let mut lhs = parse_app(stream);
 
     loop {
         match stream.peek() {
-            Some(Token::And) | Some(Token::Or) => {
+            Some(Token::And) => {
                 // Safe: we just peeked and confirmed there's a token
                 let op = stream.next().expect("token exists after peek").clone();
-                let rhs = parse_cmp(stream);
+                let rhs = parse_app(stream);
                 lhs = Expr::Binary {
                     lhs: Box::new(lhs),
                     op,
@@ -262,6 +264,35 @@ pub fn parse_logic(stream: &mut Peekable<Iter<Token>>) -> Expr {
     }
 
     lhs
+}
+
+// parse_or: handles || (logical OR) - lower precedence than AND
+pub fn parse_or(stream: &mut Peekable<Iter<Token>>) -> Expr {
+    let mut lhs = parse_and(stream);
+
+    loop {
+        match stream.peek() {
+            Some(Token::Or) => {
+                // Safe: we just peeked and confirmed there's a token
+                let op = stream.next().expect("token exists after peek").clone();
+                let rhs = parse_and(stream);
+                lhs = Expr::Binary {
+                    lhs: Box::new(lhs),
+                    op,
+                    rhs: Box::new(rhs),
+                };
+                continue;
+            }
+            _ => break,
+        }
+    }
+
+    lhs
+}
+
+// Keep parse_logic as an alias to parse_or for backward compatibility
+pub fn parse_logic(stream: &mut Peekable<Iter<Token>>) -> Expr {
+    parse_or(stream)
 }
 fn eat(stream: &mut Peekable<Iter<Token>>, token: Token) -> ParseResult<()> {
     let next = stream.next();
@@ -399,11 +430,6 @@ fn try_parse_expr(stream: &mut Peekable<Iter<Token>>) -> ParseResult<Expr> {
                 let f = Box::new(try_parse_expr(stream)?);
                 return Ok(Expr::If { cond, t, f });
             }
-            Token::Identifier(ident) if ident == "true" || ident == "false" => {
-                let value = ident == "true";
-                stream.next();
-                return Ok(Expr::Bool(value));
-            }
             _ => {}
         },
         _ => {}
@@ -414,14 +440,14 @@ fn try_parse_expr(stream: &mut Peekable<Iter<Token>>) -> ParseResult<Expr> {
 }
 
 fn parse_pipe(stream: &mut Peekable<Iter<Token>>) -> Expr {
-    let mut lhs = parse_app(stream);
+    let mut lhs = parse_logic(stream);
 
     loop {
         match stream.peek() {
             Some(Token::Pipe) => {
                 // Handle pipe operator: lhs -> rhs
                 stream.next(); // consume the pipe token
-                let rhs = parse_app(stream);
+                let rhs = parse_logic(stream);
                 lhs = Expr::Pipe {
                     lhs: Box::new(lhs),
                     rhs: Box::new(rhs),
@@ -435,12 +461,12 @@ fn parse_pipe(stream: &mut Peekable<Iter<Token>>) -> Expr {
 }
 
 fn parse_app(stream: &mut Peekable<Iter<Token>>) -> Expr {
-    let mut lhs = parse_logic(stream);
+    let mut lhs = parse_cmp(stream);
 
     loop {
         match stream.peek() {
             Some(Token::Identifier(id)) if id != "in" && id != "then" && id != "else" => {
-                let rhs = parse_term(stream);
+                let rhs = parse_cmp(stream);
                 lhs = Expr::Application {
                     lhs: Box::new(lhs),
                     rhs: Box::new(rhs),
@@ -454,7 +480,7 @@ fn parse_app(stream: &mut Peekable<Iter<Token>>) -> Expr {
             | Some(Token::LBracket)
             | Some(Token::Path(_))
             | Some(Token::BackSlash) => {
-                let rhs = parse_term(stream);
+                let rhs = parse_cmp(stream);
                 lhs = Expr::Application {
                     lhs: Box::new(lhs),
                     rhs: Box::new(rhs),
@@ -462,7 +488,7 @@ fn parse_app(stream: &mut Peekable<Iter<Token>>) -> Expr {
             }
             Some(Token::Identifier(ident)) => {
                 if ident != "in" && ident != "let" && ident != "then" && ident != "else" {
-                    let rhs = parse_term(stream);
+                    let rhs = parse_cmp(stream);
                     lhs = Expr::Application {
                         lhs: Box::new(lhs),
                         rhs: Box::new(rhs),

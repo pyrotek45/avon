@@ -175,15 +175,22 @@ is_bool value          # Boolean: true if boolean
 is_function value      # Boolean: true if function
 ```
 
-**Type assertion functions:**
+**General assertion function:**
 
 ```avon
-assert_string value    # Asserts string, returns value or error
-assert_number value    # Asserts number, returns value or error
-assert_int value       # Asserts integer, returns value or error
-assert_float value     # Asserts float, returns value or error
-assert_list value      # Asserts list, returns value or error
-assert_bool value      # Asserts boolean, returns value or error
+assert (test) value    # If test is true, returns value; otherwise errors with debug info
+```
+
+**Common assertion patterns:**
+
+```avon
+assert (is_string x) x     # Assert x is a string
+assert (is_number x) x     # Assert x is a number
+assert (is_int x) x        # Assert x is an integer
+assert (is_list x) x       # Assert x is a list
+assert (is_bool x) x       # Assert x is a boolean
+assert (x > 0) x           # Assert x is positive
+assert (length xs > 0) xs  # Assert list is not empty
 ```
 
 **Example: Defensive filtering**
@@ -191,20 +198,20 @@ assert_bool value      # Asserts boolean, returns value or error
 ```avon
 let process_numbers = \data
   # Check input type first
-  let validated = assert_list data in
+  let validated = assert (is_list data) data in
   
   # Map with type checks
   map (\item
-    let num = assert_number item in
+    let num = assert (is_number item) item in
     num * 2
   ) validated
 in
 
 process_numbers [1, 2, 3]    # Works
-process_numbers ["1", "2"]   # Error: expected number
+process_numbers ["1", "2"]   # Error: assertion failed
 ```
 
-Assertions give you **early failure** with **clear error messages**, which is better than mysterious errors deep in your pipeline.
+Assertions give you **early failure** with **clear debug information**, showing both the failing test and the actual value.
 
 ---
 
@@ -318,7 +325,7 @@ in
 
 # ✅ Correct: ensure x is a number
 let add_one = \x
-  let num = assert_number x in
+  let num = assert (is_number x) x in
   num + 1
 in
 ```
@@ -351,14 +358,14 @@ This shows you what comes in and what goes out.
 
 ```avon
 let safe_divide = \a \b
-  let a_num = assert_number a in
-  let b_num = assert_number b in
+  let a_num = assert (is_number a) a in
+  let b_num = assert (is_number b) b in
   if b_num == 0 then error "Division by zero"
   else a_num / b_num
 in
 ```
 
-Assertions catch type errors early with clear messages.
+Assertions catch type errors early with clear debug information showing the failing value.
 
 ### Pattern 3: Debugging List Transformations
 
@@ -377,11 +384,13 @@ This shows the data at each transformation.
 
 ```avon
 let classify = \x
-  let x_num = assert_number x in
-  if x_num < 0 then (trace "negative" "neg")
-  else if x_num == 0 then (trace "zero" "zero")
-  else (trace "positive" "pos")
+  let x_num = assert (is_number x) x in
+  if x_num < 0 then trace "negative" "neg"
+  else if x_num == 0 then trace "zero" "zero"
+  else trace "positive" "pos"
 in
+
+classify (0 - 5)  # Pass a negative number: 0 - 5 = -5
 ```
 
 Traces show which branch is taken.
@@ -418,7 +427,8 @@ Shows each step of the accumulation:
 - **Use `trace` liberally** during development - label clearly ("input", "after step1", etc.)
 - **Chain traces** to see the flow of data through transformations
 - **Use `debug` for complex structures** - when you need to see exact types and nesting
-- **Validate early** with `assert_*` functions - catch type errors at the source
+- **Validate early** with `assert` - catch errors at the source with clear debug output
+- **Use type predicates** with assert: `assert (is_number x) x`, `assert (x > 0) x`
 - **Keep `trace` calls in code** - they're cheap and help future debugging
 - **Test with `eval` first** - always verify logic before deploying with `--deploy`
 
@@ -481,9 +491,9 @@ map process_env envs
 Run to see:
 
 ```
-[TRACE] all envs: [{host: "localhost", port: 8080}, ...]
+[TRACE] all envs: [{host: "localhost", port: 8080}, {host: "prod.example.com", port: 443}]
 [TRACE] processing dict: {host: "localhost", port: 8080}
-map: process_env: .: key not found: "timeout"
+map: process_env: .: expected key 'timeout', found missing
 ```
 
 Ah! The dicts have `host` and `port`, but the code expects `timeout` and `retries`. The data structure doesn't match expectations.

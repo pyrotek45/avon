@@ -10,41 +10,39 @@ let person = {
 } in
 
 # Get all keys and values
-let all_keys = dict_keys person in
-let all_values = dict_values person in
+let all_keys = keys person in
+let all_values = values person in
 let key_count = length all_keys in
 
 # Check if keys exist
-let has_name = dict_has_key person "name" in
-let has_email = dict_has_key person "email" in
+let has_name = has_key person "name" in
+let has_email = has_key person "email" in
 
 # Get values
-let name = dict_get person "name" in
-let email = dict_get person "email" in  # Returns None
+let name = get person "name" in
+let email = get person "email" in  # Returns None
 
 # Update a value (returns new dict)
-let person_older = dict_set person "age" 31 in
-let old_age = dict_get person "age" in  # Still 30
-let new_age = dict_get person_older "age" in  # Now 31
+let person_older = set person "age" 31 in
+let old_age = get person "age" in  # Still 30
+let new_age = get person_older "age" in  # Now 31
 
 # Add new key-value pair
-let person_with_email = dict_set person "email" "alice@example.com" in
+let person_with_email = set person "email" "alice@example.com" in
 
-# Remove a key
-let person_no_role = dict_remove person "role" in
-let size_before = dict_size person in
-let size_after = dict_size person_no_role in
-
-# Merge dictionaries
+# Merge dictionaries - manually merge by copying keys
 let extra_info = {
   department: "Engineering",
   level: "Senior"
 } in
-let complete_person = dict_merge person extra_info in
-let total_keys = dict_size complete_person in
+let merge_dicts = \d1 \d2
+  fold (\acc \key set acc key (get d2 key)) d1 (keys d2)
+in
+let complete_person = merge_dicts person extra_info in
+let total_keys = length (keys complete_person) in
 
-# Convert back to list
-let as_list = dict_to_list person in
+# Convert back to list (can manually convert using keys)
+let as_list = map (\k [k, get person k]) (keys person) in
 
 # Output results
 {"
@@ -54,7 +52,7 @@ Dictionary Operations Demo
 Original person dict:
   Number of keys: {key_count}
   Name: {name}
-  City: {dict_get person "city"}
+  City: {get person "city"}
 
 Key checks:
   Has 'name': {has_name}
@@ -62,14 +60,10 @@ Key checks:
 
 Immutable updates:
   Original age: {old_age}
-  After dict_set: {new_age}
-
-Size changes:
-  Before remove: {size_before}
-  After remove: {size_after}
+  After set: {new_age}
 
 Merge operation:
   Total keys after merge: {total_keys}
-  Department: {dict_get complete_person "department"}
-  Level: {dict_get complete_person "level"}
+  Department: {get complete_person "department"}
+  Level: {get complete_person "level"}
 "}

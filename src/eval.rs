@@ -167,6 +167,10 @@ pub fn initial_builtins() -> HashMap<String, Value> {
         Value::Builtin("to_bool".to_string(), Vec::new()),
     );
     m.insert(
+        "neg".to_string(),
+        Value::Builtin("neg".to_string(), Vec::new()),
+    );
+    m.insert(
         "format_int".to_string(),
         Value::Builtin("format_int".to_string(), Vec::new()),
     );
@@ -307,30 +311,6 @@ pub fn initial_builtins() -> HashMap<String, Value> {
         "dict_has_key".to_string(),
         Value::Builtin("dict_has_key".to_string(), Vec::new()),
     );
-    m.insert(
-        "dict_keys".to_string(),
-        Value::Builtin("dict_keys".to_string(), Vec::new()),
-    );
-    m.insert(
-        "dict_values".to_string(),
-        Value::Builtin("dict_values".to_string(), Vec::new()),
-    );
-    m.insert(
-        "dict_remove".to_string(),
-        Value::Builtin("dict_remove".to_string(), Vec::new()),
-    );
-    m.insert(
-        "dict_merge".to_string(),
-        Value::Builtin("dict_merge".to_string(), Vec::new()),
-    );
-    m.insert(
-        "dict_size".to_string(),
-        Value::Builtin("dict_size".to_string(), Vec::new()),
-    );
-    m.insert(
-        "dict_to_list".to_string(),
-        Value::Builtin("dict_to_list".to_string(), Vec::new()),
-    );
 
     // System
     m.insert(
@@ -380,28 +360,6 @@ pub fn initial_builtins() -> HashMap<String, Value> {
     m.insert(
         "assert".to_string(),
         Value::Builtin("assert".to_string(), Vec::new()),
-    );
-
-    // Type assertions
-    m.insert(
-        "assert_string".to_string(),
-        Value::Builtin("assert_string".to_string(), Vec::new()),
-    );
-    m.insert(
-        "assert_number".to_string(),
-        Value::Builtin("assert_number".to_string(), Vec::new()),
-    );
-    m.insert(
-        "assert_int".to_string(),
-        Value::Builtin("assert_int".to_string(), Vec::new()),
-    );
-    m.insert(
-        "assert_list".to_string(),
-        Value::Builtin("assert_list".to_string(), Vec::new()),
-    );
-    m.insert(
-        "assert_bool".to_string(),
-        Value::Builtin("assert_bool".to_string(), Vec::new()),
     );
 
     // Debugging and error handling
@@ -1065,16 +1023,11 @@ pub fn apply_function(func: &Value, arg: Value, source: &str) -> Result<Value, E
                 "dict_get" => 2,
                 "dict_set" => 3,
                 "dict_has_key" => 2,
-                "dict_keys" => 1,
-                "dict_values" => 1,
-                "dict_remove" => 2,
-                "dict_merge" => 2,
-                "dict_size" => 1,
-                "dict_to_list" => 1,
                 "to_string" => 1,
                 "to_int" => 1,
                 "to_float" => 1,
                 "to_bool" => 1,
+                "neg" => 1,
                 "format_int" => 2,
                 "format_float" => 2,
                 "format_hex" => 1,
@@ -1109,12 +1062,6 @@ pub fn apply_function(func: &Value, arg: Value, source: &str) -> Result<Value, E
                 "is_dict" => 1,
                 // Assertions
                 "assert" => 2,
-                // Type assertions
-                "assert_string" => 1,
-                "assert_number" => 1,
-                "assert_int" => 1,
-                "assert_list" => 1,
-                "assert_bool" => 1,
                 // Debugging
                 "error" => 1,
                 "trace" => 2,
@@ -1952,6 +1899,18 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 _ => Ok(Value::Bool(true)), // Other values are truthy
             }
         }
+        "neg" => {
+            let val = &args[0];
+            match val {
+                Value::Number(Number::Int(i)) => Ok(Value::Number(Number::Int(-i))),
+                Value::Number(Number::Float(f)) => Ok(Value::Number(Number::Float(-f))),
+                other => Err(EvalError::type_mismatch(
+                    "number",
+                    other.to_string(source),
+                    0,
+                )),
+            }
+        }
         "format_int" => {
             let val = &args[0];
             let width = &args[1];
@@ -2442,92 +2401,6 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 ))
             }
         }
-        "dict_keys" => {
-            let dict = &args[0];
-            if let Value::Dict(map) = dict {
-                let keys: Vec<Value> = map.keys().cloned().map(Value::String).collect();
-                Ok(Value::List(keys))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "Dict",
-                    dict.to_string(source),
-                    0,
-                ))
-            }
-        }
-        "dict_values" => {
-            let dict = &args[0];
-            if let Value::Dict(map) = dict {
-                let vals: Vec<Value> = map.values().cloned().collect();
-                Ok(Value::List(vals))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "Dict",
-                    dict.to_string(source),
-                    0,
-                ))
-            }
-        }
-        "dict_remove" => {
-            let dict = &args[0];
-            let key = &args[1];
-            if let (Value::Dict(map), Value::String(k)) = (dict, key) {
-                let mut new_map = map.clone();
-                new_map.remove(k);
-                Ok(Value::Dict(new_map))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "Dict and String key",
-                    format!("{}, {}", dict.to_string(source), key.to_string(source)),
-                    0,
-                ))
-            }
-        }
-        "dict_merge" => {
-            let d1 = &args[0];
-            let d2 = &args[1];
-            if let (Value::Dict(a), Value::Dict(b)) = (d1, d2) {
-                let mut out = a.clone();
-                for (k, v) in b.iter() {
-                    out.insert(k.clone(), v.clone());
-                }
-                Ok(Value::Dict(out))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "Dict, Dict",
-                    format!("{}, {}", d1.to_string(source), d2.to_string(source)),
-                    0,
-                ))
-            }
-        }
-        "dict_size" => {
-            let dict = &args[0];
-            if let Value::Dict(map) = dict {
-                Ok(Value::Number(Number::Int(map.len() as i64)))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "Dict",
-                    dict.to_string(source),
-                    0,
-                ))
-            }
-        }
-        "dict_to_list" => {
-            let dict = &args[0];
-            if let Value::Dict(map) = dict {
-                let pairs: Vec<Value> = map
-                    .iter()
-                    .map(|(k, v)| Value::List(vec![Value::String(k.clone()), v.clone()]))
-                    .collect();
-                Ok(Value::List(pairs))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "Dict",
-                    dict.to_string(source),
-                    0,
-                ))
-            }
-        }
         "get" => {
             // get :: (Dict|[[String, a]]) -> String -> a | None
             // Works with both dicts and list of pairs
@@ -2810,68 +2683,6 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                     );
                     Err(EvalError::new(message, None, None, 0))
                 }
-                other => Err(EvalError::type_mismatch(
-                    "Bool",
-                    format!("{:?}", other),
-                    0,
-                )),
-            }
-        }
-
-        // Type assertions
-        "assert_string" => {
-            // assert_string :: a -> String
-            // Returns value if it's a String, throws error otherwise
-            match &args[0] {
-                Value::String(_) => Ok(args[0].clone()),
-                other => Err(EvalError::type_mismatch(
-                    "String",
-                    format!("{:?}", other),
-                    0,
-                )),
-            }
-        }
-        "assert_number" => {
-            // assert_number :: a -> Number
-            // Returns value if it's a Number, throws error otherwise
-            match &args[0] {
-                Value::Number(_) => Ok(args[0].clone()),
-                other => Err(EvalError::type_mismatch(
-                    "Number",
-                    format!("{:?}", other),
-                    0,
-                )),
-            }
-        }
-        "assert_int" => {
-            // assert_int :: a -> Int
-            // Returns value if it's an Int, throws error otherwise
-            match &args[0] {
-                Value::Number(Number::Int(_)) => Ok(args[0].clone()),
-                other => Err(EvalError::type_mismatch(
-                    "Int",
-                    format!("{:?}", other),
-                    0,
-                )),
-            }
-        }
-        "assert_list" => {
-            // assert_list :: a -> List
-            // Returns value if it's a List, throws error otherwise
-            match &args[0] {
-                Value::List(_) => Ok(args[0].clone()),
-                other => Err(EvalError::type_mismatch(
-                    "List",
-                    format!("{:?}", other),
-                    0,
-                )),
-            }
-        }
-        "assert_bool" => {
-            // assert_bool :: a -> Bool
-            // Returns value if it's a Bool, throws error otherwise
-            match &args[0] {
-                Value::Bool(_) => Ok(args[0].clone()),
                 other => Err(EvalError::type_mismatch(
                     "Bool",
                     format!("{:?}", other),

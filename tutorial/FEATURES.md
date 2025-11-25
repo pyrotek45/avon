@@ -289,11 +289,6 @@ Avon provides two dictionary representations:
 
 | Function | Arity | Purpose | Example |
 |----------|-------|---------|---------|
-| `dict_keys` | 1 | Get all keys as list | `dict_keys {name: "Alice"}` → `["name"]` |
-| `dict_values` | 1 | Get all values as list | `dict_values {name: "Alice"}` → `["Alice"]` |
-| `dict_size` | 1 | Count key-value pairs | `dict_size {a: 1, b: 2}` → `2` |
-| `dict_to_list` | 1 | Convert dict to pairs | `dict_to_list {a: 1}` → `[["a", 1]]` |
-| `dict_merge` | 2 | Merge two dicts | `dict_merge d1 d2` → merged dict |
 | `get` | 2 | Get value by key (dict or pairs) | `get {name: "Alice"} "name"` → `"Alice"` |
 | `set` | 3 | Update or add key (dict or pairs) | `set {a: 1} "b" 2` → `{a: 1, b: 2}` |
 | `keys` | 1 | Extract keys (dict or pairs) | `keys {a: 1}` → `["a"]` |
@@ -312,9 +307,8 @@ let host = config.host in          # "localhost"
 let port = config.port in          # 8080
 
 # Query the dict
-let all_keys = dict_keys config in     # ["host", "port", "debug"]
-let all_values = dict_values config in # ["localhost", 8080, true]
-dict_size config                       # 3
+let all_keys = keys config in      # ["host", "port", "debug"]
+let all_values = values config in  # ["localhost", 8080, true]
 ```
 
 **JSON Integration:**  
@@ -325,7 +319,6 @@ JSON objects are automatically parsed as dicts:
 let data = json_parse "config.json" in
 let app_name = data.app in         # "myapp" (dot notation)
 let version = get data "version" in # "1.0" (get function)
-dict_size data                     # 3
 ```
 
 **Examples:** `examples/dict_operations.av`, `examples/json_map_demo.av`
@@ -394,31 +387,35 @@ Avon provides comprehensive type introspection and validation utilities:
 | `is_bool` | 1 | Check if boolean | `is_bool true` | `true` |
 | `is_function` | 1 | Check if function | `is_function (\x x)` | `true` |
 
-#### Type Assertions
+#### Assertions & Error Handling
 
 | Function | Arity | Purpose | Example | Result |
 |----------|-------|---------|---------|--------|
-| `assert_string` | 1 | Validate string | `assert_string "hi"` | `"hi"` (or error) |
-| `assert_number` | 1 | Validate number | `assert_number 42` | `42` (or error) |
-| `assert_int` | 1 | Validate integer | `assert_int 42` | `42` (or error) |
-| `assert_list` | 1 | Validate list | `assert_list [1,2]` | `[1,2]` (or error) |
-| `assert_bool` | 1 | Validate boolean | `assert_bool true` | `true` (or error) |
-
-#### Debugging & Error Handling
-
-| Function | Arity | Purpose | Example | Result |
-|----------|-------|---------|---------|--------|
+| `assert` | 2 | Assert condition, return value or error | `assert (x > 0) x` | `x` (or error with debug info) |
 | `trace` | 2 | Print label + value to stderr | `trace "x" 42` | `42` (prints `[TRACE] x: 42`) |
 | `debug` | 1 | Pretty-print structure to stderr | `debug [1,2,3]` | `[1,2,3]` (prints `[DEBUG] List([...])`) |
 | `error` | 1 | Throw custom error | `error "Invalid port"` | Throws error with message |
+
+**Common assertion patterns:**
+
+```avon
+assert (is_string x) x      # Assert x is a string
+assert (is_number x) x      # Assert x is a number
+assert (is_int x) x         # Assert x is an integer
+assert (is_list xs) xs      # Assert xs is a list
+assert (x > 0) x            # Assert x is positive
+assert (length xs > 0) xs   # Assert list is not empty
+```
 
 **Practical Examples:**
 
 ```avon
 # Type checking before operations
 let process_config = \cfg
-  let port = assert_number (get cfg "port") in
-  let host = assert_string (get cfg "host") in
+  let port_val = get cfg "port" in
+  let host_val = get cfg "host" in
+  let port = assert (is_number port_val) port_val in
+  let host = assert (is_string host_val) host_val in
   {"Config: {host}:{port}"}
 in
 
@@ -445,8 +442,8 @@ in
 
 # Type-safe wrapper
 let safe_divide = \a \b
-  let num = assert_number a in
-  let denom = assert_number b in
+  let num = assert (is_number a) a in
+  let denom = assert (is_number b) b in
   if denom == 0 then
     error "Division by zero"
   else

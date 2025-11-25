@@ -1564,7 +1564,7 @@ mod tests {
 
         // Test that keys can be extracted from dict
         let prog2 = format!(
-            "let data = json_parse \"{}\" in dict_keys data",
+            "let data = json_parse \"{}\" in keys data",
             json_path.to_string_lossy()
         );
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
@@ -2260,16 +2260,41 @@ mod tests {
     }
 
     #[test]
-    fn test_assert_string() {
-        let prog = r#"assert_string "hello""#.to_string();
+    fn test_assert_with_true_condition() {
+        // assert returns value when condition is true
+        let prog = r#"assert (5 > 3) 42"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "42");
+    }
+
+    #[test]
+    fn test_assert_with_false_condition() {
+        // assert errors when condition is false
+        let prog = r#"assert (5 < 3) 42"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err());
+        let err_msg = format!("{:?}", result.unwrap_err());
+        assert!(err_msg.contains("assertion failed"));
+    }
+
+    #[test]
+    fn test_assert_with_type_check() {
+        // assert with is_string predicate
+        let prog = r#"assert (is_string "hello") "hello""#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         assert_eq!(v.to_string(&prog), "hello");
 
-        // Test failure case
-        let prog2 = r#"assert_string 42"#.to_string();
+        // assert with is_number predicate (should fail with string)
+        let prog2 = r#"assert (is_number "not a number") "not a number""#.to_string();
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
@@ -2278,81 +2303,123 @@ mod tests {
     }
 
     #[test]
-    fn test_assert_number() {
-        let prog = r#"assert_number 42"#.to_string();
+    fn test_assert_with_comparison() {
+        // assert with comparison
+        let prog = r#"let x = 10 in assert (x > 0) x"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        assert_eq!(v.to_string(&prog), "42");
-
-        // Test failure case
-        let prog2 = r#"assert_number "not a number""#.to_string();
-        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
-        let ast2 = parse(tokens2);
-        let mut symbols2 = initial_builtins();
-        let result = eval(ast2.program, &mut symbols2, &prog2);
-        assert!(result.is_err());
+        assert_eq!(v.to_string(&prog), "10");
     }
 
     #[test]
-    fn test_assert_int() {
-        let prog = r#"assert_int 42"#.to_string();
+    fn test_logical_or_operator() {
+        // Test: false || true => true
+        let prog = r#"false || true"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        assert_eq!(v.to_string(&prog), "42");
+        assert_eq!(v.to_string(&prog), "true");
 
-        // Test failure case with float
-        let prog2 = r#"assert_int 3.14"#.to_string();
+        // Test: true || false => true
+        let prog2 = r#"true || false"#.to_string();
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
-        let result = eval(ast2.program, &mut symbols2, &prog2);
-        assert!(result.is_err());
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "true");
+
+        // Test: false || false => false
+        let prog3 = r#"false || false"#.to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        assert_eq!(v3.to_string(&prog3), "false");
     }
 
     #[test]
-    fn test_assert_list() {
-        let prog = r#"assert_list [1, 2, 3]"#.to_string();
+    fn test_logical_and_operator() {
+        // Test: true && true => true
+        let prog = r#"true && true"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        match v {
-            Value::List(items) => assert_eq!(items.len(), 3),
-            _ => panic!("expected list"),
-        }
+        assert_eq!(v.to_string(&prog), "true");
 
-        // Test failure case
-        let prog2 = r#"assert_list "not a list""#.to_string();
+        // Test: true && false => false
+        let prog2 = r#"true && false"#.to_string();
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
-        let result = eval(ast2.program, &mut symbols2, &prog2);
-        assert!(result.is_err());
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "false");
+
+        // Test: false && true => false
+        let prog3 = r#"false && true"#.to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        assert_eq!(v3.to_string(&prog3), "false");
     }
 
     #[test]
-    fn test_assert_bool() {
-        let prog = r#"assert_bool (1 == 1)"#.to_string();
+    fn test_logical_operator_precedence() {
+        // Test AND binds tighter than OR: a || b && c => a || (b && c)
+        // true || false && false => true || (false && false) => true || false => true
+        let prog = r#"true || false && false"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        match v {
-            Value::Bool(b) => assert!(b),
-            other => panic!("expected bool true, got {:?}", other),
-        }
+        assert_eq!(v.to_string(&prog), "true");
 
-        // Test failure case
-        let prog2 = r#"assert_bool 1"#.to_string();
+        // false && true || true => (false && true) || true => false || true => true
+        let prog2 = r#"false && true || true"#.to_string();
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
-        let result = eval(ast2.program, &mut symbols2, &prog2);
-        assert!(result.is_err());
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "true");
+
+        // false && false || false => (false && false) || false => false || false => false
+        let prog3 = r#"false && false || false"#.to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        assert_eq!(v3.to_string(&prog3), "false");
+    }
+
+    #[test]
+    fn test_none_literal() {
+        // Test: none evaluates to None
+        let prog = r#"none"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "None");
+
+        // Test: none == none => true
+        let prog2 = r#"none == none"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "true");
+
+        // Test: none != none => false
+        let prog3 = r#"none != none"#.to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        assert_eq!(v3.to_string(&prog3), "false");
     }
 
     #[test]
@@ -2365,6 +2432,76 @@ mod tests {
         assert!(result.is_err());
         let err_msg = format!("{:?}", result.unwrap_err());
         assert!(err_msg.contains("Custom error message"));
+    }
+
+    #[test]
+    fn test_neg_builtin() {
+        // Test negating a positive integer
+        let prog = r#"neg 42"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "-42");
+
+        // Test negating a larger number
+        let prog2 = r#"neg 100"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "-100");
+
+        // Test negating a float
+        let prog3 = r#"neg 3.14"#.to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        assert_eq!(v3.to_string(&prog3), "-3.14");
+
+        // Test negating zero
+        let prog4 = r#"neg 0"#.to_string();
+        let tokens4 = tokenize(prog4.clone()).expect("tokenize");
+        let ast4 = parse(tokens4);
+        let mut symbols4 = initial_builtins();
+        let v4 = eval(ast4.program, &mut symbols4, &prog4).expect("eval");
+        assert_eq!(v4.to_string(&prog4), "0");
+    }
+
+    #[test]
+    fn test_is_empty_builtin() {
+        // Test is_empty on empty string
+        let prog = r#"is_empty """#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "true");
+
+        // Test is_empty on non-empty string
+        let prog2 = r#"is_empty "hello""#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "false");
+
+        // Test is_empty on empty list
+        let prog3 = r#"is_empty []"#.to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        assert_eq!(v3.to_string(&prog3), "true");
+
+        // Test is_empty on non-empty list
+        let prog4 = r#"is_empty [1, 2, 3]"#.to_string();
+        let tokens4 = tokenize(prog4.clone()).expect("tokenize");
+        let ast4 = parse(tokens4);
+        let mut symbols4 = initial_builtins();
+        let v4 = eval(ast4.program, &mut symbols4, &prog4).expect("eval");
+        assert_eq!(v4.to_string(&prog4), "false");
     }
 
     #[test]
@@ -2410,11 +2547,11 @@ mod tests {
 
     #[test]
     fn test_type_checking_in_pipeline() {
-        // Test type checking in a computation pipeline
+        // Test type checking in a computation pipeline using general assert
         let prog = r#"
-            let x = assert_number 5 in
+            let x = assert (is_number 5) 5 in
             let doubled = x * 2 in
-            let result = assert_number doubled in
+            let result = assert (is_number doubled) doubled in
             result
         "#
         .to_string();
@@ -2684,54 +2821,6 @@ mod tests {
     }
 
     #[test]
-    fn test_dict_literal_syntax_dict_keys() {
-        // Test dict_keys on dict literal
-        let prog = "let d = {x: 10, y: 20} in dict_keys d".to_string();
-        let tokens = tokenize(prog.clone()).expect("tokenize");
-        let ast = parse(tokens);
-        let mut symbols = initial_builtins();
-        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        // dict_keys should return a list of keys (order may vary)
-        let result = v.to_string(&prog);
-        assert!(result.contains("x") && result.contains("y"));
-    }
-
-    #[test]
-    fn test_dict_literal_syntax_dict_values() {
-        // Test dict_values on dict literal
-        let prog = "let d = {x: 10, y: 20} in dict_values d".to_string();
-        let tokens = tokenize(prog.clone()).expect("tokenize");
-        let ast = parse(tokens);
-        let mut symbols = initial_builtins();
-        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        // dict_values should return a list of values
-        let result = v.to_string(&prog);
-        assert!(result.contains("10") && result.contains("20"));
-    }
-
-    #[test]
-    fn test_dict_literal_syntax_dict_size() {
-        // Test dict_size on dict literal
-        let prog = "let d = {x: 10, y: 20, z: 30} in dict_size d".to_string();
-        let tokens = tokenize(prog.clone()).expect("tokenize");
-        let ast = parse(tokens);
-        let mut symbols = initial_builtins();
-        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        assert_eq!(v.to_string(&prog), "3");
-    }
-
-    #[test]
-    fn test_dict_literal_syntax_dict_merge() {
-        // Test dict_merge with dict literals
-        let prog = "let d1 = {x: 10, y: 20} in let d2 = {z: 30} in let merged = dict_merge d1 d2 in dict_size merged".to_string();
-        let tokens = tokenize(prog.clone()).expect("tokenize");
-        let ast = parse(tokens);
-        let mut symbols = initial_builtins();
-        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        assert_eq!(v.to_string(&prog), "3");
-    }
-
-    #[test]
     fn test_dict_literal_syntax_is_dict() {
         // Test is_dict on dict literal
         let prog = "let d = {x: 10} in is_dict d".to_string();
@@ -2781,8 +2870,8 @@ mod tests {
 
     #[test]
     fn test_dict_literal_syntax_with_values() {
-        // Test dict_values function with dict literal
-        let prog = "let d = {x: 100, y: 200} in dict_values d".to_string();
+        // Test values function with dict literal
+        let prog = "let d = {x: 100, y: 200} in values d".to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -2875,39 +2964,6 @@ mod tests {
     }
 
     #[test]
-    fn test_dict_literal_syntax_empty() {
-        // Test empty dict
-        let prog = "let d = {} in dict_size d".to_string();
-        let tokens = tokenize(prog.clone()).expect("tokenize");
-        let ast = parse(tokens);
-        let mut symbols = initial_builtins();
-        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        assert_eq!(v.to_string(&prog), "0");
-    }
-
-    #[test]
-    fn test_dict_literal_syntax_single_key() {
-        // Test dict with single key
-        let prog = "let d = {name: \"Alice\"} in dict_size d".to_string();
-        let tokens = tokenize(prog.clone()).expect("tokenize");
-        let ast = parse(tokens);
-        let mut symbols = initial_builtins();
-        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        assert_eq!(v.to_string(&prog), "1");
-    }
-
-    #[test]
-    fn test_dict_literal_syntax_dict_to_list() {
-        // Test dict_to_list with dict literal
-        let prog = "let d = {x: 10, y: 20} in let lst = dict_to_list d in length lst".to_string();
-        let tokens = tokenize(prog.clone()).expect("tokenize");
-        let ast = parse(tokens);
-        let mut symbols = initial_builtins();
-        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        assert_eq!(v.to_string(&prog), "2");
-    }
-
-    #[test]
     fn test_dict_nested_three_levels() {
         // Test three-level nested dict access with chained dot notation
         let prog =
@@ -2997,18 +3053,6 @@ mod tests {
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         assert_eq!(v.to_string(&prog), "8");
-    }
-
-    #[test]
-    fn test_dict_nested_empty_dicts() {
-        // Test nested dicts with empty intermediate dicts
-        let prog =
-            "let d = {outer: {inner: {deep: {}}}} in dict_size d.outer.inner.deep".to_string();
-        let tokens = tokenize(prog.clone()).expect("tokenize");
-        let ast = parse(tokens);
-        let mut symbols = initial_builtins();
-        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        assert_eq!(v.to_string(&prog), "0");
     }
 
     #[test]

@@ -276,7 +276,6 @@ impl EvalError {
             ("to_string", "str"), // Alternative suggestion
             ("print", "trace or debug"),
             ("println", "trace or debug"),
-            ("assert", "assert_string, assert_number, etc."),
         ];
 
         for (typo, correct) in suggestions {
@@ -290,7 +289,7 @@ impl EvalError {
             return "Available type predicates: is_string, is_number, is_int, is_float, is_list, is_bool, is_function".to_string();
         }
         if sym.starts_with("assert_") {
-            return "Available assertions: assert_string, assert_number, assert_int, assert_list, assert_bool".to_string();
+            return "Use general 'assert' function: assert (is_number x) x, assert (x > 0) x, etc.".to_string();
         }
         if sym.starts_with("format_") {
             return "Available formatters: format_int, format_float, format_hex, format_bytes, format_list, etc.".to_string();
@@ -318,7 +317,7 @@ impl EvalError {
                 .to_string();
         }
         if expected.contains("Int") && found.contains("Float") {
-            return "Use 'to_int' to convert a float to an integer, or change assertion to assert_number".to_string();
+            return "Use 'to_int' to convert a float to an integer, or use assert (is_number x) x instead of assert (is_int x) x".to_string();
         }
         if expected.contains("Number") && found.contains("Template") {
             return "Templates cannot be used in arithmetic. Use template interpolation instead: {expr}".to_string();

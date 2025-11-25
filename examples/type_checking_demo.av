@@ -1,19 +1,19 @@
 # Type Checking and Debugging Demo
 # Demonstrates all the new type introspection, assertion, and debugging functions
 
-let port = assert_number 8080 in
-let host = assert_string "localhost" in
-let services = assert_list ["api", "web", "db"] in
-let enabled = assert_bool (1 == 1) in
+let port = assert (is_number 8080) 8080 in
+let host = assert (is_string "localhost") "localhost" in
+let services = assert (is_list ["api", "web", "db"]) ["api", "web", "db"] in
+let enabled = assert (is_bool (1 == 1)) (1 == 1) in
 
 let validate_port = \p 
-  let validated = assert_number p in
+  let validated = assert (is_number p) p in
   if validated > 0 then validated
   else error "Port must be positive"
 in
 
 let validate_env = \env
-  let e = assert_string env in
+  let e = assert (is_string env) env in
   if e == "dev" then e
   else if e == "staging" then e
   else if e == "prod" then e
@@ -39,9 +39,9 @@ let complex_data = [
 let inspected = debug complex_data in
 
 let make_service_config = \name \port_num \env
-  let validated_name = trace "validating name" (assert_string name) in
-  let validated_port = trace "validating port" (assert_number port_num) in
-  let validated_env = trace "validating env" (assert_string env) in
+  let validated_name = trace "validating name" (assert (is_string name) name) in
+  let validated_port = trace "validating port" (assert (is_number port_num) port_num) in
+  let validated_env = trace "validating env" (assert (is_string env) env) in
   let config = [
     ["name", validated_name],
     ["port", to_string validated_port],
