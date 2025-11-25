@@ -346,13 +346,14 @@ avon eval program.av
 
 ```avon
 let process = \data
-  trace "input" data
+  let _ = trace "input" data in
   let result = ...transformation... in
-  trace "output" result
+  let _ = trace "output" result in
+  result
 in
 ```
 
-This shows you what comes in and what goes out.
+This shows you what comes in and what goes out. Note: `trace` returns a value, so you need to bind it with `let _` to discard it (or use its return value), then use `in` to continue.
 
 ### Pattern 2: Validating Before Use
 
@@ -474,7 +475,7 @@ map process_env envs
 
 ```avon
 let process_env = \env_dict
-  trace "processing dict" env_dict
+  let _ = trace "processing dict" env_dict in
   let timeout = env_dict.timeout in
   let retries = env_dict.retries in
   {timeout: timeout, retries: retries}
@@ -484,7 +485,7 @@ let envs = [
   {host: "localhost", port: 8080},
   {host: "prod.example.com", port: 443}
 ] in
-trace "all envs" envs
+let _ = trace "all envs" envs in
 map process_env envs
 ```
 
