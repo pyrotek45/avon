@@ -295,7 +295,7 @@ This is especially useful for functions with multiple parameters:
 let make_config = \env \debug ? false @/config-{env}.yml {"
     environment: {env}
     debug: {debug}
-} in
+"} in
 
 let environments = ["dev", "staging", "prod"] in
 [
@@ -441,10 +441,9 @@ The `{...}` syntax embeds an expression to be evaluated and inserted into the ou
 Templates preserve newlines exactly as you write them:
 
 ```avon
-let name = "Alice" in
-{"
-Hello, {name}!
-Welcome to Avon.
+let name = "Alice" in {"
+    Hello, {name}!
+    Welcome to Avon.
 "}
 ```
 
@@ -602,11 +601,10 @@ You can embed any expression in a template:
 ```avon
 let x = 10 in
 let y = 20 in
-let items = ["apple", "banana", "cherry"] in
-{"
-Sum: {x + y}
-Max: {if x > y then x else y}
-Items: {join items ", "}
+let items = ["apple", "banana", "cherry"] in {"
+    Sum: {x + y}
+    Max: {if x > y then x else y}
+    Items: {join items ", "}
 "}
 ```
 
