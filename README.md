@@ -297,7 +297,7 @@ See [TUTORIAL.md](./tutorial/TUTORIAL.md) for complete guide or run `avon --doc`
 
 ## Documentation
 
-- **[Tutorial](./tutorial/TUTORIAL.md)** | **[Reference](./tutorial/FEATURES.md)** | **[Style Guide](./tutorial/STYLE_GUIDE.md)**
+- **[Tutorial](./tutorial/TUTORIAL.md)** | **[Reference](./tutorial/FEATURES.md)** | **[Style Guide](./tutorial/STYLE_GUIDE.md)** | **[Debug](./tutorial/DEBUGGING_GUIDE.md)**
 - **92 working examples** in `./examples/`
 - **`avon --doc`** for built-in help
 
@@ -351,7 +351,7 @@ Each error shows the function/operator name and the types involved. **Simple err
 - `assert_*` functions — Validate types early with `assert_string`, `assert_number`, etc.
 - `--debug` flag — See lexer/parser/evaluator debug output
 
-See [tutorial/DEBUGGING_GUIDE.md](tutorial/DEBUGGING_GUIDE.md) for the complete debugging guide, and [ERROR_SIMPLIFICATION.md](ERROR_SIMPLIFICATION.md) for error system details. Try the example: `avon eval examples/debugging_techniques.av 2>&1`
+See [tutorial/DEBUGGING_GUIDE.md](tutorial/DEBUGGING_GUIDE.md) for the complete debugging guide.
 
 ## Installation
 
