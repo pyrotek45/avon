@@ -345,13 +345,17 @@ Combine paths with templates for file generation:
 "}
 ```
 
-Paths in file templates can also be stored in variables:
+Paths can be used in functions and with file operations, but file template syntax requires the `@` prefix at the point of template declaration:
 ```avon
-let output_file = @/tmp/report.txt in
-output_file {"Generated report content"}
+@/tmp/report.txt {"Generated report content"}
 ```
 
-When deployed, this writes the template content to the specified file.
+To reuse paths, pass them to functions or use them with file operations like `readfile`:
+```avon
+let output_file = @/tmp/report.txt in
+let content = readfile output_file in
+content
+```
 
 **Examples:** `examples/site_generator.av`, `examples/named_args.av`, `examples/large_program.av`
 
