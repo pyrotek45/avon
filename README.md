@@ -5,7 +5,7 @@
 **The language is only half the story—the `@` syntax deployment system is what makes Avon different.**
 
 [![Rust](https://img.shields.io/badge/Rust-1.70%2B-orange)](https://www.rust-lang.org/)
-[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
 
 ## Quick Start (2 Minutes)
 
@@ -380,7 +380,7 @@ export PATH="$PATH:/path/to/avon/target/release"
 
 ## License
 
-MIT OR Apache-2.0 — Use it however you want.
+MIT — Use it however you want.
 
 ---
 
