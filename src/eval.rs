@@ -376,6 +376,12 @@ pub fn initial_builtins() -> HashMap<String, Value> {
         Value::Builtin("is_dict".to_string(), Vec::new()),
     );
 
+    // Assertions
+    m.insert(
+        "assert".to_string(),
+        Value::Builtin("assert".to_string(), Vec::new()),
+    );
+
     // Type assertions
     m.insert(
         "assert_string".to_string(),
@@ -582,6 +588,63 @@ pub fn eval(
             let r_eval = eval(*rhs.clone(), symbols, source)?;
 
             match op {
+                // handle logical operators
+                Token::And => match (l_eval.clone(), r_eval.clone()) {
+                    (Value::Bool(lb), Value::Bool(rb)) => Ok(Value::Bool(lb && rb)),
+                    (a, b) => {
+                        let l_type = match a {
+                            Value::Number(_) => "Number",
+                            Value::String(_) => "String",
+                            Value::List(_) => "List",
+                            Value::Bool(_) => "Bool",
+                            Value::Function { .. } => "Function",
+                            _ => "unknown type",
+                        };
+                        let r_type = match b {
+                            Value::Number(_) => "Number",
+                            Value::String(_) => "String",
+                            Value::List(_) => "List",
+                            Value::Bool(_) => "Bool",
+                            Value::Function { .. } => "Function",
+                            _ => "unknown type",
+                        };
+
+                        return Err(EvalError::new(
+                            "and",
+                            Some(l_type.to_string()),
+                            Some(r_type.to_string()),
+                            0,
+                        ))
+                    }
+                },
+                Token::Or => match (l_eval.clone(), r_eval.clone()) {
+                    (Value::Bool(lb), Value::Bool(rb)) => Ok(Value::Bool(lb || rb)),
+                    (a, b) => {
+                        let l_type = match a {
+                            Value::Number(_) => "Number",
+                            Value::String(_) => "String",
+                            Value::List(_) => "List",
+                            Value::Bool(_) => "Bool",
+                            Value::Function { .. } => "Function",
+                            _ => "unknown type",
+                        };
+                        let r_type = match b {
+                            Value::Number(_) => "Number",
+                            Value::String(_) => "String",
+                            Value::List(_) => "List",
+                            Value::Bool(_) => "Bool",
+                            Value::Function { .. } => "Function",
+                            _ => "unknown type",
+                        };
+
+                        return Err(EvalError::new(
+                            "or",
+                            Some(l_type.to_string()),
+                            Some(r_type.to_string()),
+                            0,
+                        ))
+                    }
+                },
                 Token::Add => match (l_eval.clone(), r_eval.clone()) {
                     (Value::Number(ln), Value::Number(rn)) => Ok(Value::Number(ln.add(rn))),
                     (Value::String(ls), Value::String(rs)) => {
@@ -737,7 +800,7 @@ pub fn eval(
                     };
                     Ok(Value::Bool(eq))
                 }
-                _ => return Err(EvalError::new("Not a valid operation", None, None, 0)),
+                value => return Err(EvalError::new(format!("Not a valid operation: {:?}", value), None, None, 0)),
             }
         }
         Expr::Ident(ident) => {
@@ -1044,6 +1107,8 @@ pub fn apply_function(func: &Value, arg: Value, source: &str) -> Result<Value, E
                 "is_bool" => 1,
                 "is_function" => 1,
                 "is_dict" => 1,
+                // Assertions
+                "assert" => 2,
                 // Type assertions
                 "assert_string" => 1,
                 "assert_number" => 1,
@@ -1214,7 +1279,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             Ok(Value::String(data))
         }
         "fill_template" => {
-            // Args: filename (string or path), substitutions (list of [key, value] pairs)
+            // Args: filename (string or path), substitutions (dict or list of [key, value] pairs)
             let pathv = &args[0];
             let subsv = &args[1];
 
@@ -1224,61 +1289,74 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 EvalError::new(format!("fill_template"), Some("file".to_string()), Some(e.to_string()), 0)
             })?;
 
-            // Process substitutions
-            if let Value::List(pairs) = subsv {
-                for pair in pairs {
-                    if let Value::List(kv) = pair {
-                        if kv.len() != 2 {
+            // Process substitutions - accept both dict and list of pairs
+            match subsv {
+                Value::Dict(map) => {
+                    // Modern approach: use dict directly
+                    for (key, val) in map.iter() {
+                        let val_str = val.to_string(source);
+                        let placeholder = format!("{{{}}}", key);
+                        template = template.replace(&placeholder, &val_str);
+                    }
+                    Ok(Value::String(template))
+                }
+                Value::List(pairs) => {
+                    // Legacy approach: list of [key, value] pairs
+                    for pair in pairs {
+                        if let Value::List(kv) = pair {
+                            if kv.len() != 2 {
+                                return Err(EvalError::new(
+                                    "fill_template",
+                                    Some("[key, value] pair".to_string()),
+                                    Some(format!("list of {}", kv.len())),
+                                    0
+                                ));
+                            }
+
+                            let key = match &kv[0] {
+                                Value::String(s) => s.clone(),
+                                other => {
+                                    return Err(EvalError::type_mismatch(
+                                        "string",
+                                        match other {
+                                            Value::Number(_) => "number",
+                                            Value::List(_) => "list",
+                                            Value::Bool(_) => "bool",
+                                            Value::Function { .. } => "function",
+                                            _ => "unknown",
+                                        },
+                                        0,
+                                    ))
+                                }
+                            };
+
+                            let val = kv[1].to_string(source);
+                            let placeholder = format!("{{{}}}", key);
+                            template = template.replace(&placeholder, &val);
+                        } else {
                             return Err(EvalError::new(
                                 "fill_template",
-                                Some("[key, value] pair".to_string()),
-                                Some(format!("list of {}", kv.len())),
+                                Some("list".to_string()),
+                                Some(pair.to_string(source)),
                                 0
                             ));
                         }
-
-                        let key = match &kv[0] {
-                            Value::String(s) => s.clone(),
-                            other => {
-                                return Err(EvalError::type_mismatch(
-                                    "string",
-                                    match other {
-                                        Value::Number(_) => "number",
-                                        Value::List(_) => "list",
-                                        Value::Bool(_) => "bool",
-                                        Value::Function { .. } => "function",
-                                        _ => "unknown",
-                                    },
-                                    0,
-                                ))
-                            }
-                        };
-
-                        let val = kv[1].to_string(source);
-                        let placeholder = format!("{{{}}}", key);
-                        template = template.replace(&placeholder, &val);
-                    } else {
-                        return Err(EvalError::new(
-                            "fill_template",
-                            Some("list".to_string()),
-                            Some(pair.to_string(source)),
-                            0
-                        ));
                     }
+                    Ok(Value::String(template))
                 }
-                Ok(Value::String(template))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    match subsv {
-                        Value::String(_) => "string",
-                        Value::Number(_) => "number",
-                        Value::Bool(_) => "bool",
-                        Value::Function { .. } => "function",
-                        _ => "unknown",
-                    },
-                    0,
-                ))
+                _ => {
+                    Err(EvalError::type_mismatch(
+                        "dict or list of pairs",
+                        match subsv {
+                            Value::String(_) => "string",
+                            Value::Number(_) => "number",
+                            Value::Bool(_) => "bool",
+                            Value::Function { .. } => "function",
+                            _ => "unknown",
+                        },
+                        0,
+                    ))
+                }
             }
         }
         "upper" => {
@@ -2587,49 +2665,68 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             }
         }
         "values" => {
-            // values :: [[String, a]] -> [a]
-            // Usage: values [["name", "alice"], ["age", "30"]] => ["alice", "30"]
+            // values :: (Dict|[[String, a]]) -> [a]
+            // Works with both dicts and list of pairs
+            // Usage: values {name: "alice", age: 30} => ["alice", 30]
+            //        values [["name", "alice"], ["age", "30"]] => ["alice", "30"]
             let map = &args[0];
-            if let Value::List(pairs) = map {
-                let mut vals = Vec::new();
-                for pair in pairs {
-                    if let Value::List(kv) = pair {
-                        if kv.len() >= 2 {
-                            vals.push(kv[1].clone());
-                        }
-                    }
+            match map {
+                Value::Dict(dict) => {
+                    let vals: Vec<Value> = dict.values().cloned().collect();
+                    Ok(Value::List(vals))
                 }
-                Ok(Value::List(vals))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "list of pairs",
-                    map.to_string(source),
-                    0,
-                ))
-            }
-        }
-        "has_key" => {
-            // has_key :: [[String, a]] -> String -> Bool
-            // Usage: has_key [["name", "alice"]] "name" => true
-            let map = &args[0];
-            let key = &args[1];
-            if let (Value::List(pairs), Value::String(k)) = (map, key) {
-                for pair in pairs {
-                    if let Value::List(kv) = pair {
-                        if !kv.is_empty() {
-                            if let Value::String(pair_key) = &kv[0] {
-                                if pair_key == k {
-                                    return Ok(Value::Bool(true));
-                                }
+                Value::List(pairs) => {
+                    let mut vals = Vec::new();
+                    for pair in pairs {
+                        if let Value::List(kv) = pair {
+                            if kv.len() >= 2 {
+                                vals.push(kv[1].clone());
                             }
                         }
                     }
+                    Ok(Value::List(vals))
                 }
-                Ok(Value::Bool(false))
+                _ => Err(EvalError::type_mismatch(
+                    "dict or list of pairs",
+                    map.to_string(source),
+                    0,
+                )),
+            }
+        }
+        "has_key" => {
+            // has_key :: (Dict|[[String, a]]) -> String -> Bool
+            // Works with both dicts and list of pairs
+            // Usage: has_key {name: "alice"} "name" => true
+            //        has_key [["name", "alice"]] "name" => true
+            let map = &args[0];
+            let key = &args[1];
+            if let Value::String(k) = key {
+                match map {
+                    Value::Dict(dict) => Ok(Value::Bool(dict.contains_key(k))),
+                    Value::List(pairs) => {
+                        for pair in pairs {
+                            if let Value::List(kv) = pair {
+                                if !kv.is_empty() {
+                                    if let Value::String(pair_key) = &kv[0] {
+                                        if pair_key == k {
+                                            return Ok(Value::Bool(true));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Ok(Value::Bool(false))
+                    }
+                    _ => Err(EvalError::type_mismatch(
+                        "dict or list of pairs",
+                        map.to_string(source),
+                        0,
+                    )),
+                }
             } else {
                 Err(EvalError::type_mismatch(
-                    "list of pairs and string key",
-                    format!("{}, {}", map.to_string(source), key.to_string(source)),
+                    "string key",
+                    key.to_string(source),
                     0,
                 ))
             }
@@ -2697,6 +2794,28 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
         "is_dict" => {
             // is_dict :: a -> Bool
             Ok(Value::Bool(matches!(args[0], Value::Dict(_))))
+        }
+
+        // Assertions
+        "assert" => {
+            // assert :: Bool -> a -> a
+            // Returns the second argument if first is true, throws error if false
+            match &args[0] {
+                Value::Bool(true) => Ok(args[1].clone()),
+                Value::Bool(false) => {
+                    let debug_info = format!("{:#?}", args[1]);
+                    let message = format!(
+                        "\x1b[91massertion failed\x1b[0m\nvalue: {}",
+                        debug_info
+                    );
+                    Err(EvalError::new(message, None, None, 0))
+                }
+                other => Err(EvalError::type_mismatch(
+                    "Bool",
+                    format!("{:?}", other),
+                    0,
+                )),
+            }
         }
 
         // Type assertions

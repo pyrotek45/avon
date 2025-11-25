@@ -122,7 +122,7 @@ fn print_builtin_docs() {
     println!("----------------");
     println!("  readfile        :: String|Path -> String");
     println!("  readlines       :: String|Path -> [String]");
-    println!("  fill_template   :: String|Path -> [[String, String]] -> String");
+    println!("  fill_template   :: String|Path -> (Dict|[[String, String]]) -> String");
     println!("                     (reads file and fills {{placeholders}} with values)");
     println!("  exists          :: String|Path -> Bool");
     println!("  basename        :: String|Path -> String");
@@ -152,6 +152,7 @@ fn print_builtin_docs() {
     println!("  is_bool      :: a -> Bool");
     println!("  is_function  :: a -> Bool");
     println!();
+    println!("  assert       :: Bool -> a -> a                   (returns value if condition true, errors with debug info otherwise)");
     println!("  assert_string :: a -> a                          (returns value if string, errors otherwise)");
     println!("  assert_number :: a -> a                          (returns value if number, errors otherwise)");
     println!("  assert_int    :: a -> a                          (returns value if int, errors otherwise)");
@@ -278,6 +279,12 @@ Options:
   --debug            Enable detailed debug output (lexer/parser/eval)
   --doc              Show all builtin functions (with Haskell-style types)
   -h, --help         Show this brief help
+
+Debugging Tools:
+  trace "label" value    Print labeled value to stderr, return value unchanged
+  debug value            Print internal structure to stderr
+  assert_string/number/list/bool value    Type validation with early failure
+  See tutorial/DEBUGGING_GUIDE.md for complete debugging guide
 
 Examples:
   avon eval myfile.av

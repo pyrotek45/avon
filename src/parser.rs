@@ -101,8 +101,8 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
                             let value = match try_parse_expr(stream) {
                                 Ok(expr) => expr,
                                 Err(_) => {
-                                    // Fall back to parse_cmp if try_parse_expr fails
-                                    parse_cmp(stream)
+                                    // Fall back to parse_logic if try_parse_expr fails
+                                    parse_logic(stream)
                                 }
                             };
                             pairs.push((key_name, value));
@@ -210,6 +210,8 @@ pub fn parse_term(stream: &mut Peekable<Iter<Token>>) -> Expr {
     lhs
 }
 
+
+
 pub fn parse_cmp(stream: &mut Peekable<Iter<Token>>) -> Expr {
     let mut lhs = parse_term(stream);
 
@@ -238,6 +240,29 @@ pub fn parse_cmp(stream: &mut Peekable<Iter<Token>>) -> Expr {
     lhs
 }
 
+
+pub fn parse_logic(stream: &mut Peekable<Iter<Token>>) -> Expr {
+    let mut lhs = parse_cmp(stream);
+
+    loop {
+        match stream.peek() {
+            Some(Token::And) | Some(Token::Or) => {
+                // Safe: we just peeked and confirmed there's a token
+                let op = stream.next().expect("token exists after peek").clone();
+                let rhs = parse_cmp(stream);
+                lhs = Expr::Binary {
+                    lhs: Box::new(lhs),
+                    op,
+                    rhs: Box::new(rhs),
+                };
+                continue;
+            }
+            _ => break,
+        }
+    }
+
+    lhs
+}
 fn eat(stream: &mut Peekable<Iter<Token>>, token: Token) -> ParseResult<()> {
     let next = stream.next();
     if let Some(t) = next {
@@ -410,7 +435,7 @@ fn parse_pipe(stream: &mut Peekable<Iter<Token>>) -> Expr {
 }
 
 fn parse_app(stream: &mut Peekable<Iter<Token>>) -> Expr {
-    let mut lhs = parse_cmp(stream);
+    let mut lhs = parse_logic(stream);
 
     loop {
         match stream.peek() {

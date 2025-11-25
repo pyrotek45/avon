@@ -325,7 +325,7 @@ See [TUTORIAL.md](./tutorial/TUTORIAL.md) for complete guide or run `avon --doc`
 - Type-safe, single binary, no dependencies
 - Production-ready error handling (no panics)
 
-## Error Messages
+## Error Messages & Debugging
 
 Avon provides simple, direct error messages that show exactly what went wrong:
 
@@ -343,7 +343,15 @@ $ avon test_fold.av
 fold: x: +: expected Number, found String
 ```
 
-Each error shows the function/operator name and the types involved, making debugging fast and easy. See [ERROR_SIMPLIFICATION.md](ERROR_SIMPLIFICATION.md) for detailed information about the error system.
+Each error shows the function/operator name and the types involved. **Simple errors are better—they're easier to understand and act on.**
+
+**Debugging Tools:**
+- `trace "label" value` — Print labeled values to stderr, returns value unchanged
+- `debug value` — Pretty-print value structure to stderr, returns value unchanged
+- `assert_*` functions — Validate types early with `assert_string`, `assert_number`, etc.
+- `--debug` flag — See lexer/parser/evaluator debug output
+
+See [tutorial/DEBUGGING_GUIDE.md](tutorial/DEBUGGING_GUIDE.md) for the complete debugging guide, and [ERROR_SIMPLIFICATION.md](ERROR_SIMPLIFICATION.md) for error system details. Try the example: `avon eval examples/debugging_techniques.av 2>&1`
 
 ## Installation
 

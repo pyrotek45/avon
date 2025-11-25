@@ -462,6 +462,21 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, EvalError> {
                 output.push(Token::Less);
             }
             '+' => output.push(Token::Add),
+            // not sure what to do with single '&' and '|', so only handle double versions
+            '&' => {
+                if let Some('&') = stream.peek() {
+                    stream.next();
+                    output.push(Token::And);
+                    continue;
+                }
+            }
+            '|' => {
+                if let Some('|') = stream.peek() {
+                    stream.next();
+                    output.push(Token::Or);
+                    continue;
+                }
+            }
             '-' => {
                 // Check for pipe operator ->
                 if let Some('>') = stream.peek() {

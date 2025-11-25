@@ -1,16 +1,16 @@
-# Demo: Using Path values with fill_template
+# Demo: Using Path values with fill_template (using modern dict syntax)
 
 # Define template path with interpolation
 let env = "email" in
 let template_path = @examples/{env}_template.txt in
 
-# Define substitutions
-let subs = [
-    ["name", "Alice Smith"],
-    ["subject", "Project Update"],
-    ["email", "alice@example.com"],
-    ["sender", "Support Team"]
-] in
+# Define substitutions (using modern dict syntax)
+let subs = {
+    name: "Alice Smith",
+    subject: "Project Update",
+    email: "alice@example.com",
+    sender: "Support Team"
+} in
 
 # Use path with fill_template
 let filled = fill_template template_path subs in

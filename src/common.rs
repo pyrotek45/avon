@@ -28,6 +28,8 @@ pub enum Token {
     Equal,
     DoubleEqual,
     DoubleDot,
+    And,
+    Or,
     LParen,
     RParen,
     LBracket,

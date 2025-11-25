@@ -20,7 +20,7 @@ This tutorial covers everything from basic syntax to advanced patterns. We assum
 2. **[Core Concepts](#core-concepts)** — Values, types, and the Avon model
 3. **[Language Essentials](#language-essentials)** — Syntax, expressions, and operators
 4. **[Functions & Variables](#functions--variables)** — Defining and using functions, let bindings
-5. **[Collections](#collections)** — Lists and the powerful `map`, `filter`, `fold` operations
+5. **[Collections](#collections)** — Lists, dictionaries, and the powerful `map`, `filter`, `fold` operations
 6. **[Templates](#templates)** — The heart of Avon: generating text output
 7. **[File Templates & Deployment](#file-templates--deployment)** — Multi-file generation
 8. **[Builtin Functions](#builtin-functions)** — String, list, file, and JSON helpers
@@ -114,6 +114,7 @@ When you run an Avon program, it evaluates to a **Value**. Here are the types of
 | **Number** | `42`, `3.14` | Configuration, counts, versions |
 | **Bool** | `true`, `false` | Conditional logic |
 | **List** | `[1, 2, 3]` | Collections (files, items, lines) |
+| **Dictionary** | `{host: "localhost", port: 8080}` | Structured data with named fields |
 | **Function** | `\x x + 1` | Reusable logic and transformations |
 | **Template** | `{"Hello {name}"}` | Text generation with interpolation |
 | **FileTemplate** | `@/path/file {"content"}` | File generation targets |
@@ -140,9 +141,17 @@ Avon is a small, elegant language optimized for readability and powerful file ge
 3.14                       # Float
 true false                 # Booleans
 [1, 2, 3]                  # List
+{host: "localhost", port: 8080}  # Dictionary (key: value syntax)
 ```
 
 **Strings support escape sequences:** `"\n"` is a newline, `"\t"` is a tab, `"\\"` is a backslash, `"\""` is a quote.
+
+**Dictionary syntax:** Keys are identifiers (unquoted), values can be any type:
+```avon
+{a: 1, b: 2}               # Simple dict
+{host: "localhost", port: 8080, debug: true}  # Mixed types
+{nested: {x: 1, y: 2}}     # Nested dicts
+```
 
 #### Identifiers and Variables
 
@@ -347,6 +356,118 @@ You can concatenate lists with `+`:
 ```avon
 [1, 2] + [3, 4]           # Result: [1, 2, 3, 4]
 ```
+
+### Dictionaries (Key-Value Maps)
+
+For structured data with named fields, use **dictionaries** instead of lists of pairs. Dictionaries provide fast key lookup and clean dot notation access.
+
+**Dictionary syntax** uses curly braces with colon notation:
+
+```avon
+let config = {host: "localhost", port: 8080, debug: true} in
+config
+# Result: {host: "localhost", port: 8080, debug: true}
+```
+
+**Access values** using dot notation (modern) or the `get` function (compatible with lists of pairs):
+
+```avon
+let config = {host: "localhost", port: 8080} in
+let host = config.host in        # Dot notation: "localhost"
+let port = get config "port" in  # get function: 8080
+port
+```
+
+**Query dict operations:**
+
+```avon
+let config = {host: "localhost", port: 8080, debug: true} in
+
+dict_keys config      # ["host", "port", "debug"]
+dict_values config    # ["localhost", 8080, true]
+dict_size config      # 3
+has_key config "host" # true
+has_key config "user" # false
+```
+
+**Update a dictionary** using `set`:
+
+```avon
+let config = {host: "localhost", port: 8080} in
+let updated = set config "debug" true in
+updated
+# Result: {host: "localhost", port: 8080, debug: true}
+```
+
+**Merge dictionaries:**
+
+```avon
+let db_config = {host: "db.local", port: 5432} in
+let app_config = {timeout: 30, retries: 3} in
+let merged = dict_merge db_config app_config in
+merged
+# Result: {host: "db.local", port: 5432, timeout: 30, retries: 3}
+```
+
+**Nested dictionaries:**
+
+```avon
+let config = {
+  database: {host: "db.local", port: 5432},
+  app: {name: "myapp", debug: true}
+} in
+let db_host = (get config "database").host in
+db_host
+# Result: "db.local"
+```
+
+**Why use dicts instead of list of pairs?**
+
+- **Clearer intent** - `{host: "localhost"}` is more readable than `[["host", "localhost"]]`
+- **Dot notation** - Access fields naturally: `config.host` instead of `get config "host"`
+- **Faster lookups** - Hash map instead of linear search through pairs
+- **Type-safe** - Errors when accessing non-existent keys are clear
+- **Better for JSON** - JSON objects naturally parse to dicts
+- **Backward compatible** - `get`, `set`, `has_key`, `keys`, `values` work with both dicts and list-of-pairs
+
+**When to use each:**
+
+- **Use dictionaries when:**
+  - You need fast key lookup
+  - You want dot notation access
+  - Keys are unique
+  - You're modeling structured configuration or data objects
+
+- **Use list of pairs when:**
+  - You need to maintain order
+  - You want to iterate sequentially  
+  - You might have duplicate keys
+  - You're building data dynamically
+
+**Real-world example: Configuration with dicts**
+
+Instead of building a list of pairs and converting later:
+
+```avon
+# Modern approach with dict
+let service_config = {
+  name: "api-service",
+  port: 8080,
+  replicas: 3,
+  health_check: {interval: 30, timeout: 5}
+} in
+
+@/service.yml {"
+  name: {service_config.name}
+  port: {service_config.port}
+  replicas: {service_config.replicas}
+  health_check:
+    interval: {service_config.health_check.interval}
+    timeout: {service_config.health_check.timeout}
+"}
+```
+
+**See also:** `examples/dict_operations.av`, `examples/dict_vs_pairs.av`, `examples/dict_config_system.av` for more examples.
 
 ### Map — Transform Every Item
 

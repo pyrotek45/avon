@@ -23,8 +23,8 @@ let env = "prod" in
 let app_name = "myapp" in
 let config_path = @config/{env}/{app_name}.yml in
 
-# 5. Using paths with fill_template
-let subs = [["name", "Bob"], ["email", "bob@test.com"], ["subject", "Hello"], ["sender", "Team"]] in
+# 5. Using paths with fill_template (using modern dict syntax)
+let subs = {name: "Bob", email: "bob@test.com", subject: "Hello", sender: "Team"} in
 let filled = fill_template template_file subs in
 
 # 6. Multiple file generation with dynamic paths

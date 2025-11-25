@@ -1,10 +1,10 @@
-# Test fill_template with path value
+# Test fill_template with path value (using modern dict syntax)
 
 let template_path = @examples/email_template.txt in
-let subs = [
-  ["name", "Alice"],
-  ["subject", "Bug Report"],
-  ["email", "alice@example.com"],
-  ["sender", "Support Team"]
-] in
+let subs = {
+  name: "Alice",
+  subject: "Bug Report",
+  email: "alice@example.com",
+  sender: "Support Team"
+} in
 fill_template template_path subs
