@@ -353,16 +353,16 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, EvalError> {
                 // Need to distinguish between template and dict syntax
                 // Dict: {identifier:value, identifier:value, ...} or {}
                 // Template: {expr}" or {{expr}} etc - must have " after braces
-                
+
                 // Clone the stream to peek ahead without consuming
                 let mut temp_stream = stream.clone();
                 let mut is_dict = false;
-                
+
                 // Skip any additional opening braces (for templates like {{...}})
                 while let Some(&'{') = temp_stream.peek() {
                     temp_stream.next();
                 }
-                
+
                 // Skip whitespace
                 while let Some(&c) = temp_stream.peek() {
                     if c.is_whitespace() {
@@ -371,7 +371,7 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, EvalError> {
                         break;
                     }
                 }
-                
+
                 // Check if next is closing brace (empty dict {})
                 if let Some(&'}') = temp_stream.peek() {
                     is_dict = true;
@@ -386,7 +386,7 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, EvalError> {
                                 break;
                             }
                         }
-                        
+
                         // Skip whitespace after identifier
                         while let Some(&ch) = temp_stream.peek() {
                             if ch.is_whitespace() {
@@ -395,14 +395,14 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, EvalError> {
                                 break;
                             }
                         }
-                        
+
                         // Check if next is colon (dict syntax)
                         if let Some(&':') = temp_stream.peek() {
                             is_dict = true;
                         }
                     }
                 }
-                
+
                 if is_dict {
                     // Parse as dict - just output a single LBrace
                     output.push(Token::LBrace);

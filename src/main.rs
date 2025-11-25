@@ -73,7 +73,7 @@ mod tests {
         use std::io::Write;
         let dir = std::env::temp_dir();
         let template_path = dir.join("avon_test_template.txt");
-        
+
         // Create a template file with placeholders
         let mut f = fs::File::create(&template_path).expect("create temp template");
         write!(f, "Hello, {{name}}! Your email is {{email}}.").expect("write");
@@ -88,14 +88,14 @@ mod tests {
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        
+
         match v {
             Value::String(s) => {
                 assert_eq!(s, "Hello, Alice! Your email is alice@example.com.");
             }
             other => panic!("expected string, got {:?}", other),
         }
-        
+
         let _ = fs::remove_file(template_path);
     }
 
@@ -104,29 +104,26 @@ mod tests {
         use std::io::Write;
         let dir = std::env::temp_dir();
         let file_path = dir.join("avon_test_path.txt");
-        
+
         // Create a test file
         let mut f = fs::File::create(&file_path).expect("create temp file");
         write!(f, "content-from-path").expect("write");
         drop(f);
 
         // Test: store path in variable and use with readfile
-        let prog = format!(
-            "let p = @{} in readfile p",
-            file_path.to_string_lossy()
-        );
+        let prog = format!("let p = @{} in readfile p", file_path.to_string_lossy());
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        
+
         match v {
             Value::String(s) => {
                 assert_eq!(s, "content-from-path");
             }
             other => panic!("expected string, got {:?}", other),
         }
-        
+
         // Test: path with interpolation
         let dir_str = dir.to_string_lossy().to_string().replace("\\", "/");
         let prog2 = format!(
@@ -137,26 +134,26 @@ mod tests {
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
         let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
-        
+
         match v2 {
             Value::String(s) => {
                 assert_eq!(s, "content-from-path");
             }
             other => panic!("expected string, got {:?}", other),
         }
-        
+
         // Test: path with exists, basename, dirname
         let prog3 = format!("let p = @{} in exists p", file_path.to_string_lossy());
         let tokens3 = tokenize(prog3.clone()).expect("tokenize");
         let ast3 = parse(tokens3);
         let mut symbols3 = initial_builtins();
         let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
-        
+
         match v3 {
             Value::Bool(b) => assert!(b),
             other => panic!("expected bool, got {:?}", other),
         }
-        
+
         let _ = fs::remove_file(file_path);
     }
 
@@ -165,22 +162,19 @@ mod tests {
         use std::io::Write;
         let dir = std::env::temp_dir();
         let file_path = dir.join("avon_test_readlines.txt");
-        
+
         // Create a multi-line test file
         let mut f = fs::File::create(&file_path).expect("create temp file");
         write!(f, "line1\nline2\nline3").expect("write");
         drop(f);
 
         // Test: path with readlines
-        let prog = format!(
-            "let p = @{} in readlines p",
-            file_path.to_string_lossy()
-        );
+        let prog = format!("let p = @{} in readlines p", file_path.to_string_lossy());
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        
+
         match v {
             Value::List(lines) => {
                 assert_eq!(lines.len(), 3);
@@ -190,7 +184,7 @@ mod tests {
             }
             other => panic!("expected list, got {:?}", other),
         }
-        
+
         let _ = fs::remove_file(file_path);
     }
 
@@ -202,7 +196,7 @@ mod tests {
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, prog).expect("eval");
-        
+
         match v {
             Value::String(s) => {
                 assert_eq!(s, "config.json");
@@ -216,7 +210,7 @@ mod tests {
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
         let v2 = eval(ast2.program, &mut symbols2, prog2).expect("eval");
-        
+
         match v2 {
             Value::String(s) => {
                 assert!(s.contains("home") || s.contains("user"));
@@ -231,45 +225,39 @@ mod tests {
         let dir = std::env::temp_dir();
         let existing_file = dir.join("avon_test_exists_true.txt");
         let missing_file = dir.join("avon_test_exists_false_missing.txt");
-        
+
         // Create one file
         let mut f = fs::File::create(&existing_file).expect("create temp file");
         write!(f, "exists").expect("write");
         drop(f);
-        
+
         // Ensure the other doesn't exist
         let _ = fs::remove_file(&missing_file);
 
         // Test: exists returns true for existing file
-        let prog = format!(
-            "let p = @{} in exists p",
-            existing_file.to_string_lossy()
-        );
+        let prog = format!("let p = @{} in exists p", existing_file.to_string_lossy());
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        
+
         match v {
             Value::Bool(b) => assert!(b, "expected true for existing file"),
             other => panic!("expected bool, got {:?}", other),
         }
 
         // Test: exists returns false for missing file
-        let prog2 = format!(
-            "let p = @{} in exists p",
-            missing_file.to_string_lossy()
-        );
+        let prog2 = format!("let p = @{} in exists p", missing_file.to_string_lossy());
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
         let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
-        
+
         match v2 {
             Value::Bool(b) => assert!(!b, "expected false for missing file"),
             other => panic!("expected bool, got {:?}", other),
         }
-        
+
         let _ = fs::remove_file(existing_file);
     }
 
@@ -278,7 +266,7 @@ mod tests {
         use std::io::Write;
         let dir = std::env::temp_dir();
         let template_path = dir.join("avon_test_fill_path.txt");
-        
+
         // Create a template with placeholders
         let mut f = fs::File::create(&template_path).expect("create temp file");
         write!(f, "Hello {{name}}, you are {{age}} years old.").expect("write");
@@ -293,14 +281,14 @@ mod tests {
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        
+
         match v {
             Value::String(s) => {
                 assert_eq!(s, "Hello Bob, you are 25 years old.");
             }
             other => panic!("expected string, got {:?}", other),
         }
-        
+
         let _ = fs::remove_file(template_path);
     }
 
@@ -309,22 +297,19 @@ mod tests {
         use std::io::Write;
         let dir = std::env::temp_dir();
         let module_path = dir.join("avon_test_import_module.av");
-        
+
         // Create a module file that returns a value
         let mut f = fs::File::create(&module_path).expect("create temp file");
         write!(f, "[\"imported\", \"data\"]").expect("write");
         drop(f);
 
         // Test: import with path value
-        let prog = format!(
-            "let p = @{} in import p",
-            module_path.to_string_lossy()
-        );
+        let prog = format!("let p = @{} in import p", module_path.to_string_lossy());
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        
+
         match v {
             Value::List(items) => {
                 assert_eq!(items.len(), 2);
@@ -333,7 +318,7 @@ mod tests {
             }
             other => panic!("expected list, got {:?}", other),
         }
-        
+
         let _ = fs::remove_file(module_path);
     }
 
@@ -342,7 +327,7 @@ mod tests {
         use std::io::Write;
         let dir = std::env::temp_dir();
         let dir_str = dir.to_string_lossy().to_string().replace("\\", "/");
-        
+
         // Create a test file with specific name pattern
         let file_path = dir.join("config_prod_app.json");
         let mut f = fs::File::create(&file_path).expect("create temp file");
@@ -358,14 +343,14 @@ mod tests {
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        
+
         match v {
             Value::String(s) => {
                 assert!(s.contains("production"));
             }
             other => panic!("expected string, got {:?}", other),
         }
-        
+
         let _ = fs::remove_file(file_path);
     }
 
@@ -1474,7 +1459,8 @@ mod tests {
     #[test]
     fn test_map_set() {
         // Test set updates existing key
-        let prog = r#"let m = set [["name", "Alice"], ["age", "30"]] "name" "Bob" in get m "name""#.to_string();
+        let prog = r#"let m = set [["name", "Alice"], ["age", "30"]] "name" "Bob" in get m "name""#
+            .to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -1559,14 +1545,17 @@ mod tests {
         use std::io::Write;
         let dir = std::env::temp_dir();
         let json_path = dir.join("avon_test_json_map.json");
-        
+
         // Create a JSON object
         let mut jf = fs::File::create(&json_path).expect("create json");
         write!(jf, r#"{{"name": "Alice", "age": 30}}"#).expect("write json");
         drop(jf);
 
         // Test that JSON objects are parsed as dicts and can be queried with get or dot notation
-        let prog = format!("let data = json_parse \"{}\" in get data \"name\"", json_path.to_string_lossy());
+        let prog = format!(
+            "let data = json_parse \"{}\" in get data \"name\"",
+            json_path.to_string_lossy()
+        );
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -1574,7 +1563,10 @@ mod tests {
         assert_eq!(v.to_string(&prog), "Alice");
 
         // Test that keys can be extracted from dict
-        let prog2 = format!("let data = json_parse \"{}\" in dict_keys data", json_path.to_string_lossy());
+        let prog2 = format!(
+            "let data = json_parse \"{}\" in dict_keys data",
+            json_path.to_string_lossy()
+        );
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
@@ -1585,7 +1577,7 @@ mod tests {
             }
             other => panic!("expected list of keys, got {:?}", other),
         }
-        
+
         let _ = fs::remove_file(json_path);
     }
 
@@ -1756,7 +1748,10 @@ mod tests {
             ("pad_left \"hi\" 5 \" \"", "   hi"),
             ("pad_right \"hi\" 5 \" \"", "hi   "),
             ("indent \"line1\\nline2\" 2", "  line1\n  line2"),
-            ("map (\\x concat x \"!\") [\"a\", \"b\", \"c\"]", "[a!, b!, c!]"),
+            (
+                "map (\\x concat x \"!\") [\"a\", \"b\", \"c\"]",
+                "[a!, b!, c!]",
+            ),
             ("filter (\\x x > 5) [3, 7, 2, 9, 4]", "[7, 9]"),
             ("fold (\\acc \\x acc + x) 0 [1, 2, 3, 4]", "10"),
             ("flatmap (\\x [x, x]) [1, 2, 3]", "[1, 1, 2, 2, 3, 3]"),
@@ -2449,13 +2444,16 @@ mod tests {
         let mut f = fs::File::create(&module_path).expect("create temp file");
         write!(f, "let double = \\x x * 2 in {{double: double}}").expect("write");
 
-        let prog = format!("let m = import \"{}\" in typeof m", module_path.to_string_lossy());
+        let prog = format!(
+            "let m = import \"{}\" in typeof m",
+            module_path.to_string_lossy()
+        );
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         assert_eq!(v.to_string(&prog), "Dict");
-        
+
         let _ = fs::remove_file(module_path);
     }
 
@@ -2473,7 +2471,7 @@ mod tests {
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         assert_eq!(v.to_string(&prog), "42");
-        
+
         let _ = fs::remove_file(module_path);
     }
 
@@ -2485,13 +2483,16 @@ mod tests {
         let mut f = fs::File::create(&module_path).expect("create temp file");
         write!(f, "let double = \\x x * 2 in let triple = \\x x * 3 in {{double: double, triple: triple}}").expect("write");
 
-        let prog = format!("let math = import \"{}\" in math.double 5", module_path.to_string_lossy());
+        let prog = format!(
+            "let math = import \"{}\" in math.double 5",
+            module_path.to_string_lossy()
+        );
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         assert_eq!(v.to_string(&prog), "10");
-        
+
         let _ = fs::remove_file(module_path);
     }
 
@@ -2501,7 +2502,11 @@ mod tests {
         let dir = std::env::temp_dir();
         let module_path = dir.join("test_multi_module.av");
         let mut f = fs::File::create(&module_path).expect("create temp file");
-        write!(f, "let add = \\x \\y x + y in let sub = \\x \\y x - y in {{add: add, sub: sub}}").expect("write");
+        write!(
+            f,
+            "let add = \\x \\y x + y in let sub = \\x \\y x - y in {{add: add, sub: sub}}"
+        )
+        .expect("write");
 
         let prog = format!(
             "let m = import \"{}\" in let a = m.add 10 5 in let b = m.sub 10 5 in concat (concat (typeof a) \",\") (typeof b)",
@@ -2512,7 +2517,7 @@ mod tests {
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         assert_eq!(v.to_string(&prog), "Number,Number");
-        
+
         let _ = fs::remove_file(module_path);
     }
 
@@ -2522,10 +2527,10 @@ mod tests {
         let dir = std::env::temp_dir();
         let module1_path = dir.join("test_ns1.av");
         let module2_path = dir.join("test_ns2.av");
-        
+
         let mut f1 = fs::File::create(&module1_path).expect("create temp file 1");
         write!(f1, "let func = \\x x * 2 in {{func: func}}").expect("write");
-        
+
         let mut f2 = fs::File::create(&module2_path).expect("create temp file 2");
         write!(f2, "let func = \\x x * 3 in {{func: func}}").expect("write");
 
@@ -2540,7 +2545,7 @@ mod tests {
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         // m1.func 5 = 10, m2.func 5 = 15, total = 25
         assert_eq!(v.to_string(&prog), "25");
-        
+
         let _ = fs::remove_file(module1_path);
         let _ = fs::remove_file(module2_path);
     }
@@ -2554,7 +2559,7 @@ mod tests {
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         match v {
-            Value::Bool(true) => {},
+            Value::Bool(true) => {}
             other => panic!("Expected true, got {:?}", other),
         }
     }
@@ -2568,7 +2573,7 @@ mod tests {
             ("is_dict [1, 2, 3]", "list"),
             ("is_dict (\\x x)", "function"),
         ];
-        
+
         for (test_prog, desc) in tests {
             let prog = test_prog.to_string();
             let tokens = tokenize(prog.clone()).expect("tokenize");
@@ -2576,8 +2581,11 @@ mod tests {
             let mut symbols = initial_builtins();
             let v = eval(ast.program, &mut symbols, &prog).expect("eval");
             match v {
-                Value::Bool(false) => {},
-                other => panic!("Expected false for {} ('{}'), got {:?}", desc, test_prog, other),
+                Value::Bool(false) => {}
+                other => panic!(
+                    "Expected false for {} ('{}'), got {:?}",
+                    desc, test_prog, other
+                ),
             }
         }
     }
@@ -2644,7 +2652,8 @@ mod tests {
     #[test]
     fn test_dict_literal_syntax_with_strings() {
         // Test dict with string values
-        let prog = "let d = {first: \"John\", last: \"Doe\"} in d.first + \" \" + d.last".to_string();
+        let prog =
+            "let d = {first: \"John\", last: \"Doe\"} in d.first + \" \" + d.last".to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -2731,7 +2740,7 @@ mod tests {
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         match v {
-            Value::Bool(true) => {},
+            Value::Bool(true) => {}
             other => panic!("Expected true, got {:?}", other),
         }
     }
@@ -2792,13 +2801,16 @@ mod tests {
         write!(jf, r#"{{"x": 10, "y": 20}}"#).expect("write json");
         drop(jf);
 
-        let prog = format!("let d = json_parse \"{}\" in is_dict d", json_path.to_string_lossy());
+        let prog = format!(
+            "let d = json_parse \"{}\" in is_dict d",
+            json_path.to_string_lossy()
+        );
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         match v {
-            Value::Bool(true) => {},
+            Value::Bool(true) => {}
             other => panic!("Expected json_parse to return dict, got {:?}", other),
         }
     }
@@ -2813,7 +2825,10 @@ mod tests {
         write!(jf, r#"{{"name": "Alice", "age": 30}}"#).expect("write json");
         drop(jf);
 
-        let prog = format!("let d = json_parse \"{}\" in get d \"age\"", json_path.to_string_lossy());
+        let prog = format!(
+            "let d = json_parse \"{}\" in get d \"age\"",
+            json_path.to_string_lossy()
+        );
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -2830,7 +2845,7 @@ mod tests {
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         match v {
-            Value::Bool(true) => {},
+            Value::Bool(true) => {}
             other => panic!("Expected true, got {:?}", other),
         }
     }
@@ -2838,7 +2853,9 @@ mod tests {
     #[test]
     fn test_dict_literal_syntax_with_expressions() {
         // Test dict values with complex expressions
-        let prog = "let d = {sum: 5 + 10, product: 3 * 4} in let s = d.sum in let p = d.product in [s, p]".to_string();
+        let prog =
+            "let d = {sum: 5 + 10, product: 3 * 4} in let s = d.sum in let p = d.product in [s, p]"
+                .to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -2893,7 +2910,8 @@ mod tests {
     #[test]
     fn test_dict_nested_three_levels() {
         // Test three-level nested dict access with chained dot notation
-        let prog = "let d = {user: {profile: {name: \"Alice\"}}} in d.user.profile.name".to_string();
+        let prog =
+            "let d = {user: {profile: {name: \"Alice\"}}} in d.user.profile.name".to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -2937,7 +2955,9 @@ mod tests {
     #[test]
     fn test_dict_nested_with_lists() {
         // Test nested dicts containing lists
-        let prog = "let d = {org: {teams: {devs: [\"Alice\", \"Bob\", \"Charlie\"]}}} in d.org.teams.devs".to_string();
+        let prog =
+            "let d = {org: {teams: {devs: [\"Alice\", \"Bob\", \"Charlie\"]}}} in d.org.teams.devs"
+                .to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -2948,7 +2968,8 @@ mod tests {
     #[test]
     fn test_dict_nested_chained_operations() {
         // Test chained dict access with operations
-        let prog = "let d = {data: {values: {x: 10, y: 20}}} in d.data.values.x + d.data.values.y".to_string();
+        let prog = "let d = {data: {values: {x: 10, y: 20}}} in d.data.values.x + d.data.values.y"
+            .to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -2981,7 +3002,8 @@ mod tests {
     #[test]
     fn test_dict_nested_empty_dicts() {
         // Test nested dicts with empty intermediate dicts
-        let prog = "let d = {outer: {inner: {deep: {}}}} in dict_size d.outer.inner.deep".to_string();
+        let prog =
+            "let d = {outer: {inner: {deep: {}}}} in dict_size d.outer.inner.deep".to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();

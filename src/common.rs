@@ -240,8 +240,7 @@ impl EvalError {
     pub fn unknown_symbol(sym: impl Into<String>, line: usize) -> Self {
         let sym_str = sym.into();
         let hint = Self::suggest_for_unknown_symbol(&sym_str);
-        Self::new(format!("unknown symbol: {}", sym_str), None, None, line)
-            .with_hint(hint)
+        Self::new(format!("unknown symbol: {}", sym_str), None, None, line).with_hint(hint)
     }
 
     pub fn type_mismatch(
@@ -252,14 +251,8 @@ impl EvalError {
         let expected_str = expected.into();
         let found_str = found.into();
         let hint = Self::suggest_for_type_mismatch(&expected_str, &found_str);
-        
-        Self::new(
-            "type mismatch",
-            Some(expected_str),
-            Some(found_str),
-            line,
-        )
-        .with_hint(hint)
+
+        Self::new("type mismatch", Some(expected_str), Some(found_str), line).with_hint(hint)
     }
 
     fn suggest_for_unknown_symbol(sym: &str) -> String {
@@ -274,7 +267,7 @@ impl EvalError {
             ("filterr", "filter"),
             ("readfilee", "readfile"),
             ("to_str", "to_string"),
-            ("to_string", "str"),  // Alternative suggestion
+            ("to_string", "str"), // Alternative suggestion
             ("print", "trace or debug"),
             ("println", "trace or debug"),
             ("assert", "assert_string, assert_number, etc."),
@@ -315,7 +308,8 @@ impl EvalError {
             return "Wrap the value in brackets to create a list: [value]".to_string();
         }
         if expected.contains("Bool") && !found.contains("Bool") {
-            return "Use a comparison operator (==, !=, <, >, etc.) to create a boolean".to_string();
+            return "Use a comparison operator (==, !=, <, >, etc.) to create a boolean"
+                .to_string();
         }
         if expected.contains("Int") && found.contains("Float") {
             return "Use 'to_int' to convert a float to an integer, or change assertion to assert_number".to_string();
@@ -345,10 +339,10 @@ impl EvalError {
         let line_str = lines[idx];
         let line_num_str = format!("{:>4} | ", self.line);
         let padding = " ".repeat(line_num_str.len());
-        
+
         // Build the error message
         let mut output = String::new();
-        
+
         // Clickable file:line:column format at the top
         let file_location = if let Some(fname) = filename {
             if let Some(col) = self.column {
@@ -363,8 +357,11 @@ impl EvalError {
                 format!("<input>:{}", self.line)
             }
         };
-        output.push_str(&format!("\x1b[1;31mError\x1b[0m at \x1b[1m{}\x1b[0m\n", file_location));
-        
+        output.push_str(&format!(
+            "\x1b[1;31mError\x1b[0m at \x1b[1m{}\x1b[0m\n",
+            file_location
+        ));
+
         // Main error message
         if let (Some(exp), Some(found)) = (self.expected.as_ref(), self.found.as_ref()) {
             output.push_str(&format!(
@@ -374,20 +371,23 @@ impl EvalError {
         } else {
             output.push_str(&format!("\x1b[1m{}\x1b[0m\n", self.message));
         }
-        
+
         // Location (keeping this for readability)
-        output.push_str(&format!("{}  \x1b[36m-->\x1b[0m line {}", padding, self.line));
+        output.push_str(&format!(
+            "{}  \x1b[36m-->\x1b[0m line {}",
+            padding, self.line
+        ));
         if let Some(col) = self.column {
             output.push_str(&format!(", column {}", col));
         }
         output.push('\n');
-        
+
         // Empty line for spacing
         output.push_str(&format!("{}\x1b[36m|\x1b[0m\n", padding));
-        
+
         // Source line with highlighting
         output.push_str(&format!("\x1b[36m{}\x1b[0m{}\n", line_num_str, line_str));
-        
+
         // Caret pointer
         let caret_offset = if let Some(col) = self.column {
             col.saturating_sub(1)
@@ -399,7 +399,7 @@ impl EvalError {
             padding,
             " ".repeat(caret_offset)
         ));
-        
+
         // Hint if available
         if let Some(hint) = &self.hint {
             if !hint.is_empty() {
@@ -410,7 +410,7 @@ impl EvalError {
                 ));
             }
         }
-        
+
         output
     }
 
@@ -421,7 +421,10 @@ impl EvalError {
                 self.message, exp, found, self.line
             )
         } else {
-            format!("\x1b[1;31mError:\x1b[0m {} (line {})", self.message, self.line)
+            format!(
+                "\x1b[1;31mError:\x1b[0m {} (line {})",
+                self.message, self.line
+            )
         }
     }
 }

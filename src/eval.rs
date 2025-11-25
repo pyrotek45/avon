@@ -466,14 +466,12 @@ impl Value {
 pub fn value_to_path_string(val: &Value, source: &str) -> Result<String, EvalError> {
     match val {
         Value::String(s) => Ok(s.clone()),
-        Value::Path(chunks, symbols) => {
-            render_chunks_to_string(chunks, symbols, source)
-        }
+        Value::Path(chunks, symbols) => render_chunks_to_string(chunks, symbols, source),
         _ => Err(EvalError::type_mismatch(
             "string or path",
             val.to_string(source),
             0,
-        ))
+        )),
     }
 }
 
@@ -538,7 +536,7 @@ pub fn dedent(s: &str) -> String {
             break;
         }
     }
-    
+
     // Remove trailing empty lines
     while let Some(last) = lines.last() {
         if last.trim().is_empty() {
@@ -579,7 +577,7 @@ pub fn find_line_for_symbol(sym: &str, source: &str) -> usize {
 pub fn find_variable_definition(var_name: &str, source: &str) -> Option<(usize, usize, String)> {
     // Look for "let varname =" pattern
     let pattern = format!("let {} =", var_name);
-    
+
     for (line_num, line) in source.lines().enumerate() {
         if let Some(col) = line.find(&pattern) {
             // Make sure it's actually a let binding, not inside a string
@@ -589,7 +587,7 @@ pub fn find_variable_definition(var_name: &str, source: &str) -> Option<(usize, 
             }
         }
     }
-    
+
     None
 }
 
@@ -611,34 +609,37 @@ pub fn find_operator_location(op: &str, source: &str) -> (usize, usize) {
         if line.trim().starts_with('#') {
             continue;
         }
-        
+
         // Look for the operator outside of strings
         let mut in_string = false;
         let mut escape_next = false;
         let chars: Vec<char> = line.chars().collect();
-        
+
         for i in 0..chars.len() {
             if escape_next {
                 escape_next = false;
                 continue;
             }
-            
+
             if chars[i] == '\\' {
                 escape_next = true;
                 continue;
             }
-            
+
             if chars[i] == '"' {
                 in_string = !in_string;
                 continue;
             }
-            
+
             if !in_string && i + op.len() <= chars.len() {
-                let slice: String = chars[i..std::cmp::min(i + op.len(), chars.len())].iter().collect();
+                let slice: String = chars[i..std::cmp::min(i + op.len(), chars.len())]
+                    .iter()
+                    .collect();
                 if slice == op {
                     // Make sure it's not part of another operator like ==, >=, etc.
-                    let before_ok = i == 0 || !chars[i-1].is_alphanumeric();
-                    let after_ok = i + op.len() >= chars.len() || !chars[i + op.len()].is_alphanumeric();
+                    let before_ok = i == 0 || !chars[i - 1].is_alphanumeric();
+                    let after_ok =
+                        i + op.len() >= chars.len() || !chars[i + op.len()].is_alphanumeric();
                     if before_ok && after_ok {
                         return (line_num + 1, i + 1); // Return 1-indexed line and column
                     }
@@ -646,7 +647,7 @@ pub fn find_operator_location(op: &str, source: &str) -> (usize, usize) {
             }
         }
     }
-    
+
     // Fallback: just find it anywhere
     (find_line_for_symbol(op, source), 0)
 }
@@ -694,32 +695,46 @@ pub fn eval(
                             Value::Function { .. } => "Function",
                             _ => "unknown type",
                         };
-                        
+
                         // Try to extract variable names and find their definitions
                         let l_var = extract_variable_name(&lhs);
                         let r_var = extract_variable_name(&rhs);
-                        
+
                         let mut hint = format!("The + operator requires both sides to be the same type. You're trying to add a {} and a {}", l_type, r_type);
-                        
+
                         // Add information about where variables were defined with source lines
                         if let Some(l_name) = &l_var {
-                            if let Some((def_line, def_col, source_line)) = find_variable_definition(l_name, source) {
+                            if let Some((def_line, def_col, source_line)) =
+                                find_variable_definition(l_name, source)
+                            {
                                 hint.push_str(&format!("\n       |\n       | Note: '{}' ({}) was defined at line {}:{}:", l_name, l_type, def_line, def_col));
-                                hint.push_str(&format!("\n  {:>4} | {}", def_line, source_line.trim()));
+                                hint.push_str(&format!(
+                                    "\n  {:>4} | {}",
+                                    def_line,
+                                    source_line.trim()
+                                ));
                             }
                         }
                         if let Some(r_name) = &r_var {
-                            if let Some((def_line, def_col, source_line)) = find_variable_definition(r_name, source) {
+                            if let Some((def_line, def_col, source_line)) =
+                                find_variable_definition(r_name, source)
+                            {
                                 hint.push_str(&format!("\n       |\n       | Note: '{}' ({}) was defined at line {}:{}:", r_name, r_type, def_line, def_col));
-                                hint.push_str(&format!("\n  {:>4} | {}", def_line, source_line.trim()));
+                                hint.push_str(&format!(
+                                    "\n  {:>4} | {}",
+                                    def_line,
+                                    source_line.trim()
+                                ));
                             }
                         }
-                        
+
                         // Try to find the + operator in source and its column
                         let (line, col) = find_operator_location("+", source);
                         Err(EvalError::new(
                             format!("cannot use + operator with different types"),
-                            Some(format!("same types (Number + Number, String + String, or List + List)")),
+                            Some(format!(
+                                "same types (Number + Number, String + String, or List + List)"
+                            )),
                             Some(format!("{} ({}) + {} ({})", l_type, l_val, r_type, r_val)),
                             line,
                         )
@@ -945,23 +960,22 @@ pub fn eval(
         Expr::Member { object, field } => {
             let obj_val = eval(*object, symbols, source)?;
             match obj_val {
-                Value::Dict(map) => {
-                    map.get(&field).cloned().ok_or_else(|| {
-                        let available: Vec<String> = map.keys().cloned().collect();
-                        EvalError::new(
-                            format!("dict has no key '{}'", field),
-                            Some(format!("one of: {}", available.join(", "))),
-                            Some(field.clone()),
-                            find_line_for_symbol(&field, source),
-                        )
-                        .with_hint(format!("Available keys: {}", available.join(", ")))
-                    })
-                }
+                Value::Dict(map) => map.get(&field).cloned().ok_or_else(|| {
+                    let available: Vec<String> = map.keys().cloned().collect();
+                    EvalError::new(
+                        format!("dict has no key '{}'", field),
+                        Some(format!("one of: {}", available.join(", "))),
+                        Some(field.clone()),
+                        find_line_for_symbol(&field, source),
+                    )
+                    .with_hint(format!("Available keys: {}", available.join(", ")))
+                }),
                 other => Err(EvalError::type_mismatch(
                     "Dict",
                     other.to_string(source),
                     find_line_for_symbol(".", source),
-                ).with_hint("Only dicts support member access with '.' notation".to_string()))
+                )
+                .with_hint("Only dicts support member access with '.' notation".to_string())),
             }
         }
         Expr::FileTemplate { path, template } => Ok(Value::FileTemplate {
@@ -1213,13 +1227,18 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             // Args: filename (string or path), substitutions (list of [key, value] pairs)
             let pathv = &args[0];
             let subsv = &args[1];
-            
+
             let filename = value_to_path_string(pathv, source)?;
             // Read the template file
             let mut template = std::fs::read_to_string(&filename).map_err(|e| {
-                EvalError::new(format!("failed to read template {}: {}", filename, e), None, None, 0)
+                EvalError::new(
+                    format!("failed to read template {}: {}", filename, e),
+                    None,
+                    None,
+                    0,
+                )
             })?;
-            
+
             // Process substitutions
             if let Value::List(pairs) = subsv {
                 for pair in pairs {
@@ -1230,15 +1249,22 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                                 None, None, 0
                             ));
                         }
-                        
+
                         let key = match &kv[0] {
                             Value::String(s) => s.clone(),
-                            other => return Err(EvalError::new(
-                                format!("fill_template: key must be string, got {}", other.to_string(source)),
-                                None, None, 0
-                            ))
+                            other => {
+                                return Err(EvalError::new(
+                                    format!(
+                                        "fill_template: key must be string, got {}",
+                                        other.to_string(source)
+                                    ),
+                                    None,
+                                    None,
+                                    0,
+                                ))
+                            }
                         };
-                        
+
                         let val = kv[1].to_string(source);
                         let placeholder = format!("{{{}}}", key);
                         template = template.replace(&placeholder, &val);
@@ -1387,8 +1413,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             let data = std::fs::read_to_string(&p).map_err(|e| {
                 EvalError::new(format!("failed to read {}: {}", p, e), None, None, 0)
             })?;
-            let lines: Vec<Value> =
-                data.lines().map(|s| Value::String(s.to_string())).collect();
+            let lines: Vec<Value> = data.lines().map(|s| Value::String(s.to_string())).collect();
             Ok(Value::List(lines))
         }
         "walkdir" => {
@@ -2014,7 +2039,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             } else {
                 Err(EvalError::type_mismatch(
                     "list, string",
-                    format!("{}, {}", list.to_string(source), separator.to_string(source)),
+                    format!(
+                        "{}, {}",
+                        list.to_string(source),
+                        separator.to_string(source)
+                    ),
                     find_line_for_symbol("", source),
                 ))
             }
@@ -2028,7 +2057,8 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 let mut lines = Vec::new();
                 for row in rows {
                     if let Value::List(cols) = row {
-                        let strings: Vec<String> = cols.iter().map(|v| v.to_string(source)).collect();
+                        let strings: Vec<String> =
+                            cols.iter().map(|v| v.to_string(source)).collect();
                         lines.push(strings.join(sep));
                     } else {
                         lines.push(row.to_string(source));
@@ -2038,7 +2068,11 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             } else {
                 Err(EvalError::type_mismatch(
                     "list, string",
-                    format!("{}, {}", table.to_string(source), separator.to_string(source)),
+                    format!(
+                        "{}, {}",
+                        table.to_string(source),
+                        separator.to_string(source)
+                    ),
                     find_line_for_symbol("", source),
                 ))
             }
@@ -2055,15 +2089,23 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Value::List(items) => {
                     let json_items: Vec<String> = items
                         .iter()
-                        .map(|v| match execute_builtin("format_json", &vec![v.clone()], source) {
-                            Ok(Value::String(s)) => s,
-                            _ => v.to_string(source),
-                        })
+                        .map(
+                            |v| match execute_builtin("format_json", &vec![v.clone()], source) {
+                                Ok(Value::String(s)) => s,
+                                _ => v.to_string(source),
+                            },
+                        )
                         .collect();
                     format!("[{}]", json_items.join(", "))
                 }
                 Value::None => "null".to_string(),
-                other => format!("\"{}\"", other.to_string(source).replace('\\', "\\\\").replace('"', "\\\"")),
+                other => format!(
+                    "\"{}\"",
+                    other
+                        .to_string(source)
+                        .replace('\\', "\\\\")
+                        .replace('"', "\\\"")
+                ),
             };
             Ok(Value::String(json_str))
         }
@@ -2118,19 +2160,65 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             let format_style = &args[1];
             if let (Value::Bool(b), Value::String(style)) = (val, format_style) {
                 let result = match style.to_lowercase().as_str() {
-                    "yesno" | "yes/no" => if *b { "Yes" } else { "No" },
-                    "onoff" | "on/off" => if *b { "On" } else { "Off" },
-                    "10" | "1/0" => if *b { "1" } else { "0" },
-                    "enabled" => if *b { "Enabled" } else { "Disabled" },
-                    "active" => if *b { "Active" } else { "Inactive" },
-                    "success" => if *b { "Success" } else { "Failure" },
-                    _ => if *b { "true" } else { "false" },
+                    "yesno" | "yes/no" => {
+                        if *b {
+                            "Yes"
+                        } else {
+                            "No"
+                        }
+                    }
+                    "onoff" | "on/off" => {
+                        if *b {
+                            "On"
+                        } else {
+                            "Off"
+                        }
+                    }
+                    "10" | "1/0" => {
+                        if *b {
+                            "1"
+                        } else {
+                            "0"
+                        }
+                    }
+                    "enabled" => {
+                        if *b {
+                            "Enabled"
+                        } else {
+                            "Disabled"
+                        }
+                    }
+                    "active" => {
+                        if *b {
+                            "Active"
+                        } else {
+                            "Inactive"
+                        }
+                    }
+                    "success" => {
+                        if *b {
+                            "Success"
+                        } else {
+                            "Failure"
+                        }
+                    }
+                    _ => {
+                        if *b {
+                            "true"
+                        } else {
+                            "false"
+                        }
+                    }
                 };
                 Ok(Value::String(result.to_string()))
             } else {
                 Err(EvalError::type_mismatch(
                     "bool, string",
-                    format!("{}, {}", val.to_string(source), format_style.to_string(source)),
+                    format!(
+                        "{}, {}",
+                        val.to_string(source),
+                        format_style.to_string(source)
+                    ),
                     find_line_for_symbol("", source),
                 ))
             }
@@ -2171,7 +2259,12 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                     let padding = total_width - s.len();
                     let left_pad = padding / 2;
                     let right_pad = padding - left_pad;
-                    Ok(Value::String(format!("{}{}{}", " ".repeat(left_pad), s, " ".repeat(right_pad))))
+                    Ok(Value::String(format!(
+                        "{}{}{}",
+                        " ".repeat(left_pad),
+                        s,
+                        " ".repeat(right_pad)
+                    )))
                 }
             } else {
                 Err(EvalError::type_mismatch(
@@ -2245,7 +2338,12 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             } else {
                 Err(EvalError::type_mismatch(
                     "Dict, String key, and value",
-                    format!("{}, {}, {}", dict.to_string(source), key.to_string(source), value.to_string(source)),
+                    format!(
+                        "{}, {}, {}",
+                        dict.to_string(source),
+                        key.to_string(source),
+                        value.to_string(source)
+                    ),
                     find_line_for_symbol("", source),
                 ))
             }
@@ -2336,7 +2434,8 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
         "dict_to_list" => {
             let dict = &args[0];
             if let Value::Dict(map) = dict {
-                let pairs: Vec<Value> = map.iter()
+                let pairs: Vec<Value> = map
+                    .iter()
                     .map(|(k, v)| Value::List(vec![Value::String(k.clone()), v.clone()]))
                     .collect();
                 Ok(Value::List(pairs))
@@ -2357,9 +2456,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             let key = &args[1];
             if let Value::String(k) = key {
                 match map {
-                    Value::Dict(dict) => {
-                        Ok(dict.get(k).cloned().unwrap_or(Value::None))
-                    }
+                    Value::Dict(dict) => Ok(dict.get(k).cloned().unwrap_or(Value::None)),
                     Value::List(pairs) => {
                         for pair in pairs {
                             if let Value::List(kv) = pair {
@@ -2379,7 +2476,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                         "dict or list of pairs",
                         map.to_string(source),
                         find_line_for_symbol("", source),
-                    ))
+                    )),
                 }
             } else {
                 Err(EvalError::type_mismatch(
@@ -2407,7 +2504,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                     Value::List(pairs) => {
                         let mut new_pairs = Vec::new();
                         let mut found = false;
-                        
+
                         // Update existing key or keep pairs
                         for pair in pairs {
                             if let Value::List(kv) = pair {
@@ -2434,22 +2531,20 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                                 new_pairs.push(pair.clone());
                             }
                         }
-                        
+
                         // If key wasn't found, add it
                         if !found {
-                            new_pairs.push(Value::List(vec![
-                                Value::String(k.clone()),
-                                value.clone(),
-                            ]));
+                            new_pairs
+                                .push(Value::List(vec![Value::String(k.clone()), value.clone()]));
                         }
-                        
+
                         Ok(Value::List(new_pairs))
                     }
                     _ => Err(EvalError::type_mismatch(
                         "dict or list of pairs",
                         map.to_string(source),
                         find_line_for_symbol("", source),
-                    ))
+                    )),
                 }
             } else {
                 Err(EvalError::type_mismatch(
@@ -2485,7 +2580,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                     "dict or list of pairs",
                     map.to_string(source),
                     find_line_for_symbol("", source),
-                ))
+                )),
             }
         }
         "values" => {
@@ -2569,11 +2664,17 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
         }
         "is_int" => {
             // is_int :: a -> Bool
-            Ok(Value::Bool(matches!(args[0], Value::Number(Number::Int(_)))))
+            Ok(Value::Bool(matches!(
+                args[0],
+                Value::Number(Number::Int(_))
+            )))
         }
         "is_float" => {
             // is_float :: a -> Bool
-            Ok(Value::Bool(matches!(args[0], Value::Number(Number::Float(_)))))
+            Ok(Value::Bool(matches!(
+                args[0],
+                Value::Number(Number::Float(_))
+            )))
         }
         "is_list" => {
             // is_list :: a -> Bool
@@ -2585,7 +2686,10 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
         }
         "is_function" => {
             // is_function :: a -> Bool
-            Ok(Value::Bool(matches!(args[0], Value::Function { .. } | Value::Builtin(_, _))))
+            Ok(Value::Bool(matches!(
+                args[0],
+                Value::Function { .. } | Value::Builtin(_, _)
+            )))
         }
         "is_dict" => {
             // is_dict :: a -> Bool
@@ -2666,7 +2770,10 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                     find_line_for_symbol("", source),
                 )),
                 other => Err(EvalError::new(
-                    format!("error expects String message, got: {}", other.to_string(source)),
+                    format!(
+                        "error expects String message, got: {}",
+                        other.to_string(source)
+                    ),
                     None,
                     None,
                     find_line_for_symbol("", source),

@@ -57,8 +57,12 @@ fn print_builtin_docs() {
     println!("  dict_get     :: Dict -> String -> a | None       (get value by key - deprecated, use dot notation)");
     println!("  get          :: (Dict|Pairs) -> String -> a | None");
     println!("  set          :: (Dict|Pairs) -> String -> a -> (Dict|Pairs)");
-    println!("  keys         :: (Dict|Pairs) -> [String]         (works with both dict and list pairs)");
-    println!("  values       :: (Dict|Pairs) -> [a]              (works with both dict and list pairs)");
+    println!(
+        "  keys         :: (Dict|Pairs) -> [String]         (works with both dict and list pairs)"
+    );
+    println!(
+        "  values       :: (Dict|Pairs) -> [a]              (works with both dict and list pairs)"
+    );
     println!("  has_key      :: (Dict|Pairs) -> String -> Bool");
     println!();
     println!("  Modern syntax: let config = {{host: \"localhost\", port: 8080}} in");
@@ -160,11 +164,15 @@ fn print_builtin_docs() {
     println!("-----------------------");
     println!("  trace        :: String -> a -> a                 (prints \"label: value\" to stderr, returns value)");
     println!("  debug        :: a -> a                           (pretty-prints value structure, returns value)");
-    println!("  error        :: String -> a                      (throws custom error with message)");
+    println!(
+        "  error        :: String -> a                      (throws custom error with message)"
+    );
     println!();
     println!("  Examples:");
     println!("    trace \"x\" 42                        # Prints \"x: 42\" to stderr, returns 42");
-    println!("    debug [1, 2, 3]                     # Prints pretty list structure, returns [1, 2, 3]");
+    println!(
+        "    debug [1, 2, 3]                     # Prints pretty list structure, returns [1, 2, 3]"
+    );
     println!("    if (x < 0) then error \"negative\"    # Throws error if x is negative");
     println!();
 
@@ -443,7 +451,13 @@ fn run_eval(cli_args: Vec<String>, git_opt: Option<String>, debug: bool) -> i32 
                                                         continue;
                                                     }
                                                     Err(e) => {
-                                                        eprintln!("{}", e.pretty_with_file(&file, Some(&filepath_str)));
+                                                        eprintln!(
+                                                            "{}",
+                                                            e.pretty_with_file(
+                                                                &file,
+                                                                Some(&filepath_str)
+                                                            )
+                                                        );
                                                         return 1;
                                                     }
                                                 }
@@ -459,7 +473,13 @@ fn run_eval(cli_args: Vec<String>, git_opt: Option<String>, debug: bool) -> i32 
                                                         continue;
                                                     }
                                                     Err(e) => {
-                                                        eprintln!("{}", e.pretty_with_file(&file, Some(&filepath_str)));
+                                                        eprintln!(
+                                                            "{}",
+                                                            e.pretty_with_file(
+                                                                &file,
+                                                                Some(&filepath_str)
+                                                            )
+                                                        );
                                                         return 1;
                                                     }
                                                 }
@@ -471,7 +491,13 @@ fn run_eval(cli_args: Vec<String>, git_opt: Option<String>, debug: bool) -> i32 
                                                         continue;
                                                     }
                                                     Err(e) => {
-                                                        eprintln!("{}", e.pretty_with_file(&file, Some(&filepath_str)));
+                                                        eprintln!(
+                                                            "{}",
+                                                            e.pretty_with_file(
+                                                                &file,
+                                                                Some(&filepath_str)
+                                                            )
+                                                        );
                                                         return 1;
                                                     }
                                                 }
@@ -493,7 +519,13 @@ fn run_eval(cli_args: Vec<String>, git_opt: Option<String>, debug: bool) -> i32 
                                                         continue;
                                                     }
                                                     Err(e) => {
-                                                        eprintln!("{}", e.pretty_with_file(&file, Some(&filepath_str)));
+                                                        eprintln!(
+                                                            "{}",
+                                                            e.pretty_with_file(
+                                                                &file,
+                                                                Some(&filepath_str)
+                                                            )
+                                                        );
                                                         return 1;
                                                     }
                                                 }

@@ -6,7 +6,7 @@ type ParseResult<T> = Result<T, EvalError>;
 
 pub fn parse_postfix(stream: &mut Peekable<Iter<Token>>) -> Expr {
     let mut expr = parse_atom(stream);
-    
+
     // Handle member access (dot notation)
     while let Some(Token::Dot) = stream.peek() {
         stream.next(); // consume the dot
@@ -22,7 +22,7 @@ pub fn parse_postfix(stream: &mut Peekable<Iter<Token>>) -> Expr {
             return Expr::None;
         }
     }
-    
+
     expr
 }
 
@@ -55,7 +55,10 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
                                     break;
                                 }
                                 a => {
-                                    eprintln!("Parse error: expected ',' or ']' in list, got {:?}", a);
+                                    eprintln!(
+                                        "Parse error: expected ',' or ']' in list, got {:?}",
+                                        a
+                                    );
                                     return Expr::None;
                                 }
                             }
@@ -80,16 +83,19 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
                         Some(Token::Identifier(key)) => {
                             let key_name = key.clone();
                             stream.next();
-                            
+
                             // Expect colon
                             match stream.next() {
                                 Some(Token::Colon) => {}
                                 other => {
-                                    eprintln!("Parse error: expected ':' after dict key, got {:?}", other);
+                                    eprintln!(
+                                        "Parse error: expected ':' after dict key, got {:?}",
+                                        other
+                                    );
                                     return Expr::None;
                                 }
                             }
-                            
+
                             // Parse value expression
                             // We need to handle lambdas, so use try_parse_expr but don't error on failure
                             let value = match try_parse_expr(stream) {
@@ -100,7 +106,7 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
                                 }
                             };
                             pairs.push((key_name, value));
-                            
+
                             // Check for comma or closing brace
                             match stream.peek() {
                                 Some(Token::Comma) => {
@@ -113,7 +119,9 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
                                         }
                                         Some(_) => continue,
                                         None => {
-                                            eprintln!("Parse error: unexpected EOF in dict literal");
+                                            eprintln!(
+                                                "Parse error: unexpected EOF in dict literal"
+                                            );
                                             return Expr::None;
                                         }
                                     }
@@ -123,7 +131,10 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
                                     break;
                                 }
                                 other => {
-                                    eprintln!("Parse error: expected ',' or '}}' in dict, got {:?}", other);
+                                    eprintln!(
+                                        "Parse error: expected ',' or '}}' in dict, got {:?}",
+                                        other
+                                    );
                                     return Expr::None;
                                 }
                             }
@@ -133,16 +144,21 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
                             return Expr::None;
                         }
                         other => {
-                            eprintln!("Parse error: expected identifier as dict key, got {:?}", other);
+                            eprintln!(
+                                "Parse error: expected identifier as dict key, got {:?}",
+                                other
+                            );
                             return Expr::None;
                         }
                     }
                 }
                 Expr::Dict(pairs)
             }
-            Token::Identifier(value) if value != "in" && value != "let" => {
-                Expr::Ident(value.clone())
-            }
+            Token::Identifier(value) if value != "in" && value != "let" => match value.as_str() {
+                "true" => Expr::Bool(true),
+                "false" => Expr::Bool(false),
+                _ => Expr::Ident(value.clone()),
+            },
             Token::LParen => {
                 let expr = parse_expr(stream);
                 stream.next();
@@ -268,12 +284,14 @@ fn try_parse_expr(stream: &mut Peekable<Iter<Token>>) -> ParseResult<Expr> {
                             None
                         }
                     })
-                    .ok_or_else(|| EvalError::new(
-                        "expected identifier after 'let'",
-                        Some("identifier".to_string()),
-                        Some("something else".to_string()),
-                        1,
-                    ))?;
+                    .ok_or_else(|| {
+                        EvalError::new(
+                            "expected identifier after 'let'",
+                            Some("identifier".to_string()),
+                            Some("something else".to_string()),
+                            1,
+                        )
+                    })?;
                 eat(stream, Token::Equal)?;
                 let value = Box::new(try_parse_expr(stream)?);
                 eat(stream, Token::Identifier(String::from("in")))?;
@@ -288,12 +306,14 @@ fn try_parse_expr(stream: &mut Peekable<Iter<Token>>) -> ParseResult<Expr> {
                         Token::Identifier(ident) => Some(ident.clone()),
                         _ => None,
                     })
-                    .ok_or_else(|| EvalError::new(
-                        "expected identifier after '\\'",
-                        Some("identifier".to_string()),
-                        None,
-                        1,
-                    ))?;
+                    .ok_or_else(|| {
+                        EvalError::new(
+                            "expected identifier after '\\'",
+                            Some("identifier".to_string()),
+                            None,
+                            1,
+                        )
+                    })?;
 
                 let mut default: Option<Expr> = None;
                 if let Some(Token::Question) = stream.peek() {
@@ -330,12 +350,14 @@ fn try_parse_expr(stream: &mut Peekable<Iter<Token>>) -> ParseResult<Expr> {
                                     template: template_chunks.clone(),
                                 });
                             }
-                            a => return Err(EvalError::new(
-                                format!("expected template after '@', got {:?}", a),
-                                Some("template string".to_string()),
-                                Some(format!("{:?}", a)),
-                                1,
-                            )),
+                            a => {
+                                return Err(EvalError::new(
+                                    format!("expected template after '@', got {:?}", a),
+                                    Some("template string".to_string()),
+                                    Some(format!("{:?}", a)),
+                                    1,
+                                ))
+                            }
                         }
                     }
                     _ => {
