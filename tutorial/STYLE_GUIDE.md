@@ -83,22 +83,18 @@ let make_config = \service @/config/{service}.yml {"
 
 ## Escaping Braces in Templates
 
-When generating code or configs that contain literal `{` and `}` characters (like Nginx, Lua, HCL), you must escape them.
-
-### Single-Brace Templates (Default)
-
-Use `{{` for literal `{` and `}}` for literal `}`:
+When generating code or configs that contain literal `{` and `}` characters (like Nginx, Lua, HCL), use more curly braces around your templates.
 
 ```avon
-@/nginx.conf {"
-  server {{
+@/nginx.conf {{"
+  server {
     listen 80;
     server_name example.com;
-    location / {{
+    location / {
       proxy_pass http://localhost:8080;
-    }}
-  }}
-"}
+    }
+  }
+"}}
 ```
 
 **Output:**
@@ -118,12 +114,12 @@ When you have many literal braces, use double-brace templates `{{"..."}}`:
 
 ```avon
 @/terraform.tf {{"
-  resource "aws_instance" "web" {{
-    ami = "{{ ami_id }}"
-    tags = {{
-      Name = "{{ instance_name }}"
-    }}
-  }}
+  resource "aws_instance" "web" {
+    ami = "{{ "ami_id" }}"
+    tags = {
+      Name = "{{ "hello" }}"
+    }
+  }
 "}}
 ```
 
@@ -137,13 +133,13 @@ When you have many literal braces, use double-brace templates `{{"..."}}`:
 ```avon
 let port = 8080 in
 let host = "localhost" in
-let url = "http://{host}:{port}" in
+let url = {"http://{host}:{port}"} in
 url
 ```
 
 **Avoid:**
 ```avon
-let port = 8080 in let host = "localhost" in let url = "http://{host}:{port}" in url
+let port = 8080 in let host = "localhost" in let url = {"http://{host}:{port}"} in url
 ```
 
 ### ✅ Cascading Lets for Readability
@@ -178,7 +174,7 @@ map double [1, 2, 3]
 
 **Multiple Parameters (Curried):**
 ```avon
-let make_url = \protocol \host \port "{protocol}://{host}:{port}" in
+let make_url = \protocol \host \port {"{protocol}://{host}:{port}"} in
 make_url "https" "example.com" "443"
 ```
 
