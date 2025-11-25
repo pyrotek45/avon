@@ -172,7 +172,8 @@ pub enum Value {
     String(String),
     #[allow(dead_code)]
     Function {
-        ident: String,
+        name: Option<String>,  // The name the function was bound to (e.g., "stringify")
+        ident: String,         // The parameter name (e.g., "x")
         default: Option<Box<Value>>,
         expr: Box<Expr>,
         env: HashMap<String, Value>,
@@ -198,7 +199,9 @@ pub struct EvalError {
     pub message: String,
     pub expected: Option<String>,
     pub found: Option<String>,
+    #[allow(dead_code)]
     pub line: usize,
+    #[allow(dead_code)]
     pub column: Option<usize>,
     pub context: Option<String>,
     pub hint: Option<String>,
@@ -222,6 +225,7 @@ impl EvalError {
         }
     }
 
+    #[allow(dead_code)]
     pub fn with_column(mut self, column: usize) -> Self {
         self.column = Some(column);
         self
@@ -321,110 +325,19 @@ impl EvalError {
         String::new()
     }
 
-    pub fn pretty(&self, source: &str) -> String {
-        self.pretty_with_file(source, None)
+    pub fn pretty(&self, _source: &str) -> String {
+        self.format_simple()
     }
 
-    pub fn pretty_with_file(&self, source: &str, filename: Option<&str>) -> String {
-        if self.line == 0 {
-            return self.format_simple();
-        }
-
-        let lines: Vec<&str> = source.lines().collect();
-        let idx = if self.line > 0 { self.line - 1 } else { 0 };
-        if idx >= lines.len() {
-            return self.format_simple();
-        }
-
-        let line_str = lines[idx];
-        let line_num_str = format!("{:>4} | ", self.line);
-        let padding = " ".repeat(line_num_str.len());
-
-        // Build the error message
-        let mut output = String::new();
-
-        // Clickable file:line:column format at the top
-        let file_location = if let Some(fname) = filename {
-            if let Some(col) = self.column {
-                format!("{}:{}:{}", fname, self.line, col)
-            } else {
-                format!("{}:{}", fname, self.line)
-            }
-        } else {
-            if let Some(col) = self.column {
-                format!("<input>:{}:{}", self.line, col)
-            } else {
-                format!("<input>:{}", self.line)
-            }
-        };
-        output.push_str(&format!(
-            "\x1b[1;31mError\x1b[0m at \x1b[1m{}\x1b[0m\n",
-            file_location
-        ));
-
-        // Main error message
-        if let (Some(exp), Some(found)) = (self.expected.as_ref(), self.found.as_ref()) {
-            output.push_str(&format!(
-                "\x1b[1m{}\x1b[0m: expected \x1b[32m{}\x1b[0m, found \x1b[31m{}\x1b[0m\n",
-                self.message, exp, found
-            ));
-        } else {
-            output.push_str(&format!("\x1b[1m{}\x1b[0m\n", self.message));
-        }
-
-        // Location (keeping this for readability)
-        output.push_str(&format!(
-            "{}  \x1b[36m-->\x1b[0m line {}",
-            padding, self.line
-        ));
-        if let Some(col) = self.column {
-            output.push_str(&format!(", column {}", col));
-        }
-        output.push('\n');
-
-        // Empty line for spacing
-        output.push_str(&format!("{}\x1b[36m|\x1b[0m\n", padding));
-
-        // Source line with highlighting
-        output.push_str(&format!("\x1b[36m{}\x1b[0m{}\n", line_num_str, line_str));
-
-        // Caret pointer
-        let caret_offset = if let Some(col) = self.column {
-            col.saturating_sub(1)
-        } else {
-            0
-        };
-        output.push_str(&format!(
-            "{}\x1b[36m|\x1b[0m {}\x1b[1;31m^\x1b[0m\n",
-            padding,
-            " ".repeat(caret_offset)
-        ));
-
-        // Hint if available
-        if let Some(hint) = &self.hint {
-            if !hint.is_empty() {
-                output.push_str(&format!("{}\x1b[36m|\x1b[0m\n", padding));
-                output.push_str(&format!(
-                    "{}\x1b[36m= \x1b[1;36mHint:\x1b[0m {}\n",
-                    padding, hint
-                ));
-            }
-        }
-
-        output
+    pub fn pretty_with_file(&self, _source: &str, _filename: Option<&str>) -> String {
+        self.format_simple()
     }
 
     fn format_simple(&self) -> String {
         if let (Some(exp), Some(found)) = (self.expected.as_ref(), self.found.as_ref()) {
-            format!(
-                "\x1b[1;31mError:\x1b[0m {}: expected {}, found {} (line {})",
-                self.message, exp, found, self.line
-            )
+            format!("{}: expected {}, found {}", self.message, exp, found)
         } else {
-            format!(
-                "\x1b[1;31mError:\x1b[0m {} (line {})",
-                self.message, self.line
-            )
+            self.message.clone()
         }
     }
 }

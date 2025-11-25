@@ -566,7 +566,6 @@ fn run_eval(cli_args: Vec<String>, git_opt: Option<String>, debug: bool) -> i32 
             return 1;
         }
     }
-    0
 }
 
 fn run_deploy_or_eval(
@@ -820,5 +819,4 @@ fn run_deploy_or_eval(
             return 1;
         }
     }
-    0
 }

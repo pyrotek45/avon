@@ -320,10 +320,30 @@ See [TUTORIAL.md](./tutorial/TUTORIAL.md) for complete guide or run `avon --doc`
 
 ## Quality
 
-- **500+ tests passing** (151 unit tests + 93 working examples + integration tests)
-- **Excellent error messages** with clickable locations
+- **500+ tests passing** (157 unit tests + 93 working examples + integration tests)
+- **Simple, clear error messages** showing function/operator name and type information
 - Type-safe, single binary, no dependencies
 - Production-ready error handling (no panics)
+
+## Error Messages
+
+Avon provides simple, direct error messages that show exactly what went wrong:
+
+```bash
+# Type mismatch in operator
+$ avon test.av
+concat: type mismatch: expected string, found 8080, /api
+
+# Type mismatch in function
+$ avon test_map.av
+map: add_one: +: expected String, found Number
+
+# Nested function error chain
+$ avon test_fold.av
+fold: x: +: expected Number, found String
+```
+
+Each error shows the function/operator name and the types involved, making debugging fast and easy. See [ERROR_SIMPLIFICATION.md](ERROR_SIMPLIFICATION.md) for detailed information about the error system.
 
 ## Installation
 

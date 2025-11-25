@@ -567,90 +567,7 @@ pub fn dedent(s: &str) -> String {
     out_lines.join("\n")
 }
 
-pub fn find_line_for_symbol(sym: &str, source: &str) -> usize {
-    if let Some(idx) = source.find(sym) {
-        return source[..idx].chars().filter(|c| *c == '\n').count() + 1;
-    }
-    0
-}
 
-pub fn find_variable_definition(var_name: &str, source: &str) -> Option<(usize, usize, String)> {
-    // Look for "let varname =" pattern
-    let pattern = format!("let {} =", var_name);
-
-    for (line_num, line) in source.lines().enumerate() {
-        if let Some(col) = line.find(&pattern) {
-            // Make sure it's actually a let binding, not inside a string
-            let before = &line[..col];
-            if !before.contains('"') || before.matches('"').count() % 2 == 0 {
-                return Some((line_num + 1, col + 5, line.to_string())); // +5 to point at the variable name after "let "
-            }
-        }
-    }
-
-    None
-}
-
-pub fn extract_variable_name(expr: &Expr) -> Option<String> {
-    match expr {
-        Expr::Ident(name) => Some(name.clone()),
-        _ => None,
-    }
-}
-
-pub fn find_operator_line(op: &str, source: &str) -> usize {
-    find_operator_location(op, source).0
-}
-
-pub fn find_operator_location(op: &str, source: &str) -> (usize, usize) {
-    // Find the operator in context (not in strings or comments)
-    for (line_num, line) in source.lines().enumerate() {
-        // Skip comment lines
-        if line.trim().starts_with('#') {
-            continue;
-        }
-
-        // Look for the operator outside of strings
-        let mut in_string = false;
-        let mut escape_next = false;
-        let chars: Vec<char> = line.chars().collect();
-
-        for i in 0..chars.len() {
-            if escape_next {
-                escape_next = false;
-                continue;
-            }
-
-            if chars[i] == '\\' {
-                escape_next = true;
-                continue;
-            }
-
-            if chars[i] == '"' {
-                in_string = !in_string;
-                continue;
-            }
-
-            if !in_string && i + op.len() <= chars.len() {
-                let slice: String = chars[i..std::cmp::min(i + op.len(), chars.len())]
-                    .iter()
-                    .collect();
-                if slice == op {
-                    // Make sure it's not part of another operator like ==, >=, etc.
-                    let before_ok = i == 0 || !chars[i - 1].is_alphanumeric();
-                    let after_ok =
-                        i + op.len() >= chars.len() || !chars[i + op.len()].is_alphanumeric();
-                    if before_ok && after_ok {
-                        return (line_num + 1, i + 1); // Return 1-indexed line and column
-                    }
-                }
-            }
-        }
-    }
-
-    // Fallback: just find it anywhere
-    (find_line_for_symbol(op, source), 0)
-}
 
 pub fn eval(
     expr: Expr,
@@ -677,8 +594,6 @@ pub fn eval(
                         Ok(Value::List(la))
                     }
                     (a, b) => {
-                        let l_val = a.to_string(source);
-                        let r_val = b.to_string(source);
                         let l_type = match a {
                             Value::Number(_) => "Number",
                             Value::String(_) => "String",
@@ -696,72 +611,58 @@ pub fn eval(
                             _ => "unknown type",
                         };
 
-                        // Try to extract variable names and find their definitions
-                        let l_var = extract_variable_name(&lhs);
-                        let r_var = extract_variable_name(&rhs);
-
-                        let mut hint = format!("The + operator requires both sides to be the same type. You're trying to add a {} and a {}", l_type, r_type);
-
-                        // Add information about where variables were defined with source lines
-                        if let Some(l_name) = &l_var {
-                            if let Some((def_line, def_col, source_line)) =
-                                find_variable_definition(l_name, source)
-                            {
-                                hint.push_str(&format!("\n       |\n       | Note: '{}' ({}) was defined at line {}:{}:", l_name, l_type, def_line, def_col));
-                                hint.push_str(&format!(
-                                    "\n  {:>4} | {}",
-                                    def_line,
-                                    source_line.trim()
-                                ));
-                            }
-                        }
-                        if let Some(r_name) = &r_var {
-                            if let Some((def_line, def_col, source_line)) =
-                                find_variable_definition(r_name, source)
-                            {
-                                hint.push_str(&format!("\n       |\n       | Note: '{}' ({}) was defined at line {}:{}:", r_name, r_type, def_line, def_col));
-                                hint.push_str(&format!(
-                                    "\n  {:>4} | {}",
-                                    def_line,
-                                    source_line.trim()
-                                ));
-                            }
-                        }
-
-                        // Try to find the + operator in source and its column
-                        let (line, col) = find_operator_location("+", source);
-                        Err(EvalError::new(
-                            format!("cannot use + operator with different types"),
-                            Some(format!(
-                                "same types (Number + Number, String + String, or List + List)"
-                            )),
-                            Some(format!("{} ({}) + {} ({})", l_type, l_val, r_type, r_val)),
-                            line,
-                        )
-                        .with_column(col)
-                        .with_hint(hint))
+                        return Err(EvalError::new(
+                            "+",
+                            Some(l_type.to_string()),
+                            Some(r_type.to_string()),
+                            0,
+                        ))
                     }
                 },
                 Token::Mul | Token::Div | Token::Sub => {
                     let lnumber = match l_eval {
                         Value::Number(n) => n,
                         other => {
+                            let op_name = match op {
+                                Token::Mul => "*",
+                                Token::Div => "/",
+                                Token::Sub => "-",
+                                _ => "unknown",
+                            };
                             return Err(EvalError::type_mismatch(
                                 "number",
-                                other.to_string(source),
-                                find_line_for_symbol("", source),
-                            ))
+                                match other {
+                                    Value::String(_) => "string",
+                                    Value::List(_) => "list",
+                                    Value::Bool(_) => "bool",
+                                    Value::Function { .. } => "function",
+                                    _ => "unknown",
+                                },
+                                0,
+                            ).with_context(op_name))
                         }
                     };
 
                     let rnumber = match r_eval {
                         Value::Number(n) => n,
                         other => {
+                            let op_name = match op {
+                                Token::Mul => "*",
+                                Token::Div => "/",
+                                Token::Sub => "-",
+                                _ => "unknown",
+                            };
                             return Err(EvalError::type_mismatch(
                                 "number",
-                                other.to_string(source),
-                                find_line_for_symbol("", source),
-                            ))
+                                match other {
+                                    Value::String(_) => "string",
+                                    Value::List(_) => "list",
+                                    Value::Bool(_) => "bool",
+                                    Value::Function { .. } => "function",
+                                    _ => "unknown",
+                                },
+                                0,
+                            ).with_context(op_name))
                         }
                     };
 
@@ -845,12 +746,16 @@ pub fn eval(
             } else {
                 Err(EvalError::unknown_symbol(
                     ident.clone(),
-                    find_line_for_symbol(&ident, source),
+                    0,
                 ))
             }
         }
         Expr::Let { ident, value, expr } => {
-            let evalue = eval(*value, symbols, source)?;
+            let mut evalue = eval(*value, symbols, source)?;
+            // If the value is a function, set its name to the binding name
+            if let Value::Function { ref mut name, .. } = evalue {
+                *name = Some(ident.clone());
+            }
             symbols.insert(ident, evalue.clone());
             eval(*expr, symbols, source)
         }
@@ -865,6 +770,7 @@ pub fn eval(
                 None
             };
             Ok(Value::Function {
+                name: None,
                 ident,
                 default: default_val,
                 expr,
@@ -876,19 +782,35 @@ pub fn eval(
             let arg_val = eval(*rhs, symbols, source)?;
             match lhs_eval {
                 Value::Function {
-                    ident, expr, env, ..
+                    name, ident, expr, env, ..
                 } => {
                     let mut new_env = env.clone();
-                    new_env.insert(ident, arg_val);
-                    eval(*expr, &mut new_env, source)
+                    new_env.insert(ident.clone(), arg_val);
+                    let func_name = name.as_ref().unwrap_or(&ident).clone();
+                    eval(*expr, &mut new_env, source).map_err(|mut err| {
+                        // Prepend function name to error message
+                        if !err.message.starts_with(&format!("{}:", func_name)) {
+                            err.message = format!("{}: {}", func_name, err.message);
+                        }
+                        err
+                    })
                 }
                 builtin @ Value::Builtin(_, _) => apply_function(&builtin, arg_val, source),
-                other => Err(EvalError::new(
-                    format!("Tried to call a Non-Function {:?}", other),
-                    None,
-                    None,
-                    0,
-                )),
+                other => {
+                    let type_name = match other {
+                        Value::String(_) => "string",
+                        Value::Number(_) => "number",
+                        Value::List(_) => "list",
+                        Value::Bool(_) => "bool",
+                        _ => "unknown",
+                    };
+                    Err(EvalError::new(
+                        "call",
+                        Some("function".to_string()),
+                        Some(type_name.to_string()),
+                        0,
+                    ))
+                }
             }
         }
         Expr::None => Ok(Value::None),
@@ -898,14 +820,14 @@ pub fn eval(
                 let arg1 = symbols.get(&args[0]).cloned().ok_or_else(|| {
                     EvalError::unknown_symbol(
                         args[0].clone(),
-                        find_line_for_symbol(&args[0], source),
+                        0,
                     )
                 })?;
 
                 let arg2 = symbols.get(&args[1]).cloned().ok_or_else(|| {
                     EvalError::unknown_symbol(
                         args[1].clone(),
-                        find_line_for_symbol(&args[1], source),
+                        0,
                     )
                 })?;
                 // should be strings
@@ -915,7 +837,7 @@ pub fn eval(
                     return Err(EvalError::type_mismatch(
                         "string",
                         arg1.to_string(source),
-                        find_line_for_symbol("", source),
+                        0,
                     ));
                 }
                 if let Value::String(_) = arg2 {
@@ -923,7 +845,7 @@ pub fn eval(
                     return Err(EvalError::type_mismatch(
                         "string",
                         arg2.to_string(source),
-                        find_line_for_symbol("", source),
+                        0,
                     ));
                 }
                 
@@ -935,7 +857,7 @@ pub fn eval(
                     (a, b) => Err(EvalError::type_mismatch(
                         "string",
                         format!("{}, {}", a.to_string(source), b.to_string(source)),
-                        find_line_for_symbol("", source),
+                        0,
                     )),
                 }
             }
@@ -954,7 +876,7 @@ pub fn eval(
                 Err(EvalError::type_mismatch(
                     "bool",
                     cond_eval.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -979,21 +901,25 @@ pub fn eval(
             let obj_val = eval(*object, symbols, source)?;
             match obj_val {
                 Value::Dict(map) => map.get(&field).cloned().ok_or_else(|| {
-                    let available: Vec<String> = map.keys().cloned().collect();
                     EvalError::new(
-                        format!("dict has no key '{}'", field),
-                        Some(format!("one of: {}", available.join(", "))),
-                        Some(field.clone()),
-                        find_line_for_symbol(&field, source),
+                        ".",
+                        Some(format!("key '{}'", field)),
+                        Some("missing".to_string()),
+                        0,
                     )
-                    .with_hint(format!("Available keys: {}", available.join(", ")))
                 }),
                 other => Err(EvalError::type_mismatch(
-                    "Dict",
-                    other.to_string(source),
-                    find_line_for_symbol(".", source),
-                )
-                .with_hint("Only dicts support member access with '.' notation".to_string())),
+                    "dict",
+                    match other {
+                        Value::String(_) => "string",
+                        Value::Number(_) => "number",
+                        Value::List(_) => "list",
+                        Value::Bool(_) => "bool",
+                        Value::Function { .. } => "function",
+                        _ => "unknown",
+                    },
+                    0,
+                )),
             }
         }
         Expr::FileTemplate { path, template } => Ok(Value::FileTemplate {
@@ -1014,11 +940,18 @@ pub fn eval(
 pub fn apply_function(func: &Value, arg: Value, source: &str) -> Result<Value, EvalError> {
     match func {
         Value::Function {
-            ident, expr, env, ..
+            name, ident, expr, env, ..
         } => {
             let mut new_env = env.clone();
             new_env.insert(ident.clone(), arg);
-            eval(*expr.clone(), &mut new_env, source)
+            let func_name = name.as_ref().unwrap_or(&ident).clone();
+            eval(*expr.clone(), &mut new_env, source).map_err(|mut err| {
+                // Prepend function name to error message
+                if !err.message.starts_with(&format!("{}:", func_name)) {
+                    err.message = format!("{}: {}", func_name, err.message);
+                }
+                err
+            })
         }
         Value::Builtin(name, collected) => {
             let mut new_collected = collected.clone();
@@ -1129,14 +1062,29 @@ pub fn apply_function(func: &Value, arg: Value, source: &str) -> Result<Value, E
             }
 
             // execute builtin (implementation continues in cli module or separate file)
-            execute_builtin(name, &new_collected, source)
+            execute_builtin(name, &new_collected, source).map_err(|mut err| {
+                // Prepend builtin name to error message
+                if !err.message.starts_with(&format!("{}:", name)) {
+                    err.message = format!("{}: {}", name, err.message);
+                }
+                err
+            })
         }
-        other => Err(EvalError::new(
-            format!("Tried to call a Non-Function {:?}", other),
-            None,
-            None,
-            0,
-        )),
+        other => {
+            let type_name = match other {
+                Value::String(_) => "string",
+                Value::Number(_) => "number",
+                Value::List(_) => "list",
+                Value::Bool(_) => "bool",
+                _ => "unknown",
+            };
+            Err(EvalError::new(
+                "call",
+                Some("function".to_string()),
+                Some(type_name.to_string()),
+                0,
+            ))
+        }
     }
 }
 
@@ -1153,7 +1101,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     format!("{}, {}", a.to_string(source), b.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1163,7 +1111,13 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             if let Value::List(items) = list {
                 let mut out = Vec::new();
                 for item in items {
-                    let res = apply_function(func, item.clone(), source)?;
+                    let res = apply_function(func, item.clone(), source).map_err(|mut err| {
+                        // Prepend map name if not already present
+                        if !err.message.starts_with("map:") {
+                            err.message = format!("map: {}", err.message);
+                        }
+                        err
+                    })?;
                     out.push(res);
                 }
                 Ok(Value::List(out))
@@ -1171,7 +1125,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "list",
                     list.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1181,7 +1135,13 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             if let Value::List(items) = list {
                 let mut out = Vec::new();
                 for item in items {
-                    let res = apply_function(func, item.clone(), source)?;
+                    let res = apply_function(func, item.clone(), source).map_err(|mut err| {
+                        // Prepend filter name if not already present
+                        if !err.message.starts_with("filter:") {
+                            err.message = format!("filter: {}", err.message);
+                        }
+                        err
+                    })?;
                     match res {
                         Value::Bool(true) => out.push(item.clone()),
                         Value::Bool(false) => {}
@@ -1189,7 +1149,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                             return Err(EvalError::type_mismatch(
                                 "bool",
                                 other.to_string(source),
-                                find_line_for_symbol("", source),
+                                0,
                             ))
                         }
                     }
@@ -1199,7 +1159,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "list",
                     list.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1209,15 +1169,27 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             let list = &args[2];
             if let Value::List(items) = list {
                 for item in items {
-                    let step = apply_function(func, acc, source)?;
-                    acc = apply_function(&step, item.clone(), source)?;
+                    let step = apply_function(func, acc, source).map_err(|mut err| {
+                        // Prepend fold name if not already present
+                        if !err.message.starts_with("fold:") {
+                            err.message = format!("fold: {}", err.message);
+                        }
+                        err
+                    })?;
+                    acc = apply_function(&step, item.clone(), source).map_err(|mut err| {
+                        // Prepend fold name if not already present
+                        if !err.message.starts_with("fold:") {
+                            err.message = format!("fold: {}", err.message);
+                        }
+                        err
+                    })?;
                 }
                 Ok(acc)
             } else {
                 Err(EvalError::type_mismatch(
                     "list",
                     list.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1249,12 +1221,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             let filename = value_to_path_string(pathv, source)?;
             // Read the template file
             let mut template = std::fs::read_to_string(&filename).map_err(|e| {
-                EvalError::new(
-                    format!("failed to read template {}: {}", filename, e),
-                    None,
-                    None,
-                    0,
-                )
+                EvalError::new(format!("fill_template"), Some("file".to_string()), Some(e.to_string()), 0)
             })?;
 
             // Process substitutions
@@ -1263,21 +1230,25 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                     if let Value::List(kv) = pair {
                         if kv.len() != 2 {
                             return Err(EvalError::new(
-                                format!("fill_template: each substitution must be [key, value], got list of length {}", kv.len()),
-                                None, None, 0
+                                "fill_template",
+                                Some("[key, value] pair".to_string()),
+                                Some(format!("list of {}", kv.len())),
+                                0
                             ));
                         }
 
                         let key = match &kv[0] {
                             Value::String(s) => s.clone(),
                             other => {
-                                return Err(EvalError::new(
-                                    format!(
-                                        "fill_template: key must be string, got {}",
-                                        other.to_string(source)
-                                    ),
-                                    None,
-                                    None,
+                                return Err(EvalError::type_mismatch(
+                                    "string",
+                                    match other {
+                                        Value::Number(_) => "number",
+                                        Value::List(_) => "list",
+                                        Value::Bool(_) => "bool",
+                                        Value::Function { .. } => "function",
+                                        _ => "unknown",
+                                    },
                                     0,
                                 ))
                             }
@@ -1288,17 +1259,25 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                         template = template.replace(&placeholder, &val);
                     } else {
                         return Err(EvalError::new(
-                            format!("fill_template: each substitution must be a list [key, value], got {}", pair.to_string(source)),
-                            None, None, 0
+                            "fill_template",
+                            Some("list".to_string()),
+                            Some(pair.to_string(source)),
+                            0
                         ));
                     }
                 }
                 Ok(Value::String(template))
             } else {
                 Err(EvalError::type_mismatch(
-                    "list of [key, value] pairs",
-                    subsv.to_string(source),
-                    find_line_for_symbol("", source),
+                    "list",
+                    match subsv {
+                        Value::String(_) => "string",
+                        Value::Number(_) => "number",
+                        Value::Bool(_) => "bool",
+                        Value::Function { .. } => "function",
+                        _ => "unknown",
+                    },
+                    0,
                 ))
             }
         }
@@ -1310,7 +1289,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     s.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1322,7 +1301,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     s.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1334,7 +1313,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     s.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1347,7 +1326,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     format!("{}, {}", a.to_string(source), b.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1360,7 +1339,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     format!("{}, {}", a.to_string(source), b.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1373,7 +1352,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     format!("{}, {}", a.to_string(source), b.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1388,7 +1367,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     format!("{}, {}", a.to_string(source), b.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1402,7 +1381,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "list/string",
                     format!("{}, {}", a.to_string(source), b.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1421,7 +1400,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                         b.to_string(source),
                         c.to_string(source)
                     ),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1496,7 +1475,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     pathv.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1533,7 +1512,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 other => Err(EvalError::type_mismatch(
                     "string or list",
                     other.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 )),
             }
         }
@@ -1546,7 +1525,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string, number",
                     format!("{}, {}", s.to_string(source), n.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1570,7 +1549,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                         width.to_string(source),
                         pad.to_string(source)
                     ),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1594,7 +1573,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                         width.to_string(source),
                         pad.to_string(source)
                     ),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1612,7 +1591,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string, number",
                     format!("{}, {}", s.to_string(source), spaces.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1626,7 +1605,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     s.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1640,7 +1619,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     s.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1654,7 +1633,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     s.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1668,7 +1647,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     s.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1683,7 +1662,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     s.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1698,7 +1677,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     s.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1710,7 +1689,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 other => Err(EvalError::type_mismatch(
                     "string or list",
                     other.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 )),
             }
         }
@@ -1728,7 +1707,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     s.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1741,7 +1720,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     format!("{}, {}", tag.to_string(source), content.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1758,7 +1737,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     format!("{}, {}", name.to_string(source), value.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1772,7 +1751,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "number, string",
                     format!("{}, {}", level.to_string(source), text.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1785,7 +1764,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     format!("{}, {}", text.to_string(source), url.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1797,7 +1776,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string",
                     code.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1813,7 +1792,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "list",
                     items.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1913,7 +1892,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "number, number",
                     format!("{}, {}", val.to_string(source), width.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1935,7 +1914,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "number, number",
                     format!("{}, {}", val.to_string(source), precision.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1953,7 +1932,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "number",
                     val.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1971,7 +1950,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "number",
                     val.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -1989,7 +1968,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "number",
                     val.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2013,7 +1992,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "number, number",
                     format!("{}, {}", val.to_string(source), precision.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2042,7 +2021,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "number",
                     val.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2062,7 +2041,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                         list.to_string(source),
                         separator.to_string(source)
                     ),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2091,7 +2070,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                         table.to_string(source),
                         separator.to_string(source)
                     ),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2143,7 +2122,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "number, string",
                     format!("{}, {}", val.to_string(source), symbol.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2167,7 +2146,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "number, number",
                     format!("{}, {}", val.to_string(source), precision.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2237,7 +2216,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                         val.to_string(source),
                         format_style.to_string(source)
                     ),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2260,7 +2239,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string, number",
                     format!("{}, {}", text.to_string(source), max_len.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2288,7 +2267,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "string, number",
                     format!("{}, {}", text.to_string(source), width.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2298,7 +2277,13 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
             if let Value::List(items) = list {
                 let mut out = Vec::new();
                 for item in items {
-                    let res = apply_function(func, item.clone(), source)?;
+                    let res = apply_function(func, item.clone(), source).map_err(|mut err| {
+                        // Prepend flatmap name if not already present
+                        if !err.message.starts_with("flatmap:") {
+                            err.message = format!("flatmap: {}", err.message);
+                        }
+                        err
+                    })?;
                     match res {
                         Value::List(sub_items) => out.extend(sub_items),
                         single => out.push(single),
@@ -2309,7 +2294,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "list",
                     list.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2328,7 +2313,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "list",
                     list.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2341,7 +2326,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "Dict and String key",
                     format!("{}, {}", dict.to_string(source), key.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2362,7 +2347,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                         key.to_string(source),
                         value.to_string(source)
                     ),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2375,7 +2360,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "Dict and String key",
                     format!("{}, {}", dict.to_string(source), key.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2388,7 +2373,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "Dict",
                     dict.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2401,7 +2386,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "Dict",
                     dict.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2416,7 +2401,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "Dict and String key",
                     format!("{}, {}", dict.to_string(source), key.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2433,7 +2418,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "Dict, Dict",
                     format!("{}, {}", d1.to_string(source), d2.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2445,7 +2430,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "Dict",
                     dict.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2461,7 +2446,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "Dict",
                     dict.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2493,14 +2478,14 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                     _ => Err(EvalError::type_mismatch(
                         "dict or list of pairs",
                         map.to_string(source),
-                        find_line_for_symbol("", source),
+                        0,
                     )),
                 }
             } else {
                 Err(EvalError::type_mismatch(
                     "string key",
                     key.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2561,14 +2546,14 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                     _ => Err(EvalError::type_mismatch(
                         "dict or list of pairs",
                         map.to_string(source),
-                        find_line_for_symbol("", source),
+                        0,
                     )),
                 }
             } else {
                 Err(EvalError::type_mismatch(
                     "string key",
                     key.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2597,7 +2582,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 _ => Err(EvalError::type_mismatch(
                     "dict or list of pairs",
                     map.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 )),
             }
         }
@@ -2619,7 +2604,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "list of pairs",
                     map.to_string(source),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2645,7 +2630,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 Err(EvalError::type_mismatch(
                     "list of pairs and string key",
                     format!("{}, {}", map.to_string(source), key.to_string(source)),
-                    find_line_for_symbol("", source),
+                    0,
                 ))
             }
         }
@@ -2723,7 +2708,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 other => Err(EvalError::type_mismatch(
                     "String",
                     format!("{:?}", other),
-                    find_line_for_symbol("", source),
+                    0,
                 )),
             }
         }
@@ -2735,7 +2720,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 other => Err(EvalError::type_mismatch(
                     "Number",
                     format!("{:?}", other),
-                    find_line_for_symbol("", source),
+                    0,
                 )),
             }
         }
@@ -2747,7 +2732,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 other => Err(EvalError::type_mismatch(
                     "Int",
                     format!("{:?}", other),
-                    find_line_for_symbol("", source),
+                    0,
                 )),
             }
         }
@@ -2759,7 +2744,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 other => Err(EvalError::type_mismatch(
                     "List",
                     format!("{:?}", other),
-                    find_line_for_symbol("", source),
+                    0,
                 )),
             }
         }
@@ -2771,7 +2756,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 other => Err(EvalError::type_mismatch(
                     "Bool",
                     format!("{:?}", other),
-                    find_line_for_symbol("", source),
+                    0,
                 )),
             }
         }
@@ -2785,7 +2770,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                     msg.clone(),
                     None,
                     None,
-                    find_line_for_symbol("", source),
+                    0,
                 )),
                 other => Err(EvalError::new(
                     format!(
@@ -2794,7 +2779,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                     ),
                     None,
                     None,
-                    find_line_for_symbol("", source),
+                    0,
                 )),
             }
         }
@@ -2811,7 +2796,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str) -> Result<Value
                 _ => Err(EvalError::type_mismatch(
                     "String (for trace label)",
                     format!("{:?}", label),
-                    find_line_for_symbol("", source),
+                    0,
                 )),
             }
         }

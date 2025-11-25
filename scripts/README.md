@@ -1,6 +1,6 @@
 # Test Scripts
 
-This directory contains various test scripts for the Avon project.
+This directory contains various test scripts for the Avon project. These scripts help verify that all examples compile and run correctly with the simplified error handling system.
 
 ## Available Scripts
 
@@ -69,6 +69,16 @@ This script is particularly useful for catching regressions and ensuring example
 1. **`test_all_examples.sh`** - Quick smoke test to ensure nothing is broken
 2. **`test_example_outputs.sh`** - Validates correctness of output
 3. **`run_examples.sh`** - Full integration testing with deployments
+
+## Error Handling
+
+As of the latest refactoring, the Avon error system has been simplified to provide direct, clear error messages:
+
+- **Simple Format**: `function_name: type_error` (e.g., `concat: type mismatch: expected string, found 8080, /api`)
+- **No Visual Artifacts**: Clean single-line output without pretty-printing
+- **Complete Call Chains**: Nested function errors show the full call chain (e.g., `map: add_one: +: expected String, found Number`)
+
+See [ERROR_SIMPLIFICATION.md](../ERROR_SIMPLIFICATION.md) for detailed information about the error system.
 
 ## Adding New Tests
 

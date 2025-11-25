@@ -40,6 +40,20 @@ for file in "$EXAMPLES_DIR"/*.av; do
         continue
     fi
     
+    # Skip error span examples as they test the old span-based error system
+    if [[ "$filename" == error_spans_*.av ]]; then
+        if [[ "$SHOW_OUTPUT" == true ]]; then
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "⊘ SKIP: $filename (old error span test)"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+        else
+            echo "⊘ SKIP: $filename (old error span test)"
+        fi
+        SKIPPED+=("$filename")
+        continue
+    fi
+    
     if [[ "$SHOW_OUTPUT" == true ]]; then
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo "📄 Testing: $filename"
