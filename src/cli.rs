@@ -5,6 +5,8 @@ use crate::eval::{
 use crate::lexer::tokenize;
 use crate::parser::parse;
 use std::collections::HashMap;
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
 
 fn print_builtin_docs() {
     println!("Avon Builtin Functions Reference");
@@ -189,7 +191,7 @@ fn print_builtin_docs() {
     println!("  • Type variables (a, b, acc) represent any type");
     println!("  • Functions use space-separated arguments: f x y, not f(x, y)");
     println!();
-    println!("For more examples and tutorials, see: tutorial/TUTORIAL.md");
+    println!("For more examples and tutorials, see: https://github.com/pyrotek45/avon");
 }
 
 fn print_help() {
@@ -201,9 +203,13 @@ Commands:
   eval <file>        Evaluate a file and print the result (no files written)
   deploy <file>      Deploy generated templates to disk
   run <code>         Evaluate code string directly
+  repl               Start interactive REPL (Read-Eval-Print Loop)
   doc                Show builtin function reference
   version            Show version information
   help               Show this help message
+
+Note: You can omit 'eval' - 'avon <file>' is equivalent to 'avon eval <file>'
+      Example: 'avon config.av' works the same as 'avon eval config.av'
 
 Options:
   --root <dir>       Prepend <dir> to generated file paths (deploy only)
@@ -236,8 +242,9 @@ Safety:
   Always use --root to confine deployment to a specific directory.
 
 Examples:
-  # Evaluate a file (see what it produces)
+  # Evaluate a file (see what it produces) - these are equivalent:
   avon eval config.av
+  avon config.av
   
   # Deploy to a specific directory
   avon deploy config.av --root ./output
@@ -254,10 +261,13 @@ Examples:
   # Fetch and deploy from GitHub
   avon deploy --git user/repo/file.av --root ./out
   
+  # Start interactive REPL
+  avon repl
+  
   # Debug a problematic file
   avon eval config.av --debug
 
-For more information, see: tutorial/TUTORIAL.md
+For more information, see: https://github.com/pyrotek45/avon
 "#;
     println!("{}", help);
 }
@@ -422,6 +432,9 @@ pub fn run_cli(args: Vec<String>) -> i32 {
                      1
                  }
             }
+        },
+        "repl" => {
+            execute_repl()
         },
         "doc" | "docs" => {
             print_builtin_docs();
@@ -824,4 +837,442 @@ fn execute_run(opts: CliOptions) -> i32 {
     } else {
         1
     }
+}
+
+fn execute_repl() -> i32 {
+    println!("Avon REPL - Interactive Avon Shell");
+    println!("Type ':help' for commands, ':exit' to quit");
+    println!();
+
+    let mut rl = match Editor::<()>::new() {
+        Ok(editor) => editor,
+        Err(e) => {
+            eprintln!("Error: Failed to initialize REPL: {}", e);
+            return 1;
+        }
+    };
+
+    let mut symbols = initial_builtins();
+    let mut input_buffer = String::new();
+
+    loop {
+        let prompt = if input_buffer.is_empty() {
+            "avon> ".to_string()  // 6 chars: "avon" (4) + ">" (1) + " " (1)
+        } else {
+            "    > ".to_string()  // 6 chars: 4 spaces + ">" + " " = matches "avon> " exactly, aligns "let"
+        };
+
+        match rl.readline(&prompt) {
+            Ok(line) => {
+                let trimmed = line.trim();
+                
+                // Handle empty input
+                if trimmed.is_empty() {
+                    if !input_buffer.is_empty() {
+                        // Continue multi-line input
+                        input_buffer.push('\n');
+                        continue;
+                    }
+                    continue;
+                }
+
+                // Handle REPL commands
+                if trimmed.starts_with(':') {
+                    let cmd = trimmed.trim_start_matches(':');
+                    match cmd {
+                        "help" | "h" => {
+                            println!("REPL Commands:");
+                            println!("  :help, :h       Show this help");
+                            println!("  :doc <name>     Show documentation for a builtin function");
+                            println!("  :type <expr>    Show the type of an expression");
+                            println!("  :vars           Show all defined variables");
+                            println!("  :clear          Clear all user-defined variables");
+                            println!("  :exit, :quit    Exit the REPL");
+                            println!();
+                            println!("Examples:");
+                            println!("  map (\\x x * 2) [1, 2, 3]");
+                            println!("  let x = 42 in x + 1");
+                            println!("  trace \"result\" (1 + 2)");
+                            println!("  typeof [1, 2, 3]");
+                            continue;
+                        }
+                        "exit" | "quit" | "q" => {
+                            println!("Goodbye!");
+                            break;
+                        }
+                        "clear" => {
+                            symbols = initial_builtins();
+                            input_buffer.clear();
+                            println!("Cleared all user-defined variables");
+                            continue;
+                        }
+                        "vars" => {
+                            let user_vars: Vec<_> = symbols
+                                .iter()
+                                .filter(|(k, _)| {
+                                    !matches!(k.as_str(), 
+                                        "concat" | "map" | "filter" | "fold" | "import" |
+                                        "readfile" | "exists" | "basename" | "dirname" | "readlines" |
+                                        "upper" | "lower" | "trim" | "split" | "join" | "replace" |
+                                        "contains" | "starts_with" | "ends_with" | "length" | "repeat" |
+                                        "pad_left" | "pad_right" | "indent" | "is_digit" | "is_alpha" |
+                                        "is_alphanumeric" | "is_whitespace" | "is_uppercase" | "is_lowercase" |
+                                        "is_empty" | "html_escape" | "html_tag" | "html_attr" |
+                                        "md_heading" | "md_link" | "md_code" | "md_list" |
+                                        "dict_get" | "dict_set" | "dict_has_key" | "to_string" |
+                                        "to_int" | "to_float" | "to_bool" | "neg" | "format_int" |
+                                        "format_float" | "format_hex" | "format_octal" | "format_binary" |
+                                        "format_scientific" | "format_bytes" | "format_list" | "format_table" |
+                                        "format_json" | "format_currency" | "format_percent" | "format_bool" |
+                                        "truncate" | "center" | "flatmap" | "flatten" | "get" | "set" |
+                                        "keys" | "values" | "has_key" | "typeof" | "is_string" | "is_number" |
+                                        "is_int" | "is_float" | "is_list" | "is_bool" | "is_function" | "is_dict" |
+                                        "assert" | "error" | "trace" | "debug" | "os" | "env_var" | "env_var_or" |
+                                        "json_parse" | "fill_template" | "walkdir")
+                                })
+                                .collect();
+                            
+                            if user_vars.is_empty() {
+                                println!("No user-defined variables");
+                            } else {
+                                println!("User-defined variables:");
+                                for (name, val) in user_vars {
+                                    let type_info = match val {
+                                        Value::String(_) => "String",
+                                        Value::Number(_) => "Number",
+                                        Value::Bool(_) => "Bool",
+                                        Value::List(_) => "List",
+                                        Value::Dict(_) => "Dict",
+                                        Value::Function { .. } => "Function",
+                                        Value::Builtin(_, _) => "Builtin",
+                                        Value::FileTemplate { .. } => "FileTemplate",
+                                        Value::Template(_, _) => "Template",
+                                        Value::Path(_, _) => "Path",
+                                        Value::None => "None",
+                                    };
+                                    println!("  {} : {}", name, type_info);
+                                }
+                            }
+                            continue;
+                        }
+                        cmd if cmd.starts_with("doc ") => {
+                            let func_name = cmd.trim_start_matches("doc ").trim();
+                            // Show builtin doc for specific function
+                            let builtins = initial_builtins();
+                            if builtins.contains_key(func_name) {
+                                println!("Function: {}", func_name);
+                                // Try to get type info from print_builtin_docs logic
+                                // For now, just indicate it exists
+                                println!("  This is a builtin function. Use it in an expression to see its behavior.");
+                                println!("  Example: {} <args>", func_name);
+                            } else {
+                                println!("Unknown function: {}", func_name);
+                                println!("  Use :vars to see available variables");
+                            }
+                            continue;
+                        }
+                        cmd if cmd.starts_with("type ") => {
+                            let expr_str = cmd.trim_start_matches("type ").trim();
+                            if expr_str.is_empty() {
+                                println!("Usage: :type <expression>");
+                                continue;
+                            }
+                            // Evaluate expression to get type
+                            match tokenize(expr_str.to_string()) {
+                                Ok(tokens) => {
+                                    let ast = parse(tokens);
+                                    let mut temp_symbols = symbols.clone();
+                                    match eval(ast.program, &mut temp_symbols, expr_str) {
+                                        Ok(val) => {
+                                            let type_name = match val {
+                                                Value::String(_) => "String",
+                                                Value::Number(_) => "Number",
+                                                Value::Bool(_) => "Bool",
+                                                Value::List(_) => "List",
+                                                Value::Dict(_) => "Dict",
+                                                Value::Function { .. } => "Function",
+                                                Value::Builtin(_, _) => "Builtin",
+                                                Value::FileTemplate { .. } => "FileTemplate",
+                                                Value::Template(_, _) => "Template",
+                                                Value::Path(_, _) => "Path",
+                                                Value::None => "None",
+                                            };
+                                            println!("Type: {}", type_name);
+                                        }
+                                        Err(e) => {
+                                            eprintln!("Error: {}", e.message);
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("Parse error: {}", e.pretty_with_file(expr_str, Some("<input>")));
+                                }
+                            }
+                            continue;
+                        }
+                        _ => {
+                            println!("Unknown command: {}. Type :help for available commands", cmd);
+                            continue;
+                        }
+                    }
+                }
+
+                // Add to input buffer
+                if input_buffer.is_empty() {
+                    input_buffer = trimmed.to_string();
+                } else {
+                    input_buffer.push('\n');
+                    input_buffer.push_str(trimmed);
+                }
+
+                // Check if expression is complete before trying to parse
+                if !_is_expression_complete_impl(&input_buffer) {
+                    // Expression is incomplete, continue collecting
+                    continue;
+                }
+
+                // Try to parse and evaluate
+                match tokenize(input_buffer.clone()) {
+                    Ok(tokens) => {
+                        let ast = parse(tokens);
+                        match eval(ast.program, &mut symbols, &input_buffer) {
+                            Ok(val) => {
+                                // Display result nicely
+                                match &val {
+                                    Value::FileTemplate { .. } => {
+                                        match collect_file_templates(&val, &input_buffer) {
+                                            Ok(files) => {
+                                                println!("FileTemplate:");
+                                                for (path, content) in files {
+                                                    println!("  Path: {}", path);
+                                                    println!("  Content:\n{}", content);
+                                                }
+                                            }
+                                            Err(_) => {
+                                                println!("{}", val.to_string(&input_buffer));
+                                            }
+                                        }
+                                    }
+                                    Value::List(items) if items.iter().any(|v| matches!(v, Value::FileTemplate { .. })) => {
+                                        match collect_file_templates(&val, &input_buffer) {
+                                            Ok(files) => {
+                                                println!("List of FileTemplates ({}):", files.len());
+                                                for (path, content) in files {
+                                                    println!("  Path: {}", path);
+                                                    println!("  Content:\n{}", content);
+                                                }
+                                            }
+                                            Err(_) => {
+                                                println!("{}", val.to_string(&input_buffer));
+                                            }
+                                        }
+                                    }
+                                    _ => {
+                                        let type_name = match &val {
+                                            Value::String(_) => "String",
+                                            Value::Number(_) => "Number",
+                                            Value::Bool(_) => "Bool",
+                                            Value::List(_) => "List",
+                                            Value::Dict(_) => "Dict",
+                                            Value::Function { .. } => "Function",
+                                            Value::Builtin(_, _) => "Builtin",
+                                            Value::FileTemplate { .. } => "FileTemplate",
+                                            Value::Template(_, _) => "Template",
+                                            Value::Path(_, _) => "Path",
+                                            Value::None => "None",
+                                        };
+                                        println!("{} : {}", val.to_string(&input_buffer), type_name);
+                                    }
+                                }
+                                input_buffer.clear();
+                            }
+                            Err(e) => {
+                                eprintln!("Error: {}", e.pretty_with_file(&input_buffer, Some("<repl>")));
+                                input_buffer.clear();
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        // Check if it's an incomplete expression
+                        let error_msg = e.pretty_with_file(&input_buffer, Some("<repl>"));
+                        // If it looks like incomplete input, continue collecting
+                        if error_msg.contains("unexpected") || error_msg.contains("EOF") || 
+                           (error_msg.contains("expected") && (error_msg.contains("in") || error_msg.contains("then") || error_msg.contains("else"))) {
+                            // Continue multi-line input
+                            continue;
+                        } else {
+                            eprintln!("Parse error: {}", error_msg);
+                            input_buffer.clear();
+                        }
+                    }
+                }
+            }
+            Err(ReadlineError::Interrupted) => {
+                println!("^C");
+                input_buffer.clear();
+            }
+            Err(ReadlineError::Eof) => {
+                println!("\nGoodbye!");
+                break;
+            }
+            Err(err) => {
+                eprintln!("Error: {:?}", err);
+                break;
+            }
+        }
+    }
+
+    0
+}
+
+// Helper function to check if an expression appears complete
+#[cfg(test)]
+pub fn is_expression_complete(input: &str) -> bool {
+    _is_expression_complete_impl(input)
+}
+
+fn _is_expression_complete_impl(input: &str) -> bool {
+    let mut let_count = 0;
+    let mut in_count = 0;
+    let mut if_count = 0;
+    let mut then_count = 0;
+    let mut else_count = 0;
+    let mut paren_depth = 0;
+    let mut bracket_depth = 0;
+    let mut brace_depth = 0;
+    let mut in_string = false;
+    let mut in_template = false;
+    let mut escape_next = false;
+    
+    let chars: Vec<char> = input.chars().collect();
+    let mut i = 0;
+    
+    while i < chars.len() {
+        let c = chars[i];
+        
+        if escape_next {
+            escape_next = false;
+            i += 1;
+            continue;
+        }
+        
+        if in_string {
+            if c == '"' {
+                in_string = false;
+            }
+            i += 1;
+            continue;
+        }
+        
+        if in_template {
+            if c == '}' {
+                // Check if it's closing a template brace
+                let mut j = i;
+                let mut brace_count = 1;
+                while j > 0 && chars[j - 1] == '{' {
+                    j -= 1;
+                    brace_count += 1;
+                }
+                if brace_count >= 2 {
+                    in_template = false;
+                }
+            }
+            i += 1;
+            continue;
+        }
+        
+        match c {
+            '"' => in_string = true,
+            '{' => {
+                // Check if it's a template start {{"
+                if i + 2 < chars.len() && chars[i + 1] == '{' && chars[i + 2] == '"' {
+                    in_template = true;
+                    i += 3;
+                    continue;
+                } else {
+                    brace_depth += 1;
+                }
+            }
+            '}' => {
+                if !in_template {
+                    brace_depth -= 1;
+                }
+            }
+            '(' => paren_depth += 1,
+            ')' => paren_depth -= 1,
+            '[' => bracket_depth += 1,
+            ']' => bracket_depth -= 1,
+            '\\' => {
+                escape_next = true;
+                i += 1;
+                continue;
+            }
+            _ => {}
+        }
+        
+        // Check for keywords (only when not in string/template)
+        if !in_string && !in_template && i + 2 < chars.len() {
+            let remaining: String = chars[i..].iter().collect();
+            
+            // Check for "let" keyword (word boundary)
+            if remaining.starts_with("let") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
+                if i + 3 >= chars.len() || !chars[i + 3].is_alphanumeric() {
+                    let_count += 1;
+                    i += 3;
+                    continue;
+                }
+            }
+            
+            // Check for "in" keyword
+            if remaining.starts_with("in") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
+                if i + 2 >= chars.len() || !chars[i + 2].is_alphanumeric() {
+                    in_count += 1;
+                    i += 2;
+                    continue;
+                }
+            }
+            
+            // Check for "if" keyword
+            if remaining.starts_with("if") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
+                if i + 2 >= chars.len() || !chars[i + 2].is_alphanumeric() {
+                    if_count += 1;
+                    i += 2;
+                    continue;
+                }
+            }
+            
+            // Check for "then" keyword
+            if remaining.starts_with("then") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
+                if i + 4 >= chars.len() || !chars[i + 4].is_alphanumeric() {
+                    then_count += 1;
+                    i += 4;
+                    continue;
+                }
+            }
+            
+            // Check for "else" keyword
+            if remaining.starts_with("else") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
+                if i + 4 >= chars.len() || !chars[i + 4].is_alphanumeric() {
+                    else_count += 1;
+                    i += 4;
+                    continue;
+                }
+            }
+        }
+        
+        i += 1;
+    }
+    
+    // Expression is complete if:
+    // - All let statements have matching in
+    // - All if statements have matching then and else
+    // - All brackets/parens/braces are balanced
+    // - Not in the middle of a string or template
+    let_count == in_count &&
+    if_count == then_count && if_count == else_count &&
+    paren_depth == 0 &&
+    bracket_depth == 0 &&
+    brace_depth == 0 &&
+    !in_string &&
+    !in_template
 }

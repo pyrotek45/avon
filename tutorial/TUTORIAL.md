@@ -188,10 +188,33 @@ When you run an Avon program, it evaluates to a **Value**. Here are the types of
 | **FileTemplate** | `@/path/file {"content"}` | File generation targets |
 
 When evaluation is complete, `avon` either:
-1. **Prints the result** (for `eval` command)
-2. **Materializes files** (for `deploy` command)
+1. **Prints the result** (for `eval` command) - Shows the value as a string representation
+2. **Materializes files** (for `deploy` command) - Writes FileTemplate values to disk
 
-Error messages stay concise, noting which function/operator failed but omitting line numbers or file references—rely on the debugger helpers for additional context.
+**How `eval` works:**
+- Evaluates the expression in the file
+- Converts the result to a string representation
+- Prints it to stdout
+- If the result is a FileTemplate or list of FileTemplates, it shows the paths and content that would be generated (but doesn't write them)
+- Exit code: 0 on success, 1 on error
+
+**How `deploy` works:**
+- Evaluates the expression in the file
+- If the result is a FileTemplate, writes it to disk
+- If the result is a list containing FileTemplates, writes all of them
+- If the result is not a FileTemplate or list of FileTemplates, reports an error
+- Validates all paths and creates directories before writing (atomic deployment)
+- Exit code: 0 on success, 1 on error
+
+**Error messages:**
+Avon provides detailed error messages that include:
+- The function/operator that failed
+- The expected types vs. actual types
+- The line number where the error occurred
+- Source code context around the error
+- Actionable suggestions when possible
+
+Use `--debug` flag for even more detailed information about the evaluation process.
 
 ---
 
@@ -253,18 +276,79 @@ Application is **left-associative**, so `f a b` means `(f a) b`.
 
 Avon supports these binary operators:
 
+**Arithmetic Operators:**
 ```avon
-a + b                      # Addition (numbers), concatenation (strings/lists)
+a + b                      # Addition (numbers), concatenation (strings/lists/templates/paths)
 a - b                      # Subtraction (numbers only)
 a * b                      # Multiplication (numbers only)
 a / b                      # Division (numbers only)
-a == b                     # Equality
-a != b                     # Inequality
-a > b                      # Greater than
-a < b                      # Less than
-a >= b                     # Greater or equal
-a <= b                     # Less or equal
 ```
+
+**Comparison Operators:**
+```avon
+a == b                     # Equality (works for all types)
+a != b                     # Inequality (works for all types)
+a > b                      # Greater than (numbers only)
+a < b                      # Less than (numbers only)
+a >= b                     # Greater or equal (numbers only)
+a <= b                     # Less or equal (numbers only)
+```
+
+**Logical Operators:**
+```avon
+a && b                     # Logical AND (both must be true)
+a || b                     # Logical OR (at least one must be true)
+```
+
+**Pipe Operator:**
+```avon
+a -> b                     # Pipe: pass a as first argument to b
+```
+
+The pipe operator `->` chains expressions, passing the left-hand side as the first argument to the right-hand side. This eliminates nested parentheses and makes code more readable.
+
+**Basic pipe:**
+```avon
+[1, 2, 3] -> length        # Equivalent to: length [1, 2, 3]
+"hello" -> upper           # Equivalent to: upper "hello"
+```
+
+**Chained pipes:**
+```avon
+"hello world" -> upper -> length
+# Equivalent to: length (upper "hello world")
+# Result: 11
+```
+
+**Pipe with curried functions:**
+```avon
+[1, 2, 3, 4, 5] -> filter (\x x > 2) -> length
+# Equivalent to: length (filter (\x x > 2) [1, 2, 3, 4, 5])
+# Result: 3
+```
+
+**Pipe with lambdas:**
+```avon
+10 -> \x x * 2             # Equivalent to: (\x x * 2) 10
+# Result: 20
+```
+
+**Pipe with path literals:**
+```avon
+@config.json -> exists     # Equivalent to: exists @config.json
+```
+
+**Why use pipes?** Pipes make code more readable by showing the flow of data from left to right, rather than nested function calls. Compare:
+
+```avon
+# Without pipe (nested)
+length (filter (\x x > 2) (map (\x x * 2) [1, 2, 3, 4, 5]))
+
+# With pipe (linear)
+[1, 2, 3, 4, 5] -> map (\x x * 2) -> filter (\x x > 2) -> length
+```
+
+The pipe version reads naturally: "take the list, double each item, filter values greater than 2, then get the length."
 
 **Operator overloading:** The `+` operator adapts to its operands:
 - `"hello" + " world"` -> `"hello world"` (strings concatenate)
@@ -301,18 +385,138 @@ let app_config = @/app.conf in
 config_dir + app_config           # "/etc/prod//app.conf"
 ```
 
+#### Path Values
+
+Path values are first-class values in Avon. They represent file system paths and can be stored in variables, passed to functions, and used with file operations.
+
+**Path Literal Syntax:**
+```avon
+@/path/to/file                 # Absolute path
+@relative/path                 # Relative path
+@config/{env}/app.yml          # Path with interpolation
+```
+
+**Using Path Values:**
+```avon
+# Store a path in a variable
+let config_path = @config/production.json in
+
+# Use with file operations
+let content = readfile config_path in
+let exists = exists config_path in
+let lines = readlines config_path in
+
+# Path manipulation
+let filename = basename config_path in
+let directory = dirname config_path in
+
+# Dynamic path construction
+let env = "staging" in
+let app = "myapp" in
+let dynamic_path = @config/{env}/{app}.yml in
+```
+
+**Path Interpolation:**
+You can interpolate variables into paths:
+```avon
+let username = "alice" in
+let home_dir = @/home/{username} in
+let config_file = @/home/{username}/.config/app.yml in
+```
+
+**Path Concatenation:**
+Paths can be concatenated with `+`:
+```avon
+let base = @/etc in
+let app = @myapp in
+let config = @config.yml in
+base + app + config              # "/etc/myapp/config.yml"
+```
+
+**Paths with File Operations:**
+All file operations accept path values:
+- `readfile path` - Read file content
+- `readlines path` - Read file as list of lines
+- `exists path` - Check if file exists
+- `basename path` - Get filename
+- `dirname path` - Get directory
+- `import path` - Import Avon file
+- `fill_template path dict` - Fill template with substitutions
+
+**Paths vs Strings:**
+Paths are distinct from strings. They're type-safe and provide better error messages:
+```avon
+let p = @config.yml in
+readfile p                       # Works: path value
+
+let s = "config.yml" in
+readfile s                       # Type error: expected Path, got String
+```
+
+**FileTemplate Syntax:**
+FileTemplates combine a path with a template:
+```avon
+@/path/to/file.txt {"
+    File content here
+"}
+```
+
+The `@` prefix creates a path value, and the following `{...}` is a template. Together, they form a `FileTemplate` value that can be deployed.
+
 #### Conditionals
 
 ```avon
 if condition then true_expr else false_expr
 ```
 
-Example:
+The `if` expression evaluates the condition. If it's `true`, it returns `true_expr`; otherwise, it returns `false_expr`. Both branches must be present (`then` and `else`).
+
+**Examples:**
 ```avon
 if age > 18 then "adult" else "minor"
+
+if x == 0 then 1 else x
+
+if debug then "verbose" else "quiet"
 ```
 
----
+**Nested conditionals:**
+```avon
+if x > 0 then "positive" else (if x < 0 then "negative" else "zero")
+```
+
+**Important:** The condition must evaluate to a boolean (`true` or `false`). Type errors occur if you use a non-boolean value.
+
+#### Logical Operators
+
+Avon provides `&&` (AND) and `||` (OR) for combining boolean expressions:
+
+```avon
+a && b                     # Returns true only if both a and b are true
+a || b                     # Returns true if at least one of a or b is true
+```
+
+**Examples:**
+```avon
+if (age >= 18) && (has_license) then "can drive" else "cannot drive"
+
+if (x > 0) || (y > 0) then "at least one positive" else "both non-positive"
+```
+
+**Important:** Both operands must be booleans. Type errors occur if you use non-boolean values.
+
+**Precedence:** Logical operators have lower precedence than comparison operators, so parentheses are often needed:
+```avon
+# Correct
+if (x > 0) && (y > 0) then "both positive" else "not both positive"
+
+# This would be parsed incorrectly without parentheses
+# if x > 0 && y > 0 then ...  # Wrong! Parsed as: if x > (0 && y) > 0
+```
+
+**Short-circuit evaluation:** Both `&&` and `||` use short-circuit evaluation:
+- `a && b`: If `a` is `false`, `b` is not evaluated
+- `a || b`: If `a` is `true`, `b` is not evaluated
 
 ---
 
@@ -320,8 +524,9 @@ if age > 18 then "adult" else "minor"
 
 ### Let Bindings
 
-Use `let` to define variables and intermediate values:
+Use `let` to define variables and intermediate values. The syntax is `let <identifier> = <expression> in <expression>`.
 
+**Basic let binding:**
 ```avon
 let greeting = "Hello" in
 let name = "Alice" in
@@ -329,7 +534,8 @@ greeting + ", " + name
 # Evaluates to: "Hello, Alice"
 ```
 
-You can cascade multiple `let` bindings:
+**Cascading let bindings:**
+You can cascade multiple `let` bindings to build up complex computations:
 
 ```avon
 let a = 10 in
@@ -339,7 +545,236 @@ sum * 2
 # Evaluates to: 60
 ```
 
-**Important:** Always include the `in` keyword! `let` bindings require an `in` to specify the expression where the binding is visible.
+**How Scoping Works:**
+
+Avon uses **lexical scoping** (also called static scoping), which means variable visibility is determined by the structure of your code, not by when code executes. Here's how it works:
+
+1. **Each `let` creates a new scope:** When you write `let x = value in expr`, Avon:
+   - Evaluates `value` in the current scope
+   - Creates a **new scope** (a copy of the current symbol table)
+   - Adds `x` to this new scope
+   - Evaluates `expr` in the new scope
+   - The original scope is **never mutated**—this is functional programming
+
+2. **Variable visibility:** Variables are visible in the expression following `in`, but not outside:
+```avon
+let x = 10 in
+x * 2  # x is visible here
+# x is NOT visible here (outside the 'in' expression)
+```
+
+3. **Nested scopes:** Inner `let` bindings create nested scopes. Each scope can see variables from outer scopes, but outer scopes cannot see variables from inner scopes:
+```avon
+let x = 10 in           # Outer scope: x = 10
+let y = 20 in           # Middle scope: x = 10, y = 20
+let temp = x + y in     # Inner scope: x = 10, y = 20, temp = 30
+temp * 2                # Middle scope: can see temp
+# Outer scope: cannot see temp or y
+```
+
+4. **No mutations:** Because each `let` creates a new scope (not a mutation), you can safely reason about your code. Variables never change after they're defined.
+
+5. **The final expression:** The final expression (after all `in` keywords) is what gets evaluated and returned.
+
+**Example with nested scopes:**
+```avon
+let x = 10 in
+let y = 20 in
+let result = let temp = x + y in temp * 2 in
+result
+# Evaluates to: 60
+# Note: 'temp' is only visible within the inner 'let' expression
+```
+
+**Detailed Scoping Rules:**
+
+### 1. Variable Visibility
+
+Variables are visible in the expression following `in`. They are not visible before their definition or outside their scope.
+
+**Example:**
+```avon
+let x = 10 in
+x * 2  # ✓ x is visible here
+# x is NOT visible here (outside the 'in' expression)
+```
+
+**Forward reference error:**
+```avon
+let result = x + 1 in  # Error: x is not defined yet
+let x = 10 in
+result
+```
+
+### 2. Cascading Lets (Sequential Scoping)
+
+Each `let` binding makes the variable available to all subsequent expressions in the same scope. This is called "cascading" because each binding builds on the previous ones:
+
+```avon
+let a = "A" in
+let b = "B" in
+concat a b  # Both a and b are visible here
+```
+
+**How it works:**
+1. First `let` creates scope 1: `{a: "A"}`
+2. Second `let` creates scope 2: `{a: "A", b: "B"}` (includes a from scope 1)
+3. Expression `concat a b` evaluates in scope 2 (can see both a and b)
+
+### 3. Nested Scopes (Lexical Scoping)
+
+Inner `let` bindings create nested scopes. Variables defined in inner scopes are not visible outside, but inner scopes can see variables from outer scopes:
+
+```avon
+let x = 10 in                    # Scope 1: {x: 10}
+let result = let temp = x + 5 in # Scope 2: {x: 10, result: ...}
+  temp * 2                       # Scope 3: {x: 10, temp: 15} - temp visible here
+in                               # Back to Scope 2: {x: 10, result: 30}
+result                           # Scope 2: temp is NOT visible here, only result
+```
+
+**Breaking it down:**
+- **Scope 1** (`let x = 10 in`): Contains `{x: 10}`
+- **Scope 2** (`let result = ... in result`): Contains `{x: 10, result: 30}` (inherits x from Scope 1)
+- **Scope 3** (`let temp = x + 5 in temp * 2`): Contains `{x: 10, temp: 15}` (inherits x from Scope 2, adds temp)
+- After Scope 3 completes, we're back in Scope 2, where `temp` no longer exists
+
+**Verification:** Trying to use `temp` in the outer scope results in an error:
+```avon
+let x = 10 in
+let result = let temp = x + 5 in temp * 2 in
+temp  # Error: unknown symbol: temp
+```
+
+**Scope hierarchy:**
+- Outer scope: `{x: 10}`
+- Inner scope: `{x: 10, temp: 15}` (inherits x, adds temp)
+- After inner scope: back to `{x: 10, result: 30}` (temp is gone)
+
+### 4. No Variable Shadowing
+
+Avon is a functional language and does not allow variable shadowing. If you try to define a variable with the same name as an existing variable in the same scope, you'll get an error:
+
+```avon
+let x = 1 in
+let x = 2 in  # Error: variable 'x' is already defined in this scope
+x
+```
+
+**Why no shadowing?**
+- Prevents confusion and makes code more predictable
+- Each variable name is unique within its scope
+- Easier to reason about code—you always know which variable you're referring to
+- Aligns with functional programming principles (immutability)
+
+**Exception:** The variable `_` (underscore) can be reused. This is a special case for ignoring values:
+```avon
+let _ = trace "step 1" value1 in
+let _ = trace "step 2" value2 in  # OK: _ can be reused
+result
+```
+
+**Solution when you need similar names:**
+```avon
+let x = 1 in
+let y = 2 in
+let inner = let temp_x = 10 in temp_x + y in
+let outer = x + y in
+[inner, outer]
+# Result: [12, 3]
+# inner uses temp_x=10, outer uses x=1 (no shadowing, clear scoping)
+```
+
+### 5. Template Variable Capture (Closures)
+
+Templates capture variables from their surrounding scope at the time they are created. This is called a "closure" because the template "closes over" the variables:
+
+```avon
+let name = "Alice" in
+let template = {"Hello, {name}"} in
+template
+# Result: "Hello, Alice"
+# Template captured "Alice" from the surrounding scope when created
+```
+
+**Important:** The template captures the value at creation time, not evaluation time:
+```avon
+let name = "Alice" in
+let template = {"Hello, {name}"} in
+# Even if 'name' were redefined here (which we can't do), 
+# the template would still use "Alice"
+template
+```
+
+### 6. Function Closures
+
+Functions also capture their environment (closure) when they are created. This allows functions to "remember" variables from their surrounding scope:
+
+```avon
+let x = 10 in
+let add_x = \y x + y in
+add_x 5
+# Result: 15
+# Function captured x=10 from when it was created
+```
+
+**How closures work:**
+1. When `add_x` is created, it captures the current scope: `{x: 10}`
+2. This captured scope is stored with the function
+3. When `add_x 5` is called, it uses the captured `x=10`, not any later definition
+
+**Practical example:**
+```avon
+let make_adder = \base
+  let offset = 5 in
+  \x base + offset + x in
+
+let add10 = make_adder 10 in
+add10 3
+# Result: 18
+# add10 captured: base=10, offset=5
+# When called with x=3: 10 + 5 + 3 = 18
+```
+
+### 7. Scope Isolation
+
+Each `let` binding creates an isolated scope. This means:
+- Variables in one scope cannot affect variables in another scope
+- No mutations—variables never change after definition
+- Predictable behavior—you can reason about code by looking at its structure
+
+**Example demonstrating isolation:**
+```avon
+let x = 1 in
+let y = 2 in
+let inner = let temp = x + y in temp * 2 in
+let outer = x + y in
+[inner, outer]
+# Result: [6, 3]
+# inner: temp = 1 + 2 = 3, then 3 * 2 = 6
+# outer: x + y = 1 + 2 = 3
+# Both calculations are independent and predictable
+```
+
+**Best Practices:**
+- Use unique variable names to avoid shadowing errors
+- Remember that templates and functions capture their environment at creation time
+- Each `let` binding creates a new scope, so variables are isolated and predictable
+- Use descriptive names that reflect the variable's purpose
+- The `_` variable can be reused when you want to ignore a value
+
+**Important:** Always include the `in` keyword! `let` bindings require an `in` to specify the expression where the binding is visible. Without `in`, the parser will report an error.
+
+**Common mistake:**
+```avon
+# Wrong - missing 'in'
+let x = 10
+x * 2
+
+# Correct
+let x = 10 in
+x * 2
+```
 
 ### Defining Functions
 
@@ -722,18 +1157,48 @@ This is perfect for generating config files, markdown lists, and more.
 - **Strings** (`"..."`) are values with escape sequence support. Use them for single-line content and data.
 - **Templates** (`{...}`) generate multi-line output with interpolation. Use them for file content.
 
+**String escape sequences:**
 ```avon
-"hello\n"                  # String: \n is escape sequence
-{"hello\n"}               # Template: literally contains the text "\n" (not a newline)
+"hello\n"                  # String: \n is a newline character
+"hello\tworld"             # String: \t is a tab character
+"path\\to\\file"           # String: \\ is a backslash
+"quote: \""                # String: \" is a quote character
 ```
 
-To get a newline in a template, press Enter in the source:
+**Template literal text:**
+```avon
+{"hello\n"}                # Template: literally contains the text "\n" (not a newline)
+{"hello\tworld"}           # Template: literally contains "\t" (not a tab)
+```
 
+**To get a newline in a template, press Enter in the source:**
 ```avon
 {"
 hello
+world
 "}
+# Output:
+# hello
+# world
 ```
+
+**When to use each:**
+- **Use strings for:** Data values, single-line content, escape sequences needed
+- **Use templates for:** File content, multi-line output, variable interpolation needed
+
+**Template variable capture:**
+Templates capture variables from their surrounding scope at the time the template is created. This means:
+
+```avon
+let name = "Alice" in
+let template = {"Hello, {name}"} in
+let name = "Bob" in
+template
+# Still evaluates to: "Hello, Alice"
+# The template captured "Alice" when it was created
+```
+
+This is important for closures and function returns—templates remember the values from when they were defined, not when they're evaluated.
 
 ### Template Escape Hatch: Variable Brace Delimiters
 
@@ -957,18 +1422,51 @@ This generates `config-dev.yml` and `config-prod.yml`.
 
 ### Important Deploy Flags
 
-- `--root <dir>` — prepend this directory to all generated paths (recommended!)
-- `--force` — overwrite existing files without warning
-- `--append` — append to existing files instead of overwriting (useful for logs or accumulating data)
-- `--if-not-exists` — only create file if it doesn't exist (useful for initialization files)
-- `--backup` — create a backup (`.bak`) of existing files before overwriting (safest overwrite option)
-- `--git <url>` — fetch source from a git raw URL
+**`--root <dir>`** — Prepend this directory to all generated paths
+- **Required for safety:** Prevents accidental writes to system directories
+- All file paths are resolved relative to this directory
+- Example: `--root ./output` means `@/config.yml` becomes `./output/config.yml`
+- **Always use this flag** to keep your deployments contained
+
+**`--force`** — Overwrite existing files without warning
+- **Destructive:** Permanently replaces existing files
+- No backup is created
+- Use with caution, especially for production configs
+- Overrides the default behavior of skipping existing files
+
+**`--backup`** — Create a backup before overwriting
+- **Safe overwrite:** Copies existing file to `filename.bak` before writing
+- If backup fails (e.g., permissions), deployment aborts
+- Original file remains untouched if backup fails
+- Best practice for updating critical configurations
+
+**`--append`** — Append to existing files instead of overwriting
+- **Additive:** Adds new content to the end of existing files
+- Useful for logs, accumulating data, or building files incrementally
+- If file doesn't exist, creates it (same as normal write)
+
+**`--if-not-exists`** — Only create file if it doesn't already exist
+- **Initialization mode:** Skips files that already exist
+- Useful for setup scripts that should only run once
+- No warning is shown for skipped files (they're silently ignored)
+
+**`--git <url>`** — Fetch source from a git raw URL
+- Format: `user/repo/path/to/file.av`
+- Fetches the file from GitHub's raw content API
+- Useful for sharing templates across teams
+- Example: `--git pyrotek45/avon/examples/config.av`
+
+**`--debug`** — Show detailed debug output
+- Shows lexer tokens, parser AST, and evaluator steps
+- Useful for troubleshooting complex programs
+- Output can be verbose—use only when needed
 
 **Safety Guardrails:**
-- By default, Avon **will not overwrite** existing files. It skips them and warns you.
-- `--force` overrides this safety check.
-- `--backup` allows overwriting but preserves the old file as `filename.bak`.
-- `--root` ensures you don't accidentally write to system directories.
+- By default, Avon **will not overwrite** existing files. It skips them and prints a warning.
+- `--force` overrides this safety check (destructive).
+- `--backup` allows overwriting but preserves the old file as `filename.bak` (safe).
+- `--root` ensures you don't accidentally write to system directories (required for safety).
+- If any error occurs during deployment preparation, **zero files are written** (atomic deployment).
 
 ---
 
@@ -1119,16 +1617,61 @@ let formatted = map (\item concat "service: " item) items in
 
 ### Basic Commands
 
+**`eval` - Evaluate and Print:**
 ```bash
-# Evaluate a program and print result
 avon eval examples/map_example.av
-
-# Deploy: evaluate program and generate files
-avon deploy examples/site_generator.av --root ./output --force
-
-# Deploy with named arguments
-avon deploy examples/greet.av -name Alice -age 30 --root ./gen --force
 ```
+- Evaluates the Avon program
+- Prints the result to stdout
+- **Does NOT write any files** - this is read-only
+- Use this to test your program before deploying
+- If the result is a FileTemplate or list of FileTemplates, it shows the paths and content that would be generated
+
+**`deploy` - Generate Files:**
+```bash
+avon deploy examples/site_generator.av --root ./output --force
+```
+- Evaluates the Avon program
+- If the result is a FileTemplate or list of FileTemplates, writes them to disk
+- Requires `--root` to specify where files should be written (safety feature)
+- By default, skips existing files (use `--force` or `--backup` to overwrite)
+
+**`run` - Evaluate Code String:**
+```bash
+avon run 'map (\x x * 2) [1, 2, 3]'
+```
+- Evaluates a code string directly without a file
+- Useful for quick one-off calculations
+- Prints the result (does not deploy files)
+- Code must be quoted to prevent shell interpretation
+
+**`repl` - Interactive REPL:**
+```bash
+avon repl
+```
+- Starts an interactive shell for exploring Avon
+- See the [Interactive REPL](#interactive-repl) section for details
+
+**`doc` - Builtin Documentation:**
+```bash
+avon doc
+```
+- Shows documentation for all builtin functions
+- Lists function signatures and descriptions
+
+**`version` - Version Information:**
+```bash
+avon version
+```
+- Shows the Avon version number
+
+**`help` - Help Message:**
+```bash
+avon help
+# or
+avon --help
+```
+- Shows usage information and available commands
 
 ### Passing Arguments
 
@@ -1204,6 +1747,233 @@ Both `x` and `y` are provided as strings: `"5"` and `"40"`. You should convert t
 ```
 This ensures correct type handling and prevents subtle bugs when performing arithmetic or boolean logic.
 
+### Interactive REPL
+
+The REPL (Read-Eval-Print Loop) is an interactive shell for exploring Avon. It's perfect for learning the language, testing expressions, and debugging. The REPL maintains a persistent symbol table, so variables you define persist across expressions, making it ideal for building up complex computations step by step.
+
+**Why Use the REPL?**
+
+The REPL is an essential tool for Avon development:
+
+- **Learning**: Explore Avon syntax and builtins interactively without creating files
+- **Prototyping**: Test expressions quickly before adding them to your programs
+- **Debugging**: Isolate problematic code and test fixes immediately
+- **Exploration**: Discover how functions work with different inputs
+- **Quick Calculations**: Perform one-off computations or transformations
+- **Type Checking**: Verify types of expressions before using them in files
+
+**Starting the REPL:**
+```bash
+avon repl
+```
+
+You'll see:
+```
+Avon REPL - Interactive Avon Shell
+Type ':help' for commands, ':exit' to quit
+
+avon> 
+```
+
+**Basic Usage:**
+```avon
+avon> 1 + 2
+3 : Number
+
+avon> let x = 42 in x * 2
+84 : Number
+
+avon> map (\x x * 2) [1, 2, 3]
+[2, 4, 6] : List
+
+avon> typeof "hello"
+String : String
+```
+
+**REPL Commands:**
+- `:help` or `:h` - Show help and available commands
+- `:vars` - List all user-defined variables with their types
+- `:type <expr>` - Show the type of an expression
+- `:doc <name>` - Show info about a builtin function
+- `:clear` - Clear all user-defined variables (resets to initial state)
+- `:exit` or `:quit` or `:q` - Exit the REPL
+
+**Example 1: Building Up Complex Expressions**
+
+The REPL maintains state between expressions, so you can build up complex computations:
+
+```avon
+avon> let double = \x x * 2 in double
+Function : Function
+
+avon> let numbers = [1, 2, 3, 4, 5] in numbers
+[1, 2, 3, 4, 5] : List
+
+avon> map double numbers
+[2, 4, 6, 8, 10] : List
+
+avon> :vars
+User-defined variables:
+  double : Function
+  numbers : List
+```
+
+**Example 2: Testing File Templates**
+
+You can test file generation without actually writing files:
+
+```avon
+avon> @/test.txt {"Hello, {os}"}
+FileTemplate:
+  Path: /test.txt
+  Content:
+Hello, linux
+
+avon> let name = "Alice" in @/greeting.txt {"
+...>   Hello, {name}!
+...>   Welcome to Avon.
+...> "}
+FileTemplate:
+  Path: /greeting.txt
+  Content:
+  Hello, Alice!
+  Welcome to Avon.
+```
+
+**Example 3: Debugging with trace and debug**
+
+Use built-in debugging tools interactively:
+
+```avon
+avon> trace "intermediate" (1 + 2)
+[TRACE] intermediate: 3
+3 : Number
+
+avon> let result = map (\x trace "doubling" (x * 2)) [1, 2, 3] in result
+[TRACE] doubling: 2
+[TRACE] doubling: 4
+[TRACE] doubling: 6
+[2, 4, 6] : List
+
+avon> debug [1, 2, 3]
+[DEBUG] List([Number(1.0), Number(2.0), Number(3.0)])
+[1, 2, 3] : List
+```
+
+**Example 4: Type Checking**
+
+Verify types before using expressions in your files:
+
+```avon
+avon> :type [1, 2, 3]
+Type: List
+
+avon> :type "hello"
+Type: String
+
+avon> :type map (\x x * 2)
+Type: Function
+
+avon> let config = {host: "localhost", port: 8080} in :type config
+Type: Dict
+```
+
+**Example 5: Testing Function Compositions**
+
+Build and test function pipelines interactively:
+
+```avon
+avon> let add_one = \x x + 1 in add_one
+Function : Function
+
+avon> let double = \x x * 2 in double
+Function : Function
+
+avon> let pipeline = \x double (add_one x) in pipeline 5
+12 : Number
+
+avon> map pipeline [1, 2, 3]
+[4, 6, 8] : List
+```
+
+**Example 6: Working with Dictionaries**
+
+Test dictionary operations interactively:
+
+```avon
+avon> let config = {host: "localhost", port: 8080, debug: true} in config
+{host: "localhost", port: 8080, debug: true} : Dict
+
+avon> config.host
+localhost : String
+
+avon> keys config
+["host", "port", "debug"] : List
+
+avon> has_key config "port"
+true : Bool
+
+avon> let updated = set config "timeout" 30 in updated
+{host: "localhost", port: 8080, debug: true, timeout: 30} : Dict
+```
+
+**Multi-line Input:**
+
+The REPL automatically detects incomplete expressions and waits for completion. This is especially useful for `let` expressions, `if` statements, and complex structures:
+
+```avon
+avon> let config = {
+    >   host: "localhost",
+    >   port: 8080,
+    >   debug: true
+    > } in config.host
+localhost : String
+
+avon> if true
+    > then "yes"
+    > else "no"
+yes : String
+
+avon> let x = 10 in
+    > let y = 20 in
+    > x + y
+30 : Number
+```
+
+Notice how the continuation prompt (`    >`) aligns with the initial prompt, making it easy to see the structure of your multi-line expressions.
+
+**Error Handling:**
+
+The REPL provides clear error messages and continues running after errors:
+
+```avon
+avon> 1 + "hello"
+Error: +: type mismatch
+  Expected: Number, Number
+  Got: Number, String
+  At line 1
+
+avon> let x = 42 in x
+42 : Number
+```
+
+After an error, you can continue working—the REPL doesn't crash.
+
+**Best Practices:**
+
+1. **Test before writing files**: Use the REPL to verify expressions work before adding them to your `.av` files
+2. **Build incrementally**: Define functions and variables step by step, checking each one
+3. **Use `:vars` frequently**: Keep track of what you've defined
+4. **Use `:type` for verification**: Check types of complex expressions
+5. **Clear when needed**: Use `:clear` to reset if you make mistakes
+
+**When to Use REPL vs Files:**
+
+- **Use REPL for**: Quick tests, learning, debugging, one-off calculations
+- **Use files for**: Production code, reusable programs, version-controlled configs
+
+The REPL is your interactive playground—use it liberally to explore and experiment!
+
 
 ### Command-Line Flags
 
@@ -1212,6 +1982,7 @@ This ensures correct type handling and prevents subtle bugs when performing arit
 | `eval` | Evaluate program and print result | `avon eval program.av` |
 | `deploy` | Generate files using result | `avon deploy program.av ...` |
 | `run` | Evaluate code string directly | `avon run '1 + 1'` |
+| `repl` | Start interactive REPL | `avon repl` |
 | `-param value` | Named argument for deploy | `deploy ... -name alice` |
 | `--root <dir>` | Prepend directory to all generated paths | `--root ./output` |
 | `--force` | Overwrite existing files without warning | `--force` |
@@ -1301,9 +2072,53 @@ Avon uses **runtime type checking** rather than static compile-time types. This 
 
 **Key behavior:** Avon **does not deploy** if there's a type error. If a type error occurs during evaluation, deployment simply doesn't happen. This protects you from bad or improperly typed configurations being written to disk.
 
-- Runtime errors produce `EvalError` with a clear message that names the failing function/operator and includes the source line number and context code to help you locate the issue.
-- Lexing / parsing errors also report line numbers and context to help you fix syntax issues quickly.
-- If deployment panics during file materialization, `avon` catches the panic and reports `Deployment panicked` rather than aborting your entire process. This protects you from half-written states. Use `--force` and test locally.
+**How type checking works:**
+- Types are checked at runtime when operations are performed
+- If you try to add a string to a number, Avon immediately reports a type error
+- If you try to call a non-function value, Avon reports a type error
+- Type errors prevent evaluation from completing, so no files are written
+
+**Error message format:**
+Avon provides detailed error messages that help you fix issues quickly:
+
+```
+Error: +: type mismatch
+  Expected: Number, Number
+  Got: Number, String
+  At line 5
+```
+
+This tells you:
+- **What failed:** The `+` operator
+- **What was expected:** Two numbers
+- **What you provided:** A number and a string
+- **Where it failed:** Line 5
+
+**Lexing and parsing errors:**
+Syntax errors are caught during parsing and include:
+- Line number where the error occurred
+- Context around the error
+- What was expected vs. what was found
+
+Example:
+```
+Parse error: expected 'in' after let binding
+  At line 3
+  let x = 10
+         ^
+```
+
+**Deployment errors:**
+If an error occurs during file materialization (writing files), Avon:
+- Stops immediately (atomic deployment)
+- Reports exactly what failed
+- Shows how many files were written before the error
+- Does not leave partial deployments
+
+**Error recovery:**
+- After an error, you can fix the issue and try again
+- No files are left in an inconsistent state
+- Use `--debug` flag for more detailed error information
 
 ### Debugging Tools
 
@@ -1662,17 +2477,3 @@ If you have questions or want to contribute examples, the Avon project welcomes 
 
 Happy generating!
 
-### Let bindings and cascading lets
-
-The language uses `let <ident> = <expr> in <expr>` for local bindings. You can nest `let` bindings to build up intermediate values. Example:
-
-```avon
-let a = "A" in
-let b = "B" in
-let combined = concat a b in
-@/out/{combined}.txt {"
-    Combined: {combined}
-"}
-```
-
-This demonstrates cascading `let` expressions: each `let` introduces a symbol visible in the following `in` expression. Always remember to include the `in` keyword.

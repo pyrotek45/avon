@@ -828,13 +828,30 @@ pub fn eval(
                 ))
             }
         }
-        Expr::Let { ident, value, expr, line: _ } => {
+        Expr::Let { ident, value, expr, line } => {
+            // Check if variable already exists in current scope (prevent shadowing)
+            // Exception: allow '_' to be reused (common pattern for ignoring values)
+            if ident != "_" && symbols.contains_key(&ident) {
+                return Err(EvalError::new(
+                    &format!("variable '{}' is already defined in this scope", ident),
+                    Some("new variable name".to_string()),
+                    Some("existing variable".to_string()),
+                    line,
+                ));
+            }
+            
+            // Evaluate the value in the current scope
             let mut evalue = eval(*value, symbols, source)?;
             if let Value::Function { ref mut name, .. } = evalue {
                 *name = Some(ident.clone());
             }
-            symbols.insert(ident, evalue.clone());
-            eval(*expr, symbols, source)
+            
+            // Create a new scope (clone the symbol table) and add the new binding
+            let mut new_scope = symbols.clone();
+            new_scope.insert(ident, evalue);
+            
+            // Evaluate the expression in the new scope (no mutation of original)
+            eval(*expr, &mut new_scope, source)
         }
         Expr::Function {
             ident,

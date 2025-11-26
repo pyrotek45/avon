@@ -263,6 +263,9 @@ avon deploy program.av --root ./output
 # Evaluate code directly
 avon run 'map (\x x * 2) [1, 2, 3]'
 
+# Start interactive REPL
+avon repl
+
 # Fetch and run from git (single template, many machines)
 avon eval --git user/repo/program.av
 avon deploy --git user/repo/program.av --root ./output
@@ -319,6 +322,9 @@ avon deploy program.av staging
 ```bash
 # Show lexer, parser, and evaluator debug output
 avon eval program.av --debug
+
+# Start interactive REPL for exploration and debugging
+avon repl
 
 # Get all builtin function documentation
 avon doc

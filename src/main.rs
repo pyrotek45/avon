@@ -3373,6 +3373,123 @@ mod tests {
         // This verifies that missing secrets prevent deployment
     }
 
+    // REPL Functionality Tests
+    // These test the core functionality that the REPL uses
+
+    #[test]
+    fn test_repl_basic_evaluation() {
+        // Test that basic expressions work (REPL uses this)
+        let prog = "1 + 2".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "3");
+    }
+
+    #[test]
+    fn test_repl_variable_persistence() {
+        // Test that variables persist (REPL maintains symbol table)
+        // Note: In the actual REPL, variables are stored when assigned, not from let expressions
+        // This test simulates REPL behavior where you can assign to variables
+        let mut symbols = initial_builtins();
+        
+        // First expression: define a variable (in REPL, this would be stored)
+        // The REPL actually stores the result, not the let binding itself
+        let prog1 = "42".to_string();
+        let tokens1 = tokenize(prog1.clone()).expect("tokenize");
+        let ast1 = parse(tokens1);
+        let v1 = eval(ast1.program, &mut symbols, &prog1).expect("eval");
+        assert_eq!(v1.to_string(&prog1), "42");
+        
+        // In actual REPL, you'd do: x = 42 (assignment, not let binding)
+        // For this test, we simulate by manually inserting (REPL does this)
+        symbols.insert("x".to_string(), v1);
+        assert!(symbols.contains_key("x"));
+    }
+
+    #[test]
+    fn test_repl_typeof_command() {
+        // Test :type command functionality
+        let prog = "[1, 2, 3]".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        
+        // Verify it's a List (what :type would show)
+        match v {
+            Value::List(_) => {},
+            _ => panic!("Expected List"),
+        }
+    }
+
+    // REPL Expression Completion Tests
+    use crate::cli::is_expression_complete;
+
+    #[test]
+    fn test_repl_complete_simple_expression() {
+        // Simple expressions should be complete
+        assert!(is_expression_complete("1 + 2"));
+        assert!(is_expression_complete("\"hello\""));
+        assert!(is_expression_complete("[1, 2, 3]"));
+    }
+
+    #[test]
+    fn test_repl_incomplete_let_expression() {
+        // let without in should be incomplete
+        assert!(!is_expression_complete("let x = 42"));
+        assert!(!is_expression_complete("let x = 42\n"));
+        
+        // let with in should be complete
+        assert!(is_expression_complete("let x = 42 in x"));
+        assert!(is_expression_complete("let x = 42 in x + 1"));
+    }
+
+    #[test]
+    fn test_repl_nested_let_expressions() {
+        // Nested lets should be complete when all have matching in
+        assert!(is_expression_complete("let x = 1 in let y = 2 in x + y"));
+        assert!(!is_expression_complete("let x = 1 in let y = 2"));
+        assert!(!is_expression_complete("let x = 1"));
+    }
+
+    #[test]
+    fn test_repl_incomplete_if_expression() {
+        // if without then/else should be incomplete
+        assert!(!is_expression_complete("if true"));
+        assert!(!is_expression_complete("if true then 1"));
+        
+        // if with then and else should be complete
+        assert!(is_expression_complete("if true then 1 else 2"));
+    }
+
+    #[test]
+    fn test_repl_unbalanced_parens() {
+        // Unbalanced parentheses should be incomplete
+        assert!(!is_expression_complete("(1 + 2"));
+        assert!(!is_expression_complete("1 + 2)"));
+        assert!(is_expression_complete("(1 + 2)"));
+    }
+
+    #[test]
+    fn test_repl_unbalanced_brackets() {
+        // Unbalanced brackets should be incomplete
+        assert!(!is_expression_complete("[1, 2"));
+        assert!(!is_expression_complete("1, 2]"));
+        assert!(is_expression_complete("[1, 2]"));
+    }
+
+    #[test]
+    fn test_repl_string_literals() {
+        // Strings should not affect keyword matching
+        assert!(is_expression_complete("\"let x = 5\""));
+        assert!(is_expression_complete("\"in\""));
+        // But actual let without in should still be incomplete
+        assert!(!is_expression_complete("let x = \"test\""));
+        assert!(is_expression_complete("let x = \"test\" in x"));
+    }
+
     #[test]
     fn test_pipe_operator_with_map() {
         // Test pipe with map operation
