@@ -1073,6 +1073,19 @@ While possible, mixing named and positional arguments can be confusing. Avon pri
 
 **Best Practice:** Stick to either all named or all positional arguments for a single command invocation.
 
+> **Note:** All command-line arguments passed to your Avon program are received as **strings**—even if you intend to use them as numbers or booleans, you must explicitly convert them inside your program (e.g., using `to_int`, `to_bool`, etc).
+
+For example, if you run:
+```bash
+avon deploy math.av -x 5 -y 40
+```
+Both `x` and `y` are provided as strings: `"5"` and `"40"`. You should convert them as needed:
+```avon
+\x \y to_int x + to_int y
+```
+This ensures correct type handling and prevents subtle bugs when performing arithmetic or boolean logic.
+
+
 ### Command-Line Flags
 
 | Flag | Purpose | Example |

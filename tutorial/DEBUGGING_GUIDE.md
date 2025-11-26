@@ -328,12 +328,12 @@ This shows exactly what types are in your data.
 If the inputs look right, the problem is in the function logic. Fix `add_one`:
 
 ```avon
-# ❌ Wrong: tries to add string and number
+# Wrong: tries to add string and number
 let add_one = \x
   x + 1  # If x is a string, this fails
 in
 
-# ✅ Correct: ensure x is a number
+# Correct: ensure x is a number
 let add_one = \x
   let num = assert (is_number x) x in
   num + 1
