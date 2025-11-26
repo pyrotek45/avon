@@ -667,7 +667,7 @@ center "Title" 20                  # "       Title        "
 | `json_parse` | 1 | Parse JSON (objects -> dicts, arrays -> lists) | `json_parse "{\"x\": 1}"` -> `{x: 1}` |
 | `os` | 0 | Get operating system | `os` -> `"linux"`, `"windows"`, `"macos"` |
 
-**Note:** `json_parse` converts JSON objects to Dict types (e.g., `{"a": 1}` -> `{a: 1}`), which support dot notation access like `data.a` and functions like `dict_keys`, `dict_values`, etc.
+**Note:** `json_parse` converts JSON objects to Dict types (e.g., `{"a": 1}` -> `{a: 1}`), which support dot notation access like `data.a` and functions like `keys`, `values`, `has_key`, etc.
 
 **Examples:** `examples/import_example.av`, `examples/json_map_demo.av`
 

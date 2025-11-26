@@ -402,16 +402,16 @@ let port = get config "port" in  # get function: 8080
 port
 ```
 
-**Query dict operations:**
+**Dictionary query operations:**
 
 ```avon
 let config = {host: "localhost", port: 8080, debug: true} in
 
-dict_keys config      # ["host", "port", "debug"]
-dict_values config    # ["localhost", 8080, true]
-dict_size config      # 3
-has_key config "host" # true
-has_key config "user" # false
+keys config               # ["host", "port", "debug"]
+values config             # ["localhost", 8080, true]
+length (keys config)      # 3
+has_key config "host"     # true
+has_key config "missing"  # false
 ```
 
 **Update a dictionary** using `set`:
