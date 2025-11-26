@@ -1,107 +1,320 @@
-# Comprehensive Grammar Test File - Simplified to avoid hanging
-# Tests core grammar constructs without problematic patterns
+# Comprehensive Grammar Stress Test for Avon
+# This file is a stress test that exercises every grammar construct
+# If this file hangs or fails, the issue should be fixed in Avon, not the test simplified
+# The goal is to ensure Avon can handle complex, realistic code patterns
 
-# SECTION 1: LITERALS
-let test_int = 0 in
-let test_int_pos = 42 in
-let test_int_neg = -42 in
-let test_float = 0.0 in
-let test_float_pos = 3.14 in
+# NOTE: Avon should implement:
+# - Recursion depth limits to prevent stack overflow
+# - Evaluation timeouts for infinite loops
+# - Better error messages for problematic patterns
+# These are features that should be in Avon by default
+
+# ============================================================================
+# SECTION 1: LITERALS AND BASIC TYPES
+# ============================================================================
+
+let test_int_zero = 0 in
+let test_int_positive = 42 in
+let test_int_negative = -42 in
+let test_int_large = 1000000 in
+let test_int_negative_large = -1000000 in
+
+let test_float_zero = 0.0 in
+let test_float_positive = 3.14159 in
+let test_float_negative = -2.71828 in
+let test_float_large = 1000000.5 in
+
 let test_string_empty = "" in
-let test_string = "hello" in
+let test_string_simple = "hello" in
+let test_string_with_spaces = "hello world" in
+let test_string_with_newline = "line1
+line2" in
+let test_string_with_escapes = "tabs	and
+newlines" in
+
 let test_bool_true = true in
 let test_bool_false = false in
 
-# SECTION 2: IDENTIFIERS
+# ============================================================================
+# SECTION 2: IDENTIFIERS AND VARIABLE BINDING
+# ============================================================================
+
 let simple_var = 10 in
-let snake_case = 20 in
+let snake_case_var = 20 in
 let with_numbers123 = 30 in
+let _underscore_prefix = 40 in
 
-# SECTION 3: ARITHMETIC
+# ============================================================================
+# SECTION 3: ARITHMETIC OPERATIONS
+# ============================================================================
+
 let test_add = 1 + 2 in
-let test_sub = 10 - 5 in
-let test_mul = 3 * 4 in
-let test_div = 8 / 2 in
-let test_chained_add = 1 + 2 + 3 in
-let test_mixed = 1 + 2 * 3 in
-let test_parens = (1 + 2) * 3 in
+let test_subtract = 10 - 5 in
+let test_multiply = 3 * 4 in
+let test_divide = 8 / 2 in
 let test_unary_minus = -5 in
+let test_unary_in_expr = -10 + 5 in
 
-# SECTION 4: COMPARISON
-let test_eq = 1 == 1 in
-let test_ne = 1 != 2 in
+let test_add_chain = 1 + 2 + 3 + 4 in
+let test_sub_chain = 10 - 1 - 2 - 3 in
+let test_mul_chain = 2 * 3 * 4 in
+let test_div_chain = 16 / 2 / 2 in
+
+let test_mixed_ops = 1 + 2 * 3 in
+let test_mixed_parens = (1 + 2) * 3 in
+let test_nested_parens = ((1 + 2) * (3 + 4)) in
+
+let test_float_arithmetic = 3.14 + 2.86 in
+let test_mixed_int_float = 10 + 3.5 in
+
+# ============================================================================
+# SECTION 4: COMPARISON OPERATIONS
+# ============================================================================
+
+let test_eq_int = 1 == 1 in
+let test_ne_int = 1 != 2 in
 let test_gt = 5 > 3 in
 let test_lt = 3 < 5 in
 let test_gte = 5 >= 5 in
 let test_lte = 3 <= 5 in
 
-# SECTION 5: LOGICAL
-let test_and = true && true in
-let test_or = true || false in
-let test_mixed_logical = (true && false) || true in
+let test_eq_string = "hello" == "hello" in
+let test_ne_string = "hello" != "world" in
+let test_eq_bool = true == true in
+let test_ne_bool = true != false in
 
+let test_comparison_chain = (1 < 2) && (2 < 3) && (3 < 4) in
+
+# ============================================================================
+# SECTION 5: LOGICAL OPERATIONS
+# ============================================================================
+
+let test_and_true = true && true in
+let test_and_false = true && false in
+let test_or_true = true || false in
+let test_or_false = false || false in
+
+let test_and_chain = true && true && true in
+let test_or_chain = false || false || true in
+let test_mixed_and_or = (true && false) || (true && true) in
+let test_complex_logical = ((true && false) || (true && true)) && (false || true) in
+
+# ============================================================================
 # SECTION 6: LET BINDINGS
-let test_simple_let = let x = 10 in x in
-let test_cascading_let = let x = 10 in let y = 20 in x + y in
-let test_nested_let = let outer = 100 in let inner = let temp = 50 in temp * 2 in outer + inner in
+# ============================================================================
 
-# SECTION 7: FUNCTIONS
+let test_simple_let = let x = 10 in x in
+let test_let_in_expr = let x = 10 in x + 5 in
+let test_cascading_let = let x = 10 in let y = 20 in x + y in
+let test_triple_let = let a = 1 in let b = 2 in let c = 3 in a + b + c in
+let test_nested_let = let outer = 100 in let inner = let temp = 50 in temp * 2 in outer + inner in
+let test_let_with_ops = let x = 2 + 3 in let y = x * 4 in y - 1 in
+
+# ============================================================================
+# SECTION 7: FUNCTIONS AND LAMBDAS
+# ============================================================================
+
 let test_simple_func = \x x + 1 in
 let test_curried_func = \x \y x + y in
-let test_anonymous_func = (\x x * 2) 10 in
+let test_triple_curried = \a \b \c a + b + c in
+let test_nested_lambda = \x (\y x + y) in
+
+let test_func_with_arithmetic = \x x * 2 + 3 in
+let test_func_with_comparison = \x if (x > 0) then x else (-x) in
+let test_func_with_let = \x let doubled = x * 2 in doubled + 1 in
+
+let test_anonymous_func = (\x x * 2) 5 in
+let test_anonymous_curried = (\x \y x + y) 3 4 in
+
 let test_func_application = let add = \x \y x + y in add 5 3 in
+let test_partial_application = let add = \x \y x + y in let add5 = add 5 in add5 10 in
 
-# SECTION 8: CONDITIONALS
+# ============================================================================
+# SECTION 8: CONDITIONALS (if-then-else)
+# ============================================================================
+
 let test_simple_if = if true then "yes" else "no" in
-let test_if_with_expr = if 5 > 3 then 10 else 20 in
-let test_nested_if = if true then (if false then 1 else 2) else 3 in
+let test_if_with_comparison = if 5 > 3 then 10 else 20 in
+let test_if_with_string = if true then "hello" else "goodbye" in
 
+let test_nested_if_1 = if true then (if false then 1 else 2) else 3 in
+let test_nested_if_2 = if (1 > 0) then (if (2 > 1) then "a" else "b") else "c" in
+let test_nested_if_3 = if false then 1 else (if true then 2 else 3) in
+
+let test_if_in_let = let result = if true then 100 else 200 in result in
+let test_if_with_ops = if (5 > 3) && (10 < 20) then (2 + 3) else (5 * 2) in
+
+# ============================================================================
 # SECTION 9: LISTS
+# ============================================================================
+
 let test_empty_list = [] in
-let test_single_list = [1] in
-let test_multi_list = [1, 2, 3] in
-let test_mixed_list = [1, "hello", true, 3.14] in
-let test_nested_list = [[1, 2], [3, 4]] in
+let test_single_element = [1] in
+let test_two_elements = [1, 2] in
+let test_multi_elements = [1, 2, 3, 4, 5] in
 
+let test_string_list = ["hello", "world"] in
+let test_bool_list = [true, false, true] in
+let test_mixed_list = [1, "two", true, 3.14] in
+
+let test_nested_list = [[1, 2], [3, 4], [5, 6]] in
+let test_deeply_nested = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]] in
+
+let test_list_with_expr = [1 + 1, 2 * 2, 3 - 1] in
+let test_list_with_func = [(\x x + 1) 5, (\x x * 2) 10] in
+let test_list_with_let = [(let a = 10 in a), (let b = 20 in b)] in
+let test_list_with_if = [(if true then 1 else 2), (if false then 3 else 4)] in
+
+# ============================================================================
 # SECTION 10: RANGES
+# ============================================================================
+
 let test_simple_range = [1 .. 5] in
-let test_range_zero = [0 .. 0] in
-let test_range_large = [10 .. 15] in
+let test_range_to_self = [5 .. 5] in
+let test_range_large = [1 .. 100] in
+let test_range_negative = [-5 .. 5] in
+
 let test_range_with_step = [0, 2 .. 10] in
+let test_range_negative_step = [10, 8 .. 0] in
+let test_range_large_step = [0, 10 .. 100] in
+let test_range_with_expr = [(1 + 1) .. (5 + 5)] in
 
+# ============================================================================
 # SECTION 11: DICTIONARIES
+# ============================================================================
+
 let test_empty_dict = {} in
-let test_simple_dict = {a: 1} in
-let test_multi_dict = {a: 1, b: 2, c: 3} in
-let test_mixed_dict = {name: "Alice", age: 30, active: true} in
-let test_nested_dict = {outer: {inner: 42}} in
+let test_single_key = {a: 1} in
+let test_multiple_keys = {a: 1, b: 2, c: 3} in
 
+let test_string_keys = {hello: "world", foo: "bar"} in
+let test_mixed_values = {num: 42, str: "text", bool: true} in
+
+let test_nested_dict = {outer: {inner: 1}} in
+let test_deeply_nested_dict = {a: {b: {c: {d: 1}}}} in
+
+let test_dict_with_expr = {sum: 1 + 2, prod: 3 * 4} in
+let test_dict_with_let = {x: (let a = 5 in a), y: (let b = 10 in b)} in
+let test_dict_with_if = {positive: (if (5 > 0) then "yes" else "no")} in
+
+# ============================================================================
 # SECTION 12: TEMPLATES
+# ============================================================================
+
 let test_simple_template = {"hello"} in
-let test_template_multi = {"hello world"} in
+let test_template_multiline = {"
+line one
+line two
+"} in
 
+# ============================================================================
 # SECTION 13: PATHS
-let test_absolute_path = @/absolute/path/to/file in
-let test_relative_path = @relative/path/to/file in
+# ============================================================================
 
+let test_abs_path = @/absolute/path/to/file in
+let test_rel_path = @relative/path/to/file in
+let test_path_with_file = @/path/to/file.txt in
+
+# ============================================================================
 # SECTION 14: MEMBER ACCESS
-let test_member_access = let d = {a: 1, b: 2} in d.a in
+# ============================================================================
+
+let test_simple_member = let d = {a: 1, b: 2} in d.a in
 let test_nested_member = let d = {outer: {inner: 42}} in d.outer.inner in
+let test_triple_nested = let d = {x: {y: {z: 10}}} in d.x.y.z in
+let test_member_in_expr = let d = {value: 5} in d.value + 10 in
 
-# SECTION 15: PIPES
+# ============================================================================
+# SECTION 15: PIPE OPERATOR
+# ============================================================================
+
 let test_simple_pipe = "hello" -> upper in
-let test_pipe_chain = "hello" -> upper -> length in
+let test_pipe_chain_2 = "hello" -> upper -> length in
 let test_pipe_with_func = [1, 2, 3] -> length in
+let test_pipe_to_lambda = 5 -> \x x * 2 in
 
-# SECTION 16: FUNCTION APPLICATION
-let test_simple_app = length [1, 2, 3] in
-let test_nested_app = map (\x x * 2) [1, 2, 3] in
-let test_complex_app = fold (\acc \x acc + x) 0 [1, 2, 3] in
+# ============================================================================
+# SECTION 16: HIGHER-ORDER FUNCTIONS
+# ============================================================================
 
-# SECTION 17: PRECEDENCE
-let test_precedence_1 = 1 + 2 * 3 in
-let test_precedence_2 = (1 + 2) * 3 in
-let test_precedence_3 = true && false || true in
+let test_map_simple = map (\x x * 2) [1, 2, 3] in
+let test_map_with_if = map (\x if (x > 0) then x else (-x)) [-1, 2, -3] in
+let test_map_nested = map (\x map (\y y + 1) x) [[1, 2], [3, 4]] in
 
-# Final result
-"success"
+let test_filter_simple = filter (\x (x > 2)) [1, 2, 3, 4, 5] in
+let test_filter_with_eq = filter (\x (x == 3)) [1, 2, 3, 4, 5] in
+
+let test_fold_simple = fold (\acc \x acc + x) 0 [1, 2, 3] in
+let test_fold_multiply = fold (\acc \x acc * x) 1 [1, 2, 3, 4] in
+
+# ============================================================================
+# SECTION 17: OPERATOR PRECEDENCE
+# ============================================================================
+
+let test_prec_add_mul = 1 + 2 * 3 in
+let test_prec_parens = (1 + 2) * 3 in
+let test_prec_complex = 1 + 2 * 3 + 4 * 5 in
+
+let test_prec_comparison = 1 < 2 && 3 > 2 in
+let test_prec_logical = true && false || true in
+let test_prec_complex_logical = true && false || true && true in
+
+# ============================================================================
+# SECTION 18: COMPLEX NESTED EXPRESSIONS
+# ============================================================================
+
+let test_complex_1 = let data = [1, 2, 3, 4, 5] in map (\x x * 2) data in
+let test_complex_2 = let process = \xs map (\x (if (x > 2) then (x * 2) else x)) xs in process [1, 2, 3, 4, 5] in
+let test_complex_3 = let config = {host: "localhost", port: 8080} in [config.host, config.port] in
+
+let test_complex_4 = let double = \x x * 2 in let nums = [1, 2, 3] in map double nums in
+let test_complex_5 = let add = \a \b a + b in let nums = [1, 2, 3, 4] in fold add 0 nums in
+
+let test_complex_6 = let filterGt2 = \xs filter (\x (x > 2)) xs in let doubled = \xs map (\x x * 2) xs in doubled (filterGt2 [1, 2, 3, 4, 5]) in
+
+# ============================================================================
+# SECTION 19: EDGE CASES
+# ============================================================================
+
+let edge_empty_string = "" in
+let edge_empty_list = [] in
+let edge_empty_dict = {} in
+
+let edge_single_char = "a" in
+let edge_single_element_list = [1] in
+let edge_single_key_dict = {x: 1} in
+
+let edge_zero = 0 in
+let edge_negative_zero = -0 in
+let edge_float_zero = 0.0 in
+
+# ============================================================================
+# SECTION 20: COMBINATIONS OF FEATURES
+# ============================================================================
+
+let test_comb_1 = let numbers = [1, 2, 3, 4, 5] in let filtered = filter (\x (x > 2)) numbers in map (\x x * 2) filtered in
+
+let test_comb_2 = let dict = {a: [1, 2, 3], b: [4, 5, 6]} in [length dict.a, length dict.b] in
+
+let test_comb_3 = let get_square = \x x * x in let nums = [1, 2, 3, 4] in map get_square nums in
+
+let test_comb_4 = let process = \xs let filtered = filter (\x (x > 1)) xs in map (\x x + 10) filtered in process [1, 2, 3] in
+
+# ============================================================================
+# FINAL SANITY CHECK
+# ============================================================================
+
+let final_result = {
+  has_literals: true,
+  has_arithmetic: true,
+  has_logic: true,
+  has_lists: true,
+  has_funcs: true,
+  has_conditionals: true,
+  has_dicts: true,
+  has_ranges: true
+} in
+
+final_result.has_literals
+
+
