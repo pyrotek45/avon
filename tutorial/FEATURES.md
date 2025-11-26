@@ -615,6 +615,7 @@ Avon provides a comprehensive suite of 15 formatting functions for various data 
 |----------|-------|---------|---------|--------|
 | `format_list` | 2 | Join with separator | `format_list ["a","b","c"] ", "` | `"a, b, c"` |
 | `format_table` | 2 | 2D table | `format_table [["A","B"],["1","2"]] " \| "` | `"A \| B\n1 \| 2"` |
+| | | | Also accepts dicts: `format_table {a: 1, b: 2} " \| "` | `"a \| b\n1 \| 2"` |
 | `format_json` | 1 | JSON representation | `format_json [1,2,3]` | `"[1, 2, 3]"` |
 
 #### Text Formatting
@@ -650,6 +651,16 @@ format_list ["apple", "banana", "cherry"] ", "
 
 format_table [["Name", "Age"], ["Alice", "30"], ["Bob", "25"]] " | "
 # "Name | Age\nAlice | 30\nBob | 25"
+
+# format_table also works directly with dicts:
+let data = {name: "Alice", age: 30, city: "NYC"} in
+format_table data " | "
+# Or with dict literal directly:
+format_table {a: 1, b: 2} " | "
+# "age | city | name\n30 | NYC | Alice"
+# Note: Key order in dicts is not guaranteed
+
+# For more advanced dict-to-table patterns, see examples/dict_to_table.av
 
 # Text formatting
 format_bool (age > 18) "yes/no"  # "Yes" or "No"

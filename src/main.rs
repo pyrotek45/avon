@@ -1956,6 +1956,7 @@ mod tests {
 
     #[test]
     fn test_format_table() {
+        // Test with list of lists
         let prog = r#"format_table [["A", "B"], ["1", "2"], ["3", "4"]] " | ""#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
@@ -1965,6 +1966,21 @@ mod tests {
         assert!(result.contains("A | B"));
         assert!(result.contains("1 | 2"));
         assert!(result.contains("3 | 4"));
+        
+        // Test with dict (no parentheses needed)
+        let prog2 = r#"format_table {a: 1, b: 2, c: 3} " | ""#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        let result2 = v2.to_string(&prog2);
+        // Dict should produce two rows: keys row and values row
+        // The result should be a string with newlines separating rows
+        // Check that we have the separator (note: separator is " | " with spaces)
+        assert!(result2.contains("|"), "Result should contain pipe separator: {}", result2);
+        // Check that keys and values are present (order may vary)
+        assert!(result2.contains("a") || result2.contains("b") || result2.contains("c"), "Result should contain keys: {}", result2);
+        assert!(result2.contains("1") || result2.contains("2") || result2.contains("3"), "Result should contain values: {}", result2);
     }
 
     #[test]

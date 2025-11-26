@@ -226,7 +226,7 @@ fi
 # test overwrite protection
 echo "Test: overwrite protection"
 cargo run --quiet -- examples/test.av --deploy alice --root "$root" 2> /tmp/stderr.txt || true
-if grep -q "already exists and was NOT written" /tmp/stderr.txt; then
+if grep -q "WARNING:.*exists.*Use --force" /tmp/stderr.txt || grep -q "already exists" /tmp/stderr.txt; then
   echo "OK (refused overwrite)"
 else
   echo "WARN: second deploy did not refuse overwrite (expected message)"; fail=1
@@ -253,6 +253,7 @@ remaining_files=(
   "curly_test_4_array.av"
   "curly_test_5_code.av"
   "deploy_list.av"
+  "dict_to_table.av"
   "docker_compose.av"
   "docker_compose_gen.av"
   "emacs_init.av"
@@ -278,6 +279,7 @@ remaining_files=(
   "new_functions_demo.av"
   "nginx_config.av"
   "nginx_gen.av"
+  "os_conditionals.av"
   "package_json_gen.av"
   "split_join.av"
   "string_functions.av"

@@ -89,7 +89,7 @@ fn print_builtin_docs() {
     println!("  format_scientific :: Number -> Int -> String          (scientific notation)");
     println!("  format_bytes      :: Number -> String                 (human-readable bytes)");
     println!("  format_list       :: [a] -> String -> String          (join with separator)");
-    println!("  format_table      :: [[a]] -> String -> String        (2D table)");
+    println!("  format_table      :: ([[a]]|Dict) -> String -> String (2D table, also accepts dict)");
     println!("  format_json       :: a -> String                      (JSON representation)");
     println!("  format_currency   :: Number -> String -> String       (currency with symbol)");
     println!("  format_percent    :: Number -> Int -> String          (percentage)");

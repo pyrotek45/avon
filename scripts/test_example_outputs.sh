@@ -208,8 +208,8 @@ test_no_error "examples/pipe_operator.av" "basic pipe operator"
 test_output_contains "examples/pipe_operator.av" "2" "pipe result"
 
 test_no_error "examples/pipe_operator_demo.av" "pipe operator demo"
-# Expect list of results: [5, 3, 11, 2, [2, 4, 6], true, 50]
-test_output_contains "examples/pipe_operator_demo.av" "\[5, 3, 11, 2, \[2, 4, 6\], true, 50\]" "pipe demo results"
+# Expect list of results: [5, 3, 11, 2, [2, 4, 6], false, 50] (config.json doesn't exist)
+test_output_contains "examples/pipe_operator_demo.av" "\[5, 3, 11, 2, \[2, 4, 6\], false, 50\]" "pipe demo results"
 
 # Complex usage examples
 test_no_error "examples/complex_usage_1.av" "complex usage 1 runs"

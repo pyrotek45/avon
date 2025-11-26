@@ -2109,30 +2109,51 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
             }
         }
         "format_table" => {
-            // format_table :: [[a]] -> String -> String
+            // format_table :: ([[a]]|Dict) -> String -> String
             // Formats a 2D list as a simple table with column separator
+            // Also accepts a dict, which is converted to [keys, values] format
             let table = &args[0];
             let separator = &args[1];
-            if let (Value::List(rows), Value::String(sep)) = (table, separator) {
-                let mut lines = Vec::new();
-                for row in rows {
-                    if let Value::List(cols) = row {
-                        let strings: Vec<String> =
-                            cols.iter().map(|v| v.to_string(source)).collect();
-                        lines.push(strings.join(sep));
-                    } else {
-                        lines.push(row.to_string(source));
+            
+            if let Value::String(sep) = separator {
+                let rows: Vec<Vec<String>> = match table {
+                    Value::Dict(dict) => {
+                        // Convert dict to table format: [keys_row, values_row]
+                        let keys_row: Vec<String> = dict.keys().map(|k| k.clone()).collect();
+                        let values_row: Vec<String> = dict.values().map(|v| v.to_string(source)).collect();
+                        vec![keys_row, values_row]
                     }
-                }
+                    Value::List(rows) => {
+                        // Existing behavior: list of lists
+                        let mut result = Vec::new();
+                        for row in rows {
+                            if let Value::List(cols) = row {
+                                let strings: Vec<String> =
+                                    cols.iter().map(|v| v.to_string(source)).collect();
+                                result.push(strings);
+                            } else {
+                                result.push(vec![row.to_string(source)]);
+                            }
+                        }
+                        result
+                    }
+                    _ => {
+                        return Err(EvalError::type_mismatch(
+                            "list of lists or dict",
+                            table.to_string(source),
+                            0,
+                        ));
+                    }
+                };
+                
+                let lines: Vec<String> = rows.iter()
+                    .map(|row| row.join(sep))
+                    .collect();
                 Ok(Value::String(lines.join("\n")))
             } else {
                 Err(EvalError::type_mismatch(
-                    "list, string",
-                    format!(
-                        "{}, {}",
-                        table.to_string(source),
-                        separator.to_string(source)
-                    ),
+                    "string",
+                    separator.to_string(source),
                     0,
                 ))
             }

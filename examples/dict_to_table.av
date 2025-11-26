@@ -1,0 +1,52 @@
+# Example: Dictionary to Table Format
+# 
+# Purpose:
+# Demonstrate format_table with dicts and advanced conversion patterns.
+# format_table now works directly with dicts (converts to [keys, values] format).
+#
+# How to run:
+#   avon eval examples/dict_to_table.av
+#     - shows the formatted table output
+
+# Method 1: Direct dict usage (simplest)
+let config = {host: "localhost", port: 8080, debug: true} in
+let direct_table = format_table config " | " in
+# Or use dict literal directly: format_table {a: 1, b: 2} " | "
+
+# Method 2: Key-value pairs table with header
+let pairs = map (\k [k, to_string (get config k)]) (keys config) in
+let kv_table = [["Key", "Value"]] + pairs in
+
+# Method 3: Multiple dicts as rows (useful for config comparison)
+let dev_config = {env: "dev", replicas: 1, debug: true} in
+let prod_config = {env: "prod", replicas: 3, debug: false} in
+let all_keys = keys dev_config in
+let dev_values = map (\k get dev_config k) all_keys in
+let prod_values = map (\k get prod_config k) all_keys in
+let comparison_table = [
+  ["Setting"] + all_keys,
+  ["Dev"] + dev_values,
+  ["Prod"] + prod_values
+] in
+
+@/tmp/dict_tables.txt {"
+Dictionary to Table Format Examples
+====================================
+
+Method 1: Direct Dict Usage (Simplest)
+--------------------------------------
+{direct_table}
+
+Method 2: Key-Value Pairs with Header
+--------------------------------------
+{format_table kv_table " | "}
+
+Method 3: Multiple Dicts Comparison
+-----------------------------------
+{format_table comparison_table " | "}
+
+Note: format_table accepts both [[a]] (list of lists) and Dict.
+When given a dict, it automatically converts to [keys, values] format.
+For more control, use the conversion methods shown above.
+"}
+

@@ -534,6 +534,7 @@ fn parse_app(stream: &mut Peekable<Iter<Token>>) -> Expr {
             | Some(Token::Template(_, _))
             | Some(Token::LParen(_))
             | Some(Token::LBracket(_))
+            | Some(Token::LBrace(_))
             | Some(Token::Path(_, _))
             | Some(Token::BackSlash(_)) => {
                 let rhs = parse_cmp(stream);
