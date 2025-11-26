@@ -342,8 +342,13 @@ pub fn parse_expr(stream: &mut Peekable<Iter<Token>>) -> Expr {
 }
 
 fn try_parse_expr(stream: &mut Peekable<Iter<Token>>) -> ParseResult<Expr> {
-    match stream.peek() {
-        Some(token) => match token {
+    // First check for lambda or let or path/template literals that start with keywords or specific tokens
+    // We peek first to avoid consuming if we need to delegate
+    
+    let peek_token = stream.peek().cloned();
+    
+    if let Some(token) = peek_token {
+        match token {
             Token::Identifier(ident, line) if ident == "let" => {
                 let line = *line;
                 eat(stream, Token::Identifier(String::from("let"), 0))?;
@@ -438,7 +443,19 @@ fn try_parse_expr(stream: &mut Peekable<Iter<Token>>) -> ParseResult<Expr> {
                         }
                     }
                     _ => {
-                        return Ok(Expr::Path(path_chunks, line));
+                        // Check if this path is part of a pipe or other expression
+                        // We've consumed the token, so we return the path expr directly 
+                        // but we need to continue parsing if it's part of a larger expression.
+                        // The original logic returned immediately, preventing `path -> function`.
+                        // However, `try_parse_expr` is expected to parse the *whole* expression if it starts with these tokens.
+                        
+                        // If we return here, we miss the pipe logic at the end of the function.
+                        // We should construct the LHS and then fall through to `parse_pipe` logic logic below, 
+                        // BUT `try_parse_expr` structure is a bit rigid.
+                        
+                        // A better approach: parse the prefix part, then continue.
+                        let lhs = Expr::Path(path_chunks, line);
+                        return Ok(parse_pipe_suffix(stream, lhs));
                     }
                 }
             }
@@ -453,24 +470,43 @@ fn try_parse_expr(stream: &mut Peekable<Iter<Token>>) -> ParseResult<Expr> {
                 return Ok(Expr::If { cond, t, f, line });
             }
             _ => {}
-        },
-        _ => {}
+        }
     }
 
+    // If not one of the special prefix forms, parse as a pipe expression
     let lhs = parse_pipe(stream);
     Ok(lhs)
 }
 
 fn parse_pipe(stream: &mut Peekable<Iter<Token>>) -> Expr {
-    let mut lhs = parse_logic(stream);
+    let lhs = parse_logic(stream);
+    parse_pipe_suffix(stream, lhs)
+}
 
+fn parse_pipe_suffix(stream: &mut Peekable<Iter<Token>>, mut lhs: Expr) -> Expr {
     loop {
         match stream.peek() {
             Some(Token::Pipe(line)) => {
                 let line = *line;
                 // Handle pipe operator: lhs -> rhs
                 stream.next(); // consume the pipe token
-                let rhs = parse_logic(stream);
+                
+                // Check if the RHS starts with a lambda (BackSlash)
+                let rhs = if let Some(Token::BackSlash(_)) = stream.peek() {
+                     // Directly call try_parse_expr to handle the lambda
+                     // We handle errors by converting to Expr::None or propagating?
+                     // try_parse_expr returns Result.
+                     match try_parse_expr(stream) {
+                         Ok(e) => e,
+                         Err(e) => {
+                             eprintln!("Parse error in pipe RHS: {}", e.message);
+                             std::process::exit(1);
+                         }
+                     }
+                } else {
+                    parse_logic(stream)
+                };
+
                 lhs = Expr::Pipe {
                     lhs: Box::new(lhs),
                     rhs: Box::new(rhs),
@@ -480,7 +516,6 @@ fn parse_pipe(stream: &mut Peekable<Iter<Token>>) -> Expr {
             _ => break,
         }
     }
-
     lhs
 }
 

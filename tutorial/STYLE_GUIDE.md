@@ -150,7 +150,7 @@ app:
 **Deeply nested templates stay readable:**
 ```avon
 let environments = ["dev", "staging"] in
-let make_deploy = \env {
+let make_deploy = \env
   let replicas = if env == "prod" then "3" else "1" in
   @/deploy-{env}.yaml {"
     apiVersion: apps/v1
@@ -158,7 +158,7 @@ let make_deploy = \env {
     spec:
       replicas: {replicas}
   "}
-} in
+in
 map make_deploy environments
 ```
 
@@ -499,7 +499,6 @@ Before committing your Avon code, verify:
 - [ ] Templates start with `{"` on same line as path
 - [ ] Template content is indented for source code readability (dedent will clean output)
 - [ ] No manual indentation compensation needed—rely on automatic dedent
-- [ ] Braces are escaped (`{{` `}}`) only when using double-brace delimiter
 - [ ] Let bindings are on separate lines
 - [ ] Functions use `snake_case` naming
 - [ ] Complex logic is broken into named steps

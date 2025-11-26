@@ -19,5 +19,13 @@ let num_str_length = 42 -> to_string -> length in
 # Example 5: Map and chain operations
 let doubled = [1, 2, 3] -> map (\x x * 2) in
 
+# Example 6: Path literal pipe 
+# This checks if "config.json" exists
+let config_exists = @config.json -> exists in
+
+# Example 7: Lambda on RHS (New!)
+# You can pipe directly into a lambda function
+let custom_pipe = 10 -> \x x * 5 in
+
 # Return all results
-[count, even_count, upper_length, num_str_length, doubled]
+[count, even_count, upper_length, num_str_length, doubled, config_exists, custom_pipe]

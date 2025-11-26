@@ -5,4 +5,3 @@
 
 # Basic piping: pass a value through a function
 42 -> to_string -> length
-

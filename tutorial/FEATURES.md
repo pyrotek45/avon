@@ -729,23 +729,32 @@ config_path + app_config   # "/etc/prod//myapp.conf"
 - `<=` Less or equal
 
 ### Pipe Operator
+The pipe operator `->` allows you to chain expressions without nested parentheses. It passes the result of the left-hand side as the **first argument** to the function on the right-hand side.
+
 ```avon
-# Chain expressions without nested function calls
+# Simple chaining
 [1, 2, 3] -> length                    # 3
+
+# Chaining multiple operations
 "hello" -> upper -> length             # 5
+
+# Chaining with curried functions (filter takes 2 args, here it gets the second from the pipe)
 [1, 2, 3, 4, 5] -> filter (\x x > 2) -> length  # 3
 ```
 
-The pipe operator `->` passes the left-hand side value as an argument to the right-hand side function. This eliminates the need for nested parentheses and makes code more readable.
+**Supported Patterns:**
+1. **Standard functions:** `value -> func` (equivalent to `func value`)
+2. **Curried functions:** `value -> func arg1` (equivalent to `func arg1 value`)
+3. **Lambda expressions:** `value -> \x x * 2` (equivalent to `(\x x * 2) value`)
+4. **Path literals:** `@path -> exists` (equivalent to `exists @path`)
 
-**Without pipes (nested):**
+**Examples:**
 ```avon
-length (filter (\x x > 2) [1, 2, 3, 4, 5])
-```
+# Lambda on RHS
+10 -> \x x * 2  # 20
 
-**With pipes (cleaner):**
-```avon
-[1, 2, 3, 4, 5] -> filter (\x x > 2) -> length
+# Path on LHS
+@config.json -> exists
 ```
 
 ---
@@ -810,7 +819,7 @@ Fetch and run programs directly from GitHub's raw content CDN.
 
 ## Real-World Examples by Use Case
 
-### Web Development
+### 🌐 Web Development
 
 **Site Generator:** `examples/site_generator.av`
 - Generate HTML pages with shared layouts
@@ -822,7 +831,7 @@ Fetch and run programs directly from GitHub's raw content CDN.
 - Conditional dependencies
 - Custom scripts
 
-### Configuration & Infrastructure
+### ⚙️ Configuration & Infrastructure
 
 **Docker Compose:** `examples/docker_compose_gen.av`
 - Multi-service setup
@@ -839,7 +848,7 @@ Fetch and run programs directly from GitHub's raw content CDN.
 - Conditional jobs
 - Multi-file generation
 
-### Tool Configuration
+### 🛠️ Tool Configuration
 
 **Neovim Config:** `examples/neovim_init.av`
 - Plugin management
@@ -857,20 +866,20 @@ Fetch and run programs directly from GitHub's raw content CDN.
 
 | Example | Features Shown | Complexity |
 |---------|----------------|------------|
-| `test.av` | Basics, lists | * |
-| `nested_let.av` | Let bindings | * |
-| `list_insert.av` | Lists, templates | ** |
-| `map_example.av` | Map, filter | ** |
-| `fold_example.av` | Fold operation | ** |
-| `function_defaults.av` | Functions, defaults | ** |
-| `string_functions.av` | String builtins | ** |
-| `conditionals_template.av` | If/then/else in templates | ** |
-| `site_generator.av` | Multi-file generation | *** |
-| `neovim_init.av` | Complex config, conditionals | *** |
-| `emacs_init.av` | Feature toggles, filtering | *** |
-| `docker_compose_gen.av` | Multi-service templates | *** |
-| `kubernetes_gen.av` | Complex multi-file output | *** |
-| `github_actions_gen.av` | Conditional YAML generation | *** |
+| `test.av` | Basics, lists | ⭐ |
+| `nested_let.av` | Let bindings | ⭐ |
+| `list_insert.av` | Lists, templates | ⭐⭐ |
+| `map_example.av` | Map, filter | ⭐⭐ |
+| `fold_example.av` | Fold operation | ⭐⭐ |
+| `function_defaults.av` | Functions, defaults | ⭐⭐ |
+| `string_functions.av` | String builtins | ⭐⭐ |
+| `conditionals_template.av` | If/then/else in templates | ⭐⭐ |
+| `site_generator.av` | Multi-file generation | ⭐⭐⭐ |
+| `neovim_init.av` | Complex config, conditionals | ⭐⭐⭐ |
+| `emacs_init.av` | Feature toggles, filtering | ⭐⭐⭐ |
+| `docker_compose_gen.av` | Multi-service templates | ⭐⭐⭐ |
+| `kubernetes_gen.av` | Complex multi-file output | ⭐⭐⭐ |
+| `github_actions_gen.av` | Conditional YAML generation | ⭐⭐⭐ |
 
 ---
 
@@ -979,4 +988,4 @@ For most use cases (100s of files), Avon runs in milliseconds.
 
 ---
 
-Have fun generating! For more details, see `tutorial/TUTORIAL.md`.
+Have fun generating! 🚀 For more details, see `tutorial/TUTORIAL.md`.

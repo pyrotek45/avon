@@ -1011,6 +1011,68 @@ avon deploy examples/site_generator.av --root ./output --force
 avon deploy examples/greet.av -name Alice -age 30 --root ./gen --force
 ```
 
+### Passing Arguments
+
+Avon allows you to pass values into your program from the command line. This is essential for reusing templates across different environments or configurations.
+
+#### 1. Named Arguments
+
+If your main expression is a function with parameters, you can pass values using `-parameter_name value`.
+
+**Program (`greet.av`):**
+```avon
+# Function with two parameters
+\name \role @/greeting.txt {"
+    Hello, {name}!
+    Role: {role}
+"}
+```
+
+**Command:**
+```bash
+avon deploy greet.av -name "Alice" -role "Admin"
+```
+
+**How it works:**
+- The CLI looks for `-name` and passes "Alice" to the `name` parameter.
+- It looks for `-role` and passes "Admin" to the `role` parameter.
+- Arguments are type-checked at runtime (e.g. if your function uses the argument as a number, passing "hello" will cause an error).
+
+#### 2. Positional Arguments
+
+You can also pass arguments positionally, without the parameter names. This maps command line arguments to function parameters in order.
+
+**Command:**
+```bash
+# Maps "Alice" to name, "Admin" to role
+avon deploy greet.av "Alice" "Admin"
+```
+
+**Recommendation:** Use named arguments for clarity, especially when you have multiple parameters or default values.
+
+#### 3. Default Values
+
+Parameters can have default values using the `?` syntax.
+
+**Program (`config.av`):**
+```avon
+\env ? "dev" \port ? 8080 @/config.yml {"
+    env: {env}
+    port: {port}
+"}
+```
+
+**Usage:**
+- **Use defaults:** `avon deploy config.av` (env="dev", port=8080)
+- **Override some:** `avon deploy config.av -env prod` (env="prod", port=8080)
+- **Override all:** `avon deploy config.av -env prod -port 9090` (env="prod", port=9090)
+
+#### 4. Mixing Named and Positional
+
+While possible, mixing named and positional arguments can be confusing. Avon prioritizes named arguments first, then fills remaining parameters with positional arguments in order.
+
+**Best Practice:** Stick to either all named or all positional arguments for a single command invocation.
+
 ### Command-Line Flags
 
 | Flag | Purpose | Example |
