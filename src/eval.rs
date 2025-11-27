@@ -482,7 +482,7 @@ fn validate_path(path: &str) -> Result<(), EvalError> {
             0,
         ));
     }
-    
+
     // Block absolute paths that try to access /etc or other system paths
     // Allow relative paths and absolute paths that aren't trying to escape
     if path.starts_with('/') && (path.contains("etc/") || path.contains("etc\\")) {
@@ -493,7 +493,7 @@ fn validate_path(path: &str) -> Result<(), EvalError> {
             0,
         ));
     }
-    
+
     Ok(())
 }
 
@@ -502,16 +502,18 @@ pub fn value_to_path_string(val: &Value, source: &str) -> Result<String, EvalErr
     let path_str = match val {
         Value::String(s) => s.clone(),
         Value::Path(chunks, symbols) => render_chunks_to_string(chunks, symbols, source)?,
-        _ => return Err(EvalError::type_mismatch(
-            "string or path",
-            val.to_string(source),
-            0,
-        )),
+        _ => {
+            return Err(EvalError::type_mismatch(
+                "string or path",
+                val.to_string(source),
+                0,
+            ))
+        }
     };
-    
+
     // Validate the path for security issues
     validate_path(&path_str)?;
-    
+
     Ok(path_str)
 }
 
@@ -610,10 +612,10 @@ pub fn dedent(s: &str) -> String {
         .into_iter()
         .map(|l| {
             let trimmed_len = l.trim_start().len();
-            
+
             // Count leading whitespace
             let leading_spaces = l.chars().take_while(|c| c.is_whitespace()).count();
-            
+
             // If line is empty/whitespace-only, keep it empty
             if trimmed_len == 0 {
                 String::new()
@@ -629,8 +631,6 @@ pub fn dedent(s: &str) -> String {
 
     out_lines.join("\n")
 }
-
-
 
 pub fn eval(
     expr: Expr,
@@ -672,7 +672,7 @@ pub fn eval(
                             Some(l_type.to_string()),
                             Some(r_type.to_string()),
                             line,
-                        ))
+                        ));
                     }
                 },
                 Token::Or(_) => match (l_eval.clone(), r_eval.clone()) {
@@ -700,7 +700,7 @@ pub fn eval(
                             Some(l_type.to_string()),
                             Some(r_type.to_string()),
                             line,
-                        ))
+                        ));
                     }
                 },
                 Token::Add(_) => match (l_eval.clone(), r_eval.clone()) {
@@ -761,7 +761,7 @@ pub fn eval(
                             Some(l_type.to_string()),
                             Some(r_type.to_string()),
                             line,
-                        ))
+                        ));
                     }
                 },
                 Token::Mul(_) | Token::Div(_) | Token::Sub(_) | Token::Mod(_) => {
@@ -785,7 +785,8 @@ pub fn eval(
                                     _ => "unknown",
                                 },
                                 line,
-                            ).with_context(op_name))
+                            )
+                            .with_context(op_name));
                         }
                     };
 
@@ -809,7 +810,8 @@ pub fn eval(
                                     _ => "unknown",
                                 },
                                 line,
-                            ).with_context(op_name))
+                            )
+                            .with_context(op_name));
                         }
                     };
 
@@ -885,20 +887,29 @@ pub fn eval(
                     };
                     Ok(Value::Bool(eq))
                 }
-                value => return Err(EvalError::new(format!("Not a valid operation: {:?}", value), None, None, line)),
+                value => {
+                    return Err(EvalError::new(
+                        format!("Not a valid operation: {:?}", value),
+                        None,
+                        None,
+                        line,
+                    ))
+                }
             }
         }
         Expr::Ident(ident, line) => {
             if let Some(value) = symbols.get(&ident) {
                 Ok(value.clone())
             } else {
-                Err(EvalError::unknown_symbol(
-                    ident.clone(),
-                    line,
-                ))
+                Err(EvalError::unknown_symbol(ident.clone(), line))
             }
         }
-        Expr::Let { ident, value, expr, line } => {
+        Expr::Let {
+            ident,
+            value,
+            expr,
+            line,
+        } => {
             // Check if variable already exists in current scope (prevent shadowing)
             // Exception: allow '_' to be reused (common pattern for ignoring values)
             if ident != "_" && symbols.contains_key(&ident) {
@@ -909,17 +920,17 @@ pub fn eval(
                     line,
                 ));
             }
-            
+
             // Evaluate the value in the current scope
             let mut evalue = eval(*value, symbols, source)?;
             if let Value::Function { ref mut name, .. } = evalue {
                 *name = Some(ident.clone());
             }
-            
+
             // Add binding to current scope, evaluate expression, then remove (stack-based scoping)
             symbols.insert(ident.clone(), evalue);
             let result = eval(*expr, symbols, source);
-            symbols.remove(&ident);  // Restore previous state
+            symbols.remove(&ident); // Restore previous state
             result
         }
         Expr::Function {
@@ -938,16 +949,14 @@ pub fn eval(
                 ident,
                 default: default_val,
                 expr,
-                env: std::sync::Arc::new(symbols.clone()),  // Arc wraps a snapshot of the current environment
+                env: std::sync::Arc::new(symbols.clone()), // Arc wraps a snapshot of the current environment
             })
         }
         Expr::Application { lhs, rhs, line } => {
             let lhs_eval = eval(*lhs, symbols, source)?;
             let arg_val = eval(*rhs, symbols, source)?;
             match lhs_eval {
-                Value::Function { .. } => {
-                    apply_function(&lhs_eval, arg_val, source, line)
-                }
+                Value::Function { .. } => apply_function(&lhs_eval, arg_val, source, line),
                 builtin @ Value::Builtin(_, _) => apply_function(&builtin, arg_val, source, line),
                 other => {
                     let type_name = match other {
@@ -970,20 +979,16 @@ pub fn eval(
         Expr::Template(chunks, _) => Ok(Value::Template(chunks, symbols.clone())),
         Expr::Builtin(function, args, line) => match function.as_str() {
             "concat" => {
-                let arg1 = symbols.get(&args[0]).cloned().ok_or_else(|| {
-                    EvalError::unknown_symbol(
-                        args[0].clone(),
-                        line,
-                    )
-                })?;
+                let arg1 = symbols
+                    .get(&args[0])
+                    .cloned()
+                    .ok_or_else(|| EvalError::unknown_symbol(args[0].clone(), line))?;
 
-                let arg2 = symbols.get(&args[1]).cloned().ok_or_else(|| {
-                    EvalError::unknown_symbol(
-                        args[1].clone(),
-                        line,
-                    )
-                })?;
-                
+                let arg2 = symbols
+                    .get(&args[1])
+                    .cloned()
+                    .ok_or_else(|| EvalError::unknown_symbol(args[1].clone(), line))?;
+
                 if let Value::String(_) = arg1 {
                 } else {
                     return Err(EvalError::type_mismatch(
@@ -1000,7 +1005,7 @@ pub fn eval(
                         line,
                     ));
                 }
-                
+
                 match (arg1, arg2) {
                     (Value::String(mut lhs), Value::String(rhs)) => {
                         lhs.push_str(rhs.as_str());
@@ -1033,7 +1038,12 @@ pub fn eval(
             }
         }
         Expr::Path(chunks, _) => Ok(Value::Path(chunks, symbols.clone())),
-        Expr::Range { start, step, end, line } => {
+        Expr::Range {
+            start,
+            step,
+            end,
+            line,
+        } => {
             let start_val = eval(*start, symbols, source)?;
             let end_val = eval(*end, symbols, source)?;
             let step_val = if let Some(step_expr) = step {
@@ -1041,28 +1051,46 @@ pub fn eval(
             } else {
                 None
             };
-            
+
             // Extract numeric values
             let start_num = match start_val {
                 Value::Number(Number::Int(n)) => n,
                 Value::Number(Number::Float(f)) => f as i64,
-                _ => return Err(EvalError::type_mismatch("number", start_val.to_string(source), line)),
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "number",
+                        start_val.to_string(source),
+                        line,
+                    ))
+                }
             };
             let end_num = match end_val {
                 Value::Number(Number::Int(n)) => n,
                 Value::Number(Number::Float(f)) => f as i64,
-                _ => return Err(EvalError::type_mismatch("number", end_val.to_string(source), line)),
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "number",
+                        end_val.to_string(source),
+                        line,
+                    ))
+                }
             };
             let step_num = if let Some(sv) = step_val {
                 match sv {
                     Value::Number(Number::Int(n)) => n,
                     Value::Number(Number::Float(f)) => f as i64,
-                    _ => return Err(EvalError::type_mismatch("number", sv.to_string(source), line)),
+                    _ => {
+                        return Err(EvalError::type_mismatch(
+                            "number",
+                            sv.to_string(source),
+                            line,
+                        ))
+                    }
                 }
             } else {
                 1
             };
-            
+
             // Generate range
             let mut result = Vec::new();
             if step_num > 0 {
@@ -1078,9 +1106,14 @@ pub fn eval(
                     current += step_num;
                 }
             } else {
-                return Err(EvalError::new("range step cannot be zero", None, None, line));
+                return Err(EvalError::new(
+                    "range step cannot be zero",
+                    None,
+                    None,
+                    line,
+                ));
             }
-            
+
             Ok(Value::List(result))
         }
         Expr::List(items, _) => {
@@ -1098,7 +1131,11 @@ pub fn eval(
             }
             Ok(Value::Dict(map))
         }
-        Expr::Member { object, field, line } => {
+        Expr::Member {
+            object,
+            field,
+            line,
+        } => {
             let obj_val = eval(*object, symbols, source)?;
             match obj_val {
                 Value::Dict(map) => map.get(&field).cloned().ok_or_else(|| {
@@ -1123,7 +1160,11 @@ pub fn eval(
                 )),
             }
         }
-        Expr::FileTemplate { path, template, line: _ } => Ok(Value::FileTemplate {
+        Expr::FileTemplate {
+            path,
+            template,
+            line: _,
+        } => Ok(Value::FileTemplate {
             path: (path, symbols.clone()),
             template: (template, symbols.clone()),
         }),
@@ -1135,13 +1176,22 @@ pub fn eval(
     }
 }
 
-pub fn apply_function(func: &Value, arg: Value, source: &str, line: usize) -> Result<Value, EvalError> {
+pub fn apply_function(
+    func: &Value,
+    arg: Value,
+    source: &str,
+    line: usize,
+) -> Result<Value, EvalError> {
     match func {
         Value::Function {
-            name, ident, expr, env, ..
+            name,
+            ident,
+            expr,
+            env,
+            ..
         } => {
             // Create a new scope based on the captured environment (Arc allows cheap sharing)
-            let mut new_env = (**env).clone();  // Dereference Arc and clone only once for this application
+            let mut new_env = (**env).clone(); // Dereference Arc and clone only once for this application
             new_env.insert(ident.clone(), arg);
             // NOTE: Recursive functions are not supported in Avon.
             // Functions cannot call themselves because they are not added to their own environment.
@@ -1292,7 +1342,12 @@ pub fn apply_function(func: &Value, arg: Value, source: &str, line: usize) -> Re
     }
 }
 
-pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) -> Result<Value, EvalError> {
+pub fn execute_builtin(
+    name: &str,
+    args: &[Value],
+    source: &str,
+    line: usize,
+) -> Result<Value, EvalError> {
     match name {
         "concat" => {
             let a = &args[0];
@@ -1315,22 +1370,19 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
             if let Value::List(items) = list {
                 let mut out = Vec::new();
                 for item in items {
-                    let res = apply_function(func, item.clone(), source, line).map_err(|mut err| {
-                        // Prepend map name if not already present
-                        if !err.message.starts_with("map:") {
-                            err.message = format!("map: {}", err.message);
-                        }
-                        err
-                    })?;
+                    let res =
+                        apply_function(func, item.clone(), source, line).map_err(|mut err| {
+                            // Prepend map name if not already present
+                            if !err.message.starts_with("map:") {
+                                err.message = format!("map: {}", err.message);
+                            }
+                            err
+                        })?;
                     out.push(res);
                 }
                 Ok(Value::List(out))
             } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    list.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
             }
         }
         "filter" => {
@@ -1339,13 +1391,14 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
             if let Value::List(items) = list {
                 let mut out = Vec::new();
                 for item in items {
-                    let res = apply_function(func, item.clone(), source, line).map_err(|mut err| {
-                        // Prepend filter name if not already present
-                        if !err.message.starts_with("filter:") {
-                            err.message = format!("filter: {}", err.message);
-                        }
-                        err
-                    })?;
+                    let res =
+                        apply_function(func, item.clone(), source, line).map_err(|mut err| {
+                            // Prepend filter name if not already present
+                            if !err.message.starts_with("filter:") {
+                                err.message = format!("filter: {}", err.message);
+                            }
+                            err
+                        })?;
                     match res {
                         Value::Bool(true) => out.push(item.clone()),
                         Value::Bool(false) => {}
@@ -1360,11 +1413,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                 }
                 Ok(Value::List(out))
             } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    list.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
             }
         }
         "fold" => {
@@ -1380,21 +1429,18 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                         }
                         err
                     })?;
-                    acc = apply_function(&step, item.clone(), source, line).map_err(|mut err| {
-                        // Prepend fold name if not already present
-                        if !err.message.starts_with("fold:") {
-                            err.message = format!("fold: {}", err.message);
-                        }
-                        err
-                    })?;
+                    acc =
+                        apply_function(&step, item.clone(), source, line).map_err(|mut err| {
+                            // Prepend fold name if not already present
+                            if !err.message.starts_with("fold:") {
+                                err.message = format!("fold: {}", err.message);
+                            }
+                            err
+                        })?;
                 }
                 Ok(acc)
             } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    list.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
             }
         }
         "import" => {
@@ -1425,7 +1471,12 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
             let filename = value_to_path_string(pathv, source)?;
             // Read the template file
             let mut template = std::fs::read_to_string(&filename).map_err(|e| {
-                EvalError::new(format!("fill_template"), Some("file".to_string()), Some(e.to_string()), line)
+                EvalError::new(
+                    format!("fill_template"),
+                    Some("file".to_string()),
+                    Some(e.to_string()),
+                    line,
+                )
             })?;
 
             // Process substitutions - accept both dict and list of pairs
@@ -1448,7 +1499,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                                     "fill_template",
                                     Some("[key, value] pair".to_string()),
                                     Some(format!("list of {}", kv.len())),
-                                    0
+                                    0,
                                 ));
                             }
 
@@ -1477,25 +1528,23 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                                 "fill_template",
                                 Some("list".to_string()),
                                 Some(pair.to_string(source)),
-                                0
+                                0,
                             ));
                         }
                     }
                     Ok(Value::String(template))
                 }
-                _ => {
-                    Err(EvalError::type_mismatch(
-                        "dict or list of pairs",
-                        match subsv {
-                            Value::String(_) => "string",
-                            Value::Number(_) => "number",
-                            Value::Bool(_) => "bool",
-                            Value::Function { .. } => "function",
-                            _ => "unknown",
-                        },
-                        0,
-                    ))
-                }
+                _ => Err(EvalError::type_mismatch(
+                    "dict or list of pairs",
+                    match subsv {
+                        Value::String(_) => "string",
+                        Value::Number(_) => "number",
+                        Value::Bool(_) => "bool",
+                        Value::Function { .. } => "function",
+                        _ => "unknown",
+                    },
+                    0,
+                )),
             }
         }
         "upper" => {
@@ -1503,11 +1552,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
             if let Value::String(st) = s {
                 Ok(Value::String(st.to_uppercase()))
             } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    s.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
             }
         }
         "lower" => {
@@ -1515,11 +1560,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
             if let Value::String(st) = s {
                 Ok(Value::String(st.to_lowercase()))
             } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    s.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
             }
         }
         "trim" => {
@@ -1527,11 +1568,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
             if let Value::String(st) = s {
                 Ok(Value::String(st.trim().to_string()))
             } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    s.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
             }
         }
         "contains" => {
@@ -1819,11 +1856,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                     !st.is_empty() && st.chars().all(|c| c.is_ascii_digit()),
                 ))
             } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    s.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
             }
         }
         "is_alpha" => {
@@ -1833,11 +1866,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                     !st.is_empty() && st.chars().all(|c| c.is_alphabetic()),
                 ))
             } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    s.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
             }
         }
         "is_alphanumeric" => {
@@ -1847,11 +1876,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                     !st.is_empty() && st.chars().all(|c| c.is_alphanumeric()),
                 ))
             } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    s.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
             }
         }
         "is_whitespace" => {
@@ -1861,11 +1886,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                     !st.is_empty() && st.chars().all(|c| c.is_whitespace()),
                 ))
             } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    s.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
             }
         }
         "is_uppercase" => {
@@ -1876,11 +1897,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                     !letters.is_empty() && letters.iter().all(|c| c.is_uppercase()),
                 ))
             } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    s.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
             }
         }
         "is_lowercase" => {
@@ -1891,11 +1908,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                     !letters.is_empty() && letters.iter().all(|c| c.is_lowercase()),
                 ))
             } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    s.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
             }
         }
         "is_empty" => {
@@ -1921,11 +1934,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                     .replace('\'', "&#x27;");
                 Ok(Value::String(escaped))
             } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    s.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
             }
         }
         "html_tag" => {
@@ -2006,11 +2015,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                     .collect();
                 Ok(Value::String(lines.join("\n")))
             } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    items.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", items.to_string(source), 0))
             }
         }
         "to_string" => {
@@ -2158,11 +2163,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                 };
                 Ok(Value::String(format!("{:x}", int_val)))
             } else {
-                Err(EvalError::type_mismatch(
-                    "number",
-                    val.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("number", val.to_string(source), 0))
             }
         }
         "format_octal" => {
@@ -2176,11 +2177,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                 };
                 Ok(Value::String(format!("{:o}", int_val)))
             } else {
-                Err(EvalError::type_mismatch(
-                    "number",
-                    val.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("number", val.to_string(source), 0))
             }
         }
         "format_binary" => {
@@ -2194,11 +2191,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                 };
                 Ok(Value::String(format!("{:b}", int_val)))
             } else {
-                Err(EvalError::type_mismatch(
-                    "number",
-                    val.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("number", val.to_string(source), 0))
             }
         }
         "format_scientific" => {
@@ -2247,11 +2240,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                 };
                 Ok(Value::String(formatted))
             } else {
-                Err(EvalError::type_mismatch(
-                    "number",
-                    val.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("number", val.to_string(source), 0))
             }
         }
         "format_list" => {
@@ -2280,27 +2269,28 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
             // Also accepts a dict, which is converted to [keys, values] format
             let table = &args[0];
             let separator = &args[1];
-            
+
             if let Value::String(sep) = separator {
                 let rows: Vec<Vec<String>> = match table {
                     Value::Dict(dict) => {
                         // Convert dict to table format: [keys_row, values_row]
                         let keys_row: Vec<String> = dict.keys().map(|k| k.clone()).collect();
-                        let values_row: Vec<String> = dict.values().map(|v| v.to_string(source)).collect();
+                        let values_row: Vec<String> =
+                            dict.values().map(|v| v.to_string(source)).collect();
                         vec![keys_row, values_row]
                     }
                     Value::List(rows) => {
                         // Existing behavior: list of lists
                         let mut result = Vec::new();
-                for row in rows {
-                    if let Value::List(cols) = row {
-                        let strings: Vec<String> =
-                            cols.iter().map(|v| v.to_string(source)).collect();
+                        for row in rows {
+                            if let Value::List(cols) = row {
+                                let strings: Vec<String> =
+                                    cols.iter().map(|v| v.to_string(source)).collect();
                                 result.push(strings);
-                    } else {
+                            } else {
                                 result.push(vec![row.to_string(source)]);
-                    }
-                }
+                            }
+                        }
                         result
                     }
                     _ => {
@@ -2311,10 +2301,8 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                         ));
                     }
                 };
-                
-                let lines: Vec<String> = rows.iter()
-                    .map(|row| row.join(sep))
-                    .collect();
+
+                let lines: Vec<String> = rows.iter().map(|row| row.join(sep)).collect();
                 Ok(Value::String(lines.join("\n")))
             } else {
                 Err(EvalError::type_mismatch(
@@ -2336,12 +2324,12 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                 Value::List(items) => {
                     let json_items: Vec<String> = items
                         .iter()
-                        .map(
-                            |v| match execute_builtin("format_json", &vec![v.clone()], source, line) {
+                        .map(|v| {
+                            match execute_builtin("format_json", &vec![v.clone()], source, line) {
                                 Ok(Value::String(s)) => s,
                                 _ => v.to_string(source),
-                            },
-                        )
+                            }
+                        })
                         .collect();
                     format!("[{}]", json_items.join(", "))
                 }
@@ -2527,13 +2515,14 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
             if let Value::List(items) = list {
                 let mut out = Vec::new();
                 for item in items {
-                    let res = apply_function(func, item.clone(), source, line).map_err(|mut err| {
-                        // Prepend flatmap name if not already present
-                        if !err.message.starts_with("flatmap:") {
-                            err.message = format!("flatmap: {}", err.message);
-                        }
-                        err
-                    })?;
+                    let res =
+                        apply_function(func, item.clone(), source, line).map_err(|mut err| {
+                            // Prepend flatmap name if not already present
+                            if !err.message.starts_with("flatmap:") {
+                                err.message = format!("flatmap: {}", err.message);
+                            }
+                            err
+                        })?;
                     match res {
                         Value::List(sub_items) => out.extend(sub_items),
                         single => out.push(single),
@@ -2541,11 +2530,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                 }
                 Ok(Value::List(out))
             } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    list.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
             }
         }
         "flatten" => {
@@ -2560,11 +2545,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                 }
                 Ok(Value::List(out))
             } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    list.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
             }
         }
         "head" => {
@@ -2572,11 +2553,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
             if let Value::List(items) = list {
                 Ok(items.first().cloned().unwrap_or(Value::None))
             } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    list.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
             }
         }
         "tail" => {
@@ -2588,11 +2565,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                     Ok(Value::List(items[1..].to_vec()))
                 }
             } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    list.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
             }
         }
         "take" => {
@@ -2600,16 +2573,18 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
             let list = &args[1];
             let n = match n_val {
                 Value::Number(Number::Int(i)) => *i as usize,
-                _ => return Err(EvalError::type_mismatch("number", n_val.to_string(source), 0)),
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "number",
+                        n_val.to_string(source),
+                        0,
+                    ))
+                }
             };
             if let Value::List(items) = list {
                 Ok(Value::List(items.iter().take(n).cloned().collect()))
             } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    list.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
             }
         }
         "drop" => {
@@ -2617,16 +2592,18 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
             let list = &args[1];
             let n = match n_val {
                 Value::Number(Number::Int(i)) => *i as usize,
-                _ => return Err(EvalError::type_mismatch("number", n_val.to_string(source), 0)),
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "number",
+                        n_val.to_string(source),
+                        0,
+                    ))
+                }
             };
             if let Value::List(items) = list {
                 Ok(Value::List(items.iter().skip(n).cloned().collect()))
             } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    list.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
             }
         }
         "zip" => {
@@ -2662,11 +2639,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                 }
                 Ok(Value::List(vec![Value::List(list1), Value::List(list2)]))
             } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    list.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
             }
         }
         "split_at" => {
@@ -2674,18 +2647,20 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
             let list = &args[1];
             let n = match n_val {
                 Value::Number(Number::Int(i)) => *i as usize,
-                _ => return Err(EvalError::type_mismatch("number", n_val.to_string(source), 0)),
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "number",
+                        n_val.to_string(source),
+                        0,
+                    ))
+                }
             };
             if let Value::List(items) = list {
                 let first = Value::List(items.iter().take(n).cloned().collect());
                 let second = Value::List(items.iter().skip(n).cloned().collect());
                 Ok(Value::List(vec![first, second]))
             } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    list.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
             }
         }
         "partition" => {
@@ -2695,12 +2670,13 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                 let mut true_list = Vec::new();
                 let mut false_list = Vec::new();
                 for item in items {
-                    let res = apply_function(func, item.clone(), source, line).map_err(|mut err| {
-                        if !err.message.starts_with("partition:") {
-                            err.message = format!("partition: {}", err.message);
-                        }
-                        err
-                    })?;
+                    let res =
+                        apply_function(func, item.clone(), source, line).map_err(|mut err| {
+                            if !err.message.starts_with("partition:") {
+                                err.message = format!("partition: {}", err.message);
+                            }
+                            err
+                        })?;
                     match res {
                         Value::Bool(true) => true_list.push(item.clone()),
                         Value::Bool(false) => false_list.push(item.clone()),
@@ -2713,13 +2689,12 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                         }
                     }
                 }
-                Ok(Value::List(vec![Value::List(true_list), Value::List(false_list)]))
+                Ok(Value::List(vec![
+                    Value::List(true_list),
+                    Value::List(false_list),
+                ]))
             } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    list.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
             }
         }
         "reverse" => {
@@ -2729,11 +2704,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                 reversed.reverse();
                 Ok(Value::List(reversed))
             } else {
-                Err(EvalError::type_mismatch(
-                    "list",
-                    list.to_string(source),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
             }
         }
         "dict_get" => {
@@ -3108,17 +3079,10 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                 Value::Bool(true) => Ok(args[1].clone()),
                 Value::Bool(false) => {
                     let debug_info = format!("{:#?}", args[1]);
-                    let message = format!(
-                        "\x1b[91massertion failed\x1b[0m\nvalue: {}",
-                        debug_info
-                    );
+                    let message = format!("\x1b[91massertion failed\x1b[0m\nvalue: {}", debug_info);
                     Err(EvalError::new(message, None, None, line))
                 }
-                other => Err(EvalError::type_mismatch(
-                    "Bool",
-                    format!("{:?}", other),
-                    0,
-                )),
+                other => Err(EvalError::type_mismatch("Bool", format!("{:?}", other), 0)),
             }
         }
 
@@ -3127,12 +3091,7 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
             // error :: String -> a
             // Throws an error with the given message
             match &args[0] {
-                Value::String(msg) => Err(EvalError::new(
-                    msg.clone(),
-                    None,
-                    None,
-                    0,
-                )),
+                Value::String(msg) => Err(EvalError::new(msg.clone(), None, None, 0)),
                 other => Err(EvalError::new(
                     format!(
                         "error expects String message, got: {}",

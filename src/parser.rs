@@ -30,228 +30,240 @@ pub fn parse_postfix(stream: &mut Peekable<Iter<Token>>) -> Expr {
 
 pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
     match stream.next() {
-        Some(atom) => match atom {
-            Token::Int(value, line) => Expr::Number(crate::common::Number::from(*value), *line),
-            Token::Float(value, line) => Expr::Number(crate::common::Number::from_f64(*value), *line),
-            Token::String(value, line) => Expr::String(value.clone(), *line),
-            Token::Template(chunks, line) => Expr::Template(chunks.clone(), *line),
-            Token::Path(chunks, line) => Expr::Path(chunks.clone(), *line),
-            Token::LBracket(line) => {
-                let line = *line;
-                // Check for empty list
-                match stream.peek() {
-                    Some(Token::RBracket(_)) => {
-                        stream.next();
-                        return Expr::List(Vec::new(), line);
-                    }
-                    _ => {}
+        Some(atom) => {
+            match atom {
+                Token::Int(value, line) => Expr::Number(crate::common::Number::from(*value), *line),
+                Token::Float(value, line) => {
+                    Expr::Number(crate::common::Number::from_f64(*value), *line)
                 }
-                
-                // Parse first expression
-                let first_expr = parse_expr(stream);
-                
-                // Check for range syntax: [start..end] or [start, step..end]
-                match stream.peek() {
-                    Some(Token::DoubleDot(_)) => {
-                        // Simple range: [start..end]
-                        stream.next(); // consume ..
-                        let end_expr = parse_expr(stream);
-                        match stream.peek() {
-                            Some(Token::RBracket(_)) => {
-                                stream.next(); // consume ]
-                                return Expr::Range {
-                                    start: Box::new(first_expr),
-                                    step: None,
-                                    end: Box::new(end_expr),
-                                    line,
-                                };
-                            }
-                            other => {
-                                eprintln!("Parse error: expected ']' after range end, got {:?}", other);
-                                return Expr::None(line);
+                Token::String(value, line) => Expr::String(value.clone(), *line),
+                Token::Template(chunks, line) => Expr::Template(chunks.clone(), *line),
+                Token::Path(chunks, line) => Expr::Path(chunks.clone(), *line),
+                Token::LBracket(line) => {
+                    let line = *line;
+                    // Check for empty list
+                    match stream.peek() {
+                        Some(Token::RBracket(_)) => {
+                            stream.next();
+                            return Expr::List(Vec::new(), line);
+                        }
+                        _ => {}
+                    }
+
+                    // Parse first expression
+                    let first_expr = parse_expr(stream);
+
+                    // Check for range syntax: [start..end] or [start, step..end]
+                    match stream.peek() {
+                        Some(Token::DoubleDot(_)) => {
+                            // Simple range: [start..end]
+                            stream.next(); // consume ..
+                            let end_expr = parse_expr(stream);
+                            match stream.peek() {
+                                Some(Token::RBracket(_)) => {
+                                    stream.next(); // consume ]
+                                    return Expr::Range {
+                                        start: Box::new(first_expr),
+                                        step: None,
+                                        end: Box::new(end_expr),
+                                        line,
+                                    };
+                                }
+                                other => {
+                                    eprintln!(
+                                        "Parse error: expected ']' after range end, got {:?}",
+                                        other
+                                    );
+                                    return Expr::None(line);
+                                }
                             }
                         }
+                        Some(Token::Comma(_)) => {
+                            // Could be [start, step..end] or regular list [start, second, ...]
+                            stream.next(); // consume comma
+                                           // Parse the expression after comma (could be step or second element)
+                            let second_expr = parse_expr(stream);
+                            // Check if next is DoubleDot (range with step) or something else (regular list)
+                            match stream.peek() {
+                                Some(Token::DoubleDot(_)) => {
+                                    // Range with step: [start, step..end]
+                                    stream.next(); // consume ..
+                                    let end_expr = parse_expr(stream);
+                                    match stream.peek() {
+                                        Some(Token::RBracket(_)) => {
+                                            stream.next(); // consume ]
+                                            return Expr::Range {
+                                                start: Box::new(first_expr),
+                                                step: Some(Box::new(second_expr)),
+                                                end: Box::new(end_expr),
+                                                line,
+                                            };
+                                        }
+                                        other => {
+                                            eprintln!("Parse error: expected ']' after range end, got {:?}", other);
+                                            return Expr::None(line);
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    // Regular list: [first, second, ...]
+                                    let mut items = vec![first_expr, second_expr];
+
+                                    // Continue parsing rest of list
+                                    loop {
+                                        match stream.peek() {
+                                            Some(Token::Comma(_)) => {
+                                                stream.next();
+                                                let next_expr = parse_expr(stream);
+                                                items.push(next_expr);
+                                                continue;
+                                            }
+                                            Some(Token::RBracket(_)) => {
+                                                stream.next();
+                                                break;
+                                            }
+                                            a => {
+                                                eprintln!(
+                                                "Parse error: expected ',' or ']' in list, got {:?}",
+                                                a
+                                            );
+                                                return Expr::None(line);
+                                            }
+                                        }
+                                    }
+                                    return Expr::List(items, line);
+                                }
+                            }
+                        }
+                        Some(Token::RBracket(_)) => {
+                            // Single element list: [expr]
+                            stream.next();
+                            return Expr::List(vec![first_expr], line);
+                        }
+                        a => {
+                            eprintln!(
+                            "Parse error: expected ',', '..', or ']' after list element, got {:?}",
+                            a
+                        );
+                            return Expr::None(line);
+                        }
                     }
-                    Some(Token::Comma(_)) => {
-                        // Could be [start, step..end] or regular list [start, second, ...]
-                        stream.next(); // consume comma
-                        // Parse the expression after comma (could be step or second element)
-                        let second_expr = parse_expr(stream);
-                        // Check if next is DoubleDot (range with step) or something else (regular list)
+                }
+                Token::LBrace(line) => {
+                    let line = *line;
+                    // Parse dict literal: {key:value, key:value, ...}
+                    let mut pairs = Vec::new();
+                    loop {
                         match stream.peek() {
-                            Some(Token::DoubleDot(_)) => {
-                                // Range with step: [start, step..end]
-                                stream.next(); // consume ..
-                                let end_expr = parse_expr(stream);
+                            Some(Token::RBrace(_)) => {
+                                stream.next();
+                                break;
+                            }
+                            Some(Token::Identifier(key, _)) => {
+                                let key_name = key.clone();
+                                stream.next();
+
+                                // Expect colon
+                                match stream.next() {
+                                    Some(Token::Colon(_)) => {}
+                                    other => {
+                                        eprintln!(
+                                            "Parse error: expected ':' after dict key, got {:?}",
+                                            other
+                                        );
+                                        return Expr::None(line);
+                                    }
+                                }
+
+                                // Parse value expression
+                                // We need to handle lambdas, so use try_parse_expr but don't error on failure
+                                let value = match try_parse_expr(stream) {
+                                    Ok(expr) => expr,
+                                    Err(_) => {
+                                        // Fall back to parse_logic if try_parse_expr fails
+                                        parse_logic(stream)
+                                    }
+                                };
+                                pairs.push((key_name, value));
+
+                                // Check for comma or closing brace
                                 match stream.peek() {
-                                    Some(Token::RBracket(_)) => {
-                                        stream.next(); // consume ]
-                                        return Expr::Range {
-                                            start: Box::new(first_expr),
-                                            step: Some(Box::new(second_expr)),
-                                            end: Box::new(end_expr),
-                                            line,
-                                        };
+                                    Some(Token::Comma(_)) => {
+                                        stream.next();
+                                        // Check if there's another entry or if this is a trailing comma
+                                        match stream.peek() {
+                                            Some(Token::RBrace(_)) => {
+                                                stream.next();
+                                                break;
+                                            }
+                                            Some(_) => continue,
+                                            None => {
+                                                eprintln!(
+                                                    "Parse error: unexpected EOF in dict literal"
+                                                );
+                                                return Expr::None(line);
+                                            }
+                                        }
+                                    }
+                                    Some(Token::RBrace(_)) => {
+                                        stream.next();
+                                        break;
                                     }
                                     other => {
-                                        eprintln!("Parse error: expected ']' after range end, got {:?}", other);
+                                        eprintln!(
+                                            "Parse error: expected ',' or '}}' in dict, got {:?}",
+                                            other
+                                        );
                                         return Expr::None(line);
                                     }
                                 }
                             }
-                            _ => {
-                                // Regular list: [first, second, ...]
-                                let mut items = vec![first_expr, second_expr];
-                                
-                                // Continue parsing rest of list
-                                loop {
-                                    match stream.peek() {
-                                        Some(Token::Comma(_)) => {
-                                            stream.next();
-                                            let next_expr = parse_expr(stream);
-                                            items.push(next_expr);
-                                            continue;
-                                        }
-                                        Some(Token::RBracket(_)) => {
-                                            stream.next();
-                                            break;
-                                        }
-                                        a => {
-                                            eprintln!(
-                                                "Parse error: expected ',' or ']' in list, got {:?}",
-                                                a
-                                            );
-                                            return Expr::None(line);
-                                        }
-                                    }
-                                }
-                                return Expr::List(items, line);
+                            None => {
+                                eprintln!("Parse error: unexpected end of input in dict literal");
+                                return Expr::None(line);
+                            }
+                            other => {
+                                eprintln!(
+                                    "Parse error: expected identifier as dict key, got {:?}",
+                                    other
+                                );
+                                return Expr::None(line);
                             }
                         }
                     }
-                    Some(Token::RBracket(_)) => {
-                        // Single element list: [expr]
-                        stream.next();
-                        return Expr::List(vec![first_expr], line);
-                    }
-                    a => {
-                        eprintln!(
-                            "Parse error: expected ',', '..', or ']' after list element, got {:?}",
-                            a
-                        );
-                        return Expr::None(line);
+                    Expr::Dict(pairs, line)
+                }
+                Token::Identifier(value, line) if value != "in" && value != "let" => {
+                    match value.as_str() {
+                        "true" => Expr::Bool(true, *line),
+                        "false" => Expr::Bool(false, *line),
+                        "none" => Expr::None(*line),
+                        _ => Expr::Ident(value.clone(), *line),
                     }
                 }
-            }
-            Token::LBrace(line) => {
-                let line = *line;
-                // Parse dict literal: {key:value, key:value, ...}
-                let mut pairs = Vec::new();
-                loop {
-                    match stream.peek() {
-                        Some(Token::RBrace(_)) => {
-                            stream.next();
-                            break;
-                        }
-                        Some(Token::Identifier(key, _)) => {
-                            let key_name = key.clone();
-                            stream.next();
-
-                            // Expect colon
-                            match stream.next() {
-                                Some(Token::Colon(_)) => {}
-                                other => {
-                                    eprintln!(
-                                        "Parse error: expected ':' after dict key, got {:?}",
-                                        other
-                                    );
-                                    return Expr::None(line);
-                                }
-                            }
-
-                            // Parse value expression
-                            // We need to handle lambdas, so use try_parse_expr but don't error on failure
-                            let value = match try_parse_expr(stream) {
-                                Ok(expr) => expr,
-                                Err(_) => {
-                                    // Fall back to parse_logic if try_parse_expr fails
-                                    parse_logic(stream)
-                                }
-                            };
-                            pairs.push((key_name, value));
-
-                            // Check for comma or closing brace
-                            match stream.peek() {
-                                Some(Token::Comma(_)) => {
-                                    stream.next();
-                                    // Check if there's another entry or if this is a trailing comma
-                                    match stream.peek() {
-                                        Some(Token::RBrace(_)) => {
-                                            stream.next();
-                                            break;
-                                        }
-                                        Some(_) => continue,
-                                        None => {
-                                            eprintln!(
-                                                "Parse error: unexpected EOF in dict literal"
-                                            );
-                                            return Expr::None(line);
-                                        }
-                                    }
-                                }
-                                Some(Token::RBrace(_)) => {
-                                    stream.next();
-                                    break;
-                                }
-                                other => {
-                                    eprintln!(
-                                        "Parse error: expected ',' or '}}' in dict, got {:?}",
-                                        other
-                                    );
-                                    return Expr::None(line);
-                                }
-                            }
-                        }
-                        None => {
-                            eprintln!("Parse error: unexpected end of input in dict literal");
-                            return Expr::None(line);
-                        }
-                        other => {
-                            eprintln!(
-                                "Parse error: expected identifier as dict key, got {:?}",
-                                other
-                            );
-                            return Expr::None(line);
-                        }
-                    }
+                Token::LParen(_) => {
+                    let expr = parse_expr(stream);
+                    stream.next();
+                    expr
                 }
-                Expr::Dict(pairs, line)
+                Token::RParen(line) => {
+                    eprintln!(
+                        "Parse error: unexpected closing parenthesis on line {}",
+                        line
+                    );
+                    Expr::None(*line)
+                }
+                Token::RBracket(line) => {
+                    eprintln!("Parse error: unexpected closing bracket on line {}", line);
+                    Expr::None(*line)
+                }
+                Token::RBrace(line) => {
+                    eprintln!("Parse error: unexpected closing brace on line {}", line);
+                    Expr::None(*line)
+                }
+                t => Expr::None(t.line()),
             }
-            Token::Identifier(value, line) if value != "in" && value != "let" => match value.as_str() {
-                "true" => Expr::Bool(true, *line),
-                "false" => Expr::Bool(false, *line),
-                "none" => Expr::None(*line),
-                _ => Expr::Ident(value.clone(), *line),
-            },
-            Token::LParen(_) => {
-                let expr = parse_expr(stream);
-                stream.next();
-                expr
-            }
-            Token::RParen(line) => {
-                eprintln!("Parse error: unexpected closing parenthesis on line {}", line);
-                Expr::None(*line)
-            }
-            Token::RBracket(line) => {
-                eprintln!("Parse error: unexpected closing bracket on line {}", line);
-                Expr::None(*line)
-            }
-            Token::RBrace(line) => {
-                eprintln!("Parse error: unexpected closing brace on line {}", line);
-                Expr::None(*line)
-            }
-            t => Expr::None(t.line()),
-        },
+        }
         None => Expr::None(0),
     }
 }
@@ -419,14 +431,14 @@ fn eat(stream: &mut Peekable<Iter<Token>>, token: Token) -> ParseResult<()> {
     if let Some(t) = next {
         // Match token variants ignoring line info
         let match_ = match (t, &token) {
-             (Token::Identifier(s1, _), Token::Identifier(s2, _)) => s1 == s2,
-             (Token::Equal(_), Token::Equal(_)) => true,
-             (Token::BackSlash(_), Token::BackSlash(_)) => true,
-             _ => false,
+            (Token::Identifier(s1, _), Token::Identifier(s2, _)) => s1 == s2,
+            (Token::Equal(_), Token::Equal(_)) => true,
+            (Token::BackSlash(_), Token::BackSlash(_)) => true,
+            _ => false,
         };
-        
+
         if !match_ {
-             return Err(EvalError::new(
+            return Err(EvalError::new(
                 format!("parse error: expected {:?}, found {:?}", token, t),
                 Some(format!("{:?}", token)),
                 Some(format!("{:?}", t)),
@@ -457,9 +469,9 @@ pub fn parse_expr(stream: &mut Peekable<Iter<Token>>) -> Expr {
 fn try_parse_expr(stream: &mut Peekable<Iter<Token>>) -> ParseResult<Expr> {
     // First check for lambda or let or path/template literals that start with keywords or specific tokens
     // We peek first to avoid consuming if we need to delegate
-    
+
     let peek_token = stream.peek().cloned();
-    
+
     if let Some(token) = peek_token {
         match token {
             Token::Identifier(ident, line) if ident == "let" => {
@@ -486,7 +498,12 @@ fn try_parse_expr(stream: &mut Peekable<Iter<Token>>) -> ParseResult<Expr> {
                 let value = Box::new(try_parse_expr(stream)?);
                 eat(stream, Token::Identifier(String::from("in"), 0))?;
                 let expr = Box::new(try_parse_expr(stream)?);
-                return Ok(Expr::Let { ident, value, expr, line });
+                return Ok(Expr::Let {
+                    ident,
+                    value,
+                    expr,
+                    line,
+                });
             }
             Token::BackSlash(line) => {
                 let line = *line;
@@ -557,15 +574,15 @@ fn try_parse_expr(stream: &mut Peekable<Iter<Token>>) -> ParseResult<Expr> {
                     }
                     _ => {
                         // Check if this path is part of a pipe or other expression
-                        // We've consumed the token, so we return the path expr directly 
+                        // We've consumed the token, so we return the path expr directly
                         // but we need to continue parsing if it's part of a larger expression.
                         // The original logic returned immediately, preventing `path -> function`.
                         // However, `try_parse_expr` is expected to parse the *whole* expression if it starts with these tokens.
-                        
+
                         // If we return here, we miss the pipe logic at the end of the function.
-                        // We should construct the LHS and then fall through to `parse_pipe` logic logic below, 
+                        // We should construct the LHS and then fall through to `parse_pipe` logic logic below,
                         // BUT `try_parse_expr` structure is a bit rigid.
-                        
+
                         // A better approach: parse the prefix part, then continue.
                         let lhs = Expr::Path(path_chunks, line);
                         return Ok(parse_pipe_suffix(stream, lhs));
@@ -603,19 +620,19 @@ fn parse_pipe_suffix(stream: &mut Peekable<Iter<Token>>, mut lhs: Expr) -> Expr 
                 let line = *line;
                 // Handle pipe operator: lhs -> rhs
                 stream.next(); // consume the pipe token
-                
+
                 // Check if the RHS starts with a lambda (BackSlash)
                 let rhs = if let Some(Token::BackSlash(_)) = stream.peek() {
-                     // Directly call try_parse_expr to handle the lambda
-                     // We handle errors by converting to Expr::None or propagating?
-                     // try_parse_expr returns Result.
-                     match try_parse_expr(stream) {
-                         Ok(e) => e,
-                         Err(e) => {
-                             eprintln!("Parse error in pipe RHS: {}", e.message);
-                             std::process::exit(1);
-                         }
-                     }
+                    // Directly call try_parse_expr to handle the lambda
+                    // We handle errors by converting to Expr::None or propagating?
+                    // try_parse_expr returns Result.
+                    match try_parse_expr(stream) {
+                        Ok(e) => e,
+                        Err(e) => {
+                            eprintln!("Parse error in pipe RHS: {}", e.message);
+                            std::process::exit(1);
+                        }
+                    }
                 } else {
                     parse_logic(stream)
                 };
@@ -639,7 +656,12 @@ fn parse_app(stream: &mut Peekable<Iter<Token>>) -> Expr {
         match stream.peek() {
             Some(Token::Identifier(id, _)) if id != "in" && id != "then" && id != "else" => {
                 let rhs = parse_cmp(stream);
-                let line = lhs.line(); lhs = Expr::Application { lhs: Box::new(lhs), rhs: Box::new(rhs), line };
+                let line = lhs.line();
+                lhs = Expr::Application {
+                    lhs: Box::new(lhs),
+                    rhs: Box::new(rhs),
+                    line,
+                };
             }
             Some(Token::Int(_, _))
             | Some(Token::Float(_, _))
@@ -651,12 +673,22 @@ fn parse_app(stream: &mut Peekable<Iter<Token>>) -> Expr {
             | Some(Token::Path(_, _))
             | Some(Token::BackSlash(_)) => {
                 let rhs = parse_cmp(stream);
-                let line = lhs.line(); lhs = Expr::Application { lhs: Box::new(lhs), rhs: Box::new(rhs), line };
+                let line = lhs.line();
+                lhs = Expr::Application {
+                    lhs: Box::new(lhs),
+                    rhs: Box::new(rhs),
+                    line,
+                };
             }
             Some(Token::Identifier(ident, _)) => {
                 if ident != "in" && ident != "let" && ident != "then" && ident != "else" {
                     let rhs = parse_cmp(stream);
-                    let line = lhs.line(); lhs = Expr::Application { lhs: Box::new(lhs), rhs: Box::new(rhs), line };
+                    let line = lhs.line();
+                    lhs = Expr::Application {
+                        lhs: Box::new(lhs),
+                        rhs: Box::new(rhs),
+                        line,
+                    };
                     continue;
                 }
                 break;
