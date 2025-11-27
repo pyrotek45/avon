@@ -86,20 +86,11 @@ impl Token {
     }
 
     pub fn is_term_op(&self) -> bool {
-        match self {
-            Token::Add(_) => true,
-            Token::Sub(_) => true,
-            _ => false,
-        }
+        matches!(self, Token::Add(_) | Token::Sub(_))
     }
 
     pub fn is_factor_op(&self) -> bool {
-        match self {
-            Token::Mul(_) => true,
-            Token::Div(_) => true,
-            Token::Mod(_) => true,
-            _ => false,
-        }
+        matches!(self, Token::Mul(_) | Token::Div(_) | Token::Mod(_))
     }
 }
 

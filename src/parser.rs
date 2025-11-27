@@ -42,12 +42,9 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
                 Token::LBracket(line) => {
                     let line = *line;
                     // Check for empty list
-                    match stream.peek() {
-                        Some(Token::RBracket(_)) => {
-                            stream.next();
-                            return Expr::List(Vec::new(), line);
-                        }
-                        _ => {}
+                    if let Some(Token::RBracket(_)) = stream.peek() {
+                        stream.next();
+                        return Expr::List(Vec::new(), line);
                     }
 
                     // Parse first expression
@@ -62,19 +59,19 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
                             match stream.peek() {
                                 Some(Token::RBracket(_)) => {
                                     stream.next(); // consume ]
-                                    return Expr::Range {
+                                    Expr::Range {
                                         start: Box::new(first_expr),
                                         step: None,
                                         end: Box::new(end_expr),
                                         line,
-                                    };
+                                    }
                                 }
                                 other => {
                                     eprintln!(
                                         "Parse error: expected ']' after range end, got {:?}",
                                         other
                                     );
-                                    return Expr::None(line);
+                                    Expr::None(line)
                                 }
                             }
                         }
@@ -92,16 +89,16 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
                                     match stream.peek() {
                                         Some(Token::RBracket(_)) => {
                                             stream.next(); // consume ]
-                                            return Expr::Range {
+                                            Expr::Range {
                                                 start: Box::new(first_expr),
                                                 step: Some(Box::new(second_expr)),
                                                 end: Box::new(end_expr),
                                                 line,
-                                            };
+                                            }
                                         }
                                         other => {
                                             eprintln!("Parse error: expected ']' after range end, got {:?}", other);
-                                            return Expr::None(line);
+                                            Expr::None(line)
                                         }
                                     }
                                 }
@@ -131,21 +128,21 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
                                             }
                                         }
                                     }
-                                    return Expr::List(items, line);
+                                    Expr::List(items, line)
                                 }
                             }
                         }
                         Some(Token::RBracket(_)) => {
                             // Single element list: [expr]
                             stream.next();
-                            return Expr::List(vec![first_expr], line);
+                            Expr::List(vec![first_expr], line)
                         }
                         a => {
                             eprintln!(
                             "Parse error: expected ',', '..', or ']' after list element, got {:?}",
                             a
                         );
-                            return Expr::None(line);
+                            Expr::None(line)
                         }
                     }
                 }
@@ -347,28 +344,23 @@ pub fn parse_term(stream: &mut Peekable<Iter<Token>>) -> Expr {
 pub fn parse_cmp(stream: &mut Peekable<Iter<Token>>) -> Expr {
     let mut lhs = parse_term(stream);
 
-    loop {
-        match stream.peek() {
-            Some(Token::DoubleEqual(_))
-            | Some(Token::NotEqual(_))
-            | Some(Token::Greater(_))
-            | Some(Token::Less(_))
-            | Some(Token::GreaterEqual(_))
-            | Some(Token::LessEqual(_)) => {
-                // Safe: we just peeked and confirmed there's a token
-                let op = stream.next().expect("token exists after peek").clone();
-                let line = op.line();
-                let rhs = parse_term(stream);
-                lhs = Expr::Binary {
-                    lhs: Box::new(lhs),
-                    op,
-                    rhs: Box::new(rhs),
-                    line,
-                };
-                continue;
-            }
-            _ => break,
-        }
+    while let Some(Token::DoubleEqual(_))
+    | Some(Token::NotEqual(_))
+    | Some(Token::Greater(_))
+    | Some(Token::Less(_))
+    | Some(Token::GreaterEqual(_))
+    | Some(Token::LessEqual(_)) = stream.peek()
+    {
+        // Safe: we just peeked and confirmed there's a token
+        let op = stream.next().expect("token exists after peek").clone();
+        let line = op.line();
+        let rhs = parse_term(stream);
+        lhs = Expr::Binary {
+            lhs: Box::new(lhs),
+            op,
+            rhs: Box::new(rhs),
+            line,
+        };
     }
 
     lhs
@@ -377,22 +369,17 @@ pub fn parse_cmp(stream: &mut Peekable<Iter<Token>>) -> Expr {
 pub fn parse_and(stream: &mut Peekable<Iter<Token>>) -> Expr {
     let mut lhs = parse_app(stream);
 
-    loop {
-        match stream.peek() {
-            Some(Token::And(line)) => {
-                let line = *line;
-                let op = stream.next().expect("token exists after peek").clone();
-                let rhs = parse_app(stream);
-                lhs = Expr::Binary {
-                    lhs: Box::new(lhs),
-                    op,
-                    rhs: Box::new(rhs),
-                    line,
-                };
-                continue;
-            }
-            _ => break,
-        }
+    while let Some(Token::And(line)) = stream.peek() {
+        let line = *line;
+        let op = stream.next().expect("token exists after peek").clone();
+        let rhs = parse_app(stream);
+        lhs = Expr::Binary {
+            lhs: Box::new(lhs),
+            op,
+            rhs: Box::new(rhs),
+            line,
+        };
+        continue;
     }
 
     lhs
@@ -401,22 +388,17 @@ pub fn parse_and(stream: &mut Peekable<Iter<Token>>) -> Expr {
 pub fn parse_or(stream: &mut Peekable<Iter<Token>>) -> Expr {
     let mut lhs = parse_and(stream);
 
-    loop {
-        match stream.peek() {
-            Some(Token::Or(line)) => {
-                let line = *line;
-                let op = stream.next().expect("token exists after peek").clone();
-                let rhs = parse_and(stream);
-                lhs = Expr::Binary {
-                    lhs: Box::new(lhs),
-                    op,
-                    rhs: Box::new(rhs),
-                    line,
-                };
-                continue;
-            }
-            _ => break,
-        }
+    while let Some(Token::Or(line)) = stream.peek() {
+        let line = *line;
+        let op = stream.next().expect("token exists after peek").clone();
+        let rhs = parse_and(stream);
+        lhs = Expr::Binary {
+            lhs: Box::new(lhs),
+            op,
+            rhs: Box::new(rhs),
+            line,
+        };
+        continue;
     }
 
     lhs
@@ -534,7 +516,7 @@ fn try_parse_expr(stream: &mut Peekable<Iter<Token>>) -> ParseResult<Expr> {
 
                 return Ok(Expr::Function {
                     ident,
-                    default: default.map(|d| Box::new(d)),
+                    default: default.map(Box::new),
                     expr: Box::new(expr),
                     line,
                 });
@@ -614,37 +596,32 @@ fn parse_pipe(stream: &mut Peekable<Iter<Token>>) -> Expr {
 }
 
 fn parse_pipe_suffix(stream: &mut Peekable<Iter<Token>>, mut lhs: Expr) -> Expr {
-    loop {
-        match stream.peek() {
-            Some(Token::Pipe(line)) => {
-                let line = *line;
-                // Handle pipe operator: lhs -> rhs
-                stream.next(); // consume the pipe token
+    while let Some(Token::Pipe(line)) = stream.peek() {
+        let line = *line;
+        // Handle pipe operator: lhs -> rhs
+        stream.next(); // consume the pipe token
 
-                // Check if the RHS starts with a lambda (BackSlash)
-                let rhs = if let Some(Token::BackSlash(_)) = stream.peek() {
-                    // Directly call try_parse_expr to handle the lambda
-                    // We handle errors by converting to Expr::None or propagating?
-                    // try_parse_expr returns Result.
-                    match try_parse_expr(stream) {
-                        Ok(e) => e,
-                        Err(e) => {
-                            eprintln!("Parse error in pipe RHS: {}", e.message);
-                            std::process::exit(1);
-                        }
-                    }
-                } else {
-                    parse_logic(stream)
-                };
-
-                lhs = Expr::Pipe {
-                    lhs: Box::new(lhs),
-                    rhs: Box::new(rhs),
-                    line,
-                };
+        // Check if the RHS starts with a lambda (BackSlash)
+        let rhs = if let Some(Token::BackSlash(_)) = stream.peek() {
+            // Directly call try_parse_expr to handle the lambda
+            // We handle errors by converting to Expr::None or propagating?
+            // try_parse_expr returns Result.
+            match try_parse_expr(stream) {
+                Ok(e) => e,
+                Err(e) => {
+                    eprintln!("Parse error in pipe RHS: {}", e.message);
+                    std::process::exit(1);
+                }
             }
-            _ => break,
-        }
+        } else {
+            parse_logic(stream)
+        };
+
+        lhs = Expr::Pipe {
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs),
+            line,
+        };
     }
     lhs
 }

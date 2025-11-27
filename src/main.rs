@@ -1,3 +1,4 @@
+#![expect(clippy::result_large_err)]
 mod cli;
 mod common;
 mod eval;
@@ -422,24 +423,20 @@ mod tests {
         let mut v = eval(ast.program, &mut symbols, &data).expect("eval");
 
         // emulate the deploy application loop: apply defaults when present
-        loop {
-            match &v {
-                Value::Function {
-                    ident: _, default, ..
-                } => {
-                    if let Some(def) = default {
-                        v = apply_function(&v, (**def).clone(), &data, 0).expect("apply default");
-                        continue;
-                    } else {
-                        panic!("expected default to be present for test");
-                    }
-                }
-                _ => break,
+        while let Value::Function {
+            ident: _, default, ..
+        } = &v
+        {
+            if let Some(def) = default {
+                v = apply_function(&v, (**def).clone(), &data, 0).expect("apply default");
+                continue;
+            } else {
+                panic!("expected default to be present for test");
             }
         }
 
         let files = collect_file_templates(&v, &data).expect("collect");
-        assert!(files.len() >= 1, "expected at least one filetemplate");
+        assert!(!files.is_empty(), "expected at least one filetemplate");
     }
 
     #[test]
@@ -476,7 +473,7 @@ mod tests {
         // json_parse object (now returns dict)
         let json_obj_path = dir.join("avon_test_json_obj.json");
         let mut jo = fs::File::create(&json_obj_path).expect("create json obj");
-        write!(jo, "{}", r#"{"k": "v"}"#).expect("write json obj");
+        write!(jo, "{{\"k\": \"v\"}}").expect("write json obj");
         let progo = format!("json_parse \"{}\"", json_obj_path.to_string_lossy());
         let tokens = tokenize(progo.clone()).expect("tokenize");
         let ast = parse(tokens);
@@ -576,24 +573,20 @@ mod tests {
         let mut v = eval(ast.program, &mut symbols, &prog).expect("eval");
 
         // emulate deploy application loop: apply defaults when present
-        loop {
-            match &v {
-                Value::Function {
-                    ident: _, default, ..
-                } => {
-                    if let Some(def) = default {
-                        v = apply_function(&v, (**def).clone(), &prog, 0).expect("apply default");
-                        continue;
-                    } else {
-                        panic!("expected default to be present for test");
-                    }
-                }
-                _ => break,
+        while let Value::Function {
+            ident: _, default, ..
+        } = &v
+        {
+            if let Some(def) = default {
+                v = apply_function(&v, (**def).clone(), &prog, 0).expect("apply default");
+                continue;
+            } else {
+                panic!("expected default to be present for test");
             }
         }
 
         let files = collect_file_templates(&v, &prog).expect("collect");
-        assert!(files.len() >= 1, "expected at least one filetemplate");
+        assert!(!files.is_empty(), "expected at least one filetemplate");
     }
 
     #[test]
@@ -610,25 +603,18 @@ mod tests {
         deploy_named.insert("name".to_string(), "bob".to_string());
 
         // emulate the deploy application loop which prefers named args by param ident
-        loop {
-            match &v {
-                Value::Function { ident, default, .. } => {
-                    if let Some(named_val) = deploy_named.remove(ident) {
-                        v = apply_function(&v, Value::String(named_val), &prog, 0)
-                            .expect("apply named");
-                        continue;
-                    } else if let Some(def) = default {
-                        // if default present (not in this test), it would be applied
-                        v = apply_function(&v, (**def).clone(), &prog, 0).expect("apply default");
-                        continue;
-                    } else {
-                        panic!("missing argument in test (no positional args provided)");
-                    }
-                }
-                _ => break,
+        while let Value::Function { ident, default, .. } = &v {
+            if let Some(named_val) = deploy_named.remove(ident) {
+                v = apply_function(&v, Value::String(named_val), &prog, 0).expect("apply named");
+                continue;
+            } else if let Some(def) = default {
+                // if default present (not in this test), it would be applied
+                v = apply_function(&v, (**def).clone(), &prog, 0).expect("apply default");
+                continue;
+            } else {
+                panic!("missing argument in test (no positional args provided)");
             }
         }
-
         let files = collect_file_templates(&v, &prog).expect("collect");
         // ensure the produced path contains the supplied named value
         assert!(
@@ -2791,6 +2777,7 @@ mod tests {
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
         let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        #[expect(clippy::approx_constant)]
         match v2 {
             Value::Number(Number::Float(f)) => assert!((f + 3.14).abs() < 0.001),
             other => panic!("expected -3.14, got {:?}", other),
@@ -2820,7 +2807,7 @@ mod tests {
         let v4 = eval(ast4.program, &mut symbols4, &prog4).expect("eval");
         match v4 {
             Value::List(items) => {
-                assert!(items.len() > 0);
+                assert!(!items.is_empty());
                 if let Value::Number(Number::Int(n)) = &items[0] {
                     assert_eq!(*n, 10);
                 }
@@ -3892,7 +3879,7 @@ mod tests {
         assert!(result.is_ok());
         // Template should evaluate safely
         match result.unwrap() {
-            Value::Template(_, _) => assert!(true),
+            Value::Template(_, _) => (),
             _ => panic!("Expected template"),
         }
     }
@@ -4010,7 +3997,7 @@ mod tests {
         match v {
             Value::List(items) => {
                 assert_eq!(items.len(), 6);
-                let expected = vec![0, 2, 4, 6, 8, 10];
+                let expected = [0, 2, 4, 6, 8, 10];
                 for (i, item) in items.iter().enumerate() {
                     if let Value::Number(Number::Int(n)) = item {
                         assert_eq!(*n, expected[i]);
@@ -4034,7 +4021,7 @@ mod tests {
         match v {
             Value::List(items) => {
                 assert_eq!(items.len(), 5);
-                let expected = vec![-5, -4, -3, -2, -1];
+                let expected = [-5, -4, -3, -2, -1];
                 for (i, item) in items.iter().enumerate() {
                     if let Value::Number(Number::Int(n)) = item {
                         assert_eq!(*n, expected[i]);
@@ -4089,7 +4076,7 @@ mod tests {
         match v {
             Value::List(items) => {
                 assert_eq!(items.len(), 6);
-                let expected = vec![0, 2, 4, 6, 8, 10];
+                let expected = [0, 2, 4, 6, 8, 10];
                 for (i, item) in items.iter().enumerate() {
                     if let Value::Number(Number::Int(n)) = item {
                         assert_eq!(*n, expected[i]);
@@ -4119,6 +4106,7 @@ mod tests {
     #[test]
     fn test_float_literals_multiple() {
         // Test multiple float literals to ensure parsing is robust
+        #[expect(clippy::approx_constant)]
         let test_cases = vec![
             ("0.5", 0.5),
             ("3.14", 3.14),
@@ -4225,7 +4213,7 @@ mod tests {
         match v {
             Value::List(items) => {
                 assert_eq!(items.len(), 6);
-                let expected = vec![1, 2, 3, 4, 5, 6];
+                let expected = [1, 2, 3, 4, 5, 6];
                 for (i, item) in items.iter().enumerate() {
                     if let Value::Number(Number::Int(n)) = item {
                         assert_eq!(*n, expected[i] as i64);

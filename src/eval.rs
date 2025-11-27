@@ -518,7 +518,7 @@ pub fn value_to_path_string(val: &Value, source: &str) -> Result<String, EvalErr
 }
 
 pub fn render_chunks_to_string(
-    chunks: &Vec<Chunk>,
+    chunks: &[Chunk],
     symbols: &HashMap<String, Value>,
     source: &str,
 ) -> Result<String, EvalError> {
@@ -667,12 +667,12 @@ pub fn eval(
                             _ => "unknown type",
                         };
 
-                        return Err(EvalError::new(
+                        Err(EvalError::new(
                             "and",
                             Some(l_type.to_string()),
                             Some(r_type.to_string()),
                             line,
-                        ));
+                        ))
                     }
                 },
                 Token::Or(_) => match (l_eval.clone(), r_eval.clone()) {
@@ -695,12 +695,12 @@ pub fn eval(
                             _ => "unknown type",
                         };
 
-                        return Err(EvalError::new(
+                        Err(EvalError::new(
                             "or",
                             Some(l_type.to_string()),
                             Some(r_type.to_string()),
                             line,
-                        ));
+                        ))
                     }
                 },
                 Token::Add(_) => match (l_eval.clone(), r_eval.clone()) {
@@ -711,7 +711,7 @@ pub fn eval(
                         Ok(Value::String(out))
                     }
                     (Value::List(mut la), Value::List(lb)) => {
-                        la.extend(lb.into_iter());
+                        la.extend(lb);
                         Ok(Value::List(la))
                     }
                     (Value::Template(lchunks, lsyms), Value::Template(rchunks, rsyms)) => {
@@ -756,12 +756,12 @@ pub fn eval(
                             _ => "unknown type",
                         };
 
-                        return Err(EvalError::new(
+                        Err(EvalError::new(
                             "+",
                             Some(l_type.to_string()),
                             Some(r_type.to_string()),
                             line,
-                        ));
+                        ))
                     }
                 },
                 Token::Mul(_) | Token::Div(_) | Token::Sub(_) | Token::Mod(_) => {
@@ -888,7 +888,7 @@ pub fn eval(
                     Ok(Value::Bool(eq))
                 }
                 value => {
-                    return Err(EvalError::new(
+                    Err(EvalError::new(
                         format!("Not a valid operation: {:?}", value),
                         None,
                         None,
@@ -914,7 +914,7 @@ pub fn eval(
             // Exception: allow '_' to be reused (common pattern for ignoring values)
             if ident != "_" && symbols.contains_key(&ident) {
                 return Err(EvalError::new(
-                    &format!("variable '{}' is already defined in this scope", ident),
+                    format!("variable '{}' is already defined in this scope", ident),
                     Some("new variable name".to_string()),
                     Some("existing variable".to_string()),
                     line,
@@ -1201,7 +1201,7 @@ pub fn apply_function(
             // 3. Clearer error messages (unknown symbol vs infinite recursion)
             // 4. Encourages iterative solutions using fold/map/filter
             // If a function tries to call itself, it will get an "unknown symbol" error.
-            let func_name = name.as_ref().unwrap_or(&ident).clone();
+            let func_name = name.as_ref().unwrap_or(ident).clone();
             eval(*expr.clone(), &mut new_env, source).map_err(|mut err| {
                 if !err.message.starts_with(&format!("{}:", func_name)) {
                     err.message = format!("{}: {}", func_name, err.message);
@@ -1472,7 +1472,7 @@ pub fn execute_builtin(
             // Read the template file
             let mut template = std::fs::read_to_string(&filename).map_err(|e| {
                 EvalError::new(
-                    format!("fill_template"),
+                    "fill_template".to_string(),
                     Some("file".to_string()),
                     Some(e.to_string()),
                     line,
@@ -1712,7 +1712,7 @@ pub fn execute_builtin(
                         }
                         serde_json::Value::String(s) => Value::String(s.clone()),
                         serde_json::Value::Array(a) => {
-                            Value::List(a.iter().map(|it| conv(it)).collect())
+                            Value::List(a.iter().map(conv).collect())
                         }
                         serde_json::Value::Object(o) => {
                             // Convert JSON object to Dict (hash map)
@@ -1971,7 +1971,7 @@ pub fn execute_builtin(
             let level = &args[0];
             let text = &args[1];
             if let (Value::Number(Number::Int(lvl)), Value::String(txt)) = (level, text) {
-                let hashes = "#".repeat((*lvl).max(1).min(6) as usize);
+                let hashes = "#".repeat((*lvl).clamp(1, 6) as usize);
                 Ok(Value::String(format!("{} {}", hashes, txt)))
             } else {
                 Err(EvalError::type_mismatch(
@@ -2274,7 +2274,7 @@ pub fn execute_builtin(
                 let rows: Vec<Vec<String>> = match table {
                     Value::Dict(dict) => {
                         // Convert dict to table format: [keys_row, values_row]
-                        let keys_row: Vec<String> = dict.keys().map(|k| k.clone()).collect();
+                        let keys_row: Vec<String> = dict.keys().cloned().collect();
                         let values_row: Vec<String> =
                             dict.values().map(|v| v.to_string(source)).collect();
                         vec![keys_row, values_row]
@@ -2325,7 +2325,7 @@ pub fn execute_builtin(
                     let json_items: Vec<String> = items
                         .iter()
                         .map(|v| {
-                            match execute_builtin("format_json", &vec![v.clone()], source, line) {
+                            match execute_builtin("format_json", std::slice::from_ref(v), source, line) {
                                 Ok(Value::String(s)) => s,
                                 _ => v.to_string(source),
                             }

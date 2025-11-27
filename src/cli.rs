@@ -1078,7 +1078,7 @@ fn process_source(source: String, source_name: String, opts: CliOptions, deploy_
                                 eprintln!("  Expected: FileTemplate or list of FileTemplates");
                                 eprintln!("  Got: {}", v.to_string(&source));
                                 eprintln!("  Details: {}", e.message);
-                                eprintln!("");
+                                eprintln!();
                                 eprintln!("  Tip: Make sure your program returns a FileTemplate (using @/path {{...}})");
                                 eprintln!("  Tip: Or return a list of FileTemplates: [@/file1.txt {{...}}, @/file2.txt {{...}}]");
                                 eprintln!("  Tip: Use 'avon eval {}' to see what your program evaluates to", source_name);
@@ -1609,49 +1609,43 @@ fn _is_expression_complete_impl(input: &str) -> bool {
             let remaining: String = chars[i..].iter().collect();
 
             // Check for "let" keyword (word boundary)
-            if remaining.starts_with("let") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
-                if i + 3 >= chars.len() || !chars[i + 3].is_alphanumeric() {
+            if remaining.starts_with("let") && (i == 0 || !chars[i - 1].is_alphanumeric())
+                && (i + 3 >= chars.len() || !chars[i + 3].is_alphanumeric()) {
                     let_count += 1;
                     i += 3;
                     continue;
                 }
-            }
 
             // Check for "in" keyword
-            if remaining.starts_with("in") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
-                if i + 2 >= chars.len() || !chars[i + 2].is_alphanumeric() {
+            if remaining.starts_with("in") && (i == 0 || !chars[i - 1].is_alphanumeric())
+                && (i + 2 >= chars.len() || !chars[i + 2].is_alphanumeric()) {
                     in_count += 1;
                     i += 2;
                     continue;
                 }
-            }
 
             // Check for "if" keyword
-            if remaining.starts_with("if") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
-                if i + 2 >= chars.len() || !chars[i + 2].is_alphanumeric() {
+            if remaining.starts_with("if") && (i == 0 || !chars[i - 1].is_alphanumeric())
+                && (i + 2 >= chars.len() || !chars[i + 2].is_alphanumeric()) {
                     if_count += 1;
                     i += 2;
                     continue;
                 }
-            }
 
             // Check for "then" keyword
-            if remaining.starts_with("then") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
-                if i + 4 >= chars.len() || !chars[i + 4].is_alphanumeric() {
+            if remaining.starts_with("then") && (i == 0 || !chars[i - 1].is_alphanumeric())
+                && (i + 4 >= chars.len() || !chars[i + 4].is_alphanumeric()) {
                     then_count += 1;
                     i += 4;
                     continue;
                 }
-            }
 
             // Check for "else" keyword
-            if remaining.starts_with("else") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
-                if i + 4 >= chars.len() || !chars[i + 4].is_alphanumeric() {
+            if remaining.starts_with("else") && (i == 0 || !chars[i - 1].is_alphanumeric()) && (i + 4 >= chars.len() || !chars[i + 4].is_alphanumeric()) {
                     else_count += 1;
                     i += 4;
                     continue;
                 }
-            }
         }
 
         i += 1;

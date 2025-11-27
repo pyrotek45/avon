@@ -6,7 +6,7 @@ pub fn identifier(next: char, stream: &mut Peekable<Chars<'_>>, line: usize) -> 
     let mut ident = String::new();
     ident.push(next);
     loop {
-        let Some(peek) = stream.peek().clone() else {
+        let Some(peek) = stream.peek() else {
             break;
         };
         if peek.is_whitespace() || (!peek.is_alphanumeric() && *peek != '_') {
@@ -319,7 +319,7 @@ pub fn number(
     let mut number = String::new();
     number.push(next);
     loop {
-        let Some(peek) = stream.peek().clone() else {
+        let Some(peek) = stream.peek() else {
             break;
         };
         if peek.is_whitespace() || !peek.is_numeric() {
@@ -347,7 +347,7 @@ pub fn number(
                 // Safe: we just checked peek == '.'
                 number.push(stream.next().expect("'.' character exists after peek"));
                 loop {
-                    let Some(peek) = stream.peek().clone() else {
+                    let Some(peek) = stream.peek() else {
                         break;
                     };
                     if peek.is_whitespace() || !peek.is_numeric() {
