@@ -1,0 +1,32 @@
+# List Operations Demo
+# Demonstrates the new list operation functions: zip, take, drop, split_at, partition, reverse, head, tail
+
+let numbers = [1, 2, 3, 4, 5] in
+let letters = ["a", "b", "c", "d", "e"] in
+
+let zipped = zip numbers letters in
+let taken = take 3 numbers in
+let dropped = drop 2 numbers in
+let split_result = split_at 2 numbers in
+let partitioned = partition (\x x > 2) numbers in
+let reversed = reverse numbers in
+let first = head numbers in
+let rest = tail numbers in
+
+@/list_ops_output.txt {"
+List Operations Demo
+====================
+
+Original list: {numbers}
+Letters: {letters}
+
+zip(numbers, letters): {zipped}
+take(3, numbers): {taken}
+drop(2, numbers): {dropped}
+split_at(2, numbers): {split_result}
+partition(>2, numbers): {partitioned}
+reverse(numbers): {reversed}
+head(numbers): {first}
+tail(numbers): {rest}
+"}
+

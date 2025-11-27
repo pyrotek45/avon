@@ -38,41 +38,110 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
             Token::Path(chunks, line) => Expr::Path(chunks.clone(), *line),
             Token::LBracket(line) => {
                 let line = *line;
-                let mut items = Vec::new();
-                loop {
-                    match stream.peek() {
-                        Some(Token::RBracket(_)) => {
-                            stream.next();
-                            break;
-                        }
-                        Some(_) => {
-                            let expr = parse_expr(stream);
-                            items.push(expr);
-                            match stream.peek() {
-                                Some(Token::Comma(_)) => {
-                                    stream.next();
-                                    continue;
-                                }
-                                Some(Token::RBracket(_)) => {
-                                    stream.next();
-                                    break;
-                                }
-                                a => {
-                                    eprintln!(
-                                        "Parse error: expected ',' or ']' in list, got {:?}",
-                                        a
-                                    );
-                                    return Expr::None(line);
-                                }
+                // Check for empty list
+                match stream.peek() {
+                    Some(Token::RBracket(_)) => {
+                        stream.next();
+                        return Expr::List(Vec::new(), line);
+                    }
+                    _ => {}
+                }
+                
+                // Parse first expression
+                let first_expr = parse_expr(stream);
+                
+                // Check for range syntax: [start..end] or [start, step..end]
+                match stream.peek() {
+                    Some(Token::DoubleDot(_)) => {
+                        // Simple range: [start..end]
+                        stream.next(); // consume ..
+                        let end_expr = parse_expr(stream);
+                        match stream.peek() {
+                            Some(Token::RBracket(_)) => {
+                                stream.next(); // consume ]
+                                return Expr::Range {
+                                    start: Box::new(first_expr),
+                                    step: None,
+                                    end: Box::new(end_expr),
+                                    line,
+                                };
+                            }
+                            other => {
+                                eprintln!("Parse error: expected ']' after range end, got {:?}", other);
+                                return Expr::None(line);
                             }
                         }
-                        None => {
-                            eprintln!("Parse error: unexpected end of input in list literal");
-                            return Expr::None(line);
+                    }
+                    Some(Token::Comma(_)) => {
+                        // Could be [start, step..end] or regular list [start, second, ...]
+                        stream.next(); // consume comma
+                        // Parse the expression after comma (could be step or second element)
+                        let second_expr = parse_expr(stream);
+                        // Check if next is DoubleDot (range with step) or something else (regular list)
+                        match stream.peek() {
+                            Some(Token::DoubleDot(_)) => {
+                                // Range with step: [start, step..end]
+                                stream.next(); // consume ..
+                                let end_expr = parse_expr(stream);
+                                match stream.peek() {
+                                    Some(Token::RBracket(_)) => {
+                                        stream.next(); // consume ]
+                                        return Expr::Range {
+                                            start: Box::new(first_expr),
+                                            step: Some(Box::new(second_expr)),
+                                            end: Box::new(end_expr),
+                                            line,
+                                        };
+                                    }
+                                    other => {
+                                        eprintln!("Parse error: expected ']' after range end, got {:?}", other);
+                                        return Expr::None(line);
+                                    }
+                                }
+                            }
+                            _ => {
+                                // Regular list: [first, second, ...]
+                                let mut items = vec![first_expr, second_expr];
+                                
+                                // Continue parsing rest of list
+                                loop {
+                                    match stream.peek() {
+                                        Some(Token::Comma(_)) => {
+                                            stream.next();
+                                            let next_expr = parse_expr(stream);
+                                            items.push(next_expr);
+                                            continue;
+                                        }
+                                        Some(Token::RBracket(_)) => {
+                                            stream.next();
+                                            break;
+                                        }
+                                        a => {
+                                            eprintln!(
+                                                "Parse error: expected ',' or ']' in list, got {:?}",
+                                                a
+                                            );
+                                            return Expr::None(line);
+                                        }
+                                    }
+                                }
+                                return Expr::List(items, line);
+                            }
                         }
                     }
+                    Some(Token::RBracket(_)) => {
+                        // Single element list: [expr]
+                        stream.next();
+                        return Expr::List(vec![first_expr], line);
+                    }
+                    a => {
+                        eprintln!(
+                            "Parse error: expected ',', '..', or ']' after list element, got {:?}",
+                            a
+                        );
+                        return Expr::None(line);
+                    }
                 }
-                Expr::List(items, line)
             }
             Token::LBrace(line) => {
                 let line = *line;
@@ -169,6 +238,18 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
                 stream.next();
                 expr
             }
+            Token::RParen(line) => {
+                eprintln!("Parse error: unexpected closing parenthesis on line {}", line);
+                Expr::None(*line)
+            }
+            Token::RBracket(line) => {
+                eprintln!("Parse error: unexpected closing bracket on line {}", line);
+                Expr::None(*line)
+            }
+            Token::RBrace(line) => {
+                eprintln!("Parse error: unexpected closing brace on line {}", line);
+                Expr::None(*line)
+            }
             t => Expr::None(t.line()),
         },
         None => Expr::None(0),
@@ -176,6 +257,38 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
 }
 
 pub fn parse_factor(stream: &mut Peekable<Iter<Token>>) -> Expr {
+    // Handle unary minus for negative numbers
+    if let Some(Token::Sub(line)) = stream.peek() {
+        let line = *line;
+        stream.next(); // consume the minus
+        let expr = parse_postfix(stream);
+        let mut lhs = Expr::Binary {
+            lhs: Box::new(Expr::Number(crate::common::Number::from(0), line)),
+            op: Token::Sub(line),
+            rhs: Box::new(expr),
+            line,
+        };
+
+        // Continue with factor operations
+        while let Some(peek) = stream.peek() {
+            if !peek.is_factor_op() {
+                break;
+            }
+            // Safe: we just peeked and confirmed there's a token
+            let op = stream.next().expect("token exists after peek").clone();
+            let line = op.line();
+            let rhs = parse_postfix(stream);
+            lhs = Expr::Binary {
+                lhs: Box::new(lhs),
+                op,
+                rhs: Box::new(rhs),
+                line,
+            };
+        }
+
+        return lhs;
+    }
+
     let mut lhs = parse_postfix(stream);
 
     while let Some(peek) = stream.peek() {

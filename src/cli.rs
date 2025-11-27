@@ -48,6 +48,15 @@ fn print_builtin_docs() {
     println!("  flatmap      :: (a -> [b]) -> [a] -> [b]");
     println!("  flatten      :: [[a]] -> [a]");
     println!("  length       :: [a] -> Int  (also works on strings)");
+    println!("  zip          :: [a] -> [b] -> [(a, b)]");
+    println!("  unzip        :: [(a, b)] -> ([a], [b])");
+    println!("  take         :: Int -> [a] -> [a]");
+    println!("  drop         :: Int -> [a] -> [a]");
+    println!("  split_at     :: Int -> [a] -> ([a], [a])");
+    println!("  partition    :: (a -> Bool) -> [a] -> ([a], [a])");
+    println!("  reverse      :: [a] -> [a]");
+    println!("  head         :: [a] -> a | None");
+    println!("  tail         :: [a] -> [a]");
     println!();
 
     // Map/Dictionary Operations
@@ -646,9 +655,38 @@ fn process_source(
                                 for (path, content) in &files {
                                     let write_path = if let Some(root) = &opts.root {
                                         let rel = path.trim_start_matches('/');
-                                        std::path::Path::new(root).join(rel)
+                                        // SECURITY: Normalize path to prevent directory traversal attacks
+                                        let normalized = std::path::Path::new(rel)
+                                            .components()
+                                            .filter(|c| match c {
+                                                std::path::Component::ParentDir => false, // Block ".."
+                                                std::path::Component::RootDir => false,    // Block absolute paths
+                                                _ => true,
+                                            })
+                                            .collect::<std::path::PathBuf>();
+                                        let full_path = std::path::Path::new(root).join(normalized);
+                                        // SECURITY: Ensure the resolved path is still within the root directory
+                                        let root_path = std::path::Path::new(root).canonicalize()
+                                            .unwrap_or_else(|_| std::path::Path::new(root).to_path_buf());
+                                        let resolved = full_path.canonicalize()
+                                            .unwrap_or_else(|_| full_path.clone());
+                                        if !resolved.starts_with(&root_path) {
+                                            eprintln!("Error: Path traversal detected: {}", path);
+                                            eprintln!("  Attempted path would escape --root directory");
+                                            eprintln!("  Deployment aborted.");
+                                            return 1;
+                                        }
+                                        resolved
                                     } else {
-                                        std::path::Path::new(&path).to_path_buf()
+                                        // SECURITY: Without --root, validate absolute paths don't contain ".."
+                                        let path_buf = std::path::Path::new(&path).to_path_buf();
+                                        if path_buf.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+                                            eprintln!("Error: Path contains '..' which is not allowed without --root");
+                                            eprintln!("  Use --root to safely contain file operations");
+                                            eprintln!("  Deployment aborted.");
+                                            return 1;
+                                        }
+                                        path_buf
                                     };
                                     
                                     let exists = write_path.exists();

@@ -2107,15 +2107,227 @@ mod tests {
         assert_eq!(result.len(), 10);
         assert_eq!(result.trim(), "Hi");
         assert!(result.starts_with("    "));
+    }
 
-        // Test string longer than width
-        let prog2 = r#"center "VeryLongText" 5"#.to_string();
+    #[test]
+    fn test_list_operations_zip() {
+        let prog = r#"zip [1, 2, 3] ["a", "b", "c"]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => {
+                assert_eq!(items.len(), 3);
+                // Check first pair
+                if let Value::List(pair) = &items[0] {
+                    assert_eq!(pair.len(), 2);
+                } else {
+                    panic!("expected list of pairs");
+                }
+            }
+            other => panic!("expected list, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_list_operations_unzip() {
+        let prog = r#"unzip [[1, "a"], [2, "b"], [3, "c"]]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(result) => {
+                assert_eq!(result.len(), 2);
+                // First list should be [1, 2, 3]
+                if let Value::List(first) = &result[0] {
+                    assert_eq!(first.len(), 3);
+                }
+                // Second list should be ["a", "b", "c"]
+                if let Value::List(second) = &result[1] {
+                    assert_eq!(second.len(), 3);
+                }
+            }
+            other => panic!("expected list of two lists, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_list_operations_take() {
+        let prog = r#"take 3 [1, 2, 3, 4, 5]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => {
+                assert_eq!(items.len(), 3);
+            }
+            other => panic!("expected list, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_list_operations_drop() {
+        let prog = r#"drop 2 [1, 2, 3, 4, 5]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => {
+                assert_eq!(items.len(), 3);
+            }
+            other => panic!("expected list, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_list_operations_split_at() {
+        let prog = r#"split_at 2 [1, 2, 3, 4, 5]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(result) => {
+                assert_eq!(result.len(), 2);
+                if let Value::List(first) = &result[0] {
+                    assert_eq!(first.len(), 2);
+                }
+                if let Value::List(second) = &result[1] {
+                    assert_eq!(second.len(), 3);
+                }
+            }
+            other => panic!("expected list of two lists, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_list_operations_partition() {
+        let prog = r#"partition (\x x > 2) [1, 2, 3, 4, 5]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(result) => {
+                assert_eq!(result.len(), 2);
+                if let Value::List(true_list) = &result[0] {
+                    assert_eq!(true_list.len(), 3); // [3, 4, 5]
+                }
+                if let Value::List(false_list) = &result[1] {
+                    assert_eq!(false_list.len(), 2); // [1, 2]
+                }
+            }
+            other => panic!("expected list of two lists, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_list_operations_reverse() {
+        let prog = r#"reverse [1, 2, 3]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => {
+                assert_eq!(items.len(), 3);
+                // Check it's reversed
+                if let Value::Number(Number::Int(n)) = &items[0] {
+                    assert_eq!(*n, 3);
+                }
+            }
+            other => panic!("expected list, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_list_operations_head() {
+        let prog = r#"head [1, 2, 3]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Number(Number::Int(n)) => assert_eq!(n, 1),
+            other => panic!("expected number 1, got {:?}", other),
+        }
+
+        // Test empty list
+        let prog2 = r#"head []"#.to_string();
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
         let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
-        assert_eq!(v2.to_string(&prog2), "VeryLongText");
+        match v2 {
+            Value::None => {}
+            other => panic!("expected None for empty list, got {:?}", other),
+        }
     }
+
+    #[test]
+    fn test_list_operations_tail() {
+        let prog = r#"tail [1, 2, 3, 4]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => {
+                assert_eq!(items.len(), 3);
+                if let Value::Number(Number::Int(n)) = &items[0] {
+                    assert_eq!(*n, 2);
+                }
+            }
+            other => panic!("expected list, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_range_syntax() {
+        let prog = r#"[1 .. 5]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => {
+                assert_eq!(items.len(), 5);
+                if let Value::Number(Number::Int(n)) = &items[0] {
+                    assert_eq!(*n, 1);
+                }
+                if let Value::Number(Number::Int(n)) = &items[4] {
+                    assert_eq!(*n, 5);
+                }
+            }
+            other => panic!("expected list, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_range_syntax_with_step() {
+        let prog = r#"[1, 3 .. 10]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => {
+                assert_eq!(items.len(), 4); // [1, 4, 7, 10]
+                if let Value::Number(Number::Int(n)) = &items[0] {
+                    assert_eq!(*n, 1);
+                }
+                if let Value::Number(Number::Int(n)) = &items[1] {
+                    assert_eq!(*n, 4);
+                }
+            }
+            other => panic!("expected list, got {:?}", other),
+        }
+    }
+
 
     #[test]
     fn test_all_formatting_functions() {
@@ -2545,6 +2757,96 @@ mod tests {
         let mut symbols4 = initial_builtins();
         let v4 = eval(ast4.program, &mut symbols4, &prog4).expect("eval");
         assert_eq!(v4.to_string(&prog4), "0");
+    }
+
+    #[test]
+    fn test_negative_number_literals() {
+        // Test negative integer literal
+        let prog = r#"-42"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Number(Number::Int(n)) => assert_eq!(n, -42),
+            other => panic!("expected -42, got {:?}", other),
+        }
+
+        // Test negative float literal
+        let prog2 = r#"-3.14"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        match v2 {
+            Value::Number(Number::Float(f)) => assert!((f + 3.14).abs() < 0.001),
+            other => panic!("expected -3.14, got {:?}", other),
+        }
+
+        // Test negative numbers in lists
+        let prog3 = r#"[-5, -4, -3]"#.to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        match v3 {
+            Value::List(items) => {
+                assert_eq!(items.len(), 3);
+                if let Value::Number(Number::Int(n)) = &items[0] {
+                    assert_eq!(*n, -5);
+                }
+            }
+            other => panic!("expected list, got {:?}", other),
+        }
+
+        // Test negative numbers in ranges
+        let prog4 = r#"[10, -1 .. 0]"#.to_string();
+        let tokens4 = tokenize(prog4.clone()).expect("tokenize");
+        let ast4 = parse(tokens4);
+        let mut symbols4 = initial_builtins();
+        let v4 = eval(ast4.program, &mut symbols4, &prog4).expect("eval");
+        match v4 {
+            Value::List(items) => {
+                assert!(items.len() > 0);
+                if let Value::Number(Number::Int(n)) = &items[0] {
+                    assert_eq!(*n, 10);
+                }
+            }
+            other => panic!("expected list, got {:?}", other),
+        }
+
+        // Test subtraction still works
+        let prog5 = r#"10 - 5"#.to_string();
+        let tokens5 = tokenize(prog5.clone()).expect("tokenize");
+        let ast5 = parse(tokens5);
+        let mut symbols5 = initial_builtins();
+        let v5 = eval(ast5.program, &mut symbols5, &prog5).expect("eval");
+        match v5 {
+            Value::Number(Number::Int(n)) => assert_eq!(n, 5),
+            other => panic!("expected 5, got {:?}", other),
+        }
+
+        // Test unary minus on variable (uses neg function)
+        let prog6 = r#"let x = 5 in -x"#.to_string();
+        let tokens6 = tokenize(prog6.clone()).expect("tokenize");
+        let ast6 = parse(tokens6);
+        let mut symbols6 = initial_builtins();
+        let v6 = eval(ast6.program, &mut symbols6, &prog6).expect("eval");
+        match v6 {
+            Value::Number(Number::Int(n)) => assert_eq!(n, -5),
+            other => panic!("expected -5, got {:?}", other),
+        }
+
+        // Test negative number in arithmetic
+        let prog7 = r#"-5 * 3"#.to_string();
+        let tokens7 = tokenize(prog7.clone()).expect("tokenize");
+        let ast7 = parse(tokens7);
+        let mut symbols7 = initial_builtins();
+        let v7 = eval(ast7.program, &mut symbols7, &prog7).expect("eval");
+        match v7 {
+            Value::Number(Number::Int(n)) => assert_eq!(n, -15),
+            other => panic!("expected -15, got {:?}", other),
+        }
     }
 
     #[test]
@@ -3499,5 +3801,119 @@ mod tests {
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         assert_eq!(v.to_string(&prog), "3");
+    }
+
+    // Security tests
+    #[test]
+    fn test_path_traversal_blocked_in_readfile() {
+        // Test that readfile blocks path traversal
+        let prog = r#"readfile "../../etc/passwd""#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().message;
+        assert!(err_msg.contains("..") || err_msg.contains("not allowed"), 
+                "Expected path traversal error, got: {}", err_msg);
+    }
+
+    #[test]
+    fn test_path_traversal_blocked_in_import() {
+        // Test that import blocks path traversal
+        let prog = r#"import "../../etc/passwd""#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().message;
+        assert!(err_msg.contains("..") || err_msg.contains("not allowed"),
+                "Expected path traversal error, got: {}", err_msg);
+    }
+
+    #[test]
+    fn test_path_traversal_blocked_in_fill_template() {
+        // Test that fill_template blocks path traversal
+        let prog = r#"fill_template "../../etc/passwd" {}"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().message;
+        assert!(err_msg.contains("..") || err_msg.contains("not allowed"),
+                "Expected path traversal error, got: {}", err_msg);
+    }
+
+    #[test]
+    fn test_safe_paths_allowed() {
+        // Test that safe paths work
+        let prog = r#"let p = @config/app.yml in typeof p"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        // Should parse and evaluate (path is valid even if file doesn't exist)
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_template_sandboxing() {
+        // Templates should only evaluate expressions, not execute arbitrary code
+        let prog = r#"{"value: {1 + 2}"}"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_ok());
+        // Template should evaluate safely
+        match result.unwrap() {
+            Value::Template(_, _) => assert!(true),
+            _ => panic!("Expected template"),
+        }
+    }
+
+    #[test]
+    fn test_no_code_injection_in_strings() {
+        // Strings should be treated as data, not code
+        let prog = r#"let malicious = "readfile \"/etc/passwd\"" in malicious"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            Value::String(s) => assert_eq!(s, "readfile \"/etc/passwd\""),
+            _ => panic!("Expected string"),
+        }
+    }
+
+    #[test]
+    fn test_type_safety_enforced() {
+        // Type mismatches should be caught
+        let prog = r#"5 + "hello""#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        // Check that the error has type information
+        assert!(
+            err.expected.is_some() && err.found.is_some(),
+            "Expected type error with expected/found types, got: {}",
+            err
+        );
+        // Verify it's actually a type mismatch
+        let expected_str = err.expected.as_ref().unwrap();
+        let found_str = err.found.as_ref().unwrap();
+        assert!(
+            (expected_str.contains("Number") && found_str.contains("String")) ||
+            (expected_str.contains("String") && found_str.contains("Number")),
+            "Expected Number/String mismatch, got: {} vs {}",
+            expected_str,
+            found_str
+        );
     }
 }

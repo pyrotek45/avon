@@ -530,6 +530,7 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, EvalError> {
                 output.push(Token::Sub(line))
             }
             '/' => output.push(Token::Div(line)),
+            '%' => output.push(Token::Mod(line)),
             '*' => output.push(Token::Mul(line)),
             '(' => output.push(Token::LParen(line)),
             ')' => output.push(Token::RParen(line)),

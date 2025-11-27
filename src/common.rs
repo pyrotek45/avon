@@ -22,6 +22,7 @@ pub enum Token {
     NotEqual(usize),
     Mul(usize),
     Div(usize),
+    Mod(usize),
     Add(usize),
     Sub(usize),
     Dot(usize),
@@ -60,6 +61,7 @@ impl Token {
             Token::NotEqual(l) => *l,
             Token::Mul(l) => *l,
             Token::Div(l) => *l,
+            Token::Mod(l) => *l,
             Token::Add(l) => *l,
             Token::Sub(l) => *l,
             Token::Dot(l) => *l,
@@ -95,6 +97,7 @@ impl Token {
         match self {
             Token::Mul(_) => true,
             Token::Div(_) => true,
+            Token::Mod(_) => true,
             _ => false,
         }
     }
@@ -151,6 +154,15 @@ impl Number {
             (Number::Float(v), Number::Float(r)) => Number::Float(v - r),
         }
     }
+
+    pub fn rem(self, other: Number) -> Number {
+        match (self, other) {
+            (Number::Int(v), Number::Int(r)) => Number::Int(v % r),
+            (Number::Int(v), Number::Float(r)) => Number::Float((v as f64) % r),
+            (Number::Float(v), Number::Int(r)) => Number::Float(v % (r as f64)),
+            (Number::Float(v), Number::Float(r)) => Number::Float(v % r),
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -186,6 +198,12 @@ pub enum Expr {
         line: usize,
     },
     List(Vec<Expr>, usize),
+    Range {
+        start: Box<Expr>,
+        step: Option<Box<Expr>>,
+        end: Box<Expr>,
+        line: usize,
+    },
     Dict(Vec<(String, Expr)>, usize),
     Builtin(String, Vec<String>, usize),
     If {
@@ -227,6 +245,7 @@ impl Expr {
             Expr::Path(_, l) => *l,
             Expr::FileTemplate { line, .. } => *line,
             Expr::List(_, l) => *l,
+            Expr::Range { line, .. } => *line,
             Expr::Dict(_, l) => *l,
             Expr::Builtin(_, _, l) => *l,
             Expr::If { line, .. } => *line,
@@ -249,7 +268,7 @@ pub enum Value {
         ident: String,         // The parameter name (e.g., "x")
         default: Option<Box<Value>>,
         expr: Box<Expr>,
-        env: HashMap<String, Value>,
+        env: std::sync::Arc<HashMap<String, Value>>,  // Reference counted immutable environment capture
     },
     Builtin(String, Vec<Value>),
     Template(Vec<Chunk>, HashMap<String, Value>),

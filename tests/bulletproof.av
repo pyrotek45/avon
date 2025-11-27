@@ -1,0 +1,123 @@
+# Bulletproof Comprehensive Test Suite
+# Test all core language features
+
+let test_int_zero = 0 in
+let test_int_one = 1 in
+let test_int_negative = -1 in
+let test_int_large = 999999999 in
+
+let test_float_zero = 0.0 in
+let test_float_one = 1.0 in
+
+let test_string_empty = "" in
+let test_string_simple = "hello" in
+
+let test_bool_true = true in
+let test_bool_false = false in
+
+let test_add_ints = 1 + 2 in
+let test_subtract_ints = 10 - 3 in
+let test_multiply_ints = 3 * 4 in
+let test_divide_ints = 12 / 3 in
+
+let test_equal_ints = 5 == 5 in
+let test_not_equal_ints = 5 != 3 in
+let test_greater_ints = 10 > 5 in
+let test_less_ints = 3 < 7 in
+
+let test_and_both_true = true && true in
+let test_and_one_false = true && false in
+let test_or_both_true = true || true in
+let test_or_one_true = true || false in
+
+let test_let_simple = let x = 5 in x in
+let test_let_reuse = let x = 10 in let y = x + 5 in y in
+let test_let_nested = let x = let y = 5 in y + 1 in x in
+
+let test_simple_lambda = (\x x + 1) in
+let test_lambda_with_result = (\x x + 1) 5 in
+let test_multi_param = (\x \y x + y) 3 4 in
+
+let test_map_increment = let inc = \x x + 1 in map inc [1, 2, 3, 4, 5] in
+let test_map_double = let double = \x x * 2 in map double [1, 2, 3] in
+let test_filter_positive = let is_positive = \x x > 2 in filter is_positive [1, 2, 3, 4, 5] in
+let test_fold_sum = let add = \a \b a + b in fold add 0 [1, 2, 3, 4, 5] in
+
+let test_simple_if = if true then "yes" else "no" in
+let test_if_false = if false then "yes" else "no" in
+let test_if_with_comparison = if (5 > 3) then 10 else 20 in
+let test_nested_if = if true then (if false then 1 else 2) else 3 in
+
+let test_empty_list = [] in
+let test_single_element = [1] in
+let test_list_concat = [1, 2] + [3, 4] in
+
+let test_empty_dict = {} in
+let test_dict_one = {name: "Alice"} in
+
+let test_string_concat = "hello" + " world" in
+let test_string_length = length "hello" in
+
+let stress_1 = let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] in let filtered = filter (\x (x > 2)) numbers in let mapped = map (\x x * 2) filtered in let summed = fold (\acc \x acc + x) 0 mapped in summed in
+
+let stress_2 = let x = 42 in let y = x + 8 in y in
+
+let stress_3 = let nums = [1, 2, 3, 4, 5, 6, 7, 8] in let inc = \x x + 1 in map inc nums in
+
+let stress_4 = let process = \xs let step1 = map (\x x * 2) xs in let step2 = filter (\x (x > 5)) step1 in let step3 = map (\x x + 10) step2 in step3 in process [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] in
+
+# Deep nesting stress test
+let stress_5 = let a = 1 in let b = a + 1 in let c = b + 1 in let d = c + 1 in let e = d + 1 in let f = e + 1 in let g = f + 1 in let h = g + 1 in let i = h + 1 in let j = i + 1 in j in
+
+# Multiple lambdas and compositions
+let stress_6 = let add1 = \x x + 1 in let mul2 = \x x * 2 in let sub3 = \x x - 3 in let nums = [1, 2, 3, 4, 5] in let step1 = map add1 nums in let step2 = map mul2 step1 in let step3 = map sub3 step2 in step3 in
+
+# Complex list operations
+let stress_7 = let data = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] in let doubled = map (\x x * 2) data in let filtered = filter (\x x > 50) doubled in let summed = fold (\acc \x acc + x) 0 filtered in summed in
+
+# Nested conditionals
+let stress_8 = let val = 25 in if val > 20 then (if val < 30 then "in range" else "too high") else "too low" in
+
+# Large list processing
+let stress_9 = let big_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] in let result = fold (\acc \x if x > 10 then acc + x else acc) 0 big_list in result in
+
+# Dict operations stress
+let stress_10 = let config = {host: "localhost", port: 8080, debug: true} in let host = config.host in let port = config.port in host in
+
+# String operations
+let stress_11 = let str1 = "Hello" in let str2 = " " in let str3 = "World" in let combined = str1 + str2 + str3 in length combined in
+
+# Lambda closures
+let stress_12 = let factor = 10 in let multiply_by_factor = \x x * factor in map multiply_by_factor [1, 2, 3, 4, 5] in
+
+# Chained operations
+let stress_13 = let data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] in let increment = \x x + 1 in let is_gt_five = \x x > 5 in let add_hundred = \x x + 100 in let step1 = map increment data in let step2 = filter is_gt_five step1 in let step3 = map add_hundred step2 in fold (\a \b a + b) 0 step3 in
+
+# Modulo operator
+let stress_13_mod = 17 % 5 in
+
+# Comparison chains
+let stress_14 = let x = 15 in let result = if (x > 10) && (x < 20) then "yes" else "no" in result in
+
+# Arithmetic stress
+let stress_15 = let a = 100 in let b = 50 in let c = 25 in let d = 10 in let result = ((a - b) * c) / d in result in
+
+# List append operations
+let stress_16 = let list1 = [1, 2, 3] in let list2 = [4, 5, 6] in let list3 = [7, 8, 9] in let combined = list1 + list2 + list3 in fold (\acc \x acc + x) 0 combined in
+
+# Mixed type operations
+let stress_17 = let nums = [10, 20, 30, 40, 50] in let filtered = filter (\x x >= 20) nums in let str_length = length "test" in filtered in
+
+# Complex fold with closure
+let stress_18 = let numbers = [1, 2, 3, 4, 5, 6, 7, 8] in let lt_five = \x x < 5 in let sum_small = fold (\acc \x acc + x) 0 (filter lt_five numbers) in sum_small in
+
+# Even odd checking with modulo
+let stress_19 = let nums = [1, 2, 3, 4, 5, 6, 7, 8, 10, 12] in let is_even = \x (x % 2) == 0 in filter is_even nums in
+
+# Modulo stress test
+let stress_20 = let test_mod_1 = 17 % 5 in let test_mod_2 = 20 % 3 in let test_mod_3 = 100 % 7 in [test_mod_1, test_mod_2, test_mod_3] in
+
+# Validation: All tests should execute without error
+let all_pass = 42 in
+
+all_pass

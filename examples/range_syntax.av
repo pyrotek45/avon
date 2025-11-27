@@ -1,0 +1,27 @@
+# Range Syntax Demo
+# Demonstrates the new range syntax: [start..end] and [start, step..end]
+
+let simple_range = [1 .. 10] in
+let step_range = [0, 5 .. 20] in
+let negative_step = [10, -1 .. 0] in
+
+# Use ranges to generate configs
+let ports = [8080 .. 8085] in
+let services = map (\p @/service-{p}.yml {"
+  port: {p}
+  name: service-{p}
+"}) ports in
+
+@/range_demo.txt {"
+Range Syntax Demo
+=================
+
+Simple range [1..10]: {simple_range}
+Step range [0, 5..20]: {step_range}
+Negative step [10, -1..0]: {negative_step}
+
+Generated {length ports} service configs from range.
+"}
+
+services
+

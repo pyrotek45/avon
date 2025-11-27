@@ -251,6 +251,42 @@ pub fn initial_builtins() -> HashMap<String, Value> {
         "flatten".to_string(),
         Value::Builtin("flatten".to_string(), Vec::new()),
     );
+    m.insert(
+        "head".to_string(),
+        Value::Builtin("head".to_string(), Vec::new()),
+    );
+    m.insert(
+        "tail".to_string(),
+        Value::Builtin("tail".to_string(), Vec::new()),
+    );
+    m.insert(
+        "take".to_string(),
+        Value::Builtin("take".to_string(), Vec::new()),
+    );
+    m.insert(
+        "drop".to_string(),
+        Value::Builtin("drop".to_string(), Vec::new()),
+    );
+    m.insert(
+        "zip".to_string(),
+        Value::Builtin("zip".to_string(), Vec::new()),
+    );
+    m.insert(
+        "unzip".to_string(),
+        Value::Builtin("unzip".to_string(), Vec::new()),
+    );
+    m.insert(
+        "split_at".to_string(),
+        Value::Builtin("split_at".to_string(), Vec::new()),
+    );
+    m.insert(
+        "partition".to_string(),
+        Value::Builtin("partition".to_string(), Vec::new()),
+    );
+    m.insert(
+        "reverse".to_string(),
+        Value::Builtin("reverse".to_string(), Vec::new()),
+    );
 
     // Map/Dictionary operations (using list of pairs)
     m.insert(
@@ -435,17 +471,48 @@ impl Value {
     }
 }
 
+// Security: Validate path to prevent directory traversal attacks
+fn validate_path(path: &str) -> Result<(), EvalError> {
+    // Check for ".." components which could escape the intended directory
+    if path.contains("..") {
+        return Err(EvalError::new(
+            format!("Path traversal not allowed: {}", path),
+            None,
+            None,
+            0,
+        ));
+    }
+    
+    // Block absolute paths that try to access /etc or other system paths
+    // Allow relative paths and absolute paths that aren't trying to escape
+    if path.starts_with('/') && (path.contains("etc/") || path.contains("etc\\")) {
+        return Err(EvalError::new(
+            format!("Access to system paths not allowed: {}", path),
+            None,
+            None,
+            0,
+        ));
+    }
+    
+    Ok(())
+}
+
 // Helper function to extract a file path from either a String or Path value
 pub fn value_to_path_string(val: &Value, source: &str) -> Result<String, EvalError> {
-    match val {
-        Value::String(s) => Ok(s.clone()),
-        Value::Path(chunks, symbols) => render_chunks_to_string(chunks, symbols, source),
-        _ => Err(EvalError::type_mismatch(
+    let path_str = match val {
+        Value::String(s) => s.clone(),
+        Value::Path(chunks, symbols) => render_chunks_to_string(chunks, symbols, source)?,
+        _ => return Err(EvalError::type_mismatch(
             "string or path",
             val.to_string(source),
             0,
         )),
-    }
+    };
+    
+    // Validate the path for security issues
+    validate_path(&path_str)?;
+    
+    Ok(path_str)
 }
 
 pub fn render_chunks_to_string(
@@ -697,7 +764,7 @@ pub fn eval(
                         ))
                     }
                 },
-                Token::Mul(_) | Token::Div(_) | Token::Sub(_) => {
+                Token::Mul(_) | Token::Div(_) | Token::Sub(_) | Token::Mod(_) => {
                     let lnumber = match l_eval {
                         Value::Number(n) => n,
                         other => {
@@ -705,6 +772,7 @@ pub fn eval(
                                 Token::Mul(_) => "*",
                                 Token::Div(_) => "/",
                                 Token::Sub(_) => "-",
+                                Token::Mod(_) => "%",
                                 _ => "unknown",
                             };
                             return Err(EvalError::type_mismatch(
@@ -728,6 +796,7 @@ pub fn eval(
                                 Token::Mul(_) => "*",
                                 Token::Div(_) => "/",
                                 Token::Sub(_) => "-",
+                                Token::Mod(_) => "%",
                                 _ => "unknown",
                             };
                             return Err(EvalError::type_mismatch(
@@ -748,6 +817,7 @@ pub fn eval(
                         Token::Mul(_) => Value::Number(lnumber.mul(rnumber)),
                         Token::Div(_) => Value::Number(lnumber.div(rnumber)),
                         Token::Sub(_) => Value::Number(lnumber.sub(rnumber)),
+                        Token::Mod(_) => Value::Number(lnumber.rem(rnumber)),
                         _ => unreachable!(),
                     };
                     Ok(res)
@@ -846,12 +916,11 @@ pub fn eval(
                 *name = Some(ident.clone());
             }
             
-            // Create a new scope (clone the symbol table) and add the new binding
-            let mut new_scope = symbols.clone();
-            new_scope.insert(ident, evalue);
-            
-            // Evaluate the expression in the new scope (no mutation of original)
-            eval(*expr, &mut new_scope, source)
+            // Add binding to current scope, evaluate expression, then remove (stack-based scoping)
+            symbols.insert(ident.clone(), evalue);
+            let result = eval(*expr, symbols, source);
+            symbols.remove(&ident);  // Restore previous state
+            result
         }
         Expr::Function {
             ident,
@@ -869,7 +938,7 @@ pub fn eval(
                 ident,
                 default: default_val,
                 expr,
-                env: symbols.clone(),
+                env: std::sync::Arc::new(symbols.clone()),  // Arc wraps a snapshot of the current environment
             })
         }
         Expr::Application { lhs, rhs, line } => {
@@ -964,6 +1033,56 @@ pub fn eval(
             }
         }
         Expr::Path(chunks, _) => Ok(Value::Path(chunks, symbols.clone())),
+        Expr::Range { start, step, end, line } => {
+            let start_val = eval(*start, symbols, source)?;
+            let end_val = eval(*end, symbols, source)?;
+            let step_val = if let Some(step_expr) = step {
+                Some(eval(*step_expr, symbols, source)?)
+            } else {
+                None
+            };
+            
+            // Extract numeric values
+            let start_num = match start_val {
+                Value::Number(Number::Int(n)) => n,
+                Value::Number(Number::Float(f)) => f as i64,
+                _ => return Err(EvalError::type_mismatch("number", start_val.to_string(source), line)),
+            };
+            let end_num = match end_val {
+                Value::Number(Number::Int(n)) => n,
+                Value::Number(Number::Float(f)) => f as i64,
+                _ => return Err(EvalError::type_mismatch("number", end_val.to_string(source), line)),
+            };
+            let step_num = if let Some(sv) = step_val {
+                match sv {
+                    Value::Number(Number::Int(n)) => n,
+                    Value::Number(Number::Float(f)) => f as i64,
+                    _ => return Err(EvalError::type_mismatch("number", sv.to_string(source), line)),
+                }
+            } else {
+                1
+            };
+            
+            // Generate range
+            let mut result = Vec::new();
+            if step_num > 0 {
+                let mut current = start_num;
+                while current <= end_num {
+                    result.push(Value::Number(Number::Int(current)));
+                    current += step_num;
+                }
+            } else if step_num < 0 {
+                let mut current = start_num;
+                while current >= end_num {
+                    result.push(Value::Number(Number::Int(current)));
+                    current += step_num;
+                }
+            } else {
+                return Err(EvalError::new("range step cannot be zero", None, None, line));
+            }
+            
+            Ok(Value::List(result))
+        }
         Expr::List(items, _) => {
             let mut evaluated = Vec::new();
             for item in items {
@@ -1021,8 +1140,17 @@ pub fn apply_function(func: &Value, arg: Value, source: &str, line: usize) -> Re
         Value::Function {
             name, ident, expr, env, ..
         } => {
-            let mut new_env = env.clone();
+            // Create a new scope based on the captured environment (Arc allows cheap sharing)
+            let mut new_env = (**env).clone();  // Dereference Arc and clone only once for this application
             new_env.insert(ident.clone(), arg);
+            // NOTE: Recursive functions are not supported in Avon.
+            // Functions cannot call themselves because they are not added to their own environment.
+            // This design choice ensures:
+            // 1. Simpler implementation (no need to track recursion depth)
+            // 2. Better performance (no overhead from recursion tracking)
+            // 3. Clearer error messages (unknown symbol vs infinite recursion)
+            // 4. Encourages iterative solutions using fold/map/filter
+            // If a function tries to call itself, it will get an "unknown symbol" error.
             let func_name = name.as_ref().unwrap_or(&ident).clone();
             eval(*expr.clone(), &mut new_env, source).map_err(|mut err| {
                 if !err.message.starts_with(&format!("{}:", func_name)) {
@@ -1102,6 +1230,15 @@ pub fn apply_function(func: &Value, arg: Value, source: &str, line: usize) -> Re
                 "center" => 2,
                 "flatmap" => 2,
                 "flatten" => 1,
+                "head" => 1,
+                "tail" => 1,
+                "take" => 2,
+                "drop" => 2,
+                "zip" => 2,
+                "unzip" => 1,
+                "split_at" => 2,
+                "partition" => 2,
+                "reverse" => 1,
                 "get" => 2,
                 "set" => 3,
                 "keys" => 1,
@@ -2422,6 +2559,175 @@ pub fn execute_builtin(name: &str, args: &[Value], source: &str, line: usize) ->
                     }
                 }
                 Ok(Value::List(out))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    0,
+                ))
+            }
+        }
+        "head" => {
+            let list = &args[0];
+            if let Value::List(items) = list {
+                Ok(items.first().cloned().unwrap_or(Value::None))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    0,
+                ))
+            }
+        }
+        "tail" => {
+            let list = &args[0];
+            if let Value::List(items) = list {
+                if items.is_empty() {
+                    Ok(Value::List(Vec::new()))
+                } else {
+                    Ok(Value::List(items[1..].to_vec()))
+                }
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    0,
+                ))
+            }
+        }
+        "take" => {
+            let n_val = &args[0];
+            let list = &args[1];
+            let n = match n_val {
+                Value::Number(Number::Int(i)) => *i as usize,
+                _ => return Err(EvalError::type_mismatch("number", n_val.to_string(source), 0)),
+            };
+            if let Value::List(items) = list {
+                Ok(Value::List(items.iter().take(n).cloned().collect()))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    0,
+                ))
+            }
+        }
+        "drop" => {
+            let n_val = &args[0];
+            let list = &args[1];
+            let n = match n_val {
+                Value::Number(Number::Int(i)) => *i as usize,
+                _ => return Err(EvalError::type_mismatch("number", n_val.to_string(source), 0)),
+            };
+            if let Value::List(items) = list {
+                Ok(Value::List(items.iter().skip(n).cloned().collect()))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    0,
+                ))
+            }
+        }
+        "zip" => {
+            let list1 = &args[0];
+            let list2 = &args[1];
+            if let (Value::List(items1), Value::List(items2)) = (list1, list2) {
+                let mut out = Vec::new();
+                let min_len = items1.len().min(items2.len());
+                for i in 0..min_len {
+                    out.push(Value::List(vec![items1[i].clone(), items2[i].clone()]));
+                }
+                Ok(Value::List(out))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    format!("{}, {}", list1.to_string(source), list2.to_string(source)),
+                    0,
+                ))
+            }
+        }
+        "unzip" => {
+            let list = &args[0];
+            if let Value::List(items) = list {
+                let mut list1 = Vec::new();
+                let mut list2 = Vec::new();
+                for item in items {
+                    if let Value::List(pair) = item {
+                        if pair.len() >= 2 {
+                            list1.push(pair[0].clone());
+                            list2.push(pair[1].clone());
+                        }
+                    }
+                }
+                Ok(Value::List(vec![Value::List(list1), Value::List(list2)]))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    0,
+                ))
+            }
+        }
+        "split_at" => {
+            let n_val = &args[0];
+            let list = &args[1];
+            let n = match n_val {
+                Value::Number(Number::Int(i)) => *i as usize,
+                _ => return Err(EvalError::type_mismatch("number", n_val.to_string(source), 0)),
+            };
+            if let Value::List(items) = list {
+                let first = Value::List(items.iter().take(n).cloned().collect());
+                let second = Value::List(items.iter().skip(n).cloned().collect());
+                Ok(Value::List(vec![first, second]))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    0,
+                ))
+            }
+        }
+        "partition" => {
+            let func = &args[0];
+            let list = &args[1];
+            if let Value::List(items) = list {
+                let mut true_list = Vec::new();
+                let mut false_list = Vec::new();
+                for item in items {
+                    let res = apply_function(func, item.clone(), source, line).map_err(|mut err| {
+                        if !err.message.starts_with("partition:") {
+                            err.message = format!("partition: {}", err.message);
+                        }
+                        err
+                    })?;
+                    match res {
+                        Value::Bool(true) => true_list.push(item.clone()),
+                        Value::Bool(false) => false_list.push(item.clone()),
+                        other => {
+                            return Err(EvalError::type_mismatch(
+                                "bool",
+                                other.to_string(source),
+                                0,
+                            ))
+                        }
+                    }
+                }
+                Ok(Value::List(vec![Value::List(true_list), Value::List(false_list)]))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    0,
+                ))
+            }
+        }
+        "reverse" => {
+            let list = &args[0];
+            if let Value::List(items) = list {
+                let mut reversed = items.clone();
+                reversed.reverse();
+                Ok(Value::List(reversed))
             } else {
                 Err(EvalError::type_mismatch(
                     "list",

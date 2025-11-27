@@ -77,7 +77,7 @@ echo "PASS: No files written for non-deployable result"
 echo ""
 echo "Test 4: Valid deployment writes files correctly"
 cat > "$TEST_DIR/valid_program.av" << 'EOF'
-[@/test1.txt {"content1"}, @/test2.txt {"content2"}]
+let files = [@/test1.txt {"content1"}, @/test2.txt {"content2"}] in files
 EOF
 
 $AVON deploy "$TEST_DIR/valid_program.av" --root "$TEST_DIR/output4" --force

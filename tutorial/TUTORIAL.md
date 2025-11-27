@@ -12,19 +12,178 @@ But Avon isn't just for complex infrastructure projects. It's a **powerful workf
 
 ## Table of Contents
 
-1. **[Quick Start](#quick-start)** — Get up and running in 60 seconds
-2. **[Core Concepts](#core-concepts)** — Values, types, and the Avon model
-3. **[Language Essentials](#language-essentials)** — Syntax, expressions, and operators
-4. **[Functions & Variables](#functions--variables)** — Defining and using functions, let bindings
-5. **[Collections](#collections)** — Lists, dictionaries, and the powerful `map`, `filter`, `fold` operations
-6. **[Templates](#templates)** — The heart of Avon: generating text output
-7. **[File Templates & Deployment](#file-templates--deployment)** — Multi-file generation
-8. **[Builtin Functions](#builtin-functions)** — String, list, file, and JSON helpers
-9. **[CLI Usage](#cli-usage)** — Running, deploying, and fetching from GitHub
-10. **[Safety & Security](#safety--security)** — Secrets, backups, and fail-safe deployment
-11. **[Real-World Examples](#real-world-examples)** — Docker, Kubernetes, GitHub Actions, site generation
-12. **[Best Practices](#best-practices)** — Tips for clean, maintainable Avon code
-13. **[Troubleshooting](#troubleshooting)** — Common issues and solutions
+1. **[Quick Start](#quick-start)**
+   - Your First Program
+   - Generate a Single File
+   - Generate Multiple Files
+   - Avon for Single Files and Dotfiles
+
+2. **[Core Concepts](#core-concepts)**
+   - Simple File Model (one expression per file)
+   - The Avon Runtime Model (values and types)
+
+3. **[Language Essentials](#language-essentials)**
+   - Syntax Overview
+     - Literals (strings, numbers including negatives, booleans, lists, dicts)
+     - Identifiers and Variables
+     - Function Literals
+     - Function Application
+   - Operators
+     - Arithmetic (`+`, `-`, `*`, `/`, unary `-` for negative numbers)
+     - Comparison (`==`, `!=`, `>`, `<`, `>=`, `<=`)
+     - Logical (`&&`, `||`)
+     - Pipe Operator (`->`)
+   - Path Values (file system paths)
+   - Conditionals (`if then else`)
+
+4. **[Functions & Variables](#functions--variables)**
+   - Let Bindings
+     - How Scoping Works (lexical scoping)
+     - Variable Visibility
+     - Cascading Lets
+     - Nested Scopes
+     - No Variable Shadowing
+     - Template Variable Capture (closures)
+     - Function Closures
+     - Scope Isolation
+   - Defining Functions
+   - Why Recursion Is Not Supported
+   - Default Parameters (`?` syntax)
+   - Named Deploy Arguments
+   - Practical Example: Configuration Generator
+
+5. **[Collections](#collections)**
+   - Lists (creation, interpolation, concatenation)
+   - Range Syntax (`[start..end]`, `[start, step..end]`)
+     - How ranges work
+     - What ranges return
+     - Functions that work with ranges
+     - Ranges in interpolation
+   - Dictionaries (key-value maps, dot notation, operations)
+   - Map (transform every item)
+   - Filter (keep what you need)
+   - Fold (reduce to a single value)
+   - Builtins for Lists (comprehensive list operations)
+
+6. **[Templates](#templates)**
+   - Basic Template Syntax
+   - Multi-line Templates
+   - Indentation and Dedent
+   - Interpolating Lists
+   - String vs Template (escape sequences)
+   - Template Escape Hatch (variable brace delimiters)
+     - Single-brace templates
+     - Double-brace templates
+     - Triple-brace templates
+   - Complex Interpolations
+
+7. **[File Templates & Deployment](#file-templates--deployment)**
+   - Basic FileTemplate
+   - Deploying Single Files
+   - Deploying Multiple Files
+   - Dynamic File Paths
+   - Important Deploy Flags
+     - `--root` (required for safety)
+     - `--force` (overwrite)
+     - `--backup` (safe overwrite)
+     - `--append` (additive)
+     - `--if-not-exists` (initialization)
+     - `--git` (fetch from GitHub)
+     - `--debug` (detailed output)
+
+8. **[Builtin Functions](#builtin-functions)**
+   - String Operations (`concat`, `upper`, `lower`, `split`, `replace`, etc.)
+   - List Operations (`map`, `filter`, `fold`, `join`, `length`, `zip`, `unzip`, `take`, `drop`, `split_at`, `partition`, `reverse`, `head`, `tail`)
+   - File & Filesystem (`readfile`, `readlines`, `exists`, `basename`, `dirname`)
+   - HTML Generation Helpers (`html_escape`, `html_tag`, `html_attr`)
+   - Markdown Generation Helpers (`md_heading`, `md_link`, `md_code`, `md_list`)
+   - Type Conversion (`to_string`, `to_int`, `to_float`, `to_bool`)
+   - Advanced List Operations (`flatmap`, `flatten`)
+   - Data & Utilities (`import`, `json_parse`, `os`)
+
+9. **[CLI Usage](#cli-usage)**
+   - Basic Commands
+     - `eval` (evaluate and print)
+     - `deploy` (generate files)
+     - `run` (evaluate code string)
+     - `repl` (interactive shell)
+     - `doc` (builtin documentation)
+     - `version` (version info)
+     - `help` (usage information)
+   - Passing Arguments
+     - How It Works (function evaluation flow)
+     - Named Arguments (`-param value`)
+     - Positional Arguments
+     - Default Values
+     - Mixing Named and Positional
+     - Argument Types (all arguments are strings)
+     - Complete Examples
+   - Interactive REPL
+     - Why Use the REPL
+     - Starting the REPL
+     - Basic Usage
+     - REPL Commands (`:help`, `:vars`, `:type`, `:doc`, `:clear`, `:exit`)
+     - Multi-line Input
+     - Error Handling
+     - Best Practices
+   - Command-Line Flags
+   - Real-World Examples
+   - Single File in Git, Many Deployments
+
+10. **[Error handling and debugging](#error-handling-and-debugging)**
+    - Runtime Type Safety
+      - How type checking works
+      - Error message format
+      - Lexing and parsing errors
+      - Deployment errors
+      - Error recovery
+    - Debugging Tools
+      - `trace` (labeled values to stderr)
+      - `debug` (pretty-print structures)
+      - `assert` (validate conditions)
+      - `--debug` flag (detailed output)
+
+11. **[Best Practices](#best-practices)**
+    - Write Clear, Composable Code
+    - Test Before Deploying
+    - Use Named Arguments
+    - Always Use `--root`
+    - Keep Templates Readable
+    - Return Lists for Multiple Files
+
+12. **[Safety & Security](#safety--security)**
+    - Secrets Management
+      - `env_var` (fail-safe)
+      - `env_var_or` (with defaults)
+    - Deployment Safety
+      - No Partial Writes (atomic deployment)
+      - Directory Creation Checks
+      - Write Error Handling
+    - Preventing Accidental Overwrites
+      - Default behavior (skip existing)
+      - Backup Feature (`--backup`)
+    - Best Practices for Safety
+
+13. **[Real-World Examples](#real-world-examples)**
+    - Example 1: Site Generator
+    - Example 2: Neovim Configuration
+    - Example 3: Emacs Configuration
+    - Example 4: Docker Compose Generator
+    - Example 5: Kubernetes Manifests
+    - Example 6: GitHub Actions Workflow
+    - Example 7: Package.json Generator
+    - Example 8: Escape Hatch Demonstration
+
+14. **[Troubleshooting](#troubleshooting)**
+    - Common Errors
+      - "expected '\"' after opening braces"
+      - "unexpected EOF"
+      - "undefined identifier"
+    - Escape Hatch Troubleshooting
+      - Literal braces not showing
+      - Lots of braces getting confusing
+      - Interpolation not working
+    - Debugging Tips
 
 ---
 
@@ -229,11 +388,23 @@ Avon is a small, elegant language optimized for readability and powerful file ge
 ```avon
 "hello"                    # String (escape sequences: \n, \t, \\, \")
 42                         # Integer
+-42                        # Negative integer
 3.14                       # Float
+-3.14                      # Negative float
 true false                 # Booleans
 [1, 2, 3]                  # List
 {host: "localhost", port: 8080}  # Dictionary (key: value syntax)
 ```
+
+**Negative Numbers:** You can write negative numbers directly using the `-` prefix:
+```avon
+-5                         # Negative integer
+-3.14                      # Negative float
+[-5, -4, -3]               # List with negative numbers
+[10, -1 .. 0]              # Range with negative step
+```
+
+**Note:** For variables, use the `neg` function: `let x = 5 in -x` (uses `neg` function internally).
 
 **Strings support escape sequences:** `"\n"` is a newline, `"\t"` is a tab, `"\\"` is a backslash, `"\""` is a quote.
 
@@ -282,6 +453,7 @@ a + b                      # Addition (numbers), concatenation (strings/lists/te
 a - b                      # Subtraction (numbers only)
 a * b                      # Multiplication (numbers only)
 a / b                      # Division (numbers only)
+a % b                      # Modulo/Remainder (numbers only)
 ```
 
 **Comparison Operators:**
@@ -794,6 +966,64 @@ let add5 = add 5 in      # Partially apply: waiting for second argument
 add5 3                   # Apply remaining argument: 5 + 3 = 8
 ```
 
+### Why Recursion Is Not Supported
+
+Avon does **not** support recursive functions (functions that call themselves). This is an intentional design decision for several important reasons:
+
+**1. Simplicity**
+- Recursion adds complexity to the language implementation
+- Without recursion, the evaluator is simpler and easier to understand
+- Error messages are clearer (unknown symbol vs infinite recursion)
+
+**2. Performance**
+- Recursion tracking requires overhead (depth counters, stack management)
+- Iterative solutions using `fold`, `map`, and `filter` are often more efficient
+- No risk of stack overflow from deep recursion
+
+**3. Encourages Better Patterns**
+- Avon's built-in functions (`fold`, `map`, `filter`) are designed for iteration
+- These functions are more idiomatic and readable than recursive solutions
+- They handle edge cases (empty lists, etc.) automatically
+
+**4. Safety**
+- No risk of infinite recursion bugs
+- No need for recursion depth limits
+- Predictable execution behavior
+
+**How to achieve recursive-like behavior:**
+
+Instead of recursion, use Avon's built-in iteration functions:
+
+```avon
+# Instead of recursive factorial, use fold:
+let factorial = \n
+  fold (\acc \x acc * x) 1 [1 .. n] in
+factorial 5
+# Result: 120
+
+# Instead of recursive sum, use fold:
+let sum_list = \list
+  fold (\acc \x acc + x) 0 list in
+sum_list [1, 2, 3, 4, 5]
+# Result: 15
+
+# Instead of recursive countdown, use range:
+let countdown = \n
+  reverse [1 .. n] in
+countdown 5
+# Result: [5, 4, 3, 2, 1]
+```
+
+**If you try to use recursion:**
+```avon
+let factorial = \n
+  if n <= 1 then 1 else n * (factorial (n - 1)) in
+factorial 5
+# Error: unknown symbol: factorial
+```
+
+The function cannot reference itself because it's not added to its own environment. This ensures the design goals above are met.
+
 ### Default Parameters
 
 When deploying, you can provide default values for parameters using `?`:
@@ -889,6 +1119,89 @@ You can concatenate lists with `+`:
 ```avon
 [1, 2] + [3, 4]           # Result: [1, 2, 3, 4]
 ```
+
+### Range Syntax
+
+Avon provides a convenient syntax for generating sequences of numbers using ranges:
+
+**Simple Range:**
+```avon
+[1 .. 5]                   # Result: [1, 2, 3, 4, 5]
+[10 .. 15]                 # Result: [10, 11, 12, 13, 14, 15]
+```
+
+**Range with Step:**
+```avon
+[0, 5 .. 20]               # Result: [0, 5, 10, 15, 20] (step of 5)
+[1, 3 .. 10]               # Result: [1, 4, 7, 10] (step of 3)
+[10, -1 .. 0]              # Result: [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0] (negative step)
+```
+
+**Syntax:**
+- `[start .. end]` - Generates integers from `start` to `end` (inclusive), step of 1
+- `[start, step .. end]` - Generates integers from `start` to `end` (inclusive), incrementing by `step`
+
+**Important:** The `..` operator requires spaces around it: `[1 .. 5]` (not `[1..5]`).
+
+**What ranges return:**
+Ranges evaluate to a `List` of integers. You can use all list operations on ranges:
+
+```avon
+let ports = [8080 .. 8085] in
+length ports                # 6
+map (\p "port-" + (to_string p)) ports  # ["port-8080", "port-8081", ...]
+filter (\p p > 8082) ports  # [8083, 8084, 8085]
+```
+
+**Ranges in interpolation:**
+When a range is interpolated into a template, each number appears on its own line (like any list):
+
+```avon
+let ports = [8080 .. 8083] in
+@/ports.txt {"
+  Ports:
+  {ports}
+"}
+```
+
+Produces:
+```
+Ports:
+8080
+8081
+8082
+8083
+```
+
+**Practical examples:**
+```avon
+# Generate configs for multiple ports
+let ports = [8080 .. 8085] in
+map (\p @/service-{p}.yml {"
+  port: {p}
+  name: service-{p}
+"}) ports
+
+# Generate even numbers
+let evens = [0, 2 .. 20] in  # [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+evens
+
+# Countdown
+let countdown = [10, -1 .. 0] in  # [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+countdown
+```
+
+**Functions that work with ranges:**
+Since ranges return lists, all list functions work:
+- `map`, `filter`, `fold` - Transform, filter, reduce
+- `take`, `drop`, `split_at` - Extract portions
+- `zip`, `unzip` - Combine with other lists
+- `reverse`, `partition` - Reorder or split
+- `head`, `tail` - Get first element or rest
+- `length` - Get count
+- All other list operations
+
+**See also:** `examples/range_syntax.av` for more examples.
 
 ### Dictionaries (Key-Value Maps)
 
@@ -1497,6 +1810,9 @@ These utilities make any file more powerful—whether you're generating hundreds
 
 ### List Operations
 
+Lists are the heart of Avon, and Avon provides comprehensive list operations:
+
+**Basic Operations:**
 | Function | Description | Example |
 |----------|-------------|---------|
 | `map f list` | Apply function to each item | `map (\x x + 1) [1,2,3]` → `[2,3,4]` |
@@ -1504,6 +1820,61 @@ These utilities make any file more powerful—whether you're generating hundreds
 | `fold f init list` | Reduce list to single value | `fold (\a \x a + x) 0 [1,2,3]` → `6` |
 | `join list sep` | Join items with separator | `join ["a","b","c"] ", "` → `"a, b, c"` |
 | `length list` | Get number of items | `length [1,2,3]` → `3` |
+
+**Advanced List Operations:**
+| Function | Description | Example |
+|----------|-------------|---------|
+| `zip list1 list2` | Pair elements from two lists | `zip [1,2,3] ["a","b","c"]` → `[[1,"a"], [2,"b"], [3,"c"]]` |
+| `unzip pairs` | Split pairs into two lists | `unzip [[1,"a"], [2,"b"]]` → `[[1,2], ["a","b"]]` |
+| `take n list` | Get first n elements | `take 3 [1,2,3,4,5]` → `[1,2,3]` |
+| `drop n list` | Skip first n elements | `drop 2 [1,2,3,4,5]` → `[3,4,5]` |
+| `split_at n list` | Split list at index | `split_at 2 [1,2,3,4,5]` → `[[1,2], [3,4,5]]` |
+| `partition pred list` | Split by predicate | `partition (\x x > 2) [1,2,3,4,5]` → `[[3,4,5], [1,2]]` |
+| `reverse list` | Reverse the list | `reverse [1,2,3]` → `[3,2,1]` |
+| `head list` | Get first element (or `None` if empty) | `head [1,2,3]` → `1` |
+| `tail list` | Get all but first element | `tail [1,2,3,4]` → `[2,3,4]` |
+
+**Examples:**
+```avon
+# Zip two lists together
+let numbers = [1, 2, 3] in
+let letters = ["a", "b", "c"] in
+zip numbers letters
+# Result: [[1, "a"], [2, "b"], [3, "c"]]
+
+# Take first 3 items
+take 3 [1, 2, 3, 4, 5]      # [1, 2, 3]
+
+# Drop first 2 items
+drop 2 [1, 2, 3, 4, 5]      # [3, 4, 5]
+
+# Split list in half
+split_at 2 [1, 2, 3, 4, 5]  # [[1, 2], [3, 4, 5]]
+
+# Partition by condition
+partition (\x x > 2) [1, 2, 3, 4, 5]  # [[3, 4, 5], [1, 2]]
+
+# Reverse a list
+reverse [1, 2, 3]           # [3, 2, 1]
+
+# Get first element
+head [1, 2, 3]              # 1
+head []                      # None
+
+# Get rest of list
+tail [1, 2, 3, 4]           # [2, 3, 4]
+```
+
+**Combining operations:**
+```avon
+let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] in
+let evens = filter (\x x % 2 == 0) numbers in
+let first_three_evens = take 3 evens in
+reverse first_three_evens
+# Result: [6, 4, 2]
+```
+
+**See also:** `examples/list_operations.av` for comprehensive examples.
 
 ### File & Filesystem
 
@@ -1680,6 +2051,12 @@ avon --help
 ### Passing Arguments
 
 Avon allows you to pass values into your program from the command line. This works with **both `eval` and `deploy` commands**. When your Avon file evaluates to a function, the CLI automatically applies the arguments you provide.
+
+**Important distinction:** 
+- **Single-dash arguments** (`-name`, `-env`, `-x`, `-c`) are **function parameters** - passed to your Avon function
+- **Double-dash arguments** (`--force`, `--root`, `--debug`) are **CLI options** - control how Avon behaves
+
+This means you can use any name for your function parameters (including single letters like `-a`, `-b`, `-c`) without conflicts with CLI flags. Only `--` (double-dash) arguments are reserved for CLI options.
 
 #### How It Works
 
@@ -1862,6 +2239,8 @@ avon eval multi.av -a 1 -c 3 2 4
 # a=1 (named), b=2 (positional, first unused), c=3 (named), d=4 (positional, second unused)
 # Result: [1, 2, 3, 4]
 ```
+
+**Important:** Single-dash arguments (like `-a`, `-c`) are always treated as named function parameters, not CLI flags. Only double-dash arguments (like `--force`, `--root`) are CLI options. This means you can use any single-letter or short name for your function parameters without conflicts.
 
 **Best Practice:** Stick to either all named or all positional arguments for a single command invocation to avoid confusion.
 
@@ -2532,6 +2911,28 @@ If `config.yml` exists, Avon will:
 
 If the backup fails (e.g., permissions), the deployment aborts and the original file is untouched.
 
+### Security Features
+
+**Path Traversal Protection:**
+- All file operations (`readfile`, `import`, `fill_template`) block paths containing `..` (parent directory)
+- When using `--root`, paths are validated to ensure they stay within the root directory
+- Absolute paths without `--root` are blocked if they contain `..`
+
+**File Size Limits:**
+- `readfile`: Maximum 10MB per file (prevents DoS from large files)
+- `import`: Maximum 1MB per source file (prevents DoS from large source files)
+- `fill_template`: Maximum 10MB per template file
+
+**Recursion Depth Limits:**
+- Default limit: 10,000 function calls (prevents stack overflow and infinite loops)
+- Configurable via `--recursion-limit <N>` flag
+- Protects against accidental infinite recursion and malicious code
+
+**Input Validation:**
+- All file paths are validated before access
+- Template interpolation is sandboxed (no arbitrary code execution)
+- Type checking prevents many classes of errors
+
 ### Best Practices for Safety
 
 1. **Always use `--root`** to confine deployment to a specific directory:
@@ -2545,6 +2946,8 @@ If the backup fails (e.g., permissions), the deployment aborts and the original 
 3. **Prefer `--backup` over `--force`** when updating critical configurations.
 
 4. **Test with `avon eval` first** to inspect the output before deploying.
+
+5. **Recursion is not supported** - use iterative solutions with `fold`, `map`, and `filter` instead
 
 ---
 
