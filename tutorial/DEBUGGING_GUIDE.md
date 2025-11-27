@@ -507,13 +507,16 @@ If your files aren't appearing where you expect:
 
 2. **Check `--root`**: The `--root` flag prepends a directory to all paths.
    ```avon
-   @/config.yml {"..."}
+   @config.yml {"..."}
    ```
    With `--root ./out`, this writes to `./out/config.yml`.
 
 3. **Absolute vs Relative**: 
-   - Paths starting with `/` (e.g. `@/etc/config`) are absolute unless `--root` is used.
-   - With `--root`, the leading `/` is stripped and the path is appended to the root.
+   - **Without `--root`**: Absolute paths (starting with `/`, e.g. `@/etc/config`) are **blocked** for security.
+   - **With `--root`**: Paths starting with `/` have the leading `/` stripped and are appended to the root directory.
+     - Example: `@/etc/config` with `--root ./out` writes to `./out/etc/config`
+     - Example: `@config.yml` with `--root ./out` writes to `./out/config.yml`
+   - **Always use `--root`** when deploying to ensure files are written to a controlled directory.
 
 ### Permission Errors
 

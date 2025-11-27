@@ -61,7 +61,7 @@ add5 3                  # Result: 8
 Provide fallback values:
 
 ```avon
-\name ? "Guest" @/welcome.txt {"
+\name ? "Guest" @welcome.txt {"
     Welcome, {name}!
 "}
 ```
@@ -77,7 +77,7 @@ Choose between alternatives:
 if age > 18 then "adult" else "minor"
 
 # In templates:
-@/output.txt {"
+@output.txt {"
     Status: {if count > 0 then "has items" else "empty"}
 "}
 ```
@@ -125,9 +125,9 @@ This works with any nesting level and preserves relative indentation (useful for
 Avon templates use a **variable-brace delimiter system** that lets you choose how many opening braces to use. This is a powerful feature that adapts to your content's needs:
 
 ```
-@/file.txt {" ... "}      # single-brace template (open_count = 1)
-@/file.txt {{" ... "}}    # double-brace template (open_count = 2)
-@/file.txt {{{" ... "}}}  # triple-brace template (open_count = 3)
+@file.txt {" ... "}      # single-brace template (open_count = 1)
+@file.txt {{" ... "}}    # double-brace template (open_count = 2)
+@file.txt {{{" ... "}}}  # triple-brace template (open_count = 3)
 ```
 
 **Why this design?**
@@ -143,9 +143,9 @@ By allowing multiple opening braces, you can choose a delimiter that requires **
 Interpolation uses exactly the same number of leading braces as the template opener:
 
 ```
-@/single.txt {"Value: { 1 + 2 }"}        # interpolation with { }
-@/double.txt {{"Value: {{ 1 + 2 }}"}}    # interpolation with {{ }}
-@/triple.txt {{{" Value: {{{ 1 + 2 }}} "}}}  # interpolation with {{{ }}}
+@single.txt {"Value: { 1 + 2 }"}        # interpolation with { }
+@double.txt {{"Value: {{ 1 + 2 }}"}}    # interpolation with {{ }}
+@triple.txt {{{" Value: {{{ 1 + 2 }}} "}}}  # interpolation with {{{ }}}
 ```
 
 To produce literal braces without starting interpolation, use one more brace than the opener:
@@ -165,12 +165,12 @@ To produce literal braces without starting interpolation, use one more brace tha
 
 ```avon
 # Few braces? Single-brace is fine
-@/simple.txt {"
+@simple.txt {"
   Config: { value }
 "}
 
 # Many braces? Use double-brace to avoid escaping
-@/config.json {{"
+@config.json {{"
   {
     "key": "{{ value }}",
     "nested": {
@@ -180,7 +180,7 @@ To produce literal braces without starting interpolation, use one more brace tha
 "}}
 
 # Very brace-heavy? Use triple-brace (rare)
-@/complex.txt {{{" 
+@complex.txt {{{" 
   {{ outer }} and {{{ interpolation }}} mixed
 "}}}
 ```
@@ -190,7 +190,7 @@ To produce literal braces without starting interpolation, use one more brace tha
 **Lua configuration** (single-brace template with brace escaping):
 ```avon
 let dev = true in
-@/config.lua {"
+@config.lua {"
 local settings = {{
   name = "app",
   debug = { if dev then "true" else "false" }
@@ -210,7 +210,7 @@ Note: In single-brace templates `{" "}`, literal braces must be escaped as `{{` 
 **Nginx server block** (single-brace template with brace escaping):
 ```avon
 let domain = "example.com" in
-@/nginx.conf {"
+@nginx.conf {"
   server {{
     listen 80;
     server_name { domain };
@@ -234,7 +234,7 @@ With double braces `{{"..."}}`, single braces in the output are literal and don'
 ```avon
 let ami_id = "ami-0c55b159cbfafe1f0" in
 let instance_name = "web-server" in
-@/main.tf {{"
+@main.tf {{"
   resource "aws_instance" "web" {
     ami = "{{ ami_id }}"
     tags = {
@@ -269,14 +269,14 @@ The key insight is choosing your template delimiter based on brace density in yo
 
 ```avon
 # YAML config (few braces) - single-brace is fine:
-@/app.yml {"
+@app.yml {"
 app:
   name: myapp
   debug: { debug_mode }
 "}
 
 # JSON (lots of braces) - double-brace is much cleaner:
-@/config.json {{"
+@config.json {{"
 {
   "database": {
     "host": "{{ db_host }}",
@@ -286,7 +286,7 @@ app:
 "}}
 
 # Python code (many braces for dict literals):
-@/config.py {{{
+@config.py {{{
 def get_config():
     return {
         "database": "{{ db_name }}",
@@ -339,7 +339,7 @@ let dir = dirname dynamic_path in
 Combine paths with templates for file generation:
 
 ```avon
-@/config.yml {"
+@config.yml {"
     environment: prod
     debug: false
 "}
@@ -347,12 +347,12 @@ Combine paths with templates for file generation:
 
 Paths can be used in functions and with file operations, but file template syntax requires the `@` prefix at the point of template declaration:
 ```avon
-@/tmp/report.txt {"Generated report content"}
+@tmp/report.txt {"Generated report content"}
 ```
 
 To reuse paths, pass them to functions or use them with file operations like `readfile`:
 ```avon
-let output_file = @/tmp/report.txt in
+let output_file = @tmp/report.txt in
 let content = readfile output_file in
 content
 ```
@@ -719,15 +719,15 @@ t1 + t2                    # "Hello, Alice!"
 ### Path Concatenation
 Paths can be combined with the `+` operator to join path segments:
 ```avon
-let base = @/home/user in
-let subdir = @/projects in
+let base = @home/user in
+let subdir = @projects in
 base + subdir              # "/home/user//projects" (/ separator added)
 
 # With interpolation
 let env = "prod" in
 let app = "myapp" in
-let config_path = @/etc/{env} in
-let app_config = @/{app}.conf in
+let config_path = @etc/{env} in
+let app_config = @{app}.conf in
 config_path + app_config   # "/etc/prod//myapp.conf"
 ```
 
@@ -899,7 +899,7 @@ Fetch and run programs directly from GitHub's raw content CDN.
 ### Generate a Single Configuration File
 ```avon
 let app = "myapp" in
-@/config.yml {"
+@config.yml {"
     app: {app}
     debug: false
 "}
@@ -908,13 +908,13 @@ let app = "myapp" in
 ### Generate Files for Multiple Items
 ```avon
 let items = ["dev", "staging", "prod"] in
-map (\item @/config-{item}.yml {"{item}"}) items
+map (\item @config-{item}.yml {"{item}"}) items
 ```
 
 ### Complex Configuration with Conditionals
 ```avon
 let env = "prod" in
-@/.env {"
+@.env {"
     DEBUG={if env == "prod" then "false" else "true"}
     CACHE_ENABLED={if env == "dev" then "false" else "true"}
 "}
@@ -964,7 +964,7 @@ avon deploy program.av --force   # Then generate files
 Use indentation in templates — Avon's dedent removes it based on the first line's indentation:
 
 ```avon
-@/config.yml {"
+@config.yml {"
     server:
       host: localhost
       port: 8080

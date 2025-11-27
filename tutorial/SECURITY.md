@@ -167,44 +167,60 @@ The security test suite covers:
 ### ✅ Safe Path Handling
 
 ```avon
-# Use relative paths only
-readfile "config.json"        # Safe
-readfile "./templates/app.json"  # Safe
+# Use relative paths only (absolute paths blocked for security)
+readfile "config.json"                    # Safe
+readfile "templates/app.json"             # Safe
+readfile @config/app.json                 # Safe (Path type)
 
-# Don't use absolute paths
-readfile "/etc/passwd"        # Error: absolute not allowed
-readfile "../../secrets.env"  # Error: traversal not allowed
+# Don't use absolute paths or traversal
+readfile "/etc/passwd"                    # Error: absolute not allowed
+readfile "../../secrets.env"              # Error: traversal not allowed
+readfile @etc/passwd                      # Error: absolute path blocked
+
+# For deployment, always use --root flag
+@config/app.json {"content"}              # Relative path
+# Deploy with: avon deploy app.av --root ./output
 ```
 
 ### ✅ Safe User Input
 
 ```avon
-# Validate input before use
-let port = "8080" in
-let port_num = to_number port in
-if port_num > 1024 && port_num < 65535 then
-  {"Server running on port {port_num}"}
-else
-  "Invalid port"
+# Validate input before use with assert
+let port_str = "8080" in
+let port_num = assert (is_string port_str) (to_int port_str) in
+let validated_port = assert (port_num > 1024 && port_num < 65535) port_num in
+{"Server running on port {validated_port}"}
 
-# Escape dangerous characters in templates
+# Validate type before use
 let user_input = "O'Brien" in
-{"Name: {user_input}"}  # Safely interpolated
+let safe_input = assert (is_string user_input) user_input in
+{"Name: {safe_input}"}  # Safely interpolated
+
+# Validate with multiple checks
+let config_value = env_var "PORT" in
+let port = assert (is_string config_value) (to_int config_value) in
+let valid_port = assert (port > 0 && port < 65536) port in
+valid_port
 ```
 
 ### ✅ Safe File Operations
 
 ```avon
-# Deploy to controlled paths only
-@./config/app.json {"setting": "value"}
+# Deploy to controlled paths only (use --root flag)
+@config/app.json {"setting": "value"}
+# Deploy with: avon deploy app.av --root ./output
 
 # Don't construct paths from user input
 let filename = "malicious" in
-@/. {filename} "content"  # Don't do this!
+@{"{filename}"} {"content"}  # Don't do this! User input in path
 
-# Instead, use safe lists
+# Instead, validate and use safe lists
 let allowed = ["config", "data", "logs"] in
-@./output/file.txt "content"
+let safe_dir = assert (contains allowed "config") "config" in
+@{safe_dir}/app.json {"setting": "value"}
+
+# Always use --root flag for deployment
+# avon deploy app.av --root ./output
 ```
 
 ### ❌ Unsafe Patterns
@@ -231,10 +247,11 @@ readfile path  # DANGER
    avon deploy app.av -username "$(validate_username "$1")"
    ```
 
-2. **Limit File Permissions**
+2. **Use --root Flag for Deployment**
    ```bash
-   # Deploy with restricted permissions
-   avon deploy app.av --root ./output --mode 0755
+   # Always use --root to confine deployment to specific directory
+   avon deploy app.av --root ./output
+   # This ensures files cannot escape the specified directory
    ```
 
 3. **Review Templates Before Deploy**
@@ -285,12 +302,46 @@ If you find a security vulnerability:
    - Expected vs actual behavior
    - Impact assessment
 
+## Input Validation with assert
+
+The `assert` function is essential for validating user input and ensuring type safety:
+
+```avon
+# Validate type
+let user_input = env_var "PORT" in
+let port = assert (is_string user_input) (to_int user_input) in
+let valid_port = assert (port > 0 && port < 65536) port in
+valid_port
+
+# Validate before file operations
+let filename = env_var "CONFIG_FILE" in
+let safe_name = assert (is_string filename) filename in
+let validated = assert (contains ["config.json", "app.json"] safe_name) safe_name in
+readfile validated
+
+# Validate dictionary structure
+let config = json_parse config_json in
+let host = assert (is_dict config && has_key config "host") (get config "host") in
+let port = assert (is_number (get config "port")) (get config "port") in
+{host: host, port: port}
+```
+
+**Best Practices:**
+- Always validate user input with `assert` before use
+- Check types with `is_string`, `is_number`, `is_list`, etc.
+- Validate ranges and constraints (e.g., port numbers, array bounds)
+- Use `assert` before file operations to ensure paths are safe
+- Chain assertions for complex validation
+
 ## Security Checklist
 
 Before deploying Avon templates in production:
 
-- [ ] All paths use relative paths only
-- [ ] No user input passed to file operations
+- [ ] All paths use relative paths only (no absolute paths)
+- [ ] `--root` flag used for all deployments
+- [ ] All user input validated with `assert`
+- [ ] Type checking with `is_string`, `is_number`, etc. before use
+- [ ] No user input passed directly to file operations
 - [ ] Input validation on all CLI parameters
 - [ ] Type safety verified (no type errors in output)
 - [ ] No recursion attempts in code

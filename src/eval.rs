@@ -887,14 +887,12 @@ pub fn eval(
                     };
                     Ok(Value::Bool(eq))
                 }
-                value => {
-                    Err(EvalError::new(
-                        format!("Not a valid operation: {:?}", value),
-                        None,
-                        None,
-                        line,
-                    ))
-                }
+                value => Err(EvalError::new(
+                    format!("Not a valid operation: {:?}", value),
+                    None,
+                    None,
+                    line,
+                )),
             }
         }
         Expr::Ident(ident, line) => {
@@ -1711,9 +1709,7 @@ pub fn execute_builtin(
                             }
                         }
                         serde_json::Value::String(s) => Value::String(s.clone()),
-                        serde_json::Value::Array(a) => {
-                            Value::List(a.iter().map(conv).collect())
-                        }
+                        serde_json::Value::Array(a) => Value::List(a.iter().map(conv).collect()),
                         serde_json::Value::Object(o) => {
                             // Convert JSON object to Dict (hash map)
                             let mut map = HashMap::new();
@@ -2325,7 +2321,12 @@ pub fn execute_builtin(
                     let json_items: Vec<String> = items
                         .iter()
                         .map(|v| {
-                            match execute_builtin("format_json", std::slice::from_ref(v), source, line) {
+                            match execute_builtin(
+                                "format_json",
+                                std::slice::from_ref(v),
+                                source,
+                                line,
+                            ) {
                                 Ok(Value::String(s)) => s,
                                 _ => v.to_string(source),
                             }

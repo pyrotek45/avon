@@ -16,7 +16,7 @@ This guide describes the recommended formatting conventions for writing Avon cod
 
 **Preferred:**
 ```avon
-let name = "Alice" in @/greeting.txt {"
+let name = "Alice" in @greeting.txt {"
   Hello, {name}!
   Welcome to Avon.
 "}
@@ -25,18 +25,18 @@ let name = "Alice" in @/greeting.txt {"
 **Avoid:**
 ```avon
 let name = "Alice" in
-@/greeting.txt {"
+@greeting.txt {"
 Hello, {name}!
 "}
 ```
 
-**Reason:** The template opening `{"` must appear on the same line as the path `@/file`. This is a syntax requirement in Avon.
+**Reason:** The template opening `{"` must appear on the same line as the path `@file`. This is a syntax requirement in Avon.
 
 ### Indent Template Content (Leverage Automatic Dedent)
 
 **Preferred:**
 ```avon
-@/config.yml {"
+@config.yml {"
   server:
     host: localhost
     port: 8080
@@ -47,7 +47,7 @@ Hello, {name}!
 
 **Avoid:**
 ```avon
-@/config.yml {"
+@config.yml {"
 server:
   host: localhost
   port: 8080
@@ -86,7 +86,7 @@ This lets you indent your template in source code without padding your output.
 **Example:**
 ```avon
 # Avon code is indented 2 spaces inside the function
-let make_config = \service @/config/{service}.yml {"
+let make_config = \service @config/{service}.yml {"
   # This line has 2 spaces: it becomes the baseline
   # Dedent will remove 2 spaces from every line
   service: {service}
@@ -129,7 +129,7 @@ Avon finds the **first line with non-whitespace content** and uses its indentati
 
 **Indent for code clarity:**
 ```avon
-let make_yaml = \name @/config.yml {"
+let make_yaml = \name @config.yml {"
   app:
     name: {name}
     database:
@@ -152,7 +152,7 @@ app:
 let environments = ["dev", "staging"] in
 let make_deploy = \env
   let replicas = if env == "prod" then "3" else "1" in
-  @/deploy-{env}.yaml {"
+  @deploy-{env}.yaml {"
     apiVersion: apps/v1
     kind: Deployment
     spec:
@@ -166,7 +166,7 @@ Even though the template is 4+ levels deep in the source, the generated files ar
 
 **Use blank lines for readability (they're automatically stripped):**
 ```avon
-@/config.json {{"
+@config.json {{"
 
   {
     "database": {
@@ -189,7 +189,7 @@ Output (blank lines removed, properly formatted):
 **Don't worry about indentation affecting output—it won't:**
 ```avon
 # This produces identical output to the examples above
-@/config.yml {"
+@config.yml {"
                   server: localhost
                   port: 8080
 "}
@@ -200,7 +200,7 @@ The first line `server: localhost` (with 18 spaces) becomes the baseline, so 18 
 **Practical example showing baseline selection:**
 ```avon
 # 8-space indent in source, first line has 8 spaces = baseline
-@/file.txt {"
+@file.txt {"
         line1
         line2
             line3
@@ -229,7 +229,7 @@ When generating code or configs that contain curly braces, Avon's variable-brace
 Use `{" ... "}` when your output has **few or no literal braces**:
 
 ```avon
-@/app.yml {"
+@app.yml {"
 app:
   name: myapp
   port: { port }
@@ -245,7 +245,7 @@ app:
 Use `{{"  ... "}}` when your output has **many literal braces** (JSON, HCL, Terraform, Lua, etc.):
 
 ```avon
-@/nginx.conf {{"
+@nginx.conf {{"
 server {
   listen 80;
   server_name {{ domain }};
@@ -267,7 +267,7 @@ server {
 ```avon
 let db_host = "localhost" in
 let db_port = 5432 in
-@/config.json {{"
+@config.json {{"
 {
   "database": {
     "host": "{{ db_host }}",
@@ -280,7 +280,7 @@ let db_port = 5432 in
 **Example: Terraform**
 ```avon
 let ami_id = "ami-123456" in
-@/main.tf {{"
+@main.tf {{"
 resource "aws_instance" "web" {
   ami = "{{ ami_id }}"
   tags = {
@@ -328,7 +328,7 @@ Break complex logic into named steps:
 **Preferred:**
 ```avon
 let services = ["api", "web", "worker"] in
-let make_config = \svc @/config-{svc}.yml {"
+let make_config = \svc @config-{svc}.yml {"
   service: {svc}
 "} in
 map make_config services
@@ -336,7 +336,7 @@ map make_config services
 
 **Avoid:**
 ```avon
-map (\svc @/config-{svc}.yml {"service: {svc}"}) ["api", "web", "worker"]
+map (\svc @config-{svc}.yml {"service: {svc}"}) ["api", "web", "worker"]
 ```
 
 ---
@@ -362,7 +362,7 @@ make_url "https" "example.com" "443"
 Use `?` for parameters with defaults:
 
 ```avon
-let greet = \name ? "Guest" @/greeting.txt {"
+let greet = \name ? "Guest" @greeting.txt {"
   Hello, {name}!
 "} in
 greet "Alice"
@@ -373,7 +373,7 @@ greet "Alice"
 Use `snake_case` for function names:
 
 ```avon
-let make_kubernetes_manifest = \service \env @/k8s/{env}/{service}.yaml {"
+let make_kubernetes_manifest = \service \env @k8s/{env}/{service}.yaml {"
   ...
 "} in
 ```
@@ -421,7 +421,7 @@ Use `#` for comments. Place them above the code they describe:
 let environments = ["dev", "staging", "prod"] in
 
 # Create a config file for each environment
-let make_config = \env @/config-{env}.yml {"
+let make_config = \env @config-{env}.yml {"
   environment: {env}
   debug: {if env == "prod" then "false" else "true"}
 "} in
@@ -448,7 +448,7 @@ let services = [
 let environments = ["dev", "staging", "prod"] in
 
 # Create a Kubernetes deployment manifest
-let make_k8s_manifest = \service \env @/k8s/{env}/{service}-deployment.yaml {"
+let make_k8s_manifest = \service \env @k8s/{env}/{service}-deployment.yaml {"
   apiVersion: apps/v1
   kind: Deployment
   metadata:

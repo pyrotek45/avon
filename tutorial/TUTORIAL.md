@@ -211,7 +211,7 @@ Congratulations! You've just run your first Avon program.
 Now let's generate an actual file. Create `greet.av`:
 
 ```avon
-\name @/greeting.txt {"
+\name @greeting.txt {"
     Hello, {name}!
     Welcome to Avon.
 "}
@@ -220,10 +220,10 @@ Now let's generate an actual file. Create `greet.av`:
 Deploy it:
 
 ```bash
-avon deploy examples/greet.av -name Alice --root /tmp/output --force
+avon deploy examples/greet.av -name Alice --root ./output --force
 ```
 
-This creates `/tmp/output/greeting.txt` with the content:
+This creates `./output/greeting.txt` with the content:
 ```
 Hello, Alice!
 Welcome to Avon.
@@ -231,8 +231,9 @@ Welcome to Avon.
 
 **What happened?**
 - `\name` defines a function parameter
-- `@/greeting.txt` specifies the output file path
+- `@greeting.txt` specifies the output file path (relative to `--root`)
 - `{"..."}` is a template that interpolates the `{name}` variable
+- `--root ./output` ensures files are written to `./output/greeting.txt`
 
 ### Generate Multiple Files
 
@@ -240,7 +241,7 @@ Here's where Avon shines. Let's generate a config file for each environment:
 
 ```avon
 let environments = ["dev", "staging", "prod"] in
-map (\env @/config-{env}.yml {"
+map (\env @config-{env}.yml {"
     environment: {env}
     debug: {if env == "prod" then false else true}
 "}) environments
@@ -269,7 +270,7 @@ Avon isn't just for generating hundreds of files. It's a powerful workflow layer
 
 **Example: Dotfile with Variables**
 ```avon
-\username ? "developer" @/.vimrc {"
+\username ? "developer" @.vimrc {"
   " Vim configuration for {username}
   set number
   set expandtab
@@ -288,7 +289,7 @@ avon deploy vimrc.av --root ~ -username alice
 **Example: Long Config with List Interpolation**
 ```avon
 let plugins = ["vim-fugitive", "vim-surround", "vim-commentary", "vim-repeat"] in
-@/.vimrc {"
+@.vimrc {"
   " Plugin configuration
   {plugins}
 "}
@@ -326,7 +327,7 @@ This simplicity enables powerful modularity: the `import` function allows any fi
 
 **Example: Generator file (`deploy.av`):**
 ```avon
-@/config.yml {"host: localhost"}
+@config.yml {"host: localhost"}
 ```
 
 All three are valid Avon files. The `import` function evaluates the file and returns whatever value it produces, making Avon naturally modular.
@@ -344,7 +345,7 @@ When you run an Avon program, it evaluates to a **Value**. Here are the types of
 | **Dictionary** | `{host: "localhost", port: 8080}` | Structured data with named fields |
 | **Function** | `\x x + 1` | Reusable logic and transformations |
 | **Template** | `{"Hello {name}"}` | Text generation with interpolation |
-| **FileTemplate** | `@/path/file {"content"}` | File generation targets |
+| **FileTemplate** | `@path/file {"content"}` | File generation targets (relative to `--root`) |
 
 When evaluation is complete, `avon` either:
 1. **Prints the result** (for `eval` command) - Shows the value as a string representation
@@ -527,7 +528,7 @@ The pipe version reads naturally: "take the list, double each item, filter value
 - `[1,2] + [3,4]` -> `[1,2,3,4]` (lists concatenate)
 - `5 + 3` -> `8` (numbers add)
 - `{"Hello "} + {"World!"}` -> `"Hello World!"` (templates concatenate)
-- `@/home/user + @/projects` -> `/home/user//projects` (paths join with `/` separator)
+- `@home/user + @projects` -> `/home/user//projects` (paths join with `/` separator)
 
 **Template Concatenation:**
 Templates can be combined with `+` to merge content:
@@ -546,15 +547,15 @@ t1 + t2                           # "User: Alice (verified)"
 **Path Concatenation:**
 Paths can be combined with `+` to join path segments:
 ```avon
-let base = @/home in
-let user = @/alice in
-base + user                       # "/home//alice"
+let base = @home in
+let user = @alice in
+base + user                       # "home/alice"
 
 # Practical example
 let env = "prod" in
-let config_dir = @/etc/{env} in
-let app_config = @/app.conf in
-config_dir + app_config           # "/etc/prod//app.conf"
+let config_dir = @config/{env} in
+let app_config = @app.conf in
+config_dir + app_config           # "config/prod/app.conf"
 ```
 
 #### Path Values
@@ -563,7 +564,7 @@ Path values are first-class values in Avon. They represent file system paths and
 
 **Path Literal Syntax:**
 ```avon
-@/path/to/file                 # Absolute path
+@path/to/file                  # Relative path (use with --root flag)
 @relative/path                 # Relative path
 @config/{env}/app.yml          # Path with interpolation
 ```
@@ -592,17 +593,17 @@ let dynamic_path = @config/{env}/{app}.yml in
 You can interpolate variables into paths:
 ```avon
 let username = "alice" in
-let home_dir = @/home/{username} in
-let config_file = @/home/{username}/.config/app.yml in
+let home_dir = @users/{username} in
+let config_file = @users/{username}/.config/app.yml in
 ```
 
 **Path Concatenation:**
 Paths can be concatenated with `+`:
 ```avon
-let base = @/etc in
+let base = @config in
 let app = @myapp in
 let config = @config.yml in
-base + app + config              # "/etc/myapp/config.yml"
+base + app + config              # "config/myapp/config.yml"
 ```
 
 **Paths with File Operations:**
@@ -628,7 +629,7 @@ readfile s                       # Type error: expected Path, got String
 **FileTemplate Syntax:**
 FileTemplates combine a path with a template:
 ```avon
-@/path/to/file.txt {"
+@path/to/file.txt {"
     File content here
 "}
 ```
@@ -1029,7 +1030,7 @@ The function cannot reference itself because it's not added to its own environme
 When deploying, you can provide default values for parameters using `?`:
 
 ```avon
-\name ? "Guest" @/welcome.txt {"
+\name ? "Guest" @welcome.txt {"
     Welcome, {name}!
 "}
 ```
@@ -1055,7 +1056,7 @@ avon deploy examples/config.av -env prod -debug false
 This is especially useful for functions with multiple parameters:
 
 ```avon
-\app ? "service" \env ? "dev" @/config-{app}-{env}.yml {"
+\app ? "service" \env ? "dev" @config-{app}-{env}.yml {"
     app: {app}
     environment: {env}
 "}
@@ -1064,7 +1065,7 @@ This is especially useful for functions with multiple parameters:
 ### Practical Example: Configuration Generator
 
 ```avon
-let make_config = \env \debug ? false @/config-{env}.yml {"
+let make_config = \env \debug ? false @config-{env}.yml {"
     environment: {env}
     debug: {debug}
 "} in
@@ -1100,7 +1101,7 @@ When a list is interpolated into a template, each item appears on its own line:
 
 ```avon
 let names = ["Alice", "Bob", "Charlie"] in
-@/names.txt {"
+@names.txt {"
     Names:
     {names}
 "}
@@ -1158,7 +1159,7 @@ When a range is interpolated into a template, each number appears on its own lin
 
 ```avon
 let ports = [8080 .. 8083] in
-@/ports.txt {"
+@ports.txt {"
   Ports:
   {ports}
 "}
@@ -1177,7 +1178,7 @@ Ports:
 ```avon
 # Generate configs for multiple ports
 let ports = [8080 .. 8085] in
-map (\p @/service-{p}.yml {"
+map (\p @service-{p}.yml {"
   port: {p}
   name: service-{p}
 "}) ports
@@ -1303,7 +1304,7 @@ let service_config = {
   health_check: {interval: 30, timeout: 5}
 } in
 
-@/service.yml {"
+@service.yml {"
   name: {service_config.name}
   port: {service_config.port}
   replicas: {service_config.replicas}
@@ -1329,7 +1330,7 @@ Real-world example: generate configuration for each environment:
 
 ```avon
 let environments = ["dev", "staging", "prod"] in
-let make_config = \env @/config-{env}.yml {"
+let make_config = \env @config-{env}.yml {"
     environment: {env}
     debug: {env != "prod"}
 "} in
@@ -1351,7 +1352,7 @@ Example: generate files only for production and staging:
 ```avon
 let all_envs = ["dev", "staging", "prod"] in
 let prod_envs = filter (\e e != "dev") all_envs in
-map (\e @/prod-{e}.yml {"prod config"}) prod_envs
+map (\e @prod-{e}.yml {"prod config"}) prod_envs
 ```
 
 ### Fold — Reduce to a Single Value
@@ -1372,7 +1373,7 @@ Example: join list items into a comma-separated string:
 ```avon
 let names = ["Alice", "Bob", "Charlie"] in
 let join_names = fold (\acc \n (concat acc (concat ", " n))) "" names in
-@/names.txt {"{join_names}"}
+@names.txt {"{join_names}"}
 ```
 
 (Note: Avon has a `join` builtin to make this easier!)
@@ -1426,7 +1427,7 @@ Templates automatically dedent based on the **first line with content** (baselin
 
 ```avon
 let item = "widget" in
-@/config.yml {"
+@config.yml {"
     item: {item}
     description: "A useful widget"
     version: 1.0
@@ -1448,7 +1449,7 @@ When you interpolate a list, its items appear on separate lines:
 
 ```avon
 let items = ["apple", "banana", "cherry"] in
-@/shopping.txt {"
+@shopping.txt {"
     Items:
     {items}
 "}
@@ -1563,7 +1564,7 @@ Use when your output has **few or no literal braces**:
 
 **Example: Simple YAML config**
 ```avon
-@/app.yml {"
+@app.yml {"
 app:
   name: myapp
   debug: { debug_mode }
@@ -1575,7 +1576,7 @@ app:
 Use when your output has **many literal braces** (JSON, HCL, Terraform, Lua dicts, etc.):
 
 ```avon
-@/config.lua {{"
+@config.lua {{"
 local config = {
   name = "{{ app_name }}",
   debug = {{ if dev then "true" else "false" }}
@@ -1586,7 +1587,7 @@ local config = {
 **Rule:** In double-brace templates, single braces are literal (no escaping needed):
 
 ```avon
-@/output.json {{"
+@output.json {{"
 {
   "app": "{{ app_name }}",
   "nested": {
@@ -1601,7 +1602,7 @@ local config = {
 With single-brace, you must escape braces:
 
 ```avon
-@/config.lua {"
+@config.lua {"
 local config = {{
   name = "myapp",
   debug = true
@@ -1616,7 +1617,7 @@ end
 With double-brace, braces are literal:
 
 ```avon
-@/config.lua {{"
+@config.lua {{"
 local config = {
   name = "{{ app_name }}",
   debug = true
@@ -1667,7 +1668,7 @@ The real power of Avon is **file templates**: combining a file path with a templ
 ### Basic FileTemplate
 
 ```avon
-@/path/to/file.txt {"
+@path/to/file.txt {"
     File content goes here
 "}
 ```
@@ -1679,7 +1680,7 @@ This is a `FileTemplate` value. When you evaluate and deploy a program that retu
 Create `greet.av`:
 
 ```avon
-\name @/greeting.txt {"
+\name @greeting.txt {"
     Hello, {name}!
 "}
 ```
@@ -1699,13 +1700,13 @@ Return a list of file templates:
 ```avon
 let name = "my-app" in
 [
-    @/docker-compose.yml {"
+    @docker-compose.yml {"
         docker-compose: {name}
     "},
-    @/README.md {"
+    @README.md {"
         # {name}
     "},
-    @/.gitignore {"
+    @.gitignore {"
         __pycache__/
         node_modules/
     "}
@@ -1726,7 +1727,7 @@ Use variables in file paths:
 
 ```avon
 let configs = ["dev", "prod"] in
-map (\env @/config-{env}.yml {"
+map (\env @config-{env}.yml {"
     environment: {env}
 "}) configs
 ```
@@ -1738,7 +1739,7 @@ This generates `config-dev.yml` and `config-prod.yml`.
 **`--root <dir>`** — Prepend this directory to all generated paths
 - **Required for safety:** Prevents accidental writes to system directories
 - All file paths are resolved relative to this directory
-- Example: `--root ./output` means `@/config.yml` becomes `./output/config.yml`
+- Example: `--root ./output` means `@config.yml` becomes `./output/config.yml`
 - **Always use this flag** to keep your deployments contained
 
 **`--force`** — Overwrite existing files without warning
@@ -1962,7 +1963,7 @@ Avon's simplicity enables powerful modularity. Since each file contains exactly 
 - **Generator files** return FileTemplates or lists of FileTemplates:
   ```avon
   # deploy.av
-  @/config.yml {"host: localhost"}
+  @config.yml {"host: localhost"}
   ```
 
 - **Any other type** works too—strings, numbers, functions, etc.
@@ -1976,7 +1977,7 @@ Generate a configuration file with multiple items:
 ```avon
 let items = ["api", "worker", "scheduler"] in
 let formatted = map (\item concat "service: " item) items in
-@/services.conf {"
+@services.conf {"
     Services:
     {formatted}
 "}
@@ -2095,7 +2096,7 @@ avon deploy math.av 5 3
 **Example: Function that returns a FileTemplate**
 ```avon
 # greet.av
-\name @/greeting.txt {"
+\name @greeting.txt {"
     Hello, {name}!
 "}
 ```
@@ -2121,7 +2122,7 @@ If your main expression is a function with parameters, you can pass values using
 **Program (`greet.av`):**
 ```avon
 # Function with two parameters
-\name \role @/greeting.txt {"
+\name \role @greeting.txt {"
     Hello, {name}!
     Role: {role}
 "}
@@ -2164,7 +2165,7 @@ avon deploy greet.av "Alice" "Admin" --root ./out --force
 **Example:**
 ```avon
 # config.av
-\env \port \debug @/config.yml {"
+\env \port \debug @config.yml {"
     env: {env}
     port: {port}
     debug: {debug}
@@ -2188,7 +2189,7 @@ Parameters can have default values using the `?` syntax. If an argument is not p
 
 **Program (`config.av`):**
 ```avon
-\env ? "dev" \port ? 8080 @/config.yml {"
+\env ? "dev" \port ? 8080 @config.yml {"
     env: {env}
     port: {port}
 "}
@@ -2279,7 +2280,7 @@ Both `x` and `y` are provided as strings: `"5"` and `"40"`. You should convert t
 **Example 1: Preview with `eval`, then deploy**
 ```avon
 # app.av
-\name \env ? "dev" @/config-{env}.yml {"
+\name \env ? "dev" @config-{env}.yml {"
     app_name: {name}
     environment: {env}
 "}
@@ -2297,7 +2298,7 @@ avon deploy app.av -name "myapp" -env prod --root ./configs --force
 **Example 2: Function that needs multiple arguments**
 ```avon
 # deploy.av
-\app \env \version @/deploy-{app}-{env}.yml {"
+\app \env \version @deploy-{app}-{env}.yml {"
     app: {app}
     environment: {env}
     version: {version}
@@ -2318,7 +2319,7 @@ avon deploy deploy.av -app api prod 1.2.3 --root ./out --force
 **Example 3: Function with defaults**
 ```avon
 # service.av
-\name \replicas ? 3 \port ? 8080 @/service-{name}.yml {"
+\name \replicas ? 3 \port ? 8080 @service-{name}.yml {"
     name: {name}
     replicas: {replicas}
     port: {port}
@@ -2442,13 +2443,13 @@ User-defined variables:
 You can test file generation without actually writing files:
 
 ```avon
-avon> @/test.txt {"Hello, {os}"}
+avon> @test.txt {"Hello, {os}"}
 FileTemplate:
   Path: /test.txt
   Content:
 Hello, linux
 
-avon> let name = "Alice" in @/greeting.txt {"
+avon> let name = "Alice" in @greeting.txt {"
 ...>   Hello, {name}!
 ...>   Welcome to Avon.
 ...> "}
@@ -2641,7 +2642,7 @@ A powerful pattern with Avon is to keep **one template file in git** and let eac
 
 **Example: Dotfile Template (`vimrc.av` in git):**
 ```avon
-\username ? "developer" \theme ? "solarized" @/.vimrc {"
+\username ? "developer" \theme ? "solarized" @.vimrc {"
   " Vim configuration for {username}
   set number
   set expandtab
@@ -2664,7 +2665,7 @@ avon deploy --git user/repo/vimrc.av --root ~ -username admin -theme default
 
 **Example: App Config (`config.av` in git):**
 ```avon
-\env ? "dev" \user ? "developer" @/config-{env}.yml {"
+\env ? "dev" \user ? "developer" @config-{env}.yml {"
     user: {user}
     env: {env}
 "}
@@ -2815,7 +2816,7 @@ avon deploy program.av --force
 Indent templates nicely in your source code. Avon's dedent feature handles the indentation:
 
 ```avon
-@/config.yml {"
+@config.yml {"
     database:
       host: localhost
       port: 5432
@@ -2828,7 +2829,7 @@ Indent templates nicely in your source code. Avon's dedent feature handles the i
 When generating multiple files, return a list of file templates:
 
 ```avon
-let make_file = \name @/{name}.txt {"{name}"} in
+let make_file = \name @{name}.txt {"{name}"} in
 map make_file ["a", "b", "c"]
 # Returns three file templates
 ```
@@ -2847,7 +2848,7 @@ Use the `env_var` function to read secrets from the environment at runtime.
 
 ```avon
 let db_password = env_var "DB_PASSWORD" in
-@/config.yml {"
+@config.yml {"
   database:
     host: localhost
     password: {db_password}
@@ -3043,10 +3044,10 @@ You referenced a variable that doesn't exist. Check spelling and make sure it's 
 
 ```avon
 # Wrong (in a single-brace template, { starts interpolation)
-@/f.txt {"name: {"}    # Tries to interpolate {, expects closing }
+@f.txt {"name: {"}    # Tries to interpolate {, expects closing }
 
 # Correct (use {{ to escape)
-@/f.txt {"name: {{"}   # Outputs: name: {
+@f.txt {"name: {{"}   # Outputs: name: {
 ```
 
 **Problem:** I have lots of braces and it's getting confusing.
@@ -3055,10 +3056,10 @@ You referenced a variable that doesn't exist. Check spelling and make sure it's 
 
 ```avon
 # Single-brace (awkward with 3+ braces)
-@/f.txt {"obj: {{{x}}}}"}   # Hard to count!
+@f.txt {"obj: {{{x}}}}"}   # Hard to count!
 
 # Double-brace (clearer)
-@/f.txt {{"obj: {{{x}}}}"}}  # Easier to read
+@f.txt {{"obj: {{{x}}}}"}}  # Easier to read
 ```
 
 **Problem:** Interpolation not working as expected.
@@ -3069,12 +3070,12 @@ You referenced a variable that doesn't exist. Check spelling and make sure it's 
 
 ```avon
 # Single-brace template
-@/f.txt {"Result: { 5 + 5 }"}     # Works
-@/f.txt {"Result: {{ 5 + 5 }}"}   # No interpolation, just literals
+@f.txt {"Result: { 5 + 5 }"}     # Works
+@f.txt {"Result: {{ 5 + 5 }}"}   # No interpolation, just literals
 
 # Double-brace template
-@/f.txt {{"Result: { 5 + 5 }"}}   # No interpolation
-@/f.txt {{"Result: {{ 5 + 5 }}"}} # Works
+@f.txt {{"Result: { 5 + 5 }"}}   # No interpolation
+@f.txt {{"Result: {{ 5 + 5 }}"}} # Works
 ```
 
 ### Debugging Tips
@@ -3098,7 +3099,7 @@ You referenced a variable that doesn't exist. Check spelling and make sure it's 
 
 4. **Isolate escape hatch issues:** Test brace escaping independently:
    ```bash
-   avon run '@/t.txt {"{{ {{{{ }}}}"}' 
+   avon run '@t.txt {"{{ {{{{ }}}}"}' 
    # Outputs: { {{{ }}}
    ```
 

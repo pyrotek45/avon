@@ -265,13 +265,13 @@ if x > 0 then x else -x
 
 ### Path
 ```
-@/path/to/file
+@path/to/file
 @config/{env}/app.yml
 ```
 
 ### FileTemplate
 ```
-@/output.txt {"Content: {value}"}
+@output.txt {"Content: {value}"}
 ```
 
 ### Member Access
