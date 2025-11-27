@@ -1798,6 +1798,7 @@ This generates `config-dev.yml` and `config-prod.yml`.
 - **Additive:** Adds new content to the end of existing files
 - Useful for logs, accumulating data, or building files incrementally
 - If file doesn't exist, creates it (same as normal write)
+- > **📖 For comprehensive guide on building file contents, see [BUILDING_CONTENTS.md](./BUILDING_CONTENTS.md)**
 
 **`--if-not-exists`** — Only create file if it doesn't already exist
 - **Initialization mode:** Skips files that already exist

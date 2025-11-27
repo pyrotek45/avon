@@ -1818,18 +1818,19 @@ pub fn execute_builtin(
                 !letters.is_empty() && letters.iter().all(|c| c.is_lowercase()),
             ))
         }
-        "is_empty" => {
-            let s = &args[0];
-            match s {
-                Value::String(st) => Ok(Value::Bool(st.is_empty())),
-                Value::List(items) => Ok(Value::Bool(items.is_empty())),
-                other => Err(EvalError::type_mismatch(
-                    "string or list",
-                    other.to_string(source),
-                    0,
-                )),
+        "is_empty" => match &args[0] {
+            Value::String(st) => Ok(Value::Bool(st.is_empty())),
+            Value::Template(_, _) => {
+                let st = value_to_string_auto(&args[0], source, line)?;
+                Ok(Value::Bool(st.is_empty()))
             }
-        }
+            Value::List(items) => Ok(Value::Bool(items.is_empty())),
+            other => Err(EvalError::type_mismatch(
+                "string, template, or list",
+                other.to_string(source),
+                line,
+            )),
+        },
         "html_escape" => {
             let st = value_to_string_auto(&args[0], source, line)?;
             let escaped = st

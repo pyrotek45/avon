@@ -1,0 +1,24 @@
+# Generate editor configuration file from Avon
+# Demonstrates generating TOML config files
+
+let theme = "dark_plus" in
+let cursor_shape = {
+  insert: "bar",
+  normal: "block",
+  select: "underline"
+} in
+let keys_insert = {
+  "C-space": "normal_mode"
+} in
+
+@editor.toml {"
+theme = "{theme}"
+
+[editor.cursor-shape]
+insert = "{get cursor_shape "insert"}"
+normal = "{get cursor_shape "normal"}"
+select = "{get cursor_shape "select"}"
+
+[keys.insert]
+C-space = "{get keys_insert "C-space"}"
+"}
