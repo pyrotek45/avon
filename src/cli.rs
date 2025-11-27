@@ -3,7 +3,7 @@ use crate::eval::{apply_function, collect_file_templates, eval, fetch_git_raw, i
 use crate::lexer::tokenize;
 use crate::parser::parse;
 use rustyline::error::ReadlineError;
-use rustyline::Editor;
+use rustyline::DefaultEditor;
 use std::collections::HashMap;
 
 fn print_builtin_docs() {
@@ -1142,7 +1142,7 @@ fn execute_repl() -> i32 {
     println!("Type ':help' for commands, ':exit' to quit");
     println!();
 
-    let mut rl = match Editor::<()>::new() {
+    let mut rl = match DefaultEditor::new() {
         Ok(editor) => editor,
         Err(e) => {
             eprintln!("Error: Failed to initialize REPL: {}", e);
