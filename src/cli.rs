@@ -1920,6 +1920,14 @@ fn execute_repl() -> i32 {
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
+                        "inspect" => {
+                            eprintln!("Error: Missing variable name");
+                            eprintln!("Usage: :inspect <variable_name>");
+                            eprintln!("  Example: :inspect x");
+                            eprintln!("  Note: This shows detailed information about a variable");
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
                         cmd if cmd.starts_with("inspect ") => {
                             let var_name = cmd.trim_start_matches("inspect ").trim();
                             if var_name.is_empty() {
@@ -1999,6 +2007,14 @@ fn execute_repl() -> i32 {
                                 eprintln!("Variable '{}' not found", var_name);
                                 eprintln!("  Use :vars to see available variables");
                             }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        "unlet" => {
+                            eprintln!("Error: Missing variable name");
+                            eprintln!("Usage: :unlet <variable_name>");
+                            eprintln!("  Example: :unlet x");
+                            eprintln!("  Note: This removes a user-defined variable (cannot remove builtins)");
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
@@ -2084,6 +2100,15 @@ fn execute_repl() -> i32 {
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
+                        "type" => {
+                            eprintln!("Error: Missing expression");
+                            eprintln!("Usage: :type <expression>");
+                            eprintln!("  Example: :type [1, 2, 3]");
+                            eprintln!("  Example: :type \"hello\"");
+                            eprintln!("  Note: This shows the type of an expression");
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
                         cmd if cmd.starts_with("type ") => {
                             let expr_str = cmd.trim_start_matches("type ").trim();
                             if expr_str.is_empty() {
@@ -2091,6 +2116,7 @@ fn execute_repl() -> i32 {
                                 eprintln!("Usage: :type <expression>");
                                 eprintln!("  Example: :type [1, 2, 3]");
                                 eprintln!("  Example: :type \"hello\"");
+                                eprintln!("  Note: This shows the type of an expression");
                                 let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
@@ -2131,6 +2157,14 @@ fn execute_repl() -> i32 {
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
+                        "read" => {
+                            eprintln!("Error: Missing file path");
+                            eprintln!("Usage: :read <file_path>");
+                            eprintln!("  Example: :read config.av");
+                            eprintln!("  Note: This displays the contents of the specified file");
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
                         cmd if cmd.starts_with("read ") => {
                             let file_path = cmd.trim_start_matches("read ").trim();
                             if file_path.is_empty() {
@@ -2158,6 +2192,14 @@ fn execute_repl() -> i32 {
                                     }
                                 }
                             }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        "run" => {
+                            eprintln!("Error: Missing file path");
+                            eprintln!("Usage: :run <file_path>");
+                            eprintln!("  Example: :run config.av");
+                            eprintln!("  Note: This evaluates a file without modifying REPL state");
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
@@ -2289,6 +2331,14 @@ fn execute_repl() -> i32 {
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
+                        "eval" => {
+                            eprintln!("Error: Missing file path");
+                            eprintln!("Usage: :eval <file_path>");
+                            eprintln!("  Example: :eval config.av");
+                            eprintln!("  Note: If the file evaluates to a Dict, its keys will be added to REPL state");
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
                         cmd if cmd.starts_with("eval ") => {
                             let file_path = cmd.trim_start_matches("eval ").trim();
                             if file_path.is_empty() {
@@ -2360,6 +2410,17 @@ fn execute_repl() -> i32 {
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
+                        "preview" => {
+                            eprintln!("Error: Missing file path");
+                            eprintln!("Usage: :preview <file_path> [flags...]");
+                            eprintln!("  Example: :preview config.av");
+                            eprintln!("  Example: :preview config.av --debug");
+                            eprintln!(
+                                "  Note: This shows what would be deployed without writing files"
+                            );
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
                         cmd if cmd.starts_with("preview ") => {
                             let file_path = cmd.trim_start_matches("preview ").trim();
                             if file_path.is_empty() {
@@ -2418,6 +2479,18 @@ fn execute_repl() -> i32 {
                                     eprintln!("Error reading file '{}': {}", file_path, e);
                                 }
                             }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        "deploy" => {
+                            eprintln!("Error: Missing file path");
+                            eprintln!("Usage: :deploy <file_path> [flags...]");
+                            eprintln!("  Flags: --root <dir>, --force, --backup, --append, --if-not-exists, --debug");
+                            eprintln!("  Example: :deploy config.av --root ./output --backup");
+                            eprintln!(
+                                "  Example: :deploy config.av --root ./out --force -env prod"
+                            );
+                            eprintln!("  Note: This deploys FileTemplates from the file to disk");
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
@@ -2521,6 +2594,16 @@ fn execute_repl() -> i32 {
                             if result == 0 {
                                 println!("Deployment completed successfully");
                             }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        "deploy-expr" => {
+                            eprintln!("Error: Missing expression");
+                            eprintln!("Usage: :deploy-expr <expression> [--root <dir>]");
+                            eprintln!("  Example: :deploy-expr @test.txt {{\"Hello\"}}");
+                            eprintln!("  Example: :deploy-expr config --root ./output");
+                            eprintln!("  Note: The expression must evaluate to a FileTemplate or list of FileTemplates");
+                            eprintln!("  Note: --root is required for deployment");
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
@@ -3366,6 +3449,15 @@ fn execute_repl() -> i32 {
                                     eprintln!("Error reading current directory: {}", e);
                                 }
                             }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        "cd" => {
+                            eprintln!("Error: Missing directory path");
+                            eprintln!("Usage: :cd <directory>");
+                            eprintln!("  Example: :cd ./examples");
+                            eprintln!("  Example: :cd /tmp");
+                            eprintln!("  Note: This changes the current working directory");
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
