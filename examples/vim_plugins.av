@@ -14,7 +14,7 @@ let plugins = [
 
 let plugin_declarations = map (\p concat "Plug '" (concat p "'")) plugins in
 
-@/home/{user}/.vimrc {"
+@home/{user}/.vimrc {"
 " Vim Configuration with Plugins
 " Generated with Avon
 

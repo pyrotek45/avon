@@ -59,7 +59,7 @@ let truncated = truncate long_text 20 in
 let title = "AVON" in
 let centered = center title 20 in
 
-@/tmp/formatting_demo.txt {"
+@tmp/formatting_demo.txt {"
 Formatting Functions Demonstration
 ===================================
 

@@ -29,7 +29,7 @@ let comparison_table = [
   ["Prod"] + prod_values
 ] in
 
-@/tmp/dict_tables.txt {"
+@tmp/dict_tables.txt {"
 Dictionary to Table Format Examples
 ====================================
 

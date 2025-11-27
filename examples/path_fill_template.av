@@ -16,4 +16,4 @@ let subs = {
 let filled = fill_template template_path subs in
 
 # Generate output file with the filled template
-@/tmp/path_demo_output.txt {"{filled}"}
+@tmp/path_demo_output.txt {"{filled}"}

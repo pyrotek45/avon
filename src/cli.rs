@@ -651,11 +651,49 @@ fn process_source(
                                  // If any error occurs during collection or validation, no files are written
                                  
                                 // Step 1: Prepare all file operations (validate paths, create dirs)
+                                // SECURITY: Canonicalize root path once to prevent symlink attacks
+                                let (root_path, canonical_root) = if let Some(root_str) = &opts.root {
+                                    let root = std::path::Path::new(root_str);
+                                    match std::fs::canonicalize(root) {
+                                        Ok(canon) => (root.to_path_buf(), Some(canon)),
+                                        Err(_) => {
+                                            // If root doesn't exist, create it and then canonicalize
+                                            if let Err(e) = std::fs::create_dir_all(root) {
+                                                eprintln!("Error: Failed to create root directory: {}", root_str);
+                                                eprintln!("  Reason: {}", e);
+                                                eprintln!("Deployment aborted. No files were written.");
+                                                return 1;
+                                            }
+                                            match std::fs::canonicalize(root) {
+                                                Ok(canon) => (root.to_path_buf(), Some(canon)),
+                                                Err(e) => {
+                                                    eprintln!("Error: Failed to canonicalize root directory: {}", root_str);
+                                                    eprintln!("  Reason: {}", e);
+                                                    eprintln!("Deployment aborted. No files were written.");
+                                                    return 1;
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    (std::path::PathBuf::new(), None)
+                                };
+                                
                                 let mut prepared_files: Vec<(std::path::PathBuf, String, bool, bool)> = Vec::new();
                                 for (path, content) in &files {
-                                    let write_path = if let Some(root) = &opts.root {
+                                    let write_path = if let Some(canon_root) = &canonical_root {
+                                        // SECURITY: Reject paths containing ".." before processing
+                                        // This prevents directory traversal attacks
+                                        if path.contains("..") {
+                                            eprintln!("Error: Path traversal detected: {}", path);
+                                            eprintln!("  Path contains '..' which is not allowed");
+                                            eprintln!("  Deployment aborted.");
+                                            return 1;
+                                        }
+                                        
                                         let rel = path.trim_start_matches('/');
                                         // SECURITY: Normalize path to prevent directory traversal attacks
+                                        // Filter out ParentDir ("..") and RootDir components as additional safety
                                         let normalized = std::path::Path::new(rel)
                                             .components()
                                             .filter(|c| match c {
@@ -664,18 +702,77 @@ fn process_source(
                                                 _ => true,
                                             })
                                             .collect::<std::path::PathBuf>();
-                                        let full_path = std::path::Path::new(root).join(normalized);
-                                        // SECURITY: Ensure the resolved path is still within the root directory
-                                        let root_path = std::path::Path::new(root).canonicalize()
-                                            .unwrap_or_else(|_| std::path::Path::new(root).to_path_buf());
-                                        let resolved = full_path.canonicalize()
-                                            .unwrap_or_else(|_| full_path.clone());
-                                        if !resolved.starts_with(&root_path) {
+                                        
+                                        // Build the full path within the root
+                                        let full_path = root_path.join(&normalized);
+                                        
+                                        // SECURITY: Canonicalize the full path to resolve symlinks
+                                        // If the path doesn't exist yet, we need to check parent directories
+                                        let resolved = if full_path.exists() {
+                                            match std::fs::canonicalize(&full_path) {
+                                                Ok(p) => p,
+                                                Err(e) => {
+                                                    eprintln!("Error: Failed to resolve path: {}", full_path.display());
+                                                    eprintln!("  Reason: {}", e);
+                                                    eprintln!("Deployment aborted. No files were written.");
+                                                    return 1;
+                                                }
+                                            }
+                                        } else {
+                                            // Path doesn't exist yet - canonicalize parent and check it's within root
+                                            if let Some(parent) = full_path.parent() {
+                                                if parent.exists() {
+                                                    match std::fs::canonicalize(parent) {
+                                                        Ok(canon_parent) => {
+                                                            // Ensure parent is within root
+                                                            if !canon_parent.starts_with(canon_root) {
+                                                                eprintln!("Error: Path traversal detected: {}", path);
+                                                                eprintln!("  Attempted path would escape --root directory");
+                                                                eprintln!("  Deployment aborted.");
+                                                                return 1;
+                                                            }
+                                                            // Build the final path from canonical parent + filename
+                                                            canon_parent.join(full_path.file_name().unwrap_or_default())
+                                                        }
+                                                        Err(e) => {
+                                                            eprintln!("Error: Failed to resolve parent directory: {}", parent.display());
+                                                            eprintln!("  Reason: {}", e);
+                                                            eprintln!("Deployment aborted. No files were written.");
+                                                            return 1;
+                                                        }
+                                                    }
+                                                } else {
+                                                    // Parent doesn't exist - will be created, but validate the path structure
+                                                    // Check that all parent components are safe
+                                                    let mut current = root_path.clone();
+                                                    for component in normalized.components() {
+                                                        current = current.join(component);
+                                                        // This should never happen due to filtering above, but double-check
+                                                        if let std::path::Component::ParentDir = component {
+                                                            eprintln!("Error: Path traversal detected: {}", path);
+                                                            eprintln!("  Attempted path would escape --root directory");
+                                                            eprintln!("  Deployment aborted.");
+                                                            return 1;
+                                                        }
+                                                    }
+                                                    full_path
+                                                }
+                                            } else {
+                                                // No parent - this is the root itself (shouldn't happen with file paths)
+                                                full_path
+                                            }
+                                        };
+                                        
+                                        // SECURITY: Final check - ensure resolved path is within canonical root
+                                        if !resolved.starts_with(canon_root) {
                                             eprintln!("Error: Path traversal detected: {}", path);
                                             eprintln!("  Attempted path would escape --root directory");
+                                            eprintln!("  Resolved path: {}", resolved.display());
+                                            eprintln!("  Root directory: {}", canon_root.display());
                                             eprintln!("  Deployment aborted.");
                                             return 1;
                                         }
+                                        
                                         resolved
                                     } else {
                                         // SECURITY: Without --root, validate absolute paths don't contain ".."
@@ -683,6 +780,14 @@ fn process_source(
                                         if path_buf.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
                                             eprintln!("Error: Path contains '..' which is not allowed without --root");
                                             eprintln!("  Use --root to safely contain file operations");
+                                            eprintln!("  Deployment aborted.");
+                                            return 1;
+                                        }
+                                        // Also block absolute paths without --root for security
+                                        if path_buf.is_absolute() {
+                                            eprintln!("Error: Absolute paths are not allowed without --root");
+                                            eprintln!("  Use --root to safely contain file operations");
+                                            eprintln!("  Example: avon deploy program.av --root ./output");
                                             eprintln!("  Deployment aborted.");
                                             return 1;
                                         }

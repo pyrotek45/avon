@@ -29,7 +29,7 @@ let filled = fill_template template_file subs in
 
 # 6. Multiple file generation with dynamic paths
 let environments = ["dev", "staging", "prod"] in
-let make_config = \e @/tmp/config-{e}.txt {"
+let make_config = \e @tmp/config-{e}.txt {"
 Environment: {e}
 Debug: {if e == "prod" then "false" else "true"}
 "} in
@@ -61,7 +61,7 @@ Path Value Feature Demo
 "} in
 
 let files = map make_config environments in
-let summary_file = @/tmp/path_summary.txt {"{summary}"} in
+let summary_file = @tmp/path_summary.txt {"{summary}"} in
 
 # Return both summary and generated configs
 [summary_file] + files

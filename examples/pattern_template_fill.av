@@ -14,7 +14,7 @@ let email_template = "Dear {name},\n\nThis is a message from {sender}.\n\nDate: 
 # Fill in the placeholders
 let filled = fill_placeholders email_template "Alice" "Bob" "2025-11-24" in
 
-@/tmp/email.txt {"{filled}"}
+@tmp/email.txt {"{filled}"}
 
 # Pattern 2: Using map for multiple instances
 let make_email = \recipient
@@ -22,7 +22,7 @@ let make_email = \recipient
 in
 
 let recipients = ["Alice", "Bob", "Charlie"] in
-let emails = map (\name @/tmp/email_{name}.txt {"{fill_placeholders email_template name "System" "2025-11-24"}"}) recipients in
+let emails = map (\name @tmp/email_{name}.txt {"{fill_placeholders email_template name "System" "2025-11-24"}"}) recipients in
 
 emails
 

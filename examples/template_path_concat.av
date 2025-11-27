@@ -6,8 +6,8 @@ let t2 = {"World!"} in
 let result_templates = t1 + t2 in
 
 # Test path concatenation
-let p1 = @/home/user in
-let p2 = @/projects/avon in
+let p1 = @home/user in
+let p2 = @projects/avon in
 let combined_path = p1 + p2 in
 
 # Test with interpolation in templates

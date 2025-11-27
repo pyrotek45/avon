@@ -5,7 +5,7 @@ let user = "nvimuser" in
 let theme = "tokyonight" in
 let tab_spaces = "2" in
 
-@/home/{user}/.config/nvim/init.lua {"
+@home/{user}/.config/nvim/init.lua {"
 -- Neovim Lua Configuration
 -- Generated with Avon
 

@@ -6,7 +6,7 @@ let tab_width = "4" in
 let line_numbers = true in
 let syntax_on = true in
 
-@/home/{user}/.vimrc {"
+@home/{user}/.vimrc {"
 " Simple Vim Configuration
 " Generated with Avon
 

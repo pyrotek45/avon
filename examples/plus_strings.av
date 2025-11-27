@@ -3,7 +3,7 @@
 
 let a = "hello" in
 let b = " world" in
-@/tmp/plus_strings.txt {"
+@tmp/plus_strings.txt {"
     Result: {a + b}
     Also concat: {(concat a b)}
     Repeated: { (join [a,b,a] " - ") }

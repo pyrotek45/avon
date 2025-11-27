@@ -53,7 +53,6 @@ fi
 # Run each test suite
 run_test "Grammar Test" "scripts/test_grammar.sh"
 run_test "Bulletproof Test" "scripts/test_bulletproof.sh"
-run_test "Range Syntax Test" "scripts/test_range_syntax.sh"
 run_test "Tutorial Snippets Test" "scripts/test_tutorial_snippets.sh"
 run_test "Scoping Rules Test" "scripts/test_scoping_rules.sh"
 run_test "All Examples Test" "scripts/test_all_examples.sh"

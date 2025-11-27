@@ -61,7 +61,7 @@ let arr = ["alpha","beta","gamma","delta","epsilon","zeta","eta","theta","iota",
 # create a long content by joining arr with extra annotated lines
 let body = join (map (\s concat "- " s) arr) "\n" in
 
-[@/tmp/complex_usage_4.txt {"
+[@tmp/complex_usage_4.txt {"
     JSON/Files Example
     
     This example demonstrates JSON array handling (as a list), readlines

@@ -1,5 +1,5 @@
 # generate a docker-compose for a web + redis service
-@/tmp/docker-compose.yml {"
+@tmp/docker-compose.yml {"
 version: '3'
 services:
   web:

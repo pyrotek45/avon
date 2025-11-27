@@ -1,7 +1,7 @@
 # generate nginx site configs for multiple domains
 let sites = ["example.com", "static.example.com"] in
 
-map (\s @/etc/nginx/sites-available/{s}.conf {{"
+map (\s @nginx/sites-available/{s}.conf {{"
 server {
     listen 80;
     server_name {{s}};

@@ -1,5 +1,5 @@
 # named args example (function expects `name` and optional age)
-\name ? "Guest" \age ? "unknown" @/tmp/{name}_{age}.txt {"
+\name ? "Guest" \age ? "unknown" @tmp/{name}_{age}.txt {"
     Name: {name}
     Age: {age}
 "}

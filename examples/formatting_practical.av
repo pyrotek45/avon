@@ -25,7 +25,7 @@ let metrics = [
 # Color Codes (for terminal output)
 let colors = ["Red", "Green", "Blue"] in
 
-@/tmp/server_report.txt {"
+@tmp/server_report.txt {"
 ════════════════════════════════════════
        SERVER CONFIGURATION REPORT
 ════════════════════════════════════════

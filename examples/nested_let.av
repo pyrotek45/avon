@@ -1,6 +1,6 @@
 # nested let with filetemplate
 let a = "A" in
 let b = "B" in
-@/tmp/{a}_{b}.txt {"
+@tmp/{a}_{b}.txt {"
     {a}-{b}
 "}

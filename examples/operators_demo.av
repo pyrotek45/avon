@@ -5,7 +5,7 @@ let s = "X" in
 let a = 10 in
 let b = 3 in
 let nums = ["1","2"] in
-@/tmp/operators_demo.txt {"
+@tmp/operators_demo.txt {"
 Arithmetic:
   {a} + {b} = {a + b}
   {a} - {b} = {a - b}

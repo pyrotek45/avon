@@ -6,7 +6,7 @@ let tab_size = "2" in
 let color_scheme = "desert" in
 let enable_mouse = true in
 
-@/home/{user}/.config/nvim/init.vim {"
+@home/{user}/.config/nvim/init.vim {"
 " Simple Neovim Configuration
 " Generated with Avon
 
