@@ -86,20 +86,11 @@ impl Token {
     }
 
     pub fn is_term_op(&self) -> bool {
-        match self {
-            Token::Add(_) => true,
-            Token::Sub(_) => true,
-            _ => false,
-        }
+        matches!(self, Token::Add(_) | Token::Sub(_))
     }
 
     pub fn is_factor_op(&self) -> bool {
-        match self {
-            Token::Mul(_) => true,
-            Token::Div(_) => true,
-            Token::Mod(_) => true,
-            _ => false,
-        }
+        matches!(self, Token::Mul(_) | Token::Div(_) | Token::Mod(_))
     }
 }
 
@@ -264,11 +255,11 @@ pub enum Value {
     String(String),
     #[allow(dead_code)]
     Function {
-        name: Option<String>,  // The name the function was bound to (e.g., "stringify")
-        ident: String,         // The parameter name (e.g., "x")
+        name: Option<String>, // The name the function was bound to (e.g., "stringify")
+        ident: String,        // The parameter name (e.g., "x")
         default: Option<Box<Value>>,
         expr: Box<Expr>,
-        env: std::sync::Arc<HashMap<String, Value>>,  // Reference counted immutable environment capture
+        env: std::sync::Arc<HashMap<String, Value>>, // Reference counted immutable environment capture
     },
     Builtin(String, Vec<Value>),
     Template(Vec<Chunk>, HashMap<String, Value>),
@@ -379,7 +370,8 @@ impl EvalError {
             return "Available type predicates: is_string, is_number, is_int, is_float, is_list, is_bool, is_function".to_string();
         }
         if sym.starts_with("assert_") {
-            return "Use general 'assert' function: assert (is_number x) x, assert (x > 0) x, etc.".to_string();
+            return "Use general 'assert' function: assert (is_number x) x, assert (x > 0) x, etc."
+                .to_string();
         }
         if sym.starts_with("format_") {
             return "Available formatters: format_int, format_float, format_hex, format_bytes, format_list, etc.".to_string();

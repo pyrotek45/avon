@@ -6,7 +6,7 @@ pub fn identifier(next: char, stream: &mut Peekable<Chars<'_>>, line: usize) -> 
     let mut ident = String::new();
     ident.push(next);
     loop {
-        let Some(peek) = stream.peek().clone() else {
+        let Some(peek) = stream.peek() else {
             break;
         };
         if peek.is_whitespace() || (!peek.is_alphanumeric() && *peek != '_') {
@@ -24,7 +24,14 @@ pub fn string(stream: &mut Peekable<Chars<'_>>, line: &mut usize) -> Result<Toke
     loop {
         let next_opt = stream.next();
         match next_opt {
-            None => return Err(EvalError::new("unterminated string", None, None, start_line)),
+            None => {
+                return Err(EvalError::new(
+                    "unterminated string",
+                    None,
+                    None,
+                    start_line,
+                ))
+            }
             Some('\n') => {
                 *line += 1;
                 string.push('\n');
@@ -304,11 +311,15 @@ pub fn path(stream: &mut Peekable<Chars<'_>>, line: &mut usize) -> Result<Token,
     }
 }
 
-pub fn number(next: char, stream: &mut Peekable<Chars<'_>>, line: usize) -> Result<Token, EvalError> {
+pub fn number(
+    next: char,
+    stream: &mut Peekable<Chars<'_>>,
+    line: usize,
+) -> Result<Token, EvalError> {
     let mut number = String::new();
     number.push(next);
     loop {
-        let Some(peek) = stream.peek().clone() else {
+        let Some(peek) = stream.peek() else {
             break;
         };
         if peek.is_whitespace() || !peek.is_numeric() {
@@ -329,14 +340,14 @@ pub fn number(next: char, stream: &mut Peekable<Chars<'_>>, line: usize) -> Resu
         // or member access (.), so leave it for the main lexer
         let mut temp_stream = stream.clone();
         temp_stream.next(); // consume the '.'
-        
+
         if let Some(next_char) = temp_stream.peek() {
             if next_char.is_numeric() {
                 // This is definitely a float, consume the dot and parse decimal part
                 // Safe: we just checked peek == '.'
                 number.push(stream.next().expect("'.' character exists after peek"));
                 loop {
-                    let Some(peek) = stream.peek().clone() else {
+                    let Some(peek) = stream.peek() else {
                         break;
                     };
                     if peek.is_whitespace() || !peek.is_numeric() {
@@ -517,18 +528,18 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, EvalError> {
                 if let Some('&') = stream.peek() {
                     stream.next();
                     output.push(Token::And(line));
-                    } else {
-                        // Single & is not supported - skip with warning
-                        eprintln!("Warning: single '&' is not a valid token on line {}", line);
+                } else {
+                    // Single & is not supported - skip with warning
+                    eprintln!("Warning: single '&' is not a valid token on line {}", line);
                 }
             }
             '|' => {
                 if let Some('|') = stream.peek() {
                     stream.next();
                     output.push(Token::Or(line));
-                    } else {
-                        // Single | is not supported - skip with warning  
-                        eprintln!("Warning: single '|' is not a valid token on line {}", line);
+                } else {
+                    // Single | is not supported - skip with warning
+                    eprintln!("Warning: single '|' is not a valid token on line {}", line);
                 }
             }
             '-' => {

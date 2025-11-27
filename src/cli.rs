@@ -1,12 +1,10 @@
 use crate::common::Value;
-use crate::eval::{
-    apply_function, collect_file_templates, eval, fetch_git_raw, initial_builtins,
-};
+use crate::eval::{apply_function, collect_file_templates, eval, fetch_git_raw, initial_builtins};
 use crate::lexer::tokenize;
 use crate::parser::parse;
-use std::collections::HashMap;
 use rustyline::error::ReadlineError;
-use rustyline::Editor;
+use rustyline::DefaultEditor;
+use std::collections::HashMap;
 
 fn print_builtin_docs() {
     println!("Avon Builtin Functions Reference");
@@ -100,7 +98,9 @@ fn print_builtin_docs() {
     println!("  format_scientific :: Number -> Int -> String          (scientific notation)");
     println!("  format_bytes      :: Number -> String                 (human-readable bytes)");
     println!("  format_list       :: [a] -> String -> String          (join with separator)");
-    println!("  format_table      :: ([[a]]|Dict) -> String -> String (2D table, also accepts dict)");
+    println!(
+        "  format_table      :: ([[a]]|Dict) -> String -> String (2D table, also accepts dict)"
+    );
     println!("  format_json       :: a -> String                      (JSON representation)");
     println!("  format_currency   :: Number -> String -> String       (currency with symbol)");
     println!("  format_percent    :: Number -> Int -> String          (percentage)");
@@ -359,7 +359,10 @@ fn parse_args(args: &[String], require_file: bool) -> Result<CliOptions, String>
                     opts.git_url = Some(args[i + 1].clone());
                     i += 2;
                 } else {
-                    return Err("--git requires a URL argument (format: user/repo/path/to/file.av)".to_string());
+                    return Err(
+                        "--git requires a URL argument (format: user/repo/path/to/file.av)"
+                            .to_string(),
+                    );
                 }
             }
             s if s.starts_with("-") => {
@@ -368,7 +371,10 @@ fn parse_args(args: &[String], require_file: bool) -> Result<CliOptions, String>
                     opts.named_args.insert(key, args[i + 1].clone());
                     i += 2;
                 } else {
-                    return Err(format!("Named argument '{}' requires a value. Use: -{} <value>", key, key));
+                    return Err(format!(
+                        "Named argument '{}' requires a value. Use: -{} <value>",
+                        key, key
+                    ));
                 }
             }
             s => {
@@ -385,7 +391,9 @@ fn parse_args(args: &[String], require_file: bool) -> Result<CliOptions, String>
     }
 
     if require_file && opts.file.is_none() && opts.git_url.is_none() {
-        return Err("Missing required file argument. Use: avon <command> <file> [options]".to_string());
+        return Err(
+            "Missing required file argument. Use: avon <command> <file> [options]".to_string(),
+        );
     }
 
     Ok(opts)
@@ -432,31 +440,29 @@ pub fn run_cli(args: Vec<String>) -> i32 {
             let code = rest[0].clone();
             // parse remaining flags like --debug
             match parse_args(&rest[1..], false) {
-                 Ok(mut opts) => {
-                     opts.code = Some(code);
-                     execute_run(opts)
-                 },
-                 Err(e) => {
-                     eprintln!("Error: {}", e);
-                     1
-                 }
+                Ok(mut opts) => {
+                    opts.code = Some(code);
+                    execute_run(opts)
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    1
+                }
             }
-        },
-        "repl" => {
-            execute_repl()
-        },
+        }
+        "repl" => execute_repl(),
         "doc" | "docs" => {
             print_builtin_docs();
             0
-        },
+        }
         "version" | "--version" | "-v" => {
             println!("avon 0.1.0");
             0
-        },
+        }
         "help" | "--help" | "-h" => {
             print_help();
             0
-        },
+        }
         // Legacy / Convenience
         _ => {
             // If starts with --, it's likely a legacy flag command
@@ -464,36 +470,49 @@ pub fn run_cli(args: Vec<String>) -> i32 {
                 match cmd.as_str() {
                     "--git" => {
                         // Legacy --git implies deploy
-                         let mut legacy_args = vec!["--git".to_string()];
-                         legacy_args.extend_from_slice(rest);
-                         match parse_args(&legacy_args, true) { // require_file=true satisfied by --git
+                        let mut legacy_args = vec!["--git".to_string()];
+                        legacy_args.extend_from_slice(rest);
+                        match parse_args(&legacy_args, true) {
+                            // require_file=true satisfied by --git
                             Ok(opts) => execute_deploy(opts),
-                            Err(e) => { eprintln!("Error: {}", e); 1 }
-                         }
-                    },
+                            Err(e) => {
+                                eprintln!("Error: {}", e);
+                                1
+                            }
+                        }
+                    }
                     "--git-eval" => {
-                         let mut legacy_args = vec!["--git".to_string()]; // map to git opt
-                         legacy_args.extend_from_slice(rest);
-                         match parse_args(&legacy_args, true) {
+                        let mut legacy_args = vec!["--git".to_string()]; // map to git opt
+                        legacy_args.extend_from_slice(rest);
+                        match parse_args(&legacy_args, true) {
                             Ok(opts) => execute_eval(opts),
-                            Err(e) => { eprintln!("Error: {}", e); 1 }
-                         }
-                    },
+                            Err(e) => {
+                                eprintln!("Error: {}", e);
+                                1
+                            }
+                        }
+                    }
                     "--eval-input" => {
                         if rest.is_empty() {
-                             eprintln!("Error: --eval-input requires code string");
-                             return 1;
+                            eprintln!("Error: --eval-input requires code string");
+                            return 1;
                         }
                         let code = rest[0].clone();
                         match parse_args(&rest[1..], false) {
                             Ok(mut opts) => {
                                 opts.code = Some(code);
                                 execute_run(opts)
-                            },
-                            Err(e) => { eprintln!("Error: {}", e); 1 }
+                            }
+                            Err(e) => {
+                                eprintln!("Error: {}", e);
+                                1
+                            }
                         }
-                    },
-                    "--doc" => { print_builtin_docs(); 0 },
+                    }
+                    "--doc" => {
+                        print_builtin_docs();
+                        0
+                    }
                     _ => {
                         eprintln!("Unknown flag: {}", cmd);
                         print_help();
@@ -505,8 +524,9 @@ pub fn run_cli(args: Vec<String>) -> i32 {
                 // Check if --deploy exists in args to decide mode
                 let is_deploy = args.contains(&"--deploy".to_string());
                 // Filter out --deploy from args for parsing
-                let filtered_rest: Vec<String> = rest.iter().filter(|s| *s != "--deploy").cloned().collect();
-                
+                let filtered_rest: Vec<String> =
+                    rest.iter().filter(|s| *s != "--deploy").cloned().collect();
+
                 // We treat the command as the file
                 let mut eff_args = vec![cmd.clone()];
                 eff_args.extend(filtered_rest);
@@ -518,7 +538,7 @@ pub fn run_cli(args: Vec<String>) -> i32 {
                         } else {
                             execute_eval(opts)
                         }
-                    },
+                    }
                     Err(e) => {
                         eprintln!("Error: {}", e);
                         1
@@ -546,7 +566,10 @@ fn get_source(opts: &CliOptions) -> Result<(String, String), i32> {
                 eprintln!("  Reason: {}", e);
                 if e.kind() == std::io::ErrorKind::NotFound {
                     eprintln!("  Tip: Check that the file exists and the path is correct");
-                    eprintln!("  Tip: Use 'avon eval {}' to test if the file is valid", file);
+                    eprintln!(
+                        "  Tip: Use 'avon eval {}' to test if the file is valid",
+                        file
+                    );
                 } else if e.kind() == std::io::ErrorKind::PermissionDenied {
                     eprintln!("  Tip: Check file permissions");
                 }
@@ -562,16 +585,11 @@ fn get_source(opts: &CliOptions) -> Result<(String, String), i32> {
     }
 }
 
-fn process_source(
-    source: String,
-    source_name: String,
-    opts: CliOptions,
-    deploy_mode: bool,
-) -> i32 {
+fn process_source(source: String, source_name: String, opts: CliOptions, deploy_mode: bool) -> i32 {
     if opts.debug {
         eprintln!("[DEBUG] Starting lexer...");
     }
-    
+
     match tokenize(source.clone()) {
         Ok(tokens) => {
             if opts.debug {
@@ -581,87 +599,161 @@ fn process_source(
                 }
                 eprintln!("[DEBUG] Starting parser...");
             }
-            
+
             let ast = parse(tokens);
             if opts.debug {
                 eprintln!("[DEBUG] Parser produced AST: {:?}", ast);
                 eprintln!("[DEBUG] Starting evaluator...");
             }
-            
+
             let mut symbols = initial_builtins();
             match eval(ast.program, &mut symbols, &source) {
                 Ok(mut v) => {
                     // Apply arguments logic
                     // ... (Function application logic from old code) ...
                     // We need to apply opts.named_args and opts.pos_args
-                    
+
                     // If v is a function, try to apply args
                     let mut pos_idx = 0;
                     loop {
                         match &v {
-                             Value::Function { ident, default, .. } => {
-                                 if let Some(named_val) = opts.named_args.get(ident) {
-                                     match apply_function(&v, Value::String(named_val.clone()), &source, 0) {
-                                         Ok(nv) => { v = nv; continue; },
-                                         Err(e) => { eprintln!("{}", e.pretty_with_file(&source, Some(&source_name))); return 1; }
-                                     }
-                                 } else if pos_idx < opts.pos_args.len() {
-                                     match apply_function(&v, Value::String(opts.pos_args[pos_idx].clone()), &source, 0) {
-                                         Ok(nv) => { v = nv; pos_idx += 1; continue; },
-                                         Err(e) => { eprintln!("{}", e.pretty_with_file(&source, Some(&source_name))); return 1; }
-                                     }
-                                 } else if let Some(def_box) = default {
-                                     match apply_function(&v, (**def_box).clone(), &source, 0) {
-                                         Ok(nv) => { v = nv; continue; },
-                                         Err(e) => { eprintln!("{}", e.pretty_with_file(&source, Some(&source_name))); return 1; }
-                                     }
-                                 } else {
-                                     eprintln!("Error: Missing required argument: {}", ident);
-                                     eprintln!("  The program expects an argument named '{}'", ident);
-                                     if !opts.named_args.is_empty() || !opts.pos_args.is_empty() {
-                                         eprintln!("  Provided arguments: {:?}", opts.named_args.keys().collect::<Vec<_>>());
-                                         if !opts.pos_args.is_empty() {
-                                             eprintln!("  Positional arguments: {:?}", opts.pos_args);
-                                         }
-                                     }
-                                     eprintln!("  Usage: avon deploy {} -{} <value>", source_name, ident);
-                                     eprintln!("  Example: avon deploy {} -{} myvalue", source_name, ident);
-                                     return 1;
-                                 }
-                             },
-                             Value::Builtin(_, _) => {
-                                 if pos_idx < opts.pos_args.len() {
-                                     match apply_function(&v, Value::String(opts.pos_args[pos_idx].clone()), &source, 0) {
-                                         Ok(nv) => { v = nv; pos_idx += 1; continue; },
-                                         Err(e) => { eprintln!("{}", e.pretty_with_file(&source, Some(&source_name))); return 1; }
-                                     }
-                                 } else {
-                                     break;
-                                 }
-                             },
-                             _ => break,
+                            Value::Function { ident, default, .. } => {
+                                if let Some(named_val) = opts.named_args.get(ident) {
+                                    match apply_function(
+                                        &v,
+                                        Value::String(named_val.clone()),
+                                        &source,
+                                        0,
+                                    ) {
+                                        Ok(nv) => {
+                                            v = nv;
+                                            continue;
+                                        }
+                                        Err(e) => {
+                                            eprintln!(
+                                                "{}",
+                                                e.pretty_with_file(&source, Some(&source_name))
+                                            );
+                                            return 1;
+                                        }
+                                    }
+                                } else if pos_idx < opts.pos_args.len() {
+                                    match apply_function(
+                                        &v,
+                                        Value::String(opts.pos_args[pos_idx].clone()),
+                                        &source,
+                                        0,
+                                    ) {
+                                        Ok(nv) => {
+                                            v = nv;
+                                            pos_idx += 1;
+                                            continue;
+                                        }
+                                        Err(e) => {
+                                            eprintln!(
+                                                "{}",
+                                                e.pretty_with_file(&source, Some(&source_name))
+                                            );
+                                            return 1;
+                                        }
+                                    }
+                                } else if let Some(def_box) = default {
+                                    match apply_function(&v, (**def_box).clone(), &source, 0) {
+                                        Ok(nv) => {
+                                            v = nv;
+                                            continue;
+                                        }
+                                        Err(e) => {
+                                            eprintln!(
+                                                "{}",
+                                                e.pretty_with_file(&source, Some(&source_name))
+                                            );
+                                            return 1;
+                                        }
+                                    }
+                                } else {
+                                    eprintln!("Error: Missing required argument: {}", ident);
+                                    eprintln!(
+                                        "  The program expects an argument named '{}'",
+                                        ident
+                                    );
+                                    if !opts.named_args.is_empty() || !opts.pos_args.is_empty() {
+                                        eprintln!(
+                                            "  Provided arguments: {:?}",
+                                            opts.named_args.keys().collect::<Vec<_>>()
+                                        );
+                                        if !opts.pos_args.is_empty() {
+                                            eprintln!(
+                                                "  Positional arguments: {:?}",
+                                                opts.pos_args
+                                            );
+                                        }
+                                    }
+                                    eprintln!(
+                                        "  Usage: avon deploy {} -{} <value>",
+                                        source_name, ident
+                                    );
+                                    eprintln!(
+                                        "  Example: avon deploy {} -{} myvalue",
+                                        source_name, ident
+                                    );
+                                    return 1;
+                                }
+                            }
+                            Value::Builtin(_, _) => {
+                                if pos_idx < opts.pos_args.len() {
+                                    match apply_function(
+                                        &v,
+                                        Value::String(opts.pos_args[pos_idx].clone()),
+                                        &source,
+                                        0,
+                                    ) {
+                                        Ok(nv) => {
+                                            v = nv;
+                                            pos_idx += 1;
+                                            continue;
+                                        }
+                                        Err(e) => {
+                                            eprintln!(
+                                                "{}",
+                                                e.pretty_with_file(&source, Some(&source_name))
+                                            );
+                                            return 1;
+                                        }
+                                    }
+                                } else {
+                                    break;
+                                }
+                            }
+                            _ => break,
                         }
                     }
-                    
+
                     // Result handling
                     if deploy_mode {
-                         match collect_file_templates(&v, &source) {
-                             Ok(files) => {
-                                 // SAFETY: Collect all files first, validate all paths, then write all files
-                                 // If any error occurs during collection or validation, no files are written
-                                 
+                        match collect_file_templates(&v, &source) {
+                            Ok(files) => {
+                                // SAFETY: Collect all files first, validate all paths, then write all files
+                                // If any error occurs during collection or validation, no files are written
+
                                 // Step 1: Prepare all file operations (validate paths, create dirs)
                                 // SECURITY: Canonicalize root path once to prevent symlink attacks
-                                let (root_path, canonical_root) = if let Some(root_str) = &opts.root {
+                                let (root_path, canonical_root) = if let Some(root_str) = &opts.root
+                                {
                                     let root = std::path::Path::new(root_str);
                                     match std::fs::canonicalize(root) {
                                         Ok(canon) => (root.to_path_buf(), Some(canon)),
                                         Err(_) => {
                                             // If root doesn't exist, create it and then canonicalize
                                             if let Err(e) = std::fs::create_dir_all(root) {
-                                                eprintln!("Error: Failed to create root directory: {}", root_str);
+                                                eprintln!(
+                                                    "Error: Failed to create root directory: {}",
+                                                    root_str
+                                                );
                                                 eprintln!("  Reason: {}", e);
-                                                eprintln!("Deployment aborted. No files were written.");
+                                                eprintln!(
+                                                    "Deployment aborted. No files were written."
+                                                );
                                                 return 1;
                                             }
                                             match std::fs::canonicalize(root) {
@@ -678,8 +770,13 @@ fn process_source(
                                 } else {
                                     (std::path::PathBuf::new(), None)
                                 };
-                                
-                                let mut prepared_files: Vec<(std::path::PathBuf, String, bool, bool)> = Vec::new();
+
+                                let mut prepared_files: Vec<(
+                                    std::path::PathBuf,
+                                    String,
+                                    bool,
+                                    bool,
+                                )> = Vec::new();
                                 for (path, content) in &files {
                                     let write_path = if let Some(canon_root) = &canonical_root {
                                         // SECURITY: Reject paths containing ".." before processing
@@ -690,7 +787,7 @@ fn process_source(
                                             eprintln!("  Deployment aborted.");
                                             return 1;
                                         }
-                                        
+
                                         let rel = path.trim_start_matches('/');
                                         // SECURITY: Normalize path to prevent directory traversal attacks
                                         // Filter out ParentDir ("..") and RootDir components as additional safety
@@ -698,21 +795,24 @@ fn process_source(
                                             .components()
                                             .filter(|c| match c {
                                                 std::path::Component::ParentDir => false, // Block ".."
-                                                std::path::Component::RootDir => false,    // Block absolute paths
+                                                std::path::Component::RootDir => false, // Block absolute paths
                                                 _ => true,
                                             })
                                             .collect::<std::path::PathBuf>();
-                                        
+
                                         // Build the full path within the root
                                         let full_path = root_path.join(&normalized);
-                                        
+
                                         // SECURITY: Canonicalize the full path to resolve symlinks
                                         // If the path doesn't exist yet, we need to check parent directories
                                         let resolved = if full_path.exists() {
                                             match std::fs::canonicalize(&full_path) {
                                                 Ok(p) => p,
                                                 Err(e) => {
-                                                    eprintln!("Error: Failed to resolve path: {}", full_path.display());
+                                                    eprintln!(
+                                                        "Error: Failed to resolve path: {}",
+                                                        full_path.display()
+                                                    );
                                                     eprintln!("  Reason: {}", e);
                                                     eprintln!("Deployment aborted. No files were written.");
                                                     return 1;
@@ -725,14 +825,19 @@ fn process_source(
                                                     match std::fs::canonicalize(parent) {
                                                         Ok(canon_parent) => {
                                                             // Ensure parent is within root
-                                                            if !canon_parent.starts_with(canon_root) {
+                                                            if !canon_parent.starts_with(canon_root)
+                                                            {
                                                                 eprintln!("Error: Path traversal detected: {}", path);
                                                                 eprintln!("  Attempted path would escape --root directory");
                                                                 eprintln!("  Deployment aborted.");
                                                                 return 1;
                                                             }
                                                             // Build the final path from canonical parent + filename
-                                                            canon_parent.join(full_path.file_name().unwrap_or_default())
+                                                            canon_parent.join(
+                                                                full_path
+                                                                    .file_name()
+                                                                    .unwrap_or_default(),
+                                                            )
                                                         }
                                                         Err(e) => {
                                                             eprintln!("Error: Failed to resolve parent directory: {}", parent.display());
@@ -748,7 +853,9 @@ fn process_source(
                                                     for component in normalized.components() {
                                                         current = current.join(component);
                                                         // This should never happen due to filtering above, but double-check
-                                                        if let std::path::Component::ParentDir = component {
+                                                        if let std::path::Component::ParentDir =
+                                                            component
+                                                        {
                                                             eprintln!("Error: Path traversal detected: {}", path);
                                                             eprintln!("  Attempted path would escape --root directory");
                                                             eprintln!("  Deployment aborted.");
@@ -762,47 +869,58 @@ fn process_source(
                                                 full_path
                                             }
                                         };
-                                        
+
                                         // SECURITY: Final check - ensure resolved path is within canonical root
                                         if !resolved.starts_with(canon_root) {
                                             eprintln!("Error: Path traversal detected: {}", path);
-                                            eprintln!("  Attempted path would escape --root directory");
+                                            eprintln!(
+                                                "  Attempted path would escape --root directory"
+                                            );
                                             eprintln!("  Resolved path: {}", resolved.display());
                                             eprintln!("  Root directory: {}", canon_root.display());
                                             eprintln!("  Deployment aborted.");
                                             return 1;
                                         }
-                                        
+
                                         resolved
                                     } else {
                                         // SECURITY: Without --root, validate absolute paths don't contain ".."
                                         let path_buf = std::path::Path::new(&path).to_path_buf();
-                                        if path_buf.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+                                        if path_buf
+                                            .components()
+                                            .any(|c| matches!(c, std::path::Component::ParentDir))
+                                        {
                                             eprintln!("Error: Path contains '..' which is not allowed without --root");
-                                            eprintln!("  Use --root to safely contain file operations");
+                                            eprintln!(
+                                                "  Use --root to safely contain file operations"
+                                            );
                                             eprintln!("  Deployment aborted.");
                                             return 1;
                                         }
                                         // Also block absolute paths without --root for security
                                         if path_buf.is_absolute() {
                                             eprintln!("Error: Absolute paths are not allowed without --root");
-                                            eprintln!("  Use --root to safely contain file operations");
-                                            eprintln!("  Example: avon deploy program.av --root ./output");
+                                            eprintln!(
+                                                "  Use --root to safely contain file operations"
+                                            );
+                                            eprintln!(
+                                                "  Example: avon deploy program.av --root ./output"
+                                            );
                                             eprintln!("  Deployment aborted.");
                                             return 1;
                                         }
                                         path_buf
                                     };
-                                    
+
                                     let exists = write_path.exists();
                                     let mut should_backup = false;
-                                    
+
                                     if exists {
                                         if opts.if_not_exists {
                                             println!("Skipped {} (exists)", write_path.display());
                                             continue;
                                         }
-                                        
+
                                         if opts.backup {
                                             should_backup = true;
                                         } else if !opts.force && !opts.append {
@@ -810,37 +928,53 @@ fn process_source(
                                             continue;
                                         }
                                     }
-                                    
-                                     // Create parent directories before writing
-                                     if let Some(parent) = write_path.parent() {
-                                         if let Err(e) = std::fs::create_dir_all(parent) {
-                                             eprintln!("Error: Failed to create directory: {}", parent.display());
-                                             eprintln!("  Reason: {}", e);
-                                             if e.kind() == std::io::ErrorKind::PermissionDenied {
-                                                 eprintln!("  Tip: Check directory permissions");
-                                                 eprintln!("  Tip: Try using a different --root directory");
-                                             } else if e.kind() == std::io::ErrorKind::NotFound {
-                                                 eprintln!("  Tip: Check that the parent path exists");
-                                             }
-                                             eprintln!("Deployment aborted. No files were written.");
-                                             return 1;
-                                         }
-                                     }
-                                    
-                                    prepared_files.push((write_path, content.clone(), exists, should_backup));
+
+                                    // Create parent directories before writing
+                                    if let Some(parent) = write_path.parent() {
+                                        if let Err(e) = std::fs::create_dir_all(parent) {
+                                            eprintln!(
+                                                "Error: Failed to create directory: {}",
+                                                parent.display()
+                                            );
+                                            eprintln!("  Reason: {}", e);
+                                            if e.kind() == std::io::ErrorKind::PermissionDenied {
+                                                eprintln!("  Tip: Check directory permissions");
+                                                eprintln!(
+                                                    "  Tip: Try using a different --root directory"
+                                                );
+                                            } else if e.kind() == std::io::ErrorKind::NotFound {
+                                                eprintln!(
+                                                    "  Tip: Check that the parent path exists"
+                                                );
+                                            }
+                                            eprintln!("Deployment aborted. No files were written.");
+                                            return 1;
+                                        }
+                                    }
+
+                                    prepared_files.push((
+                                        write_path,
+                                        content.clone(),
+                                        exists,
+                                        should_backup,
+                                    ));
                                 }
-                                
+
                                 // Step 2: Write all files (if any write fails, deployment is aborted)
                                 let mut written_files = Vec::new();
                                 for (write_path, content, exists, should_backup) in prepared_files {
                                     // Perform backup if needed
                                     if should_backup {
-                                        let mut backup_name = write_path.file_name().unwrap().to_os_string();
+                                        let mut backup_name =
+                                            write_path.file_name().unwrap().to_os_string();
                                         backup_name.push(".bak");
                                         let backup_path = write_path.with_file_name(backup_name);
-                                        
+
                                         if let Err(e) = std::fs::copy(&write_path, &backup_path) {
-                                            eprintln!("Error: Failed to create backup: {}", backup_path.display());
+                                            eprintln!(
+                                                "Error: Failed to create backup: {}",
+                                                backup_path.display()
+                                            );
                                             eprintln!("  Reason: {}", e);
                                             if e.kind() == std::io::ErrorKind::PermissionDenied {
                                                 eprintln!("  Tip: Check write permissions for the backup location");
@@ -856,14 +990,24 @@ fn process_source(
 
                                     if opts.append && exists {
                                         use std::io::Write;
-                                        match std::fs::OpenOptions::new().append(true).open(&write_path) {
+                                        match std::fs::OpenOptions::new()
+                                            .append(true)
+                                            .open(&write_path)
+                                        {
                                             Ok(mut f) => {
                                                 if let Err(e) = f.write_all(content.as_bytes()) {
-                                                    eprintln!("Error: Failed to append to file: {}", write_path.display());
+                                                    eprintln!(
+                                                        "Error: Failed to append to file: {}",
+                                                        write_path.display()
+                                                    );
                                                     eprintln!("  Reason: {}", e);
-                                                    if e.kind() == std::io::ErrorKind::PermissionDenied {
+                                                    if e.kind()
+                                                        == std::io::ErrorKind::PermissionDenied
+                                                    {
                                                         eprintln!("  Tip: Check file permissions");
-                                                    } else if e.kind() == std::io::ErrorKind::OutOfMemory {
+                                                    } else if e.kind()
+                                                        == std::io::ErrorKind::OutOfMemory
+                                                    {
                                                         eprintln!("  Tip: File may be too large for available memory");
                                                     }
                                                     if !written_files.is_empty() {
@@ -874,11 +1018,15 @@ fn process_source(
                                                 }
                                                 println!("Appended to {}", write_path.display());
                                                 written_files.push(write_path.clone());
-                                            },
+                                            }
                                             Err(e) => {
-                                                eprintln!("Error: Failed to open file for append: {}", write_path.display());
+                                                eprintln!(
+                                                    "Error: Failed to open file for append: {}",
+                                                    write_path.display()
+                                                );
                                                 eprintln!("  Reason: {}", e);
-                                                if e.kind() == std::io::ErrorKind::PermissionDenied {
+                                                if e.kind() == std::io::ErrorKind::PermissionDenied
+                                                {
                                                     eprintln!("  Tip: Check file permissions");
                                                     eprintln!("  Tip: Try using --backup instead of --append");
                                                 }
@@ -891,13 +1039,20 @@ fn process_source(
                                         }
                                     } else {
                                         if let Err(e) = std::fs::write(&write_path, content) {
-                                            eprintln!("Error: Failed to write file: {}", write_path.display());
+                                            eprintln!(
+                                                "Error: Failed to write file: {}",
+                                                write_path.display()
+                                            );
                                             eprintln!("  Reason: {}", e);
                                             if e.kind() == std::io::ErrorKind::PermissionDenied {
                                                 eprintln!("  Tip: Check file permissions");
-                                                eprintln!("  Tip: Try using a different --root directory");
+                                                eprintln!(
+                                                    "  Tip: Try using a different --root directory"
+                                                );
                                             } else if e.kind() == std::io::ErrorKind::NotFound {
-                                                eprintln!("  Tip: Check that the parent directory exists");
+                                                eprintln!(
+                                                    "  Tip: Check that the parent directory exists"
+                                                );
                                             } else if e.kind() == std::io::ErrorKind::OutOfMemory {
                                                 eprintln!("  Tip: File may be too large for available memory");
                                             }
@@ -915,22 +1070,22 @@ fn process_source(
                                         written_files.push(write_path);
                                     }
                                 }
-                             },
-                             Err(e) => {
-                                 // In deploy mode, if the result isn't deployable (not FileTemplate or list), error out
-                                 eprintln!("Error: Deployment failed - result is not deployable");
-                                 eprintln!("  The program evaluated successfully, but the result cannot be deployed.");
-                                 eprintln!("  Expected: FileTemplate or list of FileTemplates");
-                                 eprintln!("  Got: {}", v.to_string(&source));
-                                 eprintln!("  Details: {}", e.message);
-                                 eprintln!("");
-                                 eprintln!("  Tip: Make sure your program returns a FileTemplate (using @/path {{...}})");
-                                 eprintln!("  Tip: Or return a list of FileTemplates: [@/file1.txt {{...}}, @/file2.txt {{...}}]");
-                                 eprintln!("  Tip: Use 'avon eval {}' to see what your program evaluates to", source_name);
-                                 eprintln!("  No files were written.");
-                                 return 1;
-                             }
-                         }
+                            }
+                            Err(e) => {
+                                // In deploy mode, if the result isn't deployable (not FileTemplate or list), error out
+                                eprintln!("Error: Deployment failed - result is not deployable");
+                                eprintln!("  The program evaluated successfully, but the result cannot be deployed.");
+                                eprintln!("  Expected: FileTemplate or list of FileTemplates");
+                                eprintln!("  Got: {}", v.to_string(&source));
+                                eprintln!("  Details: {}", e.message);
+                                eprintln!();
+                                eprintln!("  Tip: Make sure your program returns a FileTemplate (using @/path {{...}})");
+                                eprintln!("  Tip: Or return a list of FileTemplates: [@/file1.txt {{...}}, @/file2.txt {{...}}]");
+                                eprintln!("  Tip: Use 'avon eval {}' to see what your program evaluates to", source_name);
+                                eprintln!("  No files were written.");
+                                return 1;
+                            }
+                        }
                     } else {
                         // Eval mode
                         match collect_file_templates(&v, &source) {
@@ -939,20 +1094,20 @@ fn process_source(
                                     println!("--- {} ---", path);
                                     println!("{}", content);
                                 }
-                            },
+                            }
                             Err(_) => {
                                 println!("{}", v.to_string(&source));
                             }
                         }
                     }
                     0
-                },
+                }
                 Err(e) => {
                     eprintln!("{}", e.pretty_with_file(&source, Some(&source_name)));
                     1
                 }
             }
-        },
+        }
         Err(e) => {
             eprintln!("{}", e.pretty_with_file(&source, Some(&source_name)));
             1
@@ -987,7 +1142,7 @@ fn execute_repl() -> i32 {
     println!("Type ':help' for commands, ':exit' to quit");
     println!();
 
-    let mut rl = match Editor::<()>::new() {
+    let mut rl = match DefaultEditor::new() {
         Ok(editor) => editor,
         Err(e) => {
             eprintln!("Error: Failed to initialize REPL: {}", e);
@@ -1000,15 +1155,15 @@ fn execute_repl() -> i32 {
 
     loop {
         let prompt = if input_buffer.is_empty() {
-            "avon> ".to_string()  // 6 chars: "avon" (4) + ">" (1) + " " (1)
+            "avon> ".to_string() // 6 chars: "avon" (4) + ">" (1) + " " (1)
         } else {
-            "    > ".to_string()  // 6 chars: 4 spaces + ">" + " " = matches "avon> " exactly, aligns "let"
+            "    > ".to_string() // 6 chars: 4 spaces + ">" + " " = matches "avon> " exactly, aligns "let"
         };
 
         match rl.readline(&prompt) {
             Ok(line) => {
                 let trimmed = line.trim();
-                
+
                 // Handle empty input
                 if trimmed.is_empty() {
                     if !input_buffer.is_empty() {
@@ -1053,28 +1208,99 @@ fn execute_repl() -> i32 {
                             let user_vars: Vec<_> = symbols
                                 .iter()
                                 .filter(|(k, _)| {
-                                    !matches!(k.as_str(), 
-                                        "concat" | "map" | "filter" | "fold" | "import" |
-                                        "readfile" | "exists" | "basename" | "dirname" | "readlines" |
-                                        "upper" | "lower" | "trim" | "split" | "join" | "replace" |
-                                        "contains" | "starts_with" | "ends_with" | "length" | "repeat" |
-                                        "pad_left" | "pad_right" | "indent" | "is_digit" | "is_alpha" |
-                                        "is_alphanumeric" | "is_whitespace" | "is_uppercase" | "is_lowercase" |
-                                        "is_empty" | "html_escape" | "html_tag" | "html_attr" |
-                                        "md_heading" | "md_link" | "md_code" | "md_list" |
-                                        "dict_get" | "dict_set" | "dict_has_key" | "to_string" |
-                                        "to_int" | "to_float" | "to_bool" | "neg" | "format_int" |
-                                        "format_float" | "format_hex" | "format_octal" | "format_binary" |
-                                        "format_scientific" | "format_bytes" | "format_list" | "format_table" |
-                                        "format_json" | "format_currency" | "format_percent" | "format_bool" |
-                                        "truncate" | "center" | "flatmap" | "flatten" | "get" | "set" |
-                                        "keys" | "values" | "has_key" | "typeof" | "is_string" | "is_number" |
-                                        "is_int" | "is_float" | "is_list" | "is_bool" | "is_function" | "is_dict" |
-                                        "assert" | "error" | "trace" | "debug" | "os" | "env_var" | "env_var_or" |
-                                        "json_parse" | "fill_template" | "walkdir")
+                                    !matches!(
+                                        k.as_str(),
+                                        "concat"
+                                            | "map"
+                                            | "filter"
+                                            | "fold"
+                                            | "import"
+                                            | "readfile"
+                                            | "exists"
+                                            | "basename"
+                                            | "dirname"
+                                            | "readlines"
+                                            | "upper"
+                                            | "lower"
+                                            | "trim"
+                                            | "split"
+                                            | "join"
+                                            | "replace"
+                                            | "contains"
+                                            | "starts_with"
+                                            | "ends_with"
+                                            | "length"
+                                            | "repeat"
+                                            | "pad_left"
+                                            | "pad_right"
+                                            | "indent"
+                                            | "is_digit"
+                                            | "is_alpha"
+                                            | "is_alphanumeric"
+                                            | "is_whitespace"
+                                            | "is_uppercase"
+                                            | "is_lowercase"
+                                            | "is_empty"
+                                            | "html_escape"
+                                            | "html_tag"
+                                            | "html_attr"
+                                            | "md_heading"
+                                            | "md_link"
+                                            | "md_code"
+                                            | "md_list"
+                                            | "dict_get"
+                                            | "dict_set"
+                                            | "dict_has_key"
+                                            | "to_string"
+                                            | "to_int"
+                                            | "to_float"
+                                            | "to_bool"
+                                            | "neg"
+                                            | "format_int"
+                                            | "format_float"
+                                            | "format_hex"
+                                            | "format_octal"
+                                            | "format_binary"
+                                            | "format_scientific"
+                                            | "format_bytes"
+                                            | "format_list"
+                                            | "format_table"
+                                            | "format_json"
+                                            | "format_currency"
+                                            | "format_percent"
+                                            | "format_bool"
+                                            | "truncate"
+                                            | "center"
+                                            | "flatmap"
+                                            | "flatten"
+                                            | "get"
+                                            | "set"
+                                            | "keys"
+                                            | "values"
+                                            | "has_key"
+                                            | "typeof"
+                                            | "is_string"
+                                            | "is_number"
+                                            | "is_int"
+                                            | "is_float"
+                                            | "is_list"
+                                            | "is_bool"
+                                            | "is_function"
+                                            | "is_dict"
+                                            | "assert"
+                                            | "error"
+                                            | "trace"
+                                            | "debug"
+                                            | "os"
+                                            | "env_var"
+                                            | "env_var_or"
+                                            | "json_parse"
+                                            | "fill_template"
+                                            | "walkdir"
+                                    )
                                 })
                                 .collect();
-                            
+
                             if user_vars.is_empty() {
                                 println!("No user-defined variables");
                             } else {
@@ -1148,13 +1374,19 @@ fn execute_repl() -> i32 {
                                     }
                                 }
                                 Err(e) => {
-                                    eprintln!("Parse error: {}", e.pretty_with_file(expr_str, Some("<input>")));
+                                    eprintln!(
+                                        "Parse error: {}",
+                                        e.pretty_with_file(expr_str, Some("<input>"))
+                                    );
                                 }
                             }
                             continue;
                         }
                         _ => {
-                            println!("Unknown command: {}. Type :help for available commands", cmd);
+                            println!(
+                                "Unknown command: {}. Type :help for available commands",
+                                cmd
+                            );
                             continue;
                         }
                     }
@@ -1196,10 +1428,17 @@ fn execute_repl() -> i32 {
                                             }
                                         }
                                     }
-                                    Value::List(items) if items.iter().any(|v| matches!(v, Value::FileTemplate { .. })) => {
+                                    Value::List(items)
+                                        if items
+                                            .iter()
+                                            .any(|v| matches!(v, Value::FileTemplate { .. })) =>
+                                    {
                                         match collect_file_templates(&val, &input_buffer) {
                                             Ok(files) => {
-                                                println!("List of FileTemplates ({}):", files.len());
+                                                println!(
+                                                    "List of FileTemplates ({}):",
+                                                    files.len()
+                                                );
                                                 for (path, content) in files {
                                                     println!("  Path: {}", path);
                                                     println!("  Content:\n{}", content);
@@ -1224,13 +1463,20 @@ fn execute_repl() -> i32 {
                                             Value::Path(_, _) => "Path",
                                             Value::None => "None",
                                         };
-                                        println!("{} : {}", val.to_string(&input_buffer), type_name);
+                                        println!(
+                                            "{} : {}",
+                                            val.to_string(&input_buffer),
+                                            type_name
+                                        );
                                     }
                                 }
                                 input_buffer.clear();
                             }
                             Err(e) => {
-                                eprintln!("Error: {}", e.pretty_with_file(&input_buffer, Some("<repl>")));
+                                eprintln!(
+                                    "Error: {}",
+                                    e.pretty_with_file(&input_buffer, Some("<repl>"))
+                                );
                                 input_buffer.clear();
                             }
                         }
@@ -1239,8 +1485,13 @@ fn execute_repl() -> i32 {
                         // Check if it's an incomplete expression
                         let error_msg = e.pretty_with_file(&input_buffer, Some("<repl>"));
                         // If it looks like incomplete input, continue collecting
-                        if error_msg.contains("unexpected") || error_msg.contains("EOF") || 
-                           (error_msg.contains("expected") && (error_msg.contains("in") || error_msg.contains("then") || error_msg.contains("else"))) {
+                        if error_msg.contains("unexpected")
+                            || error_msg.contains("EOF")
+                            || (error_msg.contains("expected")
+                                && (error_msg.contains("in")
+                                    || error_msg.contains("then")
+                                    || error_msg.contains("else")))
+                        {
                             // Continue multi-line input
                             continue;
                         } else {
@@ -1286,19 +1537,19 @@ fn _is_expression_complete_impl(input: &str) -> bool {
     let mut in_string = false;
     let mut in_template = false;
     let mut escape_next = false;
-    
+
     let chars: Vec<char> = input.chars().collect();
     let mut i = 0;
-    
+
     while i < chars.len() {
         let c = chars[i];
-        
+
         if escape_next {
             escape_next = false;
             i += 1;
             continue;
         }
-        
+
         if in_string {
             if c == '"' {
                 in_string = false;
@@ -1306,7 +1557,7 @@ fn _is_expression_complete_impl(input: &str) -> bool {
             i += 1;
             continue;
         }
-        
+
         if in_template {
             if c == '}' {
                 // Check if it's closing a template brace
@@ -1323,7 +1574,7 @@ fn _is_expression_complete_impl(input: &str) -> bool {
             i += 1;
             continue;
         }
-        
+
         match c {
             '"' => in_string = true,
             '{' => {
@@ -1352,70 +1603,65 @@ fn _is_expression_complete_impl(input: &str) -> bool {
             }
             _ => {}
         }
-        
+
         // Check for keywords (only when not in string/template)
         if !in_string && !in_template && i + 2 < chars.len() {
             let remaining: String = chars[i..].iter().collect();
-            
+
             // Check for "let" keyword (word boundary)
-            if remaining.starts_with("let") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
-                if i + 3 >= chars.len() || !chars[i + 3].is_alphanumeric() {
+            if remaining.starts_with("let") && (i == 0 || !chars[i - 1].is_alphanumeric())
+                && (i + 3 >= chars.len() || !chars[i + 3].is_alphanumeric()) {
                     let_count += 1;
                     i += 3;
                     continue;
                 }
-            }
-            
+
             // Check for "in" keyword
-            if remaining.starts_with("in") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
-                if i + 2 >= chars.len() || !chars[i + 2].is_alphanumeric() {
+            if remaining.starts_with("in") && (i == 0 || !chars[i - 1].is_alphanumeric())
+                && (i + 2 >= chars.len() || !chars[i + 2].is_alphanumeric()) {
                     in_count += 1;
                     i += 2;
                     continue;
                 }
-            }
-            
+
             // Check for "if" keyword
-            if remaining.starts_with("if") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
-                if i + 2 >= chars.len() || !chars[i + 2].is_alphanumeric() {
+            if remaining.starts_with("if") && (i == 0 || !chars[i - 1].is_alphanumeric())
+                && (i + 2 >= chars.len() || !chars[i + 2].is_alphanumeric()) {
                     if_count += 1;
                     i += 2;
                     continue;
                 }
-            }
-            
+
             // Check for "then" keyword
-            if remaining.starts_with("then") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
-                if i + 4 >= chars.len() || !chars[i + 4].is_alphanumeric() {
+            if remaining.starts_with("then") && (i == 0 || !chars[i - 1].is_alphanumeric())
+                && (i + 4 >= chars.len() || !chars[i + 4].is_alphanumeric()) {
                     then_count += 1;
                     i += 4;
                     continue;
                 }
-            }
-            
+
             // Check for "else" keyword
-            if remaining.starts_with("else") && (i == 0 || !chars[i - 1].is_alphanumeric()) {
-                if i + 4 >= chars.len() || !chars[i + 4].is_alphanumeric() {
+            if remaining.starts_with("else") && (i == 0 || !chars[i - 1].is_alphanumeric()) && (i + 4 >= chars.len() || !chars[i + 4].is_alphanumeric()) {
                     else_count += 1;
                     i += 4;
                     continue;
                 }
-            }
         }
-        
+
         i += 1;
     }
-    
+
     // Expression is complete if:
     // - All let statements have matching in
     // - All if statements have matching then and else
     // - All brackets/parens/braces are balanced
     // - Not in the middle of a string or template
-    let_count == in_count &&
-    if_count == then_count && if_count == else_count &&
-    paren_depth == 0 &&
-    bracket_depth == 0 &&
-    brace_depth == 0 &&
-    !in_string &&
-    !in_template
+    let_count == in_count
+        && if_count == then_count
+        && if_count == else_count
+        && paren_depth == 0
+        && bracket_depth == 0
+        && brace_depth == 0
+        && !in_string
+        && !in_template
 }

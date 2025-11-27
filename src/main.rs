@@ -1,3 +1,4 @@
+#![expect(clippy::result_large_err)]
 mod cli;
 mod common;
 mod eval;
@@ -422,24 +423,20 @@ mod tests {
         let mut v = eval(ast.program, &mut symbols, &data).expect("eval");
 
         // emulate the deploy application loop: apply defaults when present
-        loop {
-            match &v {
-                Value::Function {
-                    ident: _, default, ..
-                } => {
-                    if let Some(def) = default {
-                        v = apply_function(&v, (**def).clone(), &data, 0).expect("apply default");
-                        continue;
-                    } else {
-                        panic!("expected default to be present for test");
-                    }
-                }
-                _ => break,
+        while let Value::Function {
+            ident: _, default, ..
+        } = &v
+        {
+            if let Some(def) = default {
+                v = apply_function(&v, (**def).clone(), &data, 0).expect("apply default");
+                continue;
+            } else {
+                panic!("expected default to be present for test");
             }
         }
 
         let files = collect_file_templates(&v, &data).expect("collect");
-        assert!(files.len() >= 1, "expected at least one filetemplate");
+        assert!(!files.is_empty(), "expected at least one filetemplate");
     }
 
     #[test]
@@ -476,7 +473,7 @@ mod tests {
         // json_parse object (now returns dict)
         let json_obj_path = dir.join("avon_test_json_obj.json");
         let mut jo = fs::File::create(&json_obj_path).expect("create json obj");
-        write!(jo, "{}", r#"{"k": "v"}"#).expect("write json obj");
+        write!(jo, "{{\"k\": \"v\"}}").expect("write json obj");
         let progo = format!("json_parse \"{}\"", json_obj_path.to_string_lossy());
         let tokens = tokenize(progo.clone()).expect("tokenize");
         let ast = parse(tokens);
@@ -576,24 +573,20 @@ mod tests {
         let mut v = eval(ast.program, &mut symbols, &prog).expect("eval");
 
         // emulate deploy application loop: apply defaults when present
-        loop {
-            match &v {
-                Value::Function {
-                    ident: _, default, ..
-                } => {
-                    if let Some(def) = default {
-                        v = apply_function(&v, (**def).clone(), &prog, 0).expect("apply default");
-                        continue;
-                    } else {
-                        panic!("expected default to be present for test");
-                    }
-                }
-                _ => break,
+        while let Value::Function {
+            ident: _, default, ..
+        } = &v
+        {
+            if let Some(def) = default {
+                v = apply_function(&v, (**def).clone(), &prog, 0).expect("apply default");
+                continue;
+            } else {
+                panic!("expected default to be present for test");
             }
         }
 
         let files = collect_file_templates(&v, &prog).expect("collect");
-        assert!(files.len() >= 1, "expected at least one filetemplate");
+        assert!(!files.is_empty(), "expected at least one filetemplate");
     }
 
     #[test]
@@ -610,25 +603,18 @@ mod tests {
         deploy_named.insert("name".to_string(), "bob".to_string());
 
         // emulate the deploy application loop which prefers named args by param ident
-        loop {
-            match &v {
-                Value::Function { ident, default, .. } => {
-                    if let Some(named_val) = deploy_named.remove(ident) {
-                        v = apply_function(&v, Value::String(named_val), &prog, 0)
-                            .expect("apply named");
-                        continue;
-                    } else if let Some(def) = default {
-                        // if default present (not in this test), it would be applied
-                        v = apply_function(&v, (**def).clone(), &prog, 0).expect("apply default");
-                        continue;
-                    } else {
-                        panic!("missing argument in test (no positional args provided)");
-                    }
-                }
-                _ => break,
+        while let Value::Function { ident, default, .. } = &v {
+            if let Some(named_val) = deploy_named.remove(ident) {
+                v = apply_function(&v, Value::String(named_val), &prog, 0).expect("apply named");
+                continue;
+            } else if let Some(def) = default {
+                // if default present (not in this test), it would be applied
+                v = apply_function(&v, (**def).clone(), &prog, 0).expect("apply default");
+                continue;
+            } else {
+                panic!("missing argument in test (no positional args provided)");
             }
         }
-
         let files = collect_file_templates(&v, &prog).expect("collect");
         // ensure the produced path contains the supplied named value
         assert!(
@@ -927,7 +913,9 @@ mod tests {
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         // Should concatenate with / separator
-        assert!(v.to_string(&prog).contains("/home/user") && v.to_string(&prog).contains("/projects"));
+        assert!(
+            v.to_string(&prog).contains("/home/user") && v.to_string(&prog).contains("/projects")
+        );
 
         // Test: path with interpolation + path
         let prog2 = r#"let dir = "home" in let base = @/{dir} in let sub = @/config in base + sub"#
@@ -1966,7 +1954,7 @@ mod tests {
         assert!(result.contains("A | B"));
         assert!(result.contains("1 | 2"));
         assert!(result.contains("3 | 4"));
-        
+
         // Test with dict (no parentheses needed)
         let prog2 = r#"format_table {a: 1, b: 2, c: 3} " | ""#.to_string();
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
@@ -1977,10 +1965,22 @@ mod tests {
         // Dict should produce two rows: keys row and values row
         // The result should be a string with newlines separating rows
         // Check that we have the separator (note: separator is " | " with spaces)
-        assert!(result2.contains("|"), "Result should contain pipe separator: {}", result2);
+        assert!(
+            result2.contains("|"),
+            "Result should contain pipe separator: {}",
+            result2
+        );
         // Check that keys and values are present (order may vary)
-        assert!(result2.contains("a") || result2.contains("b") || result2.contains("c"), "Result should contain keys: {}", result2);
-        assert!(result2.contains("1") || result2.contains("2") || result2.contains("3"), "Result should contain values: {}", result2);
+        assert!(
+            result2.contains("a") || result2.contains("b") || result2.contains("c"),
+            "Result should contain keys: {}",
+            result2
+        );
+        assert!(
+            result2.contains("1") || result2.contains("2") || result2.contains("3"),
+            "Result should contain values: {}",
+            result2
+        );
     }
 
     #[test]
@@ -2327,7 +2327,6 @@ mod tests {
             other => panic!("expected list, got {:?}", other),
         }
     }
-
 
     #[test]
     fn test_all_formatting_functions() {
@@ -2778,6 +2777,7 @@ mod tests {
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
         let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        #[expect(clippy::approx_constant)]
         match v2 {
             Value::Number(Number::Float(f)) => assert!((f + 3.14).abs() < 0.001),
             other => panic!("expected -3.14, got {:?}", other),
@@ -2807,7 +2807,7 @@ mod tests {
         let v4 = eval(ast4.program, &mut symbols4, &prog4).expect("eval");
         match v4 {
             Value::List(items) => {
-                assert!(items.len() > 0);
+                assert!(!items.is_empty());
                 if let Value::Number(Number::Int(n)) = &items[0] {
                     assert_eq!(*n, 10);
                 }
@@ -3563,10 +3563,10 @@ mod tests {
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let result = eval(ast.program, &mut symbols, &prog);
-        
+
         // Evaluation should fail
         assert!(result.is_err());
-        
+
         // Since evaluation failed, we can't even get to collect_file_templates
         // This verifies that evaluation errors prevent any file collection
     }
@@ -3580,7 +3580,7 @@ mod tests {
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        
+
         // collect_file_templates should fail for non-deployable values
         let result = collect_file_templates(&v, &prog);
         assert!(result.is_err());
@@ -3597,7 +3597,7 @@ mod tests {
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        
+
         let result = collect_file_templates(&v, &prog);
         assert!(result.is_ok());
         let files = result.unwrap();
@@ -3615,7 +3615,7 @@ mod tests {
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        
+
         let result = collect_file_templates(&v, &prog);
         assert!(result.is_ok());
         let files = result.unwrap();
@@ -3635,7 +3635,7 @@ mod tests {
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        
+
         let result = collect_file_templates(&v, &prog);
         assert!(result.is_err());
     }
@@ -3649,7 +3649,7 @@ mod tests {
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        
+
         let result = collect_file_templates(&v, &prog);
         assert!(result.is_ok());
         let files = result.unwrap();
@@ -3660,17 +3660,18 @@ mod tests {
     fn test_atomic_deployment_env_var_failure_prevents_deployment() {
         // Claim: If env_var fails (missing secret), evaluation fails, preventing deployment
         // Test: A program using env_var with missing variable should fail evaluation
-        let prog = "let secret = env_var \"MISSING_SECRET\" in @/config.yml {\"key: {secret}\"}".to_string();
+        let prog = "let secret = env_var \"MISSING_SECRET\" in @/config.yml {\"key: {secret}\"}"
+            .to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let result = eval(ast.program, &mut symbols, &prog);
-        
+
         // Evaluation should fail because env_var fails
         assert!(result.is_err());
         let err = result.err().unwrap();
         assert!(err.message.contains("Missing environment variable"));
-        
+
         // Since evaluation failed, no file templates can be collected
         // This verifies that missing secrets prevent deployment
     }
@@ -3695,7 +3696,7 @@ mod tests {
         // Note: In the actual REPL, variables are stored when assigned, not from let expressions
         // This test simulates REPL behavior where you can assign to variables
         let mut symbols = initial_builtins();
-        
+
         // First expression: define a variable (in REPL, this would be stored)
         // The REPL actually stores the result, not the let binding itself
         let prog1 = "42".to_string();
@@ -3703,7 +3704,7 @@ mod tests {
         let ast1 = parse(tokens1);
         let v1 = eval(ast1.program, &mut symbols, &prog1).expect("eval");
         assert_eq!(v1.to_string(&prog1), "42");
-        
+
         // In actual REPL, you'd do: x = 42 (assignment, not let binding)
         // For this test, we simulate by manually inserting (REPL does this)
         symbols.insert("x".to_string(), v1);
@@ -3718,10 +3719,10 @@ mod tests {
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        
+
         // Verify it's a List (what :type would show)
         match v {
-            Value::List(_) => {},
+            Value::List(_) => {}
             _ => panic!("Expected List"),
         }
     }
@@ -3742,7 +3743,7 @@ mod tests {
         // let without in should be incomplete
         assert!(!is_expression_complete("let x = 42"));
         assert!(!is_expression_complete("let x = 42\n"));
-        
+
         // let with in should be complete
         assert!(is_expression_complete("let x = 42 in x"));
         assert!(is_expression_complete("let x = 42 in x + 1"));
@@ -3761,7 +3762,7 @@ mod tests {
         // if without then/else should be incomplete
         assert!(!is_expression_complete("if true"));
         assert!(!is_expression_complete("if true then 1"));
-        
+
         // if with then and else should be complete
         assert!(is_expression_complete("if true then 1 else 2"));
     }
@@ -3814,8 +3815,11 @@ mod tests {
         let result = eval(ast.program, &mut symbols, &prog);
         assert!(result.is_err());
         let err_msg = result.unwrap_err().message;
-        assert!(err_msg.contains("..") || err_msg.contains("not allowed"), 
-                "Expected path traversal error, got: {}", err_msg);
+        assert!(
+            err_msg.contains("..") || err_msg.contains("not allowed"),
+            "Expected path traversal error, got: {}",
+            err_msg
+        );
     }
 
     #[test]
@@ -3828,8 +3832,11 @@ mod tests {
         let result = eval(ast.program, &mut symbols, &prog);
         assert!(result.is_err());
         let err_msg = result.unwrap_err().message;
-        assert!(err_msg.contains("..") || err_msg.contains("not allowed"),
-                "Expected path traversal error, got: {}", err_msg);
+        assert!(
+            err_msg.contains("..") || err_msg.contains("not allowed"),
+            "Expected path traversal error, got: {}",
+            err_msg
+        );
     }
 
     #[test]
@@ -3842,8 +3849,11 @@ mod tests {
         let result = eval(ast.program, &mut symbols, &prog);
         assert!(result.is_err());
         let err_msg = result.unwrap_err().message;
-        assert!(err_msg.contains("..") || err_msg.contains("not allowed"),
-                "Expected path traversal error, got: {}", err_msg);
+        assert!(
+            err_msg.contains("..") || err_msg.contains("not allowed"),
+            "Expected path traversal error, got: {}",
+            err_msg
+        );
     }
 
     #[test]
@@ -3869,7 +3879,7 @@ mod tests {
         assert!(result.is_ok());
         // Template should evaluate safely
         match result.unwrap() {
-            Value::Template(_, _) => assert!(true),
+            Value::Template(_, _) => (),
             _ => panic!("Expected template"),
         }
     }
@@ -3909,8 +3919,8 @@ mod tests {
         let expected_str = err.expected.as_ref().unwrap();
         let found_str = err.found.as_ref().unwrap();
         assert!(
-            (expected_str.contains("Number") && found_str.contains("String")) ||
-            (expected_str.contains("String") && found_str.contains("Number")),
+            (expected_str.contains("Number") && found_str.contains("String"))
+                || (expected_str.contains("String") && found_str.contains("Number")),
             "Expected Number/String mismatch, got: {} vs {}",
             expected_str,
             found_str
@@ -3987,7 +3997,7 @@ mod tests {
         match v {
             Value::List(items) => {
                 assert_eq!(items.len(), 6);
-                let expected = vec![0, 2, 4, 6, 8, 10];
+                let expected = [0, 2, 4, 6, 8, 10];
                 for (i, item) in items.iter().enumerate() {
                     if let Value::Number(Number::Int(n)) = item {
                         assert_eq!(*n, expected[i]);
@@ -4011,7 +4021,7 @@ mod tests {
         match v {
             Value::List(items) => {
                 assert_eq!(items.len(), 5);
-                let expected = vec![-5, -4, -3, -2, -1];
+                let expected = [-5, -4, -3, -2, -1];
                 for (i, item) in items.iter().enumerate() {
                     if let Value::Number(Number::Int(n)) = item {
                         assert_eq!(*n, expected[i]);
@@ -4066,7 +4076,7 @@ mod tests {
         match v {
             Value::List(items) => {
                 assert_eq!(items.len(), 6);
-                let expected = vec![0, 2, 4, 6, 8, 10];
+                let expected = [0, 2, 4, 6, 8, 10];
                 for (i, item) in items.iter().enumerate() {
                     if let Value::Number(Number::Int(n)) = item {
                         assert_eq!(*n, expected[i]);
@@ -4096,6 +4106,7 @@ mod tests {
     #[test]
     fn test_float_literals_multiple() {
         // Test multiple float literals to ensure parsing is robust
+        #[expect(clippy::approx_constant)]
         let test_cases = vec![
             ("0.5", 0.5),
             ("3.14", 3.14),
@@ -4202,7 +4213,7 @@ mod tests {
         match v {
             Value::List(items) => {
                 assert_eq!(items.len(), 6);
-                let expected = vec![1, 2, 3, 4, 5, 6];
+                let expected = [1, 2, 3, 4, 5, 6];
                 for (i, item) in items.iter().enumerate() {
                     if let Value::Number(Number::Int(n)) = item {
                         assert_eq!(*n, expected[i] as i64);
@@ -4535,7 +4546,7 @@ mod tests {
         let v = eval(ast.program, &mut symbols, prog).expect("eval");
         // head of empty list returns None
         match v {
-            Value::None => {},
+            Value::None => {}
             other => panic!("expected None, got {:?}", other),
         }
     }
