@@ -4,6 +4,8 @@
 
 Avon is designed with security as a core principle. This document explains the security measures implemented and how to use Avon safely.
 
+> **💡 Using `--git` Safely:** The `--git` flag fetches templates from GitHub's raw content API. Only use `--git` with repositories you trust. Review the template code before deploying, especially when using templates from unknown sources. The `--git` flag is a powerful feature for sharing templates, but always verify the source.
+
 ## Security Principles
 
 1. **Path Isolation**: Prevent access to files outside the deployment root

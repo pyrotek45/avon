@@ -2,6 +2,8 @@
 
 This example demonstrates how to use Avon's REPL for interactive development and debugging.
 
+> **💡 Tip:** You can use the `:read` command in the REPL to load templates from GitHub using the `--git` flag format, or use `:run` to evaluate templates fetched from GitHub. This makes it easy to experiment with shared templates before deploying them.
+
 ## Starting the REPL
 
 ```bash

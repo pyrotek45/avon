@@ -46,6 +46,8 @@ Stop copy-pasting configs. Stop maintaining 50 nearly-identical YAML files. Stop
 
 **Language Agnostic:** Avon works with **any text format**—YAML, JSON, TOML, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 80+ built-in utilities to any file, making even single files more powerful and maintainable.
 
+**Share Templates with `--git`:** One of Avon's key features is the `--git` flag, which lets you fetch and deploy templates directly from GitHub. Keep one template in git, deploy customized versions everywhere with a single command. Perfect for sharing dotfiles, team configs, and infrastructure templates.
+
 **Perfect for Everyone:**
 - **Developers:** Generate 10-1000 config files from one program
 - **Non-developers:** Easy way to download and deploy dotfiles, share configs, or manage personal settings
@@ -226,11 +228,11 @@ config.host  # Access with dots!
 
 **Simple & Modular** — Each file contains one expression, keeping Avon simple. The `import` function makes it modular: any file can return any Avon type (string, dict, function, FileTemplate, etc.), allowing files to be libraries, data sources, or generators.
 ```avon
-# math.av: {double: \x x * 2, triple: \x x * 3}
+# math_lib.av (see examples/math_lib.av): {double: \x x * 2, triple: \x x * 3}
 # config.av: {host: "localhost", port: 8080}
 # deploy.av: @/config.yml {"content"}
 
-let math = import "math.av" in
+let math = import "math_lib.av" in
 let config = import "config.av" in
 math.double 21  # Returns 42
 config.host     # Returns "localhost"
@@ -271,9 +273,9 @@ avon eval --git user/repo/program.av
 avon deploy --git user/repo/program.av --root ./output
 ```
 
-### Single Template, Many Deployments
+### Single Template, Many Deployments (The `--git` Workflow)
 
-One of Avon's core workflows is keeping **one Avon file in git** and letting each developer or environment deploy their own variant using CLI arguments.
+**This is one of Avon's most powerful features.** The `--git` flag lets you fetch and deploy templates directly from GitHub, enabling a powerful workflow: keep **one Avon file in git** and let each developer or environment deploy their own variant using CLI arguments.
 
 **Example (`configs.av` in git):**
 ```avon
@@ -367,7 +369,7 @@ let env = "prod" in
 if env == "prod" then "3 replicas" else "1 replica"
 
 # Module system - each file is one expression, import returns that value
-let math = import "math.av" in  # math.av returns a dict
+let math = import "math_lib.av" in  # math_lib.av returns a dict (see examples/math_lib.av)
 math.double 21  # Use functions from imported dict
 # Any file can return any type: dict, string, FileTemplate, etc.
 
@@ -383,6 +385,7 @@ See [TUTORIAL.md](./tutorial/TUTORIAL.md) for complete guide or run `avon doc`.
 ## Documentation
 
 - **[Tutorial](./tutorial/TUTORIAL.md)** | **[Reference](./tutorial/FEATURES.md)** | **[Style Guide](./tutorial/STYLE_GUIDE.md)** | **[Debug](./tutorial/DEBUGGING_GUIDE.md)**
+- **[REPL Usage](./tutorial/REPL_USAGE.md)** | **[Simple Configs](./tutorial/SIMPLE_CONFIGS.md)** | **[Site Generator](./tutorial/SITE_GENERATOR.md)**
 - **92 working examples** in `./examples/`
 - **`avon doc`** for built-in help
 
@@ -418,16 +421,16 @@ Avon provides simple, direct error messages that show exactly what went wrong an
 
 ```bash
 # Type mismatch in operator
-$ avon eval test.av
+$ avon eval examples/test.av
 concat: type mismatch: expected String, found Number on line 10
 10 |    concat "Port: " 8080
 
-# Type mismatch in function
+# Type mismatch in function (example - create your own test file)
 $ avon eval test_map.av
 map: add_one: +: expected String, found Number on line 5
    5 |    x + " suffix"
 
-# Nested function error chain
+# Nested function error chain (example - create your own test file)
 $ avon eval test_fold.av
 fold: x: +: expected Number, found String on line 15
   15 |    acc + item

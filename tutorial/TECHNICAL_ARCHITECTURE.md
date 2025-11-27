@@ -394,3 +394,4 @@ Each file is well-commented with examples.
 - **Security**: See `tutorial/SECURITY.md` for path traversal prevention
 - **Grammar**: See `tutorial/GRAMMAR.md` for formal language specification
 - **Examples**: See `examples/` directory for real-world usage patterns
+- **Sharing Templates**: The `--git` flag enables fetching templates directly from GitHub, making it easy to share and deploy templates. This is implemented using GitHub's raw content API and supports the format `user/repo/path/to/file.av`. See [SIMPLE_CONFIGS.md](./SIMPLE_CONFIGS.md) for examples.

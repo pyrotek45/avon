@@ -191,7 +191,7 @@ Avon is a **powerful, general-purpose tool** that handles everything from comple
 
 ### Your First Program
 
-Let's start with the simplest possible Avon program. Create a file called `hello.av`:
+Let's start with the simplest possible Avon program. Create a file called `hello.av` (or see `examples/` for working examples):
 
 ```avon
 "Hello, world!"
@@ -260,6 +260,8 @@ This creates three files: `config-dev.yml`, `config-staging.yml`, and `config-pr
 ### Avon for Single Files and Dotfiles
 
 Avon is a powerful, general-purpose tool that excels at generating hundreds of files, but it's equally powerful for single files. It's a comprehensive workflow layer that makes **any file** more maintainable and shareable, whether you're managing a single config or building complex multi-file systems.
+
+> **📖 For simple config file examples, see [SIMPLE_CONFIGS.md](./SIMPLE_CONFIGS.md)**
 
 **Perfect for:**
 - **Dotfiles** — Easy way to download and deploy configs to your system
@@ -2430,6 +2432,8 @@ avon eval data.av -x 5
 
 The REPL (Read-Eval-Print Loop) is an interactive shell for exploring Avon. It's perfect for learning the language, testing expressions, and debugging. The REPL maintains a persistent symbol table, so variables you define persist across expressions, making it ideal for building up complex computations step by step.
 
+> **📖 For comprehensive REPL documentation, see [REPL_USAGE.md](./REPL_USAGE.md)**
+
 **Why Use the REPL?**
 
 The REPL is an essential tool for Avon development:
@@ -2796,9 +2800,16 @@ Fetch and evaluate a program from GitHub:
 avon eval --git pyrotek45/avon/examples/string_functions.av
 ```
 
-### Single File in Git, Many Deployments
+### Single File in Git, Many Deployments (The `--git` Workflow)
 
-A powerful pattern with Avon is to keep **one template file in git** and let each environment, developer, or user deploy customized configs via CLI arguments. This is especially useful for **dotfiles** and shared configurations.
+**This is one of Avon's most powerful and key features.** The `--git` flag enables a powerful pattern: keep **one template file in git** and let each environment, developer, or user deploy customized configs via CLI arguments. This is especially useful for **dotfiles**, shared configurations, team templates, and infrastructure code.
+
+**Key Benefits:**
+- **Easy sharing**: Put templates in GitHub, anyone can deploy with custom values
+- **Centralized management**: One template, many customized deployments
+- **Automatic updates**: When templates are updated, everyone can redeploy
+- **No copying**: No need to clone repos or copy files between machines
+- **Version control**: All templates are versioned in git
 
 **Example: Dotfile Template (`vimrc.av` in git):**
 ```avon
@@ -2920,6 +2931,8 @@ These tools ensure that whether you're debugging a simple type mismatch in a sin
 ---
 
 ## Best Practices
+
+> **📖 For style guidelines and best practices, see [STYLE_GUIDE.md](./STYLE_GUIDE.md)**
 
 ### Write Clear, Composable Code
 
@@ -3131,6 +3144,8 @@ If the backup fails (e.g., permissions), the deployment aborts and the original 
 ## Real-World Examples
 
 ### Example 1: Site Generator
+
+> **📖 For comprehensive site generator guide with examples from minimal to advanced, see [SITE_GENERATOR.md](./SITE_GENERATOR.md)**
 
 See `examples/site_generator.av`. This generates a full website with multiple HTML pages, including:
 - Shared CSS styling

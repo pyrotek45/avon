@@ -2,6 +2,28 @@
 
 A quick reference to all Avon language features, builtins, and examples demonstrating each feature.
 
+## Key Feature: Share Templates with `--git`
+
+**One of Avon's most powerful features is the `--git` flag**, which enables easy sharing and deployment of templates directly from GitHub. This makes it incredibly easy to:
+
+- **Share your templates**: Put templates in GitHub, others can deploy with custom values
+- **Use others' templates**: Deploy templates from GitHub repositories with your own settings
+- **Centralized management**: One template in git, many customized deployments
+- **Easy updates**: When templates are updated, everyone can redeploy with latest changes
+
+**Format:** `avon deploy --git user/repo/path/to/file.av --root <destination> [arguments]`
+
+**Example:**
+```bash
+# Deploy a vim config from GitHub with custom settings
+avon deploy --git user/repo/vimrc.av --root ~ -username alice -theme gruvbox
+
+# Deploy the same template with different settings
+avon deploy --git user/repo/vimrc.av --root ~ -username bob -theme solarized
+```
+
+This workflow is perfect for dotfiles, team configs, infrastructure templates, and any shared configuration. See [SIMPLE_CONFIGS.md](./SIMPLE_CONFIGS.md) for detailed examples.
+
 ## Language Basics
 
 ### File Format

@@ -4,6 +4,8 @@
 
 Avon provides multiple debugging strategies to understand and troubleshoot your programs. This guide explains the complete debugging toolkit and how to use each tool effectively.
 
+> **💡 Debugging Templates from GitHub:** When debugging templates fetched with `--git`, use `avon eval --git user/repo/template.av --debug` to see detailed output. You can also use the REPL (`avon repl`) with `:read` or `:run` commands to interactively test templates before deploying them.
+
 ## The Debugging Philosophy
 
 Avon uses a **layered debugging approach**:

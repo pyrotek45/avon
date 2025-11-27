@@ -2,6 +2,8 @@
 
 This guide describes the recommended formatting conventions for writing Avon code.
 
+> **💡 Sharing Templates:** If you plan to share your templates via the `--git` flag (highly recommended!), use function parameters with defaults (`\param ? "default"`) instead of top-level `let` bindings. This makes templates flexible and easy to customize when deployed from GitHub. See [SIMPLE_CONFIGS.md](./SIMPLE_CONFIGS.md) for examples.
+
 ## Core Principles
 
 1. **Readability First** — Code should be easy to read and understand
@@ -507,10 +509,91 @@ Before committing your Avon code, verify:
 
 ---
 
+## Template Auto-Conversion
+
+Avon automatically converts templates to strings when used with string functions. This means you don't need to call `to_string` explicitly:
+
+**Preferred:**
+```avon
+let title = {"My Site"} in
+let html = replace template "<!-- title -->" title in  # Template auto-converts
+```
+
+**Avoid:**
+```avon
+let title = {"My Site"} in
+let html = replace template "<!-- title -->" (to_string title) in  # Unnecessary
+```
+
+**String functions that accept templates:**
+- `concat`, `upper`, `lower`, `trim`, `split`, `join`, `replace`
+- `contains`, `starts_with`, `ends_with`, `repeat`
+- `pad_left`, `pad_right`, `indent`
+- All string predicate functions (`is_digit`, `is_alpha`, etc.)
+
+## Pipe Operator
+
+Use the pipe operator `->` for chaining operations:
+
+**Preferred:**
+```avon
+let result = [1, 2, 3, 4, 5]
+  -> filter (\x x > 2)
+  -> map (\x x * 2)
+  -> fold (\acc \x acc + x) 0
+in
+result
+```
+
+**Avoid:**
+```avon
+fold (\acc \x acc + x) 0 (map (\x x * 2) (filter (\x x > 2) [1, 2, 3, 4, 5]))
+```
+
+**Note:** Only `->` is a valid pipe operator. The single `|` character is not a pipe operator in Avon.
+
+## Error Handling Patterns
+
+### Use `assert` for Validation
+
+**Preferred:**
+```avon
+let port = to_int port_str in
+assert (port > 0 && port < 65536) port
+```
+
+### Use `env_var_or` for Safe Defaults
+
+**Preferred:**
+```avon
+let log_level = env_var_or "LOG_LEVEL" "info" in
+```
+
+### Validate File Existence
+
+**Preferred:**
+```avon
+let config_path = "config.yml" in
+assert (exists config_path) config_path in
+readfile config_path
+```
+
+## Best Practices Summary
+
+1. **Use templates for all string content** - They support interpolation and auto-convert in string functions
+2. **Leverage automatic dedent** - Indent templates in source code for readability
+3. **Choose the right template delimiter** - Single braces for YAML, double braces for JSON/Terraform
+4. **Break complex logic into named steps** - Use cascading `let` bindings
+5. **Use pipe operator for chaining** - Makes data transformations readable
+6. **Validate inputs with `assert`** - Catch errors early
+7. **Use default parameters** - Make functions flexible with `?` syntax
+8. **Comment the "why"** - Explain design decisions, not obvious code
+
 ## Additional Resources
 
 - **[FEATURES.md](./FEATURES.md)** — Complete language reference
 - **[TUTORIAL.md](./TUTORIAL.md)** — Learn Avon step-by-step
-- **[examples/](../examples/)** — 77 real-world examples
+- **[DEBUGGING_GUIDE.md](./DEBUGGING_GUIDE.md)** — Debugging tools and techniques
+- **[examples/](../examples/)** — 92+ real-world examples
 
 Happy coding!
