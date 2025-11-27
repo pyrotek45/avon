@@ -180,6 +180,7 @@ readfile @etc/passwd                      # Error: absolute path blocked
 # For deployment, always use --root flag
 @config/app.json {"content"}              # Relative path
 # Deploy with: avon deploy app.av --root ./output
+# Without --root: Files are written to current working directory (not recommended)
 ```
 
 ### ✅ Safe User Input

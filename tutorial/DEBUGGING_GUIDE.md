@@ -509,14 +509,21 @@ If your files aren't appearing where you expect:
    ```avon
    @config.yml {"..."}
    ```
-   With `--root ./out`, this writes to `./out/config.yml`.
+   - **With `--root ./out`**: This writes to `./out/config.yml`
+   - **Without `--root`**: Files are written relative to the current working directory where `avon` is executed
+     - Example: Running `avon deploy config.av` from `/home/user/project/` writes `@config.yml` to `/home/user/project/config.yml`
+     - **Note:** Always use `--root` for predictable, contained deployments
 
 3. **Absolute vs Relative**: 
-   - **Without `--root`**: Absolute paths (starting with `/`, e.g. `@/etc/config`) are **blocked** for security.
-   - **With `--root`**: Paths starting with `/` have the leading `/` stripped and are appended to the root directory.
+   - **Without `--root`**: 
+     - Absolute paths (starting with `/`, e.g. `@/etc/config`) are **blocked** for security
+     - Paths containing `..` are **blocked** for security
+     - Only relative paths are allowed, written to the current working directory
+   - **With `--root`**: 
+     - Paths starting with `/` have the leading `/` stripped and are appended to the root directory
      - Example: `@/etc/config` with `--root ./out` writes to `./out/etc/config`
      - Example: `@config.yml` with `--root ./out` writes to `./out/config.yml`
-   - **Always use `--root`** when deploying to ensure files are written to a controlled directory.
+   - **Always use `--root`** when deploying to ensure files are written to a controlled directory
 
 ### Permission Errors
 

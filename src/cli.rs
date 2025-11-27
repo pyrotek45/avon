@@ -513,6 +513,7 @@ Note: You can omit 'eval' - 'avon <file>' is equivalent to 'avon eval <file>'
 
 Options:
   --root <dir>       Prepend <dir> to generated file paths (deploy only)
+                     Default: If not specified, files are written relative to current working directory
                      Recommended: Always use --root to avoid writing to system directories
   
   --force            Overwrite existing files without warning (deploy only)

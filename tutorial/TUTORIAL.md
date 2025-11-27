@@ -1737,10 +1737,12 @@ This generates `config-dev.yml` and `config-prod.yml`.
 ### Important Deploy Flags
 
 **`--root <dir>`** — Prepend this directory to all generated paths
+- **Default behavior:** If `--root` is not specified, files are written relative to the current working directory where `avon` is executed
 - **Required for safety:** Prevents accidental writes to system directories
-- All file paths are resolved relative to this directory
+- All file paths are resolved relative to this directory (or current directory if not specified)
 - Example: `--root ./output` means `@config.yml` becomes `./output/config.yml`
-- **Always use this flag** to keep your deployments contained
+- Example: Without `--root`, running `avon deploy config.av` from `/home/user/project/` writes `@config.yml` to `/home/user/project/config.yml`
+- **Always use this flag** to keep your deployments contained and predictable
 
 **`--force`** — Overwrite existing files without warning
 - **Destructive:** Permanently replaces existing files
