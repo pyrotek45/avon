@@ -11,7 +11,7 @@ cat > "$TEST_INPUT" << 'EOF'
 let x = 42 in x * 2
 map (\x x * 2) [1, 2, 3]
 typeof "hello"
-:vars
+:doc
 :type [1, 2, 3]
 :help
 :exit

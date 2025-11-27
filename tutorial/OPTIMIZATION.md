@@ -1,20 +1,20 @@
 # Performance Optimization
 
-Avon's evaluator uses Arc (Atomic Reference Counting) for function environment capture and stack-based scoping for variable bindings.
+Avon's evaluator uses Rc (Reference Counting) for function environment capture and stack-based scoping for variable bindings.
 
 ## Function Environment Capture
 
-Functions capture their creation environment using Arc pointers:
+Functions capture their creation environment using Rc pointers:
 
 ```rust
 Value::Function {
     params: Vec<String>,
     body: Box<Expr>,
-    env: Arc<HashMap<String, Value>>,
+    env: Rc<HashMap<String, Value>>,
 }
 ```
 
-When a function is created, the current symbol table is wrapped in Arc. This allows:
+When a function is created, the current symbol table is wrapped in Rc. This allows:
 
 - **Multiple functions share environment references** without cloning it repeatedly
 - **Each function captures the environment at creation time** for correct closures
@@ -44,7 +44,7 @@ This approach:
 Deep nesting with many let bindings is efficient because:
 - Symbol table mutations don't cause full clones
 - Only environment snapshots are cloned (when functions capture their creation environment)
-- Arc references avoid redundant copies
+- Rc references avoid redundant copies
 
 ### Correctness
 
@@ -57,7 +57,7 @@ The design maintains correctness because:
 ## When Cloning Happens
 
 Cloning only happens:
-1. When a function is created (wraps current environment in Arc)
-2. When a function is applied (dereferences Arc and clones that snapshot)
+1. When a function is created (wraps current environment in Rc)
+2. When a function is applied (dereferences Rc and clones that snapshot)
 
 All other operations (let bindings, variable lookups) avoid cloning.

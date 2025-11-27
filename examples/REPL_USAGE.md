@@ -26,15 +26,9 @@ avon> map (\x x * 2) [1, 2, 3]
 avon> let double = \x x * 2 in double 21
 42 : Number
 
-avon> :vars
-Note: In Avon, `let` bindings are scoped to their expression.
-      Once a `let ... in` expression completes, bindings are gone.
-      The REPL maintains a symbol table, but `let` doesn't add to it.
-
+avon> :doc
 Available builtin functions (use :doc <name> for details):
   assert          concat          contains        debug
-  dict_get        dict_has_key    dict_set        env_var
-  env_var_or      error           exists          fill_template
   filter          flatten         flatmap         fold
   format_binary   format_bool     format_bytes    format_currency
   format_float    format_hex      format_int      format_json
@@ -104,11 +98,29 @@ localhost : String
 ## REPL Commands
 
 - `:help` - Show all available commands
-- `:vars` - Show available builtin functions (note: `let` bindings don't persist)
+- `:doc` - Show all available builtin functions
+- `:doc <name>` - Show detailed documentation for a builtin function
 - `:type <expr>` - Show type of expression
-- `:doc <name>` - Show builtin function info
 - `:clear` - Clear all user-defined variables
 - `:exit` - Exit the REPL
+
+## Keyboard Shortcuts
+
+The REPL supports command history navigation and emacs-style editing shortcuts:
+
+**History Navigation:**
+- `↑` / `↓` - Navigate through previous commands
+- History is kept in-memory only (no file is created)
+
+**Emacs-Style Shortcuts:**
+- `Ctrl+A` - Move to beginning of line
+- `Ctrl+E` - Move to end of line
+- `Ctrl+K` - Delete from cursor to end of line
+- `Ctrl+U` - Delete from cursor to beginning of line
+- `Ctrl+F` - Move forward one character
+- `Ctrl+B` - Move backward one character
+- `Ctrl+W` - Delete word backward
+- `Ctrl+L` - Clear screen
 
 ## Use Cases
 

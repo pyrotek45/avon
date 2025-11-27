@@ -259,7 +259,7 @@ pub enum Value {
         ident: String,        // The parameter name (e.g., "x")
         default: Option<Box<Value>>,
         expr: Box<Expr>,
-        env: std::sync::Arc<HashMap<String, Value>>, // Reference counted immutable environment capture
+        env: std::rc::Rc<HashMap<String, Value>>, // Reference counted immutable environment capture
     },
     Builtin(String, Vec<Value>),
     Template(Vec<Chunk>, HashMap<String, Value>),

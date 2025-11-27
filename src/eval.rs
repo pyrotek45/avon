@@ -947,7 +947,7 @@ pub fn eval(
                 ident,
                 default: default_val,
                 expr,
-                env: std::sync::Arc::new(symbols.clone()), // Arc wraps a snapshot of the current environment
+                env: std::rc::Rc::new(symbols.clone()), // Rc wraps a snapshot of the current environment
             })
         }
         Expr::Application { lhs, rhs, line } => {
@@ -1188,8 +1188,8 @@ pub fn apply_function(
             env,
             ..
         } => {
-            // Create a new scope based on the captured environment (Arc allows cheap sharing)
-            let mut new_env = (**env).clone(); // Dereference Arc and clone only once for this application
+            // Create a new scope based on the captured environment (Rc allows cheap sharing)
+            let mut new_env = (**env).clone(); // Dereference Rc and clone only once for this application
             new_env.insert(ident.clone(), arg);
             // NOTE: Recursive functions are not supported in Avon.
             // Functions cannot call themselves because they are not added to their own environment.

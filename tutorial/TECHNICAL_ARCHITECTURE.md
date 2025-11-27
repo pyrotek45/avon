@@ -93,25 +93,26 @@ Avon evaluates expressions strictly (eager evaluation):
 
 ## Function Closures
 
-### Environment Capture with Arc
+### Environment Capture with Rc
 
-When a function is created, it captures the current environment using `Arc`:
+When a function is created, it captures the current environment using `Rc`:
 
 ```rust
 // When evaluating: \x x + factor (where factor=10)
 Function {
     ident: "x",
     expr: BinOp(+, Ident("x"), Ident("factor")),
-    env: Arc::new(HashMap {factor: 10, ...})
+    env: Rc::new(HashMap {factor: 10, ...})
 }
 ```
 
-### Why Arc?
+### Why Rc?
 
-Arc (Atomic Reference Counted) allows:
-- **Cheap cloning**: Cloning the Arc just increments a counter, not the HashMap
+Rc (Reference Counted) allows:
+- **Cheap cloning**: Cloning the Rc just increments a counter, not the HashMap
 - **Shared ownership**: Multiple functions can share the same captured environment
 - **Immutability**: The captured environment can't change (preventing bugs)
+- **Single-threaded efficiency**: Rc is more efficient than Arc for single-threaded use cases
 
 ### Function Application
 
@@ -127,7 +128,7 @@ Avon:
 3. Evaluates function body with new scope
 4. Returns result
 
-The efficiency comes from Arc: we dereference the Arc and clone only the captured snapshot (one HashMap clone per function call), not the entire evaluation state.
+The efficiency comes from Rc: we dereference the Rc and clone only the captured snapshot (one HashMap clone per function call), not the entire evaluation state.
 
 ## Recursion: By Design
 
@@ -223,12 +224,12 @@ let z = ... in z
 
 A naive implementation would clone the symbol table at each level, causing O(n²) performance. With just 200 bindings, this would timeout.
 
-### The Solution: Arc + Stack-Based Scoping
+### The Solution: Rc + Stack-Based Scoping
 
 Instead of cloning, Avon uses two techniques:
 
-1. **Arc Wrapping for Closures**
-   When a function captures its environment, it wraps it in Arc (reference counting). This lets multiple functions share the same environment without deep copying.
+1. **Rc Wrapping for Closures**
+   When a function captures its environment, it wraps it in Rc (reference counting). This lets multiple functions share the same environment without deep copying.
 
 2. **Stack-Based Scope Management**
    Let bindings don't clone the table—they add/remove from one mutable table. This is like a call stack: push a variable, evaluate, pop it back off.
@@ -389,7 +390,7 @@ Each file is well-commented with examples.
 
 ## Further Reading
 
-- **Performance**: See `tutorial/OPTIMIZATION.md` for Arc implementation details
+- **Performance**: See `tutorial/OPTIMIZATION.md` for Rc implementation details
 - **Security**: See `tutorial/SECURITY.md` for path traversal prevention
 - **Grammar**: See `tutorial/GRAMMAR.md` for formal language specification
 - **Examples**: See `examples/` directory for real-world usage patterns

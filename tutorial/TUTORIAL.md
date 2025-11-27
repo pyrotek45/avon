@@ -122,7 +122,7 @@ But Avon isn't just for complex infrastructure projects. It's a **powerful workf
      - Why Use the REPL
      - Starting the REPL
      - Basic Usage
-     - REPL Commands (`:help`, `:vars`, `:type`, `:doc`, `:clear`, `:exit`)
+     - REPL Commands (`:help`, `:doc`, `:type`, `:clear`, `:exit`)
      - Multi-line Input
      - Error Handling
      - Best Practices
@@ -2412,11 +2412,22 @@ String : String
 
 **REPL Commands:**
 - `:help` or `:h` - Show help and available commands
-- `:vars` - List all user-defined variables with their types
+- `:doc` - Show all available builtin functions
+- `:doc <name>` - Show detailed documentation for a builtin function
 - `:type <expr>` - Show the type of an expression
-- `:doc <name>` - Show info about a builtin function
 - `:clear` - Clear all user-defined variables (resets to initial state)
 - `:exit` or `:quit` or `:q` - Exit the REPL
+
+**Keyboard Shortcuts:**
+- `↑` / `↓` - Navigate command history (in-memory only, no file saved)
+- `Ctrl+A` - Move to beginning of line
+- `Ctrl+E` - Move to end of line
+- `Ctrl+K` - Delete from cursor to end of line
+- `Ctrl+U` - Delete from cursor to beginning of line
+- `Ctrl+F` - Move forward one character
+- `Ctrl+B` - Move backward one character
+- `Ctrl+W` - Delete word backward
+- `Ctrl+L` - Clear screen
 
 **Example 1: Building Up Complex Expressions**
 
@@ -2432,10 +2443,11 @@ avon> let numbers = [1, 2, 3, 4, 5] in numbers
 avon> map double numbers
 [2, 4, 6, 8, 10] : List
 
-avon> :vars
-User-defined variables:
-  double : Function
-  numbers : List
+avon> :doc
+Available builtin functions (use :doc <name> for details):
+  assert          concat          contains        debug
+  filter          flatten         flatmap         fold
+  map             ...
 ```
 
 **Example 2: Testing File Templates**
@@ -2583,7 +2595,7 @@ After an error, you can continue working—the REPL doesn't crash.
 
 1. **Test before writing files**: Use the REPL to verify expressions work before adding them to your `.av` files
 2. **Build incrementally**: Define functions and variables step by step, checking each one
-3. **Use `:vars` frequently**: Keep track of what you've defined
+3. **Use `:doc` to explore builtins**: See all available functions with `:doc`, or get details with `:doc <name>`
 4. **Use `:type` for verification**: Check types of complex expressions
 5. **Clear when needed**: Use `:clear` to reset if you make mistakes
 

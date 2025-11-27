@@ -1277,6 +1277,9 @@ fn execute_repl() -> i32 {
         }
     };
 
+    // History navigation (↑/↓ arrows) and emacs shortcuts are enabled by default
+    // History is kept in-memory only (no file is created or saved)
+
     let mut symbols = initial_builtins();
     let mut input_buffer = String::new();
 
@@ -1308,11 +1311,22 @@ fn execute_repl() -> i32 {
                         "help" | "h" => {
                             println!("REPL Commands:");
                             println!("  :help, :h       Show this help");
+                            println!("  :doc            Show all builtin functions");
                             println!("  :doc <name>     Show documentation for a builtin function");
                             println!("  :type <expr>    Show the type of an expression");
-                            println!("  :vars           Show all defined variables");
                             println!("  :clear          Clear all user-defined variables");
                             println!("  :exit, :quit    Exit the REPL");
+                            println!();
+                            println!("Navigation:");
+                            println!("  ↑/↓             Navigate command history");
+                            println!("  Ctrl+A          Move to beginning of line");
+                            println!("  Ctrl+E          Move to end of line");
+                            println!("  Ctrl+K          Delete from cursor to end of line");
+                            println!("  Ctrl+U          Delete from cursor to beginning of line");
+                            println!("  Ctrl+F          Move forward one character");
+                            println!("  Ctrl+B          Move backward one character");
+                            println!("  Ctrl+W          Delete word backward");
+                            println!("  Ctrl+L          Clear screen");
                             println!();
                             println!("Examples:");
                             println!("  map (\\x x * 2) [1, 2, 3]");
@@ -1331,18 +1345,8 @@ fn execute_repl() -> i32 {
                             println!("Cleared all user-defined variables");
                             continue;
                         }
-                        "vars" => {
-                            println!(
-                                "Note: In Avon, `let` bindings are scoped to their expression."
-                            );
-                            println!("      Once a `let ... in` expression completes, bindings are gone.");
-                            println!("      The REPL maintains a symbol table, but `let` doesn't add to it.");
-                            println!();
-                            println!("To persist values in the REPL, evaluate expressions that return values:");
-                            println!(
-                                "  Example: let x = 42 in x  # Returns 42, but x is not stored"
-                            );
-                            println!();
+                        "doc" => {
+                            // Show all builtins when :doc is called without arguments
                             println!("Available builtin functions (use :doc <name> for details):");
                             let builtins = initial_builtins();
                             let builtin_names: Vec<&String> = builtins.keys().collect();
@@ -1363,6 +1367,7 @@ fn execute_repl() -> i32 {
                         cmd if cmd.starts_with("doc ") => {
                             let func_name = cmd.trim_start_matches("doc ").trim();
                             if func_name.is_empty() {
+                                // This shouldn't happen, but handle it gracefully
                                 println!("Usage: :doc <function_name>");
                                 println!("  Example: :doc map");
                                 println!("  Example: :doc assert");
@@ -1400,7 +1405,7 @@ fn execute_repl() -> i32 {
                                 println!("  Note: This is a user-defined variable in the current REPL session.");
                             } else {
                                 println!("Unknown function or variable: {}", func_name);
-                                println!("  Use :vars to see available builtins");
+                                println!("  Use :doc to see available builtins");
                                 println!("  Use 'avon doc' to see all builtin documentation");
                             }
                             continue;
