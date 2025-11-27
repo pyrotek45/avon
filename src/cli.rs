@@ -1304,6 +1304,9 @@ fn execute_repl() -> i32 {
                     continue;
                 }
 
+                // Note: History entries are added after successful evaluation
+                // This ensures both single-line and multi-line expressions are properly recorded
+
                 // Handle REPL commands
                 if trimmed.starts_with(':') {
                     let cmd = trimmed.trim_start_matches(':');
@@ -1333,9 +1336,12 @@ fn execute_repl() -> i32 {
                             println!("  let x = 42 in x + 1");
                             println!("  trace \"result\" (1 + 2)");
                             println!("  typeof [1, 2, 3]");
+                            // Add REPL commands to history too
+                            let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
                         "exit" | "quit" | "q" => {
+                            let _ = rl.add_history_entry(trimmed);
                             println!("Goodbye!");
                             break;
                         }
@@ -1343,6 +1349,7 @@ fn execute_repl() -> i32 {
                             symbols = initial_builtins();
                             input_buffer.clear();
                             println!("Cleared all user-defined variables");
+                            let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
                         "doc" => {
@@ -1362,6 +1369,7 @@ fn execute_repl() -> i32 {
                             println!();
                             println!();
                             println!("Tip: Use :doc <function> to see detailed documentation for any builtin.");
+                            let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
                         cmd if cmd.starts_with("doc ") => {
@@ -1408,6 +1416,7 @@ fn execute_repl() -> i32 {
                                 println!("  Use :doc to see available builtins");
                                 println!("  Use 'avon doc' to see all builtin documentation");
                             }
+                            let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
                         cmd if cmd.starts_with("type ") => {
@@ -1450,6 +1459,7 @@ fn execute_repl() -> i32 {
                                     );
                                 }
                             }
+                            let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
                         _ => {
@@ -1457,6 +1467,7 @@ fn execute_repl() -> i32 {
                                 "Unknown command: {}. Type :help for available commands",
                                 cmd
                             );
+                            let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
                     }
@@ -1540,6 +1551,8 @@ fn execute_repl() -> i32 {
                                         );
                                     }
                                 }
+                                // Add complete expression to history (for up/down arrow navigation)
+                                let _ = rl.add_history_entry(&input_buffer);
                                 input_buffer.clear();
                             }
                             Err(e) => {
@@ -1547,6 +1560,7 @@ fn execute_repl() -> i32 {
                                     "Error: {}",
                                     e.pretty_with_file(&input_buffer, Some("<repl>"))
                                 );
+                                // Don't add failed expressions to history
                                 input_buffer.clear();
                             }
                         }
