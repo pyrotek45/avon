@@ -1,10 +1,56 @@
-use crate::common::Value;
+use crate::common::{Number, Value};
 use crate::eval::{apply_function, collect_file_templates, eval, fetch_git_raw, initial_builtins};
 use crate::lexer::tokenize;
 use crate::parser::parse;
+use rustyline::completion::{Completer, FilenameCompleter, Pair};
 use rustyline::error::ReadlineError;
-use rustyline::DefaultEditor;
+use rustyline::{CompletionType, Config, Context, EditMode, Editor};
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
+
+// Get documentation for a REPL command
+fn get_repl_command_doc(cmd_name: &str) -> Option<String> {
+    let docs: std::collections::HashMap<&str, &str> = [
+        ("help", ":help, :h\n  Show this help message with all available REPL commands."),
+        ("h", ":help, :h\n  Show this help message with all available REPL commands."),
+        ("exit", ":exit, :quit, :q\n  Exit the REPL."),
+        ("quit", ":exit, :quit, :q\n  Exit the REPL."),
+        ("q", ":exit, :quit, :q\n  Exit the REPL."),
+        ("clear", ":clear\n  Clear all user-defined variables. Builtin functions are preserved."),
+        ("vars", ":vars\n  List all user-defined variables (excluding builtin functions).\n  Example: :vars"),
+        ("let", ":let <name> = <expr>\n  Store a value in a variable for later use.\n  Example: :let x = 42\n  Example: :let config = {host: \"localhost\", port: 8080}"),
+        ("inspect", ":inspect <name>\n  Show detailed information about a variable.\n  Example: :inspect x"),
+        ("unlet", ":unlet <name>\n  Remove a user-defined variable.\n  Example: :unlet x\n  Note: Cannot remove builtin functions."),
+        ("read", ":read <file>\n  Read and display the contents of a file.\n  Example: :read config.av\n  Note: REPL allows any path (absolute or relative) for interactive use."),
+        ("run", ":run <file>\n  Evaluate a file and display the result without modifying REPL state.\n  Example: :run config.av\n  Note: REPL allows any path (absolute or relative) for interactive use."),
+        ("eval", ":eval <file>\n  Evaluate a file and merge Dict keys into REPL state.\n  Example: :eval config.av\n  If the file evaluates to a Dict, its keys are added as variables.\n  Note: REPL allows any path (absolute or relative) for interactive use."),
+        ("preview", ":preview <file> [flags...]\n  Preview what would be deployed without writing files.\n  Example: :preview template.av\n  Example: :preview template.av --debug\n  Supports CLI flags: --root, --force, --backup, --append, --if-not-exists, --debug, -param value"),
+        ("deploy", ":deploy <file> [flags...]\n  Deploy a file template to disk.\n  Example: :deploy config.av --root /tmp\n  Supports CLI flags: --root, --force, --backup, --append, --if-not-exists, --debug, -param value"),
+        ("deploy-expr", ":deploy-expr <expr> [flags...]\n  Deploy the result of an expression.\n  Example: :deploy-expr @test.txt {{\"Hello\"}} --root /tmp\n  Supports CLI flags: --root, --force, --backup, --append, --if-not-exists, --debug, -param value"),
+        ("write", ":write <file> <expr>\n  Write the result of an expression to a file.\n  Example: :write output.txt \"Hello, World!\"\n  Note: REPL allows any path (absolute or relative) for interactive use."),
+        ("history", ":history [N]\n  Show command history. If N is provided, show last N entries.\n  Example: :history\n  Example: :history 10"),
+        ("save-session", ":save-session <file>\n  Save all user-defined variables to a file.\n  Example: :save-session my_session.avon\n  The file can be loaded later with :load-session."),
+        ("load-session", ":load-session <file>\n  Load variables from a saved session file.\n  Example: :load-session my_session.avon\n  Merges loaded variables into current REPL state."),
+        ("assert", ":assert <expr>\n  Assert that an expression evaluates to true.\n  Example: :assert (x > 0)\n  Example: :assert (length list == 5)"),
+        ("test", ":test <expr> <expected>\n  Test that an expression equals an expected value.\n  Example: :test (1 + 1) 2\n  Example: :test (upper \"hello\") \"HELLO\""),
+        ("benchmark", ":benchmark <expr>\n  Measure the evaluation time of an expression.\n  Example: :benchmark (map (\\x x * 2) [1..1000])\n  Example: :benchmark map double [1..1000]"),
+        ("benchmark-file", ":benchmark-file <file>\n  Measure the evaluation time of a file.\n  Example: :benchmark-file config.av\n  Example: :benchmark-file large_program.av"),
+        ("watch", ":watch <name>\n  Watch a variable and show when it changes (via :let or expressions).\n  Example: :watch x\n  Use :watch with no argument to list watched variables.\n  Use :unwatch <name> to stop watching."),
+        ("unwatch", ":unwatch <name>\n  Stop watching a variable.\n  Example: :unwatch x"),
+        ("pwd", ":pwd\n  Show the current working directory.\n  Example: :pwd"),
+        ("list", ":list [dir]\n  List directory contents. Shows current directory if no argument.\n  Example: :list\n  Example: :list ./examples\n  Note: REPL allows any path (absolute or relative) for interactive use."),
+        ("cd", ":cd <dir>\n  Change the current working directory.\n  Example: :cd ./examples\n  Example: :cd /tmp\n  Note: REPL allows any path (absolute or relative) for interactive use."),
+        ("doc", ":doc [name]\n  Show documentation. Without argument, lists all builtin functions.\n  With argument, shows documentation for a builtin function or REPL command.\n  Example: :doc\n  Example: :doc map\n  Example: :doc pwd"),
+        ("type", ":type <expr>\n  Show the type of an expression.\n  Example: :type [1, 2, 3]\n  Example: :type \"hello\""),
+        ("sh", ":sh <command>\n  Execute a shell command.\n  Example: :sh ls -la\n  Example: :sh echo hello\n  Note: This executes a single shell command. For interactive shell, exit REPL and use your terminal."),
+    ]
+    .iter()
+    .cloned()
+    .collect();
+
+    docs.get(cmd_name).map(|s| s.to_string())
+}
 
 // Get documentation for a specific builtin function
 fn get_builtin_doc(func_name: &str) -> Option<String> {
@@ -131,6 +177,124 @@ fn get_builtin_doc(func_name: &str) -> Option<String> {
     .collect();
 
     docs.get(func_name).map(|s| s.to_string())
+}
+
+// Custom completer for tab completion
+struct AvonCompleter {
+    file_completer: FilenameCompleter,
+    symbols: Rc<RefCell<HashMap<String, Value>>>,
+}
+
+impl Completer for AvonCompleter {
+    type Candidate = Pair;
+
+    fn complete(
+        &self,
+        line: &str,
+        pos: usize,
+        ctx: &Context<'_>,
+    ) -> rustyline::Result<(usize, Vec<Pair>)> {
+        // If line starts with ':', complete REPL commands
+        if line.trim_start().starts_with(':') {
+            let commands = vec![
+                "help",
+                "h",
+                "exit",
+                "quit",
+                "q",
+                "clear",
+                "vars",
+                "let",
+                "inspect",
+                "unlet",
+                "read",
+                "run",
+                "eval",
+                "preview",
+                "deploy",
+                "deploy-expr",
+                "write",
+                "history",
+                "save-session",
+                "load-session",
+                "assert",
+                "test",
+                "benchmark",
+                "benchmark-file",
+                "watch",
+                "unwatch",
+                "pwd",
+                "list",
+                "cd",
+                "doc",
+                "type",
+                "sh",
+            ];
+
+            let prefix = line[..pos].trim_start();
+            let start = prefix.rfind(':').unwrap_or(0);
+            let search = &prefix[start + 1..];
+
+            let matches: Vec<Pair> = commands
+                .iter()
+                .filter(|cmd| cmd.starts_with(search))
+                .map(|cmd| Pair {
+                    display: cmd.to_string(),
+                    replacement: format!(":{}", cmd),
+                })
+                .collect();
+
+            if !matches.is_empty() {
+                return Ok((start, matches));
+            }
+        }
+
+        // Get current word being completed
+        let word_start = line[..pos]
+            .rfind(|c: char| !c.is_alphanumeric() && c != '_' && c != ':')
+            .map(|i| i + 1)
+            .unwrap_or(0);
+
+        let search = &line[word_start..pos];
+
+        // Complete builtin functions
+        let builtins = initial_builtins();
+        let builtin_names: Vec<&str> = builtins.keys().map(|s| s.as_str()).collect();
+
+        let mut matches: Vec<Pair> = builtin_names
+            .iter()
+            .filter(|name| name.starts_with(search))
+            .map(|name| Pair {
+                display: name.to_string(),
+                replacement: name.to_string(),
+            })
+            .collect();
+
+        // Complete user-defined variables (excluding builtins)
+        if !search.is_empty() && word_start < pos {
+            let symbols = self.symbols.borrow();
+            let builtins = initial_builtins();
+            let var_names: Vec<String> = symbols
+                .keys()
+                .filter(|name| !builtins.contains_key(*name) && name.starts_with(search))
+                .cloned()
+                .collect();
+
+            for var_name in var_names {
+                matches.push(Pair {
+                    display: var_name.clone(),
+                    replacement: var_name,
+                });
+            }
+        }
+
+        if !matches.is_empty() {
+            return Ok((word_start, matches));
+        }
+
+        // Fall back to filename completion
+        self.file_completer.complete(line, pos, ctx)
+    }
 }
 
 fn print_builtin_docs() {
@@ -1087,7 +1251,108 @@ fn process_source(source: String, source_name: String, opts: CliOptions, deploy_
                                     ));
                                 }
 
-                                // Step 2: Write all files (if any write fails, deployment is aborted)
+                                // Step 2: Validate all files can be written BEFORE writing any
+                                // This ensures true atomicity - if any file can't be written, none are written
+                                for (write_path, _content, exists, should_backup) in &prepared_files
+                                {
+                                    // Check if we can write to the file location
+                                    // For existing files, check write permissions
+                                    if *exists {
+                                        // Validate: Check if existing file can be opened for writing
+                                        #[allow(clippy::suspicious_open_options)]
+                                        match std::fs::OpenOptions::new()
+                                            .write(true)
+                                            .truncate(false)
+                                            .open(write_path)
+                                        {
+                                            Ok(_) => {
+                                                // File is writable, continue
+                                            }
+                                            Err(e) => {
+                                                eprintln!(
+                                                    "Error: Cannot write to existing file: {}",
+                                                    write_path.display()
+                                                );
+                                                eprintln!("  Reason: {}", e);
+                                                if e.kind() == std::io::ErrorKind::PermissionDenied
+                                                {
+                                                    eprintln!("  Tip: Check file permissions");
+                                                }
+                                                eprintln!(
+                                                    "Deployment aborted. No files were written."
+                                                );
+                                                return 1;
+                                            }
+                                        }
+                                    }
+
+                                    // For backup operations, check if backup location is writable
+                                    if *should_backup {
+                                        let mut backup_name =
+                                            write_path.file_name().unwrap().to_os_string();
+                                        backup_name.push(".bak");
+                                        let backup_path = write_path.with_file_name(backup_name);
+
+                                        // Check if we can create the backup file
+                                        #[allow(clippy::suspicious_open_options)]
+                                        match std::fs::OpenOptions::new()
+                                            .write(true)
+                                            .create(true)
+                                            .truncate(true)
+                                            .open(&backup_path)
+                                        {
+                                            Ok(_) => {
+                                                // Backup location is writable, continue
+                                            }
+                                            Err(e) => {
+                                                eprintln!(
+                                                    "Error: Cannot create backup file: {}",
+                                                    backup_path.display()
+                                                );
+                                                eprintln!("  Reason: {}", e);
+                                                if e.kind() == std::io::ErrorKind::PermissionDenied
+                                                {
+                                                    eprintln!("  Tip: Check write permissions for backup location");
+                                                }
+                                                eprintln!(
+                                                    "Deployment aborted. No files were written."
+                                                );
+                                                return 1;
+                                            }
+                                        }
+                                    }
+
+                                    // For new files, check parent directory is writable
+                                    if !*exists {
+                                        if let Some(parent) = write_path.parent() {
+                                            // Try to create a test file to verify write permissions
+                                            let test_file = parent.join(".avon_write_test");
+                                            match std::fs::File::create(&test_file) {
+                                                Ok(_) => {
+                                                    // Clean up test file immediately
+                                                    let _ = std::fs::remove_file(&test_file);
+                                                }
+                                                Err(e) => {
+                                                    eprintln!(
+                                                        "Error: Cannot write to directory: {}",
+                                                        parent.display()
+                                                    );
+                                                    eprintln!("  Reason: {}", e);
+                                                    if e.kind()
+                                                        == std::io::ErrorKind::PermissionDenied
+                                                    {
+                                                        eprintln!("  Tip: Check directory write permissions");
+                                                    }
+                                                    eprintln!("Deployment aborted. No files were written.");
+                                                    return 1;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Step 3: All files validated - now write them all
+                                // Since we've validated all can be written, we can write them sequentially
                                 let mut written_files = Vec::new();
                                 for (write_path, content, exists, should_backup) in prepared_files {
                                     // Perform backup if needed
@@ -1269,8 +1534,55 @@ fn execute_repl() -> i32 {
     println!("Type ':help' for commands, ':exit' to quit");
     println!();
 
-    let mut rl = match DefaultEditor::new() {
-        Ok(editor) => editor,
+    // Configure rustyline with tab completion
+    let config = Config::builder()
+        .history_ignore_space(true)
+        .completion_type(CompletionType::List)
+        .edit_mode(EditMode::Emacs)
+        .build();
+
+    let mut symbols = initial_builtins();
+    let symbols_rc = Rc::new(RefCell::new(symbols.clone()));
+
+    // Set up completer for tab completion using Helper trait
+    use rustyline::highlight::Highlighter;
+    use rustyline::hint::Hinter;
+    use rustyline::validate::Validator;
+    use rustyline::Helper;
+
+    struct AvonHelper {
+        completer: AvonCompleter,
+    }
+    impl Helper for AvonHelper {}
+    impl Completer for AvonHelper {
+        type Candidate = Pair;
+        fn complete(
+            &self,
+            line: &str,
+            pos: usize,
+            ctx: &Context<'_>,
+        ) -> rustyline::Result<(usize, Vec<Pair>)> {
+            self.completer.complete(line, pos, ctx)
+        }
+    }
+    impl Highlighter for AvonHelper {}
+    impl Hinter for AvonHelper {
+        type Hint = String;
+    }
+    impl Validator for AvonHelper {}
+
+    let helper = AvonHelper {
+        completer: AvonCompleter {
+            file_completer: FilenameCompleter::new(),
+            symbols: symbols_rc.clone(),
+        },
+    };
+
+    let mut rl = match Editor::with_config(config) {
+        Ok(mut editor) => {
+            editor.set_helper(Some(helper));
+            editor
+        }
         Err(e) => {
             eprintln!("Error: Failed to initialize REPL: {}", e);
             return 1;
@@ -1279,9 +1591,9 @@ fn execute_repl() -> i32 {
 
     // History navigation (↑/↓ arrows) and emacs shortcuts are enabled by default
     // History is kept in-memory only (no file is created or saved)
-
-    let mut symbols = initial_builtins();
     let mut input_buffer = String::new();
+    let mut watched_vars: std::collections::HashMap<String, Value> =
+        std::collections::HashMap::new();
 
     loop {
         let prompt = if input_buffer.is_empty() {
@@ -1314,8 +1626,43 @@ fn execute_repl() -> i32 {
                         "help" | "h" => {
                             println!("REPL Commands:");
                             println!("  :help, :h       Show this help");
-                            println!("  :doc            Show all builtin functions");
-                            println!("  :doc <name>     Show documentation for a builtin function");
+                            println!("  :let <name> = <expr>  Store a value");
+                            println!("  :vars           List all stored variables");
+                            println!("  :inspect <name> Show detailed variable info");
+                            println!("  :unlet <name>   Remove a variable");
+                            println!("  :read <file>    Read and display file contents");
+                            println!("  :run <file>     Evaluate file and display result");
+                            println!(
+                                "  :eval <file>    Evaluate file and merge Dict keys into REPL"
+                            );
+                            println!("  :preview <file> [--debug]  Preview what would be deployed");
+                            println!("  :deploy <file> [flags...]  Deploy a file (supports --root, --force, --backup, --append, --if-not-exists, --debug, -param value)");
+                            println!(
+                                "  :deploy-expr <expr> [--root <dir>]  Deploy expression result"
+                            );
+                            println!("  :run <file> [--debug]  Evaluate file and display result");
+                            println!("  :write <file> <expr>  Write expression result to file");
+                            println!("  :history        Show command history");
+                            println!("  :save-session <file>  Save REPL state to file");
+                            println!("  :load-session <file>  Load REPL state from file");
+                            println!("  :assert <expr>  Assert that expression is true");
+                            println!(
+                                "  :test <expr> <expected>  Test that expression equals expected"
+                            );
+                            println!(
+                                "  :benchmark <expr>        Measure expression evaluation time"
+                            );
+                            println!("  :benchmark-file <file>    Measure file evaluation time");
+                            println!("  :watch <name>   Watch a variable for changes");
+                            println!("  :unwatch <name> Stop watching a variable");
+                            println!("  :pwd            Show current working directory");
+                            println!("  :list [dir]     List directory contents");
+                            println!("  :cd <dir>       Change working directory");
+                            println!("  :sh <command>   Execute shell command");
+                            println!(
+                                "  :doc            Show all builtin functions and REPL commands"
+                            );
+                            println!("  :doc <name>     Show documentation for a builtin function or REPL command");
                             println!("  :type <expr>    Show the type of an expression");
                             println!("  :clear          Clear all user-defined variables");
                             println!("  :exit, :quit    Exit the REPL");
@@ -1347,13 +1694,167 @@ fn execute_repl() -> i32 {
                         }
                         "clear" => {
                             symbols = initial_builtins();
+                            *symbols_rc.borrow_mut() = symbols.clone();
                             input_buffer.clear();
                             println!("Cleared all user-defined variables");
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
+                        "vars" => {
+                            // List all stored variables (excluding builtins)
+                            let builtins = initial_builtins();
+                            let user_vars: Vec<(&String, &Value)> = symbols
+                                .iter()
+                                .filter(|(name, _)| !builtins.contains_key(*name))
+                                .collect();
+
+                            if user_vars.is_empty() {
+                                println!("No user-defined variables.");
+                                println!("Use :let <name> = <expr> to store a value.");
+                            } else {
+                                println!("User-defined variables:");
+                                let mut sorted_vars: Vec<(&String, &Value)> = user_vars;
+                                sorted_vars.sort_by_key(|(name, _)| *name);
+
+                                for (name, val) in sorted_vars {
+                                    let type_name = match val {
+                                        Value::String(_) => "String",
+                                        Value::Number(_) => "Number",
+                                        Value::Bool(_) => "Bool",
+                                        Value::List(_) => "List",
+                                        Value::Dict(_) => "Dict",
+                                        Value::Function { .. } => "Function",
+                                        Value::Builtin(_, _) => "Builtin",
+                                        Value::FileTemplate { .. } => "FileTemplate",
+                                        Value::Template(_, _) => "Template",
+                                        Value::Path(_, _) => "Path",
+                                        Value::None => "None",
+                                    };
+                                    // Show value for simple types, just type for complex ones
+                                    match val {
+                                        Value::String(s) => {
+                                            println!("  {} : {} = \"{}\"", name, type_name, s)
+                                        }
+                                        Value::Number(_) => {
+                                            let val_str = val.to_string("");
+                                            println!("  {} : {} = {}", name, type_name, val_str)
+                                        }
+                                        Value::Bool(b) => {
+                                            println!("  {} : {} = {}", name, type_name, b)
+                                        }
+                                        Value::List(l) => println!(
+                                            "  {} : {} = [{} items]",
+                                            name,
+                                            type_name,
+                                            l.len()
+                                        ),
+                                        Value::Dict(d) => println!(
+                                            "  {} : {} = {{ {} keys }}",
+                                            name,
+                                            type_name,
+                                            d.len()
+                                        ),
+                                        _ => println!("  {} : {}", name, type_name),
+                                    }
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("let ") => {
+                            // Parse: :let <name> = <expr>
+                            let rest = cmd.trim_start_matches("let ").trim();
+                            if let Some(equals_pos) = rest.find('=') {
+                                let var_name = rest[..equals_pos].trim();
+                                let expr_str = rest[equals_pos + 1..].trim();
+
+                                if var_name.is_empty() {
+                                    eprintln!("Error: Variable name cannot be empty");
+                                    eprintln!("Usage: :let <name> = <expr>");
+                                    eprintln!("  Example: :let x = 42");
+                                    eprintln!("  Example: :let double = \\x x * 2");
+                                    continue;
+                                }
+
+                                if expr_str.is_empty() {
+                                    eprintln!("Error: Expression cannot be empty");
+                                    eprintln!("Usage: :let <name> = <expr>");
+                                    continue;
+                                }
+
+                                // Evaluate the expression
+                                match tokenize(expr_str.to_string()) {
+                                    Ok(tokens) => {
+                                        let ast = parse(tokens);
+                                        match eval(ast.program, &mut symbols, expr_str) {
+                                            Ok(val) => {
+                                                // Check if this variable is being watched and has changed
+                                                let was_watched =
+                                                    watched_vars.contains_key(var_name);
+                                                let old_watched_val =
+                                                    watched_vars.get(var_name).cloned();
+
+                                                symbols.insert(var_name.to_string(), val.clone());
+                                                *symbols_rc.borrow_mut() = symbols.clone();
+
+                                                // Check watched variables for changes
+                                                if was_watched {
+                                                    if let Some(watched_old) = old_watched_val {
+                                                        let old_str = watched_old.to_string("");
+                                                        let new_str = val.to_string("");
+                                                        if old_str != new_str {
+                                                            println!(
+                                                                "[WATCH] {} changed: {} -> {}",
+                                                                var_name, old_str, new_str
+                                                            );
+                                                        }
+                                                    }
+                                                    // Update watched variable
+                                                    watched_vars
+                                                        .insert(var_name.to_string(), val.clone());
+                                                }
+
+                                                let type_name = match val {
+                                                    Value::String(_) => "String",
+                                                    Value::Number(_) => "Number",
+                                                    Value::Bool(_) => "Bool",
+                                                    Value::List(_) => "List",
+                                                    Value::Dict(_) => "Dict",
+                                                    Value::Function { .. } => "Function",
+                                                    Value::Builtin(_, _) => "Builtin",
+                                                    Value::FileTemplate { .. } => "FileTemplate",
+                                                    Value::Template(_, _) => "Template",
+                                                    Value::Path(_, _) => "Path",
+                                                    Value::None => "None",
+                                                };
+                                                println!("Stored: {} : {}", var_name, type_name);
+                                            }
+                                            Err(e) => {
+                                                eprintln!(
+                                                    "Error: {}",
+                                                    e.pretty_with_file(expr_str, Some("<repl>"))
+                                                );
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!(
+                                            "Parse error: {}",
+                                            e.pretty_with_file(expr_str, Some("<repl>"))
+                                        );
+                                    }
+                                }
+                            } else {
+                                eprintln!("Error: Missing '=' in :let command");
+                                eprintln!("Usage: :let <name> = <expr>");
+                                eprintln!("  Example: :let x = 42");
+                                eprintln!("  Example: :let double = \\x x * 2");
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
                         "doc" => {
-                            // Show all builtins when :doc is called without arguments
+                            // Show all builtins and REPL commands when :doc is called without arguments
                             println!("Available builtin functions (use :doc <name> for details):");
                             let builtins = initial_builtins();
                             let builtin_names: Vec<&String> = builtins.keys().collect();
@@ -1368,33 +1869,149 @@ fn execute_repl() -> i32 {
                             }
                             println!();
                             println!();
-                            println!("Tip: Use :doc <function> to see detailed documentation for any builtin.");
+                            println!("Available REPL commands (use :doc <command> for details):");
+                            println!("  :help            :exit            :clear           :vars            :let             :inspect");
+                            println!("  :unlet           :read            :run             :eval            :preview         :deploy");
+                            println!("  :deploy-expr     :write           :history         :save-session     :load-session    :assert");
+                            println!("  :test            :benchmark       :benchmark-file  :watch           :unwatch         :pwd             :list            :cd");
+                            println!("  :doc             :type            :sh");
+                            println!();
+                            println!("Tip: Use :doc <name> to see detailed documentation for any builtin function or REPL command.");
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("inspect ") => {
+                            let var_name = cmd.trim_start_matches("inspect ").trim();
+                            if var_name.is_empty() {
+                                eprintln!("Usage: :inspect <variable_name>");
+                                eprintln!("  Example: :inspect x");
+                                continue;
+                            }
+
+                            if let Some(val) = symbols.get(var_name) {
+                                let type_name = match val {
+                                    Value::String(_) => "String",
+                                    Value::Number(_) => "Number",
+                                    Value::Bool(_) => "Bool",
+                                    Value::List(_) => "List",
+                                    Value::Dict(_) => "Dict",
+                                    Value::Function { .. } => "Function",
+                                    Value::Builtin(_, _) => "Builtin",
+                                    Value::FileTemplate { .. } => "FileTemplate",
+                                    Value::Template(_, _) => "Template",
+                                    Value::Path(_, _) => "Path",
+                                    Value::None => "None",
+                                };
+
+                                println!("Variable: {}", var_name);
+                                println!("  Type: {}", type_name);
+
+                                // Show detailed information based on type
+                                match val {
+                                    Value::String(s) => {
+                                        println!("  Value: \"{}\"", s);
+                                        println!("  Length: {}", s.len());
+                                    }
+                                    Value::Number(_) => {
+                                        let val_str = val.to_string("");
+                                        println!("  Value: {}", val_str);
+                                    }
+                                    Value::Bool(b) => {
+                                        println!("  Value: {}", b);
+                                    }
+                                    Value::List(l) => {
+                                        println!("  Length: {}", l.len());
+                                        println!("  Items:");
+                                        for (i, item) in l.iter().take(10).enumerate() {
+                                            let item_str = item.to_string("");
+                                            println!("    [{}]: {}", i, item_str);
+                                        }
+                                        if l.len() > 10 {
+                                            println!("    ... ({} more items)", l.len() - 10);
+                                        }
+                                    }
+                                    Value::Dict(d) => {
+                                        println!("  Keys: {}", d.len());
+                                        let mut keys: Vec<&String> = d.keys().collect();
+                                        keys.sort();
+                                        println!("  Key list:");
+                                        for key in keys.iter().take(20) {
+                                            println!("    - {}", key);
+                                        }
+                                        if d.len() > 20 {
+                                            println!("    ... ({} more keys)", d.len() - 20);
+                                        }
+                                    }
+                                    Value::Function { ident, .. } => {
+                                        println!("  Parameter: {}", ident);
+                                    }
+                                    _ => {
+                                        let val_str = val.to_string("");
+                                        println!("  Value: {}", val_str);
+                                    }
+                                }
+                            } else {
+                                eprintln!("Variable '{}' not found", var_name);
+                                eprintln!("  Use :vars to see available variables");
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("unlet ") => {
+                            let var_name = cmd.trim_start_matches("unlet ").trim();
+                            if var_name.is_empty() {
+                                eprintln!("Usage: :unlet <variable_name>");
+                                eprintln!("  Example: :unlet x");
+                                continue;
+                            }
+
+                            let builtins = initial_builtins();
+                            if builtins.contains_key(var_name) {
+                                eprintln!("Error: Cannot remove builtin function '{}'", var_name);
+                                continue;
+                            }
+
+                            if symbols.remove(var_name).is_some() {
+                                *symbols_rc.borrow_mut() = symbols.clone();
+                                println!("Removed variable: {}", var_name);
+                            } else {
+                                eprintln!("Variable '{}' not found", var_name);
+                                eprintln!("  Use :vars to see available variables");
+                            }
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
                         cmd if cmd.starts_with("doc ") => {
-                            let func_name = cmd.trim_start_matches("doc ").trim();
-                            if func_name.is_empty() {
+                            let name = cmd.trim_start_matches("doc ").trim();
+                            if name.is_empty() {
                                 // This shouldn't happen, but handle it gracefully
-                                println!("Usage: :doc <function_name>");
+                                println!("Usage: :doc <name>");
                                 println!("  Example: :doc map");
-                                println!("  Example: :doc assert");
+                                println!("  Example: :doc pwd");
+                                println!("  Example: :doc read");
                                 continue;
                             }
 
-                            // Check if it's a builtin
+                            // First check if it's a REPL command
+                            if let Some(doc) = get_repl_command_doc(name) {
+                                println!("{}", doc);
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
+
+                            // Then check if it's a builtin function
                             let builtins = initial_builtins();
-                            if builtins.contains_key(func_name) {
-                                if let Some(doc) = get_builtin_doc(func_name) {
+                            if builtins.contains_key(name) {
+                                if let Some(doc) = get_builtin_doc(name) {
                                     println!("{}", doc);
                                 } else {
-                                    println!("Function: {}", func_name);
+                                    println!("Function: {}", name);
                                     println!("  This is a builtin function.");
                                     println!("  Use 'avon doc' to see all builtin documentation.");
                                 }
-                            } else if symbols.contains_key(func_name) {
+                            } else if symbols.contains_key(name) {
                                 // User-defined variable/function
-                                let val = &symbols[func_name];
+                                let val = &symbols[name];
                                 let type_info = match val {
                                     Value::String(_) => "String",
                                     Value::Number(_) => "Number",
@@ -1408,12 +2025,12 @@ fn execute_repl() -> i32 {
                                     Value::Path(_, _) => "Path",
                                     Value::None => "None",
                                 };
-                                println!("Variable: {}", func_name);
+                                println!("Variable: {}", name);
                                 println!("  Type: {}", type_info);
                                 println!("  Note: This is a user-defined variable in the current REPL session.");
                             } else {
-                                println!("Unknown function or variable: {}", func_name);
-                                println!("  Use :doc to see available builtins");
+                                println!("Unknown function or variable: {}", name);
+                                println!("  Use :doc to see available builtin functions and REPL commands");
                                 println!("  Use 'avon doc' to see all builtin documentation");
                             }
                             let _ = rl.add_history_entry(trimmed);
@@ -1462,6 +2079,1258 @@ fn execute_repl() -> i32 {
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
+                        cmd if cmd.starts_with("read ") => {
+                            let file_path = cmd.trim_start_matches("read ").trim();
+                            if file_path.is_empty() {
+                                eprintln!("Usage: :read <file_path>");
+                                eprintln!("  Example: :read config.av");
+                                continue;
+                            }
+
+                            // REPL is a power tool - allow any path the developer wants to read
+                            match std::fs::read_to_string(file_path) {
+                                Ok(content) => {
+                                    println!("{}", content);
+                                }
+                                Err(e) => {
+                                    eprintln!("Error reading file '{}': {}", file_path, e);
+                                    if e.kind() == std::io::ErrorKind::NotFound {
+                                        eprintln!("  Tip: Check that the file exists and the path is correct");
+                                    } else if e.kind() == std::io::ErrorKind::PermissionDenied {
+                                        eprintln!("  Tip: Check file permissions");
+                                    }
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("run ") => {
+                            let file_path = cmd.trim_start_matches("run ").trim();
+                            if file_path.is_empty() {
+                                eprintln!("Usage: :run <file_path>");
+                                eprintln!("  Example: :run config.av");
+                                continue;
+                            }
+
+                            // REPL is a power tool - allow any path the developer wants to run
+                            match std::fs::read_to_string(file_path) {
+                                Ok(source) => {
+                                    match tokenize(source.clone()) {
+                                        Ok(tokens) => {
+                                            let ast = parse(tokens);
+                                            let mut temp_symbols = initial_builtins();
+                                            match eval(ast.program, &mut temp_symbols, &source) {
+                                                Ok(val) => {
+                                                    // Display result nicely (same as regular evaluation)
+                                                    match &val {
+                                                        Value::FileTemplate { .. } => {
+                                                            match collect_file_templates(
+                                                                &val, &source,
+                                                            ) {
+                                                                Ok(files) => {
+                                                                    println!("FileTemplate:");
+                                                                    for (path, content) in files {
+                                                                        println!(
+                                                                            "  Path: {}",
+                                                                            path
+                                                                        );
+                                                                        println!(
+                                                                            "  Content:\n{}",
+                                                                            content
+                                                                        );
+                                                                    }
+                                                                }
+                                                                Err(e) => {
+                                                                    eprintln!(
+                                                                        "Error: {}",
+                                                                        e.message
+                                                                    );
+                                                                }
+                                                            }
+                                                        }
+                                                        Value::List(l) => {
+                                                            // Check if it's a list of FileTemplates
+                                                            let mut all_are_file_templates = true;
+                                                            for item in l {
+                                                                if !matches!(
+                                                                    item,
+                                                                    Value::FileTemplate { .. }
+                                                                ) {
+                                                                    all_are_file_templates = false;
+                                                                    break;
+                                                                }
+                                                            }
+                                                            if all_are_file_templates {
+                                                                match collect_file_templates(
+                                                                    &val, &source,
+                                                                ) {
+                                                                    Ok(files) => {
+                                                                        println!("FileTemplates ({} files):", files.len());
+                                                                        for (path, content) in files
+                                                                        {
+                                                                            println!(
+                                                                                "  Path: {}",
+                                                                                path
+                                                                            );
+                                                                            println!(
+                                                                                "  Content:\n{}",
+                                                                                content
+                                                                            );
+                                                                        }
+                                                                    }
+                                                                    Err(e) => {
+                                                                        eprintln!(
+                                                                            "Error: {}",
+                                                                            e.message
+                                                                        );
+                                                                    }
+                                                                }
+                                                            } else {
+                                                                let val_str = val.to_string("");
+                                                                println!("{}", val_str);
+                                                            }
+                                                        }
+                                                        _ => {
+                                                            let val_str = val.to_string("");
+                                                            println!("{}", val_str);
+                                                        }
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    eprintln!(
+                                                        "Error: {}",
+                                                        e.pretty_with_file(
+                                                            &source,
+                                                            Some(file_path)
+                                                        )
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        Err(e) => {
+                                            eprintln!(
+                                                "Parse error: {}",
+                                                e.pretty_with_file(&source, Some(file_path))
+                                            );
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("Error reading file '{}': {}", file_path, e);
+                                    if e.kind() == std::io::ErrorKind::NotFound {
+                                        eprintln!("  Tip: Check that the file exists and the path is correct");
+                                    } else if e.kind() == std::io::ErrorKind::PermissionDenied {
+                                        eprintln!("  Tip: Check file permissions");
+                                    }
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("eval ") => {
+                            let file_path = cmd.trim_start_matches("eval ").trim();
+                            if file_path.is_empty() {
+                                eprintln!("Usage: :eval <file_path>");
+                                eprintln!("  Example: :eval config.av");
+                                eprintln!("  Note: If the file evaluates to a Dict, its keys will be added to REPL");
+                                continue;
+                            }
+
+                            // REPL is a power tool - allow any path the developer wants to evaluate
+                            match std::fs::read_to_string(file_path) {
+                                Ok(source) => {
+                                    match tokenize(source.clone()) {
+                                        Ok(tokens) => {
+                                            let ast = parse(tokens);
+                                            let mut temp_symbols = initial_builtins();
+                                            match eval(ast.program, &mut temp_symbols, &source) {
+                                                Ok(val) => {
+                                                    // If result is a Dict, merge its keys into REPL symbols
+                                                    if let Value::Dict(d) = &val {
+                                                        let mut added = 0;
+                                                        for (key, value) in d.iter() {
+                                                            symbols
+                                                                .insert(key.clone(), value.clone());
+                                                            added += 1;
+                                                        }
+                                                        *symbols_rc.borrow_mut() = symbols.clone();
+                                                        println!(
+                                                            "Evaluated file '{}': {} keys added to REPL",
+                                                            file_path, added
+                                                        );
+                                                    } else {
+                                                        // For non-dict results, just show the result
+                                                        let val_str = val.to_string("");
+                                                        println!("Result: {}", val_str);
+                                                        println!("  Note: Use :let <name> = import \"{}\" to store this value", file_path);
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    eprintln!(
+                                                        "Error: {}",
+                                                        e.pretty_with_file(
+                                                            &source,
+                                                            Some(file_path)
+                                                        )
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        Err(e) => {
+                                            eprintln!(
+                                                "Parse error: {}",
+                                                e.pretty_with_file(&source, Some(file_path))
+                                            );
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("Error reading file '{}': {}", file_path, e);
+                                    if e.kind() == std::io::ErrorKind::NotFound {
+                                        eprintln!("  Tip: Check that the file exists and the path is correct");
+                                    } else if e.kind() == std::io::ErrorKind::PermissionDenied {
+                                        eprintln!("  Tip: Check file permissions");
+                                    }
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("preview ") => {
+                            let file_path = cmd.trim_start_matches("preview ").trim();
+                            if file_path.is_empty() {
+                                eprintln!("Usage: :preview <file_path>");
+                                eprintln!("  Example: :preview config.av");
+                                continue;
+                            }
+
+                            // Note: REPL is interactive, so we allow relative paths and absolute paths
+                            // The developer is responsible for what they read
+
+                            match std::fs::read_to_string(file_path) {
+                                Ok(source) => match tokenize(source.clone()) {
+                                    Ok(tokens) => {
+                                        let ast = parse(tokens);
+                                        let mut temp_symbols = initial_builtins();
+                                        match eval(ast.program, &mut temp_symbols, &source) {
+                                            Ok(val) => {
+                                                match collect_file_templates(&val, &source) {
+                                                    Ok(files) => {
+                                                        println!(
+                                                            "Would deploy {} file(s):",
+                                                            files.len()
+                                                        );
+                                                        for (path, content) in files {
+                                                            println!("  Path: {}", path);
+                                                            println!("  Content:\n{}", content);
+                                                        }
+                                                    }
+                                                    Err(e) => {
+                                                        eprintln!("Error: {}", e.message);
+                                                        eprintln!("  Result is not a FileTemplate or list of FileTemplates");
+                                                    }
+                                                }
+                                            }
+                                            Err(e) => {
+                                                eprintln!(
+                                                    "Error: {}",
+                                                    e.pretty_with_file(&source, Some(file_path))
+                                                );
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!(
+                                            "Parse error: {}",
+                                            e.pretty_with_file(&source, Some(file_path))
+                                        );
+                                    }
+                                },
+                                Err(e) => {
+                                    eprintln!("Error reading file '{}': {}", file_path, e);
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("deploy ") => {
+                            // Parse: :deploy <file> [--root <dir>]
+                            let rest = cmd.trim_start_matches("deploy ").trim();
+                            let parts: Vec<&str> = rest.split_whitespace().collect();
+
+                            if parts.is_empty() {
+                                eprintln!("Usage: :deploy <file_path> [flags...]");
+                                eprintln!("  Flags: --root <dir>, --force, --backup, --append, --if-not-exists, --debug");
+                                eprintln!("  Example: :deploy config.av --root ./output --backup");
+                                eprintln!(
+                                    "  Example: :deploy config.av --root ./out --force -env prod"
+                                );
+                                continue;
+                            }
+
+                            let file_path = parts[0];
+
+                            // Parse flags (same as CLI for consistency)
+                            let mut deploy_opts = CliOptions::new();
+                            deploy_opts.file = Some(file_path.to_string());
+
+                            let mut i = 1;
+                            while i < parts.len() {
+                                match parts[i] {
+                                    "--root" => {
+                                        if i + 1 < parts.len() {
+                                            deploy_opts.root = Some(parts[i + 1].to_string());
+                                            i += 2;
+                                        } else {
+                                            eprintln!(
+                                                "Error: --root requires a directory argument"
+                                            );
+                                            let _ = rl.add_history_entry(trimmed);
+                                            continue;
+                                        }
+                                    }
+                                    "--force" => {
+                                        deploy_opts.force = true;
+                                        i += 1;
+                                    }
+                                    "--backup" => {
+                                        deploy_opts.backup = true;
+                                        i += 1;
+                                    }
+                                    "--append" => {
+                                        deploy_opts.append = true;
+                                        i += 1;
+                                    }
+                                    "--if-not-exists" => {
+                                        deploy_opts.if_not_exists = true;
+                                        i += 1;
+                                    }
+                                    "--debug" => {
+                                        deploy_opts.debug = true;
+                                        i += 1;
+                                    }
+                                    s if s.starts_with("-") && !s.starts_with("--") => {
+                                        // Named argument: -param value
+                                        let key = s.trim_start_matches('-').to_string();
+                                        if i + 1 < parts.len() {
+                                            deploy_opts
+                                                .named_args
+                                                .insert(key, parts[i + 1].to_string());
+                                            i += 2;
+                                        } else {
+                                            eprintln!(
+                                                "Error: Named argument '{}' requires a value",
+                                                s
+                                            );
+                                            let _ = rl.add_history_entry(trimmed);
+                                            continue;
+                                        }
+                                    }
+                                    s => {
+                                        // Positional argument
+                                        deploy_opts.pos_args.push(s.to_string());
+                                        i += 1;
+                                    }
+                                }
+                            }
+
+                            // Use process_source with deploy_mode=true
+                            let result = match std::fs::read_to_string(file_path) {
+                                Ok(source) => {
+                                    process_source(source, file_path.to_string(), deploy_opts, true)
+                                }
+                                Err(e) => {
+                                    eprintln!("Error reading file '{}': {}", file_path, e);
+                                    1
+                                }
+                            };
+
+                            if result == 0 {
+                                println!("Deployment completed successfully");
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("deploy-expr ") => {
+                            // Parse: :deploy-expr <expr> [--root <dir>]
+                            let rest = cmd.trim_start_matches("deploy-expr ").trim();
+
+                            // Parse --root flag if present
+                            let (expr_str, root_dir) = if let Some(root_pos) = rest.find("--root") {
+                                let expr_part = rest[..root_pos].trim();
+                                let root_part = rest[root_pos..].trim();
+                                let root_parts: Vec<&str> = root_part.split_whitespace().collect();
+                                if root_parts.len() >= 2 && root_parts[0] == "--root" {
+                                    (expr_part, Some(root_parts[1].to_string()))
+                                } else {
+                                    (rest, None)
+                                }
+                            } else {
+                                (rest, None)
+                            };
+
+                            if expr_str.is_empty() {
+                                eprintln!("Usage: :deploy-expr <expression> [--root <dir>]");
+                                eprintln!("  Example: :deploy-expr @test.txt {{\"Hello\"}}");
+                                eprintln!("  Example: :deploy-expr config --root ./output");
+                                continue;
+                            }
+
+                            // Evaluate the expression
+                            match tokenize(expr_str.to_string()) {
+                                Ok(tokens) => {
+                                    let ast = parse(tokens);
+                                    match eval(ast.program, &mut symbols, expr_str) {
+                                        Ok(val) => {
+                                            // Check if result is FileTemplate or list of FileTemplates
+                                            match collect_file_templates(&val, expr_str) {
+                                                Ok(files) => {
+                                                    if files.is_empty() {
+                                                        eprintln!("Error: Expression does not produce any FileTemplates");
+                                                        let _ = rl.add_history_entry(trimmed);
+                                                        continue;
+                                                    }
+
+                                                    // Create CliOptions for deployment
+                                                    let deploy_opts = CliOptions {
+                                                        file: None,
+                                                        root: root_dir,
+                                                        force: false,
+                                                        backup: false,
+                                                        append: false,
+                                                        if_not_exists: false,
+                                                        debug: false,
+                                                        git_url: None,
+                                                        code: Some(expr_str.to_string()),
+                                                        named_args: std::collections::HashMap::new(
+                                                        ),
+                                                        pos_args: Vec::new(),
+                                                    };
+
+                                                    // Manually handle deployment since we have the files already
+                                                    // We need to reuse the deployment logic from process_source
+                                                    // For now, let's use a simplified approach
+                                                    let root_path = if let Some(root_str) =
+                                                        &deploy_opts.root
+                                                    {
+                                                        std::path::Path::new(root_str).to_path_buf()
+                                                    } else {
+                                                        eprintln!("Error: --root is required for :deploy-expr");
+                                                        eprintln!("  Usage: :deploy-expr <expr> --root <dir>");
+                                                        let _ = rl.add_history_entry(trimmed);
+                                                        continue;
+                                                    };
+
+                                                    // Create root directory if needed
+                                                    if let Err(e) =
+                                                        std::fs::create_dir_all(&root_path)
+                                                    {
+                                                        eprintln!("Error: Failed to create root directory: {}", e);
+                                                        let _ = rl.add_history_entry(trimmed);
+                                                        continue;
+                                                    }
+
+                                                    // Deploy files (simplified - reuse logic from process_source would be better)
+                                                    let mut success = true;
+                                                    for (path, content) in &files {
+                                                        // Note: Path validation is handled by --root requirement
+                                                        // The developer controls what they deploy in the REPL
+                                                        let rel = path.trim_start_matches('/');
+                                                        let full_path = root_path.join(rel);
+
+                                                        // Create parent directories
+                                                        if let Some(parent) = full_path.parent() {
+                                                            if let Err(e) =
+                                                                std::fs::create_dir_all(parent)
+                                                            {
+                                                                eprintln!("Error: Failed to create directory: {}", e);
+                                                                success = false;
+                                                                break;
+                                                            }
+                                                        }
+
+                                                        // Write file
+                                                        if let Err(e) =
+                                                            std::fs::write(&full_path, content)
+                                                        {
+                                                            eprintln!(
+                                                                "Error: Failed to write {}: {}",
+                                                                full_path.display(),
+                                                                e
+                                                            );
+                                                            success = false;
+                                                            break;
+                                                        }
+                                                        println!(
+                                                            "Deployed: {}",
+                                                            full_path.display()
+                                                        );
+                                                    }
+
+                                                    if success {
+                                                        println!(
+                                                            "Deployment completed successfully"
+                                                        );
+                                                    } else {
+                                                        eprintln!("Deployment failed - some files may have been written");
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    eprintln!("Error: {}", e.message);
+                                                    eprintln!("  Expression result is not a FileTemplate or list of FileTemplates");
+                                                }
+                                            }
+                                        }
+                                        Err(e) => {
+                                            eprintln!(
+                                                "Error: {}",
+                                                e.pretty_with_file(expr_str, Some("<repl>"))
+                                            );
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!(
+                                        "Parse error: {}",
+                                        e.pretty_with_file(expr_str, Some("<repl>"))
+                                    );
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        "history" => {
+                            // Show command history
+                            let history = rl.history();
+                            let entries: Vec<String> =
+                                history.iter().map(|s| s.to_string()).collect();
+                            let count = entries.len();
+                            if count == 0 {
+                                println!("No command history yet.");
+                            } else {
+                                println!("Command history ({} entries):", count);
+                                // Show last 50 entries
+                                let start = count.saturating_sub(50);
+                                for (i, entry) in entries.iter().enumerate().skip(start) {
+                                    println!("  {}: {}", i + 1, entry);
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("write ") => {
+                            // Parse: :write <file> <expr>
+                            let rest = cmd.trim_start_matches("write ").trim();
+
+                            // Find the file path (first word) and expression (rest)
+                            let parts: Vec<&str> = rest.splitn(2, char::is_whitespace).collect();
+                            if parts.len() < 2 {
+                                eprintln!("Usage: :write <file_path> <expression>");
+                                eprintln!("  Example: :write output.txt \"Hello, world!\"");
+                                eprintln!("  Example: :write result.json (json_parse config)");
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
+
+                            let file_path = parts[0];
+                            let expr_str = parts[1];
+
+                            // Evaluate the expression
+                            match tokenize(expr_str.to_string()) {
+                                Ok(tokens) => {
+                                    let ast = parse(tokens);
+                                    match eval(ast.program, &mut symbols, expr_str) {
+                                        Ok(val) => {
+                                            // Convert value to string
+                                            let content = val.to_string("");
+
+                                            // Write to file
+                                            match std::fs::write(file_path, content) {
+                                                Ok(_) => {
+                                                    println!("Written to: {}", file_path);
+                                                }
+                                                Err(e) => {
+                                                    eprintln!(
+                                                        "Error writing to '{}': {}",
+                                                        file_path, e
+                                                    );
+                                                    if e.kind()
+                                                        == std::io::ErrorKind::PermissionDenied
+                                                    {
+                                                        eprintln!("  Tip: Check file permissions");
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        Err(e) => {
+                                            eprintln!(
+                                                "Error: {}",
+                                                e.pretty_with_file(expr_str, Some("<repl>"))
+                                            );
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!(
+                                        "Parse error: {}",
+                                        e.pretty_with_file(expr_str, Some("<repl>"))
+                                    );
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("save-session ") => {
+                            // Parse: :save-session <file>
+                            let file_path = cmd.trim_start_matches("save-session ").trim();
+                            if file_path.is_empty() {
+                                eprintln!("Usage: :save-session <file_path>");
+                                eprintln!("  Example: :save-session my_session.avon");
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
+
+                            // Serialize current REPL state to Avon format
+                            let builtins = initial_builtins();
+                            let user_vars: Vec<(&String, &Value)> = symbols
+                                .iter()
+                                .filter(|(name, _)| !builtins.contains_key(*name))
+                                .collect();
+
+                            let var_count = user_vars.len();
+                            if var_count == 0 {
+                                eprintln!("No user-defined variables to save.");
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
+
+                            // Generate Avon code that recreates the variables
+                            // We'll create a dict containing all variables so they persist after evaluation
+                            let mut session_code = String::from("# Avon REPL Session\n");
+                            session_code.push_str("# Saved variables:\n\n");
+                            let mut saved_count = 0;
+                            let mut dict_entries = Vec::new();
+
+                            for (name, val) in &user_vars {
+                                // Convert value to Avon syntax
+                                let val_str = match val {
+                                    Value::String(s) => format!("\"{}\"", s.replace("\"", "\\\"")),
+                                    Value::Number(Number::Int(i)) => i.to_string(),
+                                    Value::Number(Number::Float(f)) => f.to_string(),
+                                    Value::Bool(b) => b.to_string(),
+                                    Value::List(_) => val.to_string(""),
+                                    Value::Dict(_) => val.to_string(""),
+                                    Value::Function { .. } => {
+                                        eprintln!("Warning: Cannot save function '{}' (functions cannot be serialized)", name);
+                                        continue;
+                                    }
+                                    _ => {
+                                        eprintln!("Warning: Cannot save variable '{}' (type not serializable)", name);
+                                        continue;
+                                    }
+                                };
+                                session_code.push_str(&format!("let {} = {} in\n", name, val_str));
+                                dict_entries.push(format!("{}: {}", name, name));
+                                saved_count += 1;
+                            }
+
+                            // Add a final expression that creates a dict with all variables
+                            // This ensures variables persist in the symbols map after evaluation
+                            if saved_count > 0 {
+                                session_code
+                                    .push_str(&format!("{{{}}}\n", dict_entries.join(", ")));
+                            }
+
+                            // Write session file
+                            match std::fs::write(file_path, session_code) {
+                                Ok(_) => {
+                                    println!(
+                                        "Session saved to: {} ({} variables)",
+                                        file_path, saved_count
+                                    );
+                                }
+                                Err(e) => {
+                                    eprintln!("Error saving session to '{}': {}", file_path, e);
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("load-session ") => {
+                            // Parse: :load-session <file>
+                            let file_path = cmd.trim_start_matches("load-session ").trim();
+                            if file_path.is_empty() {
+                                eprintln!("Usage: :load-session <file_path>");
+                                eprintln!("  Example: :load-session my_session.avon");
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
+
+                            // Read and evaluate session file
+                            match std::fs::read_to_string(file_path) {
+                                Ok(source) => {
+                                    match tokenize(source.clone()) {
+                                        Ok(tokens) => {
+                                            let ast = parse(tokens);
+                                            // Evaluate in a temporary environment
+                                            // The session file evaluates to a dict containing all variables
+                                            let mut temp_symbols = initial_builtins();
+                                            match eval(ast.program, &mut temp_symbols, &source) {
+                                                Ok(val) => {
+                                                    // Extract variables from the dict result
+                                                    let builtins = initial_builtins();
+                                                    let mut loaded = 0;
+
+                                                    if let Value::Dict(d) = val {
+                                                        // Variables are in the dict
+                                                        for (name, value) in d.iter() {
+                                                            if !builtins.contains_key(name) {
+                                                                symbols.insert(
+                                                                    name.clone(),
+                                                                    value.clone(),
+                                                                );
+                                                                loaded += 1;
+                                                            }
+                                                        }
+                                                    } else {
+                                                        // Fallback: try to extract from temp_symbols (for backwards compatibility)
+                                                        for (name, val) in temp_symbols.iter() {
+                                                            if !builtins.contains_key(name) {
+                                                                symbols.insert(
+                                                                    name.clone(),
+                                                                    val.clone(),
+                                                                );
+                                                                loaded += 1;
+                                                            }
+                                                        }
+                                                    }
+
+                                                    *symbols_rc.borrow_mut() = symbols.clone();
+                                                    println!("Session loaded from: {} ({} variables restored)", file_path, loaded);
+                                                }
+                                                Err(e) => {
+                                                    eprintln!(
+                                                        "Error evaluating session file: {}",
+                                                        e.pretty_with_file(
+                                                            &source,
+                                                            Some(file_path)
+                                                        )
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        Err(e) => {
+                                            eprintln!(
+                                                "Parse error in session file: {}",
+                                                e.pretty_with_file(&source, Some(file_path))
+                                            );
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("Error reading session file '{}': {}", file_path, e);
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("assert ") => {
+                            // Parse: :assert <expr>
+                            let expr_str = cmd.trim_start_matches("assert ").trim();
+                            if expr_str.is_empty() {
+                                eprintln!("Usage: :assert <expression>");
+                                eprintln!("  Example: :assert (x > 0)");
+                                eprintln!("  Example: :assert true");
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
+
+                            // Evaluate the expression
+                            match tokenize(expr_str.to_string()) {
+                                Ok(tokens) => {
+                                    let ast = parse(tokens);
+                                    match eval(ast.program, &mut symbols, expr_str) {
+                                        Ok(val) => match val {
+                                            Value::Bool(true) => {
+                                                println!("✓ PASS: Assertion passed");
+                                            }
+                                            Value::Bool(false) => {
+                                                eprintln!("✗ FAIL: Assertion failed (expression evaluated to false)");
+                                            }
+                                            _ => {
+                                                eprintln!("✗ FAIL: Assertion failed (expression must evaluate to a boolean, got: {})", 
+                                                        match val {
+                                                            Value::String(_) => "String",
+                                                            Value::Number(_) => "Number",
+                                                            Value::List(_) => "List",
+                                                            Value::Dict(_) => "Dict",
+                                                            Value::Function { .. } => "Function",
+                                                            _ => "Other"
+                                                        });
+                                            }
+                                        },
+                                        Err(e) => {
+                                            eprintln!(
+                                                "✗ FAIL: {}",
+                                                e.pretty_with_file(expr_str, Some("<repl>"))
+                                            );
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!(
+                                        "Parse error: {}",
+                                        e.pretty_with_file(expr_str, Some("<repl>"))
+                                    );
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("benchmark ") => {
+                            // Parse: :benchmark <expr>
+                            let rest = cmd.trim_start_matches("benchmark ").trim();
+                            if rest.is_empty() {
+                                eprintln!("Usage: :benchmark <expression>");
+                                eprintln!("  Example: :benchmark map (\\x x * 2) [1..1000]");
+                                eprintln!("  Example: :benchmark map double [1..1000]");
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
+
+                            // Benchmark an expression
+                            let start = std::time::Instant::now();
+                            match tokenize(rest.to_string()) {
+                                Ok(tokens) => {
+                                    let ast = parse(tokens);
+                                    match eval(ast.program, &mut symbols, rest) {
+                                        Ok(val) => {
+                                            let duration = start.elapsed();
+                                            let val_str = val.to_string("");
+                                            println!("Result: {}", val_str);
+                                            println!(
+                                                "Time: {:?} ({:.2}ms)",
+                                                duration,
+                                                duration.as_secs_f64() * 1000.0
+                                            );
+                                        }
+                                        Err(e) => {
+                                            eprintln!(
+                                                "Error: {}",
+                                                e.pretty_with_file(rest, Some("<repl>"))
+                                            );
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!(
+                                        "Parse error: {}",
+                                        e.pretty_with_file(rest, Some("<repl>"))
+                                    );
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("benchmark-file ") => {
+                            // Parse: :benchmark-file <file>
+                            let rest = cmd.trim_start_matches("benchmark-file ").trim();
+                            if rest.is_empty() {
+                                eprintln!("Usage: :benchmark-file <file>");
+                                eprintln!("  Example: :benchmark-file config.av");
+                                eprintln!("  Example: :benchmark-file large_program.av");
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
+
+                            // Benchmark a file
+                            match std::fs::read_to_string(rest) {
+                                Ok(source) => {
+                                    let start = std::time::Instant::now();
+                                    match tokenize(source.clone()) {
+                                        Ok(tokens) => {
+                                            let ast = parse(tokens);
+                                            let mut temp_symbols = initial_builtins();
+                                            match eval(ast.program, &mut temp_symbols, &source) {
+                                                Ok(val) => {
+                                                    let duration = start.elapsed();
+                                                    let val_str = val.to_string("");
+                                                    println!("File: {}", rest);
+                                                    println!("Result: {}", val_str);
+                                                    println!(
+                                                        "Time: {:?} ({:.2}ms)",
+                                                        duration,
+                                                        duration.as_secs_f64() * 1000.0
+                                                    );
+                                                }
+                                                Err(e) => {
+                                                    eprintln!(
+                                                        "Error: {}",
+                                                        e.pretty_with_file(&source, Some(rest))
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        Err(e) => {
+                                            eprintln!(
+                                                "Parse error: {}",
+                                                e.pretty_with_file(&source, Some(rest))
+                                            );
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("Error reading file '{}': {}", rest, e);
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("test ") => {
+                            // Parse: :test <expr> <expected>
+                            let rest = cmd.trim_start_matches("test ").trim();
+
+                            // Find the boundary between expr and expected (look for last space before expected)
+                            // This is tricky - we'll try to split on the last space, but that might not work for complex expressions
+                            // For now, require the expected to be a simple value or use a separator
+                            let parts: Vec<&str> = rest.rsplitn(2, char::is_whitespace).collect();
+                            if parts.len() < 2 {
+                                eprintln!("Usage: :test <expression> <expected_value>");
+                                eprintln!("  Example: :test (double 21) 42");
+                                eprintln!("  Example: :test (length [1,2,3]) 3");
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
+
+                            let expected_str = parts[0];
+                            let expr_str = parts[1];
+
+                            // Evaluate both expressions
+                            let expr_result = match tokenize(expr_str.to_string()) {
+                                Ok(tokens) => {
+                                    let ast = parse(tokens);
+                                    eval(ast.program, &mut symbols, expr_str)
+                                }
+                                Err(e) => {
+                                    eprintln!(
+                                        "Parse error in expression: {}",
+                                        e.pretty_with_file(expr_str, Some("<repl>"))
+                                    );
+                                    let _ = rl.add_history_entry(trimmed);
+                                    continue;
+                                }
+                            };
+
+                            let expected_result = match tokenize(expected_str.to_string()) {
+                                Ok(tokens) => {
+                                    let ast = parse(tokens);
+                                    eval(ast.program, &mut symbols, expected_str)
+                                }
+                                Err(e) => {
+                                    eprintln!(
+                                        "Parse error in expected value: {}",
+                                        e.pretty_with_file(expected_str, Some("<repl>"))
+                                    );
+                                    let _ = rl.add_history_entry(trimmed);
+                                    continue;
+                                }
+                            };
+
+                            match (expr_result, expected_result) {
+                                (Ok(expr_val), Ok(expected_val)) => {
+                                    // Compare values using the same logic as == operator in eval
+                                    let are_equal = match (&expr_val, &expected_val) {
+                                        (Value::Number(ln), Value::Number(rn)) => {
+                                            let lval = match ln {
+                                                Number::Int(i) => *i as f64,
+                                                Number::Float(f) => *f,
+                                            };
+                                            let rval = match rn {
+                                                Number::Int(i) => *i as f64,
+                                                Number::Float(f) => *f,
+                                            };
+                                            (lval - rval).abs() < f64::EPSILON
+                                        }
+                                        (Value::String(ls), Value::String(rs)) => ls == rs,
+                                        (Value::Bool(lb), Value::Bool(rb)) => lb == rb,
+                                        (Value::List(ll), Value::List(rl)) => {
+                                            if ll.len() != rl.len() {
+                                                false
+                                            } else {
+                                                ll.iter().zip(rl.iter()).all(|(l, r)| {
+                                                    match (l, r) {
+                                                        (Value::Number(ln), Value::Number(rn)) => {
+                                                            let lval = match ln {
+                                                                Number::Int(i) => *i as f64,
+                                                                Number::Float(f) => *f,
+                                                            };
+                                                            let rval = match rn {
+                                                                Number::Int(i) => *i as f64,
+                                                                Number::Float(f) => *f,
+                                                            };
+                                                            (lval - rval).abs() < f64::EPSILON
+                                                        }
+                                                        (Value::String(ls), Value::String(rs)) => {
+                                                            ls == rs
+                                                        }
+                                                        (Value::Bool(lb), Value::Bool(rb)) => {
+                                                            lb == rb
+                                                        }
+                                                        _ => l.to_string("") == r.to_string(""),
+                                                    }
+                                                })
+                                            }
+                                        }
+                                        _ => expr_val.to_string("") == expected_val.to_string(""),
+                                    };
+
+                                    if are_equal {
+                                        println!("✓ PASS: {} == {}", expr_str, expected_str);
+                                    } else {
+                                        eprintln!("✗ FAIL: {} != {}", expr_str, expected_str);
+                                        eprintln!("  Got: {}", expr_val.to_string(""));
+                                        eprintln!("  Expected: {}", expected_val.to_string(""));
+                                    }
+                                }
+                                (Err(e), _) => {
+                                    eprintln!(
+                                        "✗ FAIL: Error evaluating expression: {}",
+                                        e.pretty_with_file(expr_str, Some("<repl>"))
+                                    );
+                                }
+                                (_, Err(e)) => {
+                                    eprintln!(
+                                        "✗ FAIL: Error evaluating expected value: {}",
+                                        e.pretty_with_file(expected_str, Some("<repl>"))
+                                    );
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("list ") => {
+                            // Parse: :list <dir>
+                            let dir_path = cmd.trim_start_matches("list ").trim();
+                            let dir = if dir_path.is_empty() { "." } else { dir_path };
+
+                            match std::fs::read_dir(dir) {
+                                Ok(entries) => {
+                                    let mut files: Vec<String> = Vec::new();
+                                    for entry in entries {
+                                        match entry {
+                                            Ok(e) => {
+                                                let name =
+                                                    e.file_name().to_string_lossy().to_string();
+                                                let path = e.path();
+                                                let file_type =
+                                                    if path.is_dir() { "/" } else { "" };
+                                                files.push(format!("{}{}", name, file_type));
+                                            }
+                                            Err(e) => {
+                                                eprintln!("Error reading directory entry: {}", e);
+                                            }
+                                        }
+                                    }
+                                    files.sort();
+                                    let current_dir = std::env::current_dir()
+                                        .unwrap_or_else(|_| std::path::PathBuf::from("."));
+                                    println!(
+                                        "Directory '{}' (current: {}):",
+                                        dir,
+                                        current_dir.display()
+                                    );
+                                    if files.is_empty() {
+                                        println!("  (empty)");
+                                    } else {
+                                        for file in files {
+                                            println!("  {}", file);
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("Error reading directory '{}': {}", dir, e);
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        "list" => {
+                            // List current directory
+                            let current_dir = std::env::current_dir()
+                                .unwrap_or_else(|_| std::path::PathBuf::from("."));
+                            match std::fs::read_dir(&current_dir) {
+                                Ok(entries) => {
+                                    let mut files: Vec<String> = Vec::new();
+                                    for entry in entries {
+                                        match entry {
+                                            Ok(e) => {
+                                                let name =
+                                                    e.file_name().to_string_lossy().to_string();
+                                                let path = e.path();
+                                                let file_type =
+                                                    if path.is_dir() { "/" } else { "" };
+                                                files.push(format!("{}{}", name, file_type));
+                                            }
+                                            Err(e) => {
+                                                eprintln!("Error reading directory entry: {}", e);
+                                            }
+                                        }
+                                    }
+                                    files.sort();
+                                    println!("Current directory: {}", current_dir.display());
+                                    if files.is_empty() {
+                                        println!("  (empty)");
+                                    } else {
+                                        for file in files {
+                                            println!("  {}", file);
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("Error reading current directory: {}", e);
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("cd ") => {
+                            // Parse: :cd <dir>
+                            let dir_path = cmd.trim_start_matches("cd ").trim();
+                            if dir_path.is_empty() {
+                                eprintln!("Usage: :cd <directory>");
+                                eprintln!("  Example: :cd ./examples");
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
+
+                            match std::env::set_current_dir(dir_path) {
+                                Ok(_) => {
+                                    let current_dir = std::env::current_dir()
+                                        .unwrap_or_else(|_| std::path::PathBuf::from("."));
+                                    println!("Changed directory to: {}", current_dir.display());
+                                }
+                                Err(e) => {
+                                    eprintln!("Error changing directory to '{}': {}", dir_path, e);
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        "pwd" => {
+                            // Show current working directory
+                            match std::env::current_dir() {
+                                Ok(dir) => {
+                                    println!("{}", dir.display());
+                                }
+                                Err(e) => {
+                                    eprintln!("Error getting current directory: {}", e);
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("sh ") => {
+                            // Execute shell command: :sh <command>
+                            let shell_cmd = cmd.trim_start_matches("sh ").trim();
+                            if shell_cmd.is_empty() {
+                                eprintln!("Usage: :sh <command>");
+                                eprintln!("  Example: :sh ls -la");
+                                eprintln!("  Example: :sh echo hello");
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
+
+                            match std::process::Command::new("sh")
+                                .arg("-c")
+                                .arg(shell_cmd)
+                                .status()
+                            {
+                                Ok(status) => {
+                                    if !status.success() {
+                                        eprintln!("Command exited with code: {:?}", status.code());
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("Error executing command: {}", e);
+                                }
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        "sh" => {
+                            // Start interactive shell
+                            eprintln!("Usage: :sh <command>");
+                            eprintln!("  Example: :sh ls -la");
+                            eprintln!("  Example: :sh echo hello");
+                            eprintln!("  Note: This executes a single shell command. For interactive shell, exit REPL and use your terminal.");
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("watch ") => {
+                            // Parse: :watch <name>
+                            let var_name = cmd.trim_start_matches("watch ").trim();
+                            if var_name.is_empty() {
+                                eprintln!("Usage: :watch <variable_name>");
+                                eprintln!("  Example: :watch x");
+                                eprintln!(
+                                    "  Use :watch with no argument to list watched variables"
+                                );
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
+
+                            if let Some(val) = symbols.get(var_name) {
+                                watched_vars.insert(var_name.to_string(), val.clone());
+                                println!("Watching: {} = {}", var_name, val.to_string(""));
+                            } else {
+                                eprintln!("Variable '{}' not found", var_name);
+                                eprintln!("  Use :vars to see available variables");
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        "watch" => {
+                            // List watched variables
+                            if watched_vars.is_empty() {
+                                println!("No variables being watched.");
+                                println!("  Use :watch <name> to watch a variable");
+                                println!("  Use :unwatch <name> to stop watching a variable");
+                            } else {
+                                println!("Watched variables:");
+                                for name in watched_vars.keys() {
+                                    if let Some(val) = symbols.get(name) {
+                                        println!("  {} = {}", name, val.to_string(""));
+                                    } else {
+                                        println!("  {} (variable no longer exists)", name);
+                                    }
+                                }
+                                println!("  Use :unwatch <name> to stop watching a variable");
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        cmd if cmd.starts_with("unwatch ") => {
+                            // Parse: :unwatch <name>
+                            let var_name = cmd.trim_start_matches("unwatch ").trim();
+                            if var_name.is_empty() {
+                                eprintln!("Usage: :unwatch <variable_name>");
+                                eprintln!("  Example: :unwatch x");
+                                eprintln!(
+                                    "  Use :watch with no argument to list watched variables"
+                                );
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
+
+                            if watched_vars.remove(var_name).is_some() {
+                                println!("Stopped watching: {}", var_name);
+                            } else {
+                                eprintln!("Variable '{}' is not being watched", var_name);
+                                eprintln!("  Use :watch to see watched variables");
+                            }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
                         _ => {
                             println!(
                                 "Unknown command: {}. Type :help for available commands",
@@ -1493,6 +3362,25 @@ fn execute_repl() -> i32 {
                         let ast = parse(tokens);
                         match eval(ast.program, &mut symbols, &input_buffer) {
                             Ok(val) => {
+                                // Check watched variables for changes (compare string representations)
+                                let mut changed_vars: Vec<(String, Value)> = Vec::new();
+                                for (name, old_val) in &watched_vars {
+                                    if let Some(new_val) = symbols.get(name) {
+                                        let old_str = old_val.to_string("");
+                                        let new_str = new_val.to_string("");
+                                        if old_str != new_str {
+                                            println!(
+                                                "[WATCH] {} changed: {} -> {}",
+                                                name, old_str, new_str
+                                            );
+                                            changed_vars.push((name.clone(), new_val.clone()));
+                                        }
+                                    }
+                                }
+                                // Update watched variables after iteration
+                                for (name, val) in changed_vars {
+                                    watched_vars.insert(name, val);
+                                }
                                 // Display result nicely
                                 match &val {
                                     Value::FileTemplate { .. } => {

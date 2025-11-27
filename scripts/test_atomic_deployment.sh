@@ -122,14 +122,41 @@ fi
 chmod 755 "$TEST_DIR/readonly_parent"  # Restore permissions for cleanup
 echo "PASS: No files written when directory creation fails"
 
-# Test 6: Multiple files - if one fails, deployment stops
+# Test 6: Multiple files - if one fails, deployment stops immediately
 echo ""
-echo "Test 6: Write failure stops deployment immediately"
-# This is harder to test without actually causing a write failure
-# We'll test that all valid files are written when deployment succeeds
+echo "Test 6: Write failure stops deployment immediately (atomicity)"
+# Test that if one file can't be written, no files are written
+# Create a read-only file to simulate write failure
+mkdir -p "$TEST_DIR/output6"
+touch "$TEST_DIR/output6/b.txt"
+chmod 444 "$TEST_DIR/output6/b.txt"  # Read-only
+
 cat > "$TEST_DIR/multi_program.av" << 'EOF'
 [@/a.txt {"a"}, @/b.txt {"b"}, @/c.txt {"c"}]
 EOF
+
+# Try to deploy - should fail because b.txt is read-only
+$AVON deploy "$TEST_DIR/multi_program.av" --root "$TEST_DIR/output6" --force 2>&1 | grep -q "Cannot write\|Deployment aborted" || {
+    echo "FAIL: Should have reported write failure"
+    chmod 644 "$TEST_DIR/output6/b.txt"
+    exit 1
+}
+
+# Verify NO files were written (atomicity)
+if [ -f "$TEST_DIR/output6/a.txt" ] || [ -f "$TEST_DIR/output6/c.txt" ]; then
+    echo "FAIL: Some files were written despite write failure (not atomic!)"
+    chmod 644 "$TEST_DIR/output6/b.txt"
+    exit 1
+fi
+
+chmod 644 "$TEST_DIR/output6/b.txt"  # Restore permissions
+echo "PASS: No files written when one file write fails (atomic deployment)"
+
+# Test 6b: All files written when deployment succeeds
+echo ""
+echo "Test 6b: All files written in successful deployment"
+rm -rf "$TEST_DIR/output6"
+mkdir -p "$TEST_DIR/output6"
 
 $AVON deploy "$TEST_DIR/multi_program.av" --root "$TEST_DIR/output6" --force
 

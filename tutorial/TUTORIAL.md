@@ -122,7 +122,7 @@ But Avon isn't just for complex infrastructure projects. It's a **powerful workf
      - Why Use the REPL
      - Starting the REPL
      - Basic Usage
-     - REPL Commands (`:help`, `:doc`, `:type`, `:clear`, `:exit`)
+     - REPL Commands (`:help`, `:let`, `:vars`, `:inspect`, `:unlet`, `:read`, `:run`, `:eval`, `:preview`, `:deploy`, `:deploy-expr`, `:write`, `:history`, `:save-session`, `:load-session`, `:doc`, `:type`, `:clear`, `:exit`)
      - Multi-line Input
      - Error Handling
      - Best Practices
@@ -1780,7 +1780,7 @@ This generates `config-dev.yml` and `config-prod.yml`.
 - `--force` overrides this safety check (destructive).
 - `--backup` allows overwriting but preserves the old file as `filename.bak` (safe).
 - `--root` ensures you don't accidentally write to system directories (required for safety).
-- If any error occurs during deployment preparation, **zero files are written** (atomic deployment).
+- If any error occurs during deployment preparation or validation, **zero files are written** (truly atomic deployment). All files are validated before any writes occur.
 
 ---
 
@@ -2412,14 +2412,42 @@ String : String
 
 **REPL Commands:**
 - `:help` or `:h` - Show help and available commands
-- `:doc` - Show all available builtin functions
-- `:doc <name>` - Show detailed documentation for a builtin function
+- `:let <name> = <expr>` - Store a value in the REPL (persists across commands)
+- `:vars` - List all user-defined variables
+- `:inspect <name>` - Show detailed information about a variable
+- `:unlet <name>` - Remove a user-defined variable
+- `:read <file>` - Read and display file contents (any path allowed)
+- `:run <file> [--debug]` - Evaluate file and display result (doesn't modify REPL state)
+- `:eval <file>` - Evaluate file and merge Dict keys into REPL (if result is a Dict)
+- `:preview <file> [--debug]` - Preview what would be deployed without writing files
+- `:deploy <file> [flags...]` - Deploy a file (supports same flags as CLI: `--root <dir>`, `--force`, `--backup`, `--append`, `--if-not-exists`, `--debug`, `-param value`)
+- `:deploy-expr <expr> [--root <dir>]` - Deploy the result of an expression
+- `:write <file> <expr>` - Write expression result to file
+- `:history` - Show command history (last 50 entries)
+- `:save-session <file>` - Save REPL state (variables) to file
+- `:load-session <file>` - Load REPL state from file
+- `:assert <expr>` - Assert that expression evaluates to true
+- `:test <expr> <expected>` - Test that expression equals expected value
+- `:benchmark <expr>` - Measure evaluation time for an expression
+- `:benchmark-file <file>` - Measure evaluation time for a file
+- `:watch <name>` - Watch a variable and show when it changes (works with :let and expressions)
+- `:unwatch <name>` - Stop watching a variable
+- `:pwd` - Show current working directory
+- `:list [dir]` - List directory contents (shows current directory path)
+- `:cd <dir>` - Change working directory
+- `:sh <command>` - Execute shell command
+- `:doc` - Show all available builtin functions and REPL commands
+- `:doc <name>` - Show detailed documentation for a builtin function or REPL command
+  - Example: `:doc map` - Shows documentation for the `map` builtin function
+  - Example: `:doc pwd` - Shows documentation for the `:pwd` REPL command
+  - Example: `:doc read` - Shows documentation for the `:read` REPL command
 - `:type <expr>` - Show the type of an expression
 - `:clear` - Clear all user-defined variables (resets to initial state)
 - `:exit` or `:quit` or `:q` - Exit the REPL
 
 **Keyboard Shortcuts:**
 - `↑` / `↓` - Navigate command history (in-memory only, no file saved)
+- `Tab` - Tab completion for REPL commands and filenames
 - `Ctrl+A` - Move to beginning of line
 - `Ctrl+E` - Move to end of line
 - `Ctrl+K` - Delete from cursor to end of line
@@ -2429,28 +2457,89 @@ String : String
 - `Ctrl+W` - Delete word backward
 - `Ctrl+L` - Clear screen
 
-**Example 1: Building Up Complex Expressions**
+**Example 1: Using Persistent Variables**
 
-The REPL maintains state between expressions, so you can build up complex computations:
+The REPL supports persistent variables that persist across commands:
 
 ```avon
-avon> let double = \x x * 2 in double
-Function : Function
+avon> :let double = \x x * 2
+Stored: double : Function
 
-avon> let numbers = [1, 2, 3, 4, 5] in numbers
-[1, 2, 3, 4, 5] : List
+avon> :let numbers = [1, 2, 3, 4, 5]
+Stored: numbers : List
 
 avon> map double numbers
 [2, 4, 6, 8, 10] : List
+
+avon> :vars
+User-defined variables:
+  double : Function
+  numbers : List = [5 items]
+
+avon> :inspect numbers
+Variable: numbers
+  Type: List
+  Length: 5
+  Items:
+    [0]: 1
+    [1]: 2
+    [2]: 3
+    [3]: 4
+    [4]: 5
 
 avon> :doc
 Available builtin functions (use :doc <name> for details):
   assert          concat          contains        debug
   filter          flatten         flatmap         fold
   map             ...
+
+Available REPL commands (use :doc <command> for details):
+  :help            :exit            :clear           :vars            :let             :inspect       
+  :unlet           :read            :run             :eval            :preview         :deploy        
+  :deploy-expr     :write           :history         :save-session     :load-session    :assert        
+  :test            :benchmark       :benchmark-file  :watch           :unwatch         :pwd             :list            :cd            
+  :doc             :type            :sh            
+
+Tip: Use :doc <name> to see detailed documentation for any builtin function or REPL command.
+
+avon> :doc pwd
+:pwd
+  Show the current working directory.
+  Example: :pwd
+
+avon> :doc map
+map :: (a -> b) -> [a] -> [b]
+  Transform each item in list.
+  Example: map (\x x * 2) [1, 2, 3] -> [2, 4, 6]
 ```
 
-**Example 2: Testing File Templates**
+**Example 2: File Operations and Deployment**
+
+The REPL supports reading, evaluating, and deploying files:
+
+```avon
+avon> :read config.av
+let port = 8080 in
+@config.yml {"port: {port}"}
+
+avon> :preview config.av
+Would deploy 1 file(s):
+  Path: config.yml
+  Content:
+port: 8080
+
+avon> :deploy config.av --root ./output --backup
+Deployment completed successfully
+
+avon> :let env = "prod"
+Stored: env : String
+
+avon> :deploy-expr @config-{env}.yml {"env: {env}"} --root ./output
+Deployed: ./output/config-prod.yml
+Deployment completed successfully
+```
+
+**Example 3: Testing File Templates**
 
 You can test file generation without actually writing files:
 
@@ -2472,7 +2561,7 @@ FileTemplate:
   Welcome to Avon.
 ```
 
-**Example 3: Debugging with trace and debug**
+**Example 4: Debugging with trace and debug**
 
 Use built-in debugging tools interactively:
 
@@ -2595,7 +2684,7 @@ After an error, you can continue working—the REPL doesn't crash.
 
 1. **Test before writing files**: Use the REPL to verify expressions work before adding them to your `.av` files
 2. **Build incrementally**: Define functions and variables step by step, checking each one
-3. **Use `:doc` to explore builtins**: See all available functions with `:doc`, or get details with `:doc <name>`
+3. **Use `:doc` to explore builtins and commands**: See all available functions and REPL commands with `:doc`, or get details with `:doc <name>` (works for both builtin functions and REPL commands like `:doc pwd` or `:doc map`)
 4. **Use `:type` for verification**: Check types of complex expressions
 5. **Clear when needed**: Use `:clear` to reset if you make mistakes
 
@@ -2742,7 +2831,7 @@ Parse error: expected 'in' after let binding
 
 **Deployment errors:**
 If an error occurs during file materialization (writing files), Avon:
-- Stops immediately (atomic deployment)
+- Stops immediately with zero files written (truly atomic deployment - all files validated before any writes)
 - Reports exactly what failed
 - Shows how many files were written before the error
 - Does not leave partial deployments
@@ -2882,21 +2971,37 @@ let port = env_var_or "PORT" "8080" in
 
 ### Deployment Safety
 
-Avon's deployment process is designed to be atomic-like and fail-safe.
+Avon's deployment process is designed to be **truly atomic** and fail-safe. When deploying a list of FileTemplates, if any file cannot be written, **zero files are written**.
 
-**1. No Partial Writes**
-Avon prepares all file operations before writing anything to disk. It validates:
-- All paths are valid
-- Parent directories can be created
+**1. Three-Phase Atomic Deployment**
+
+Avon uses a three-phase approach to ensure atomicity:
+
+**Phase 1: Preparation & Validation**
+- All paths are validated for security (no path traversal)
+- All parent directories are created
 - No type errors occurred during evaluation
 
-If **any** error occurs during this preparation phase, Avon aborts immediately. **Zero files are written.**
+If **any** error occurs during this phase, Avon aborts immediately. **Zero files are written.**
+
+**Phase 2: Write Validation**
+Before writing any files, Avon validates that **all** files can be written:
+- For existing files: Verifies they can be opened for writing (checks permissions)
+- For backup operations: Verifies backup location is writable
+- For new files: Verifies parent directories are writable
+
+If **any** file fails validation, Avon aborts immediately. **Zero files are written.**
+
+This ensures that when deploying a list like `[@/a.txt {...}, @/b.txt {...}, @/c.txt {...}]`, if `b.txt` cannot be written (e.g., read-only file), then `a.txt` and `c.txt` are also not written. The deployment is truly atomic.
+
+**Phase 3: Writing**
+Only after all files pass validation does Avon proceed to write them. Files are written sequentially, but since all have been validated, write failures are extremely rare (e.g., disk full during write).
 
 **2. Directory Creation Checks**
 If creating a directory fails (e.g., due to permissions), deployment aborts before any files are written.
 
 **3. Write Error Handling**
-If a file write fails (e.g., disk full, permission denied) during the writing phase, Avon stops immediately and reports exactly what happened.
+If a file write fails during Phase 3 (e.g., disk full), Avon stops immediately and reports exactly what happened. However, this is rare since all files are validated in Phase 2.
 
 ### Preventing Accidental Overwrites
 

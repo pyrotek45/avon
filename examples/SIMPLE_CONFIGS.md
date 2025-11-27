@@ -65,11 +65,11 @@ Some advanced examples may also use Avon function parameters with default values
 To actually write the configuration files to disk:
 
 ```bash
-avon examples/vim_simple.av --deploy
+avon deploy examples/vim_simple.av --root ~/.config
 ```
 
 Use `--force` to overwrite existing files:
 
 ```bash
-avon examples/vim_simple.av --deploy --force
+avon deploy examples/vim_simple.av --root ~/.config --force
 ```
