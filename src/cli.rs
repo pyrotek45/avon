@@ -1761,24 +1761,57 @@ fn execute_repl() -> i32 {
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
+                        "let" => {
+                            eprintln!("Error: Missing variable name and expression");
+                            eprintln!("Usage: :let <name> = <expression>");
+                            eprintln!("  Example: :let x = 42");
+                            eprintln!(
+                                "  Example: :let config = {{host: \"localhost\", port: 8080}}"
+                            );
+                            eprintln!("  Note: You must include an '=' sign between the variable name and expression");
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
                         cmd if cmd.starts_with("let ") => {
                             // Parse: :let <name> = <expr>
                             let rest = cmd.trim_start_matches("let ").trim();
+                            if rest.is_empty() {
+                                eprintln!("Error: Missing variable name and expression");
+                                eprintln!("Usage: :let <name> = <expression>");
+                                eprintln!("  Example: :let x = 42");
+                                eprintln!(
+                                    "  Example: :let config = {{host: \"localhost\", port: 8080}}"
+                                );
+                                eprintln!("  Note: You must include an '=' sign between the variable name and expression");
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
                             if let Some(equals_pos) = rest.find('=') {
                                 let var_name = rest[..equals_pos].trim();
                                 let expr_str = rest[equals_pos + 1..].trim();
 
                                 if var_name.is_empty() {
                                     eprintln!("Error: Variable name cannot be empty");
-                                    eprintln!("Usage: :let <name> = <expr>");
+                                    eprintln!("Usage: :let <name> = <expression>");
                                     eprintln!("  Example: :let x = 42");
-                                    eprintln!("  Example: :let double = \\x x * 2");
+                                    eprintln!("  Example: :let config = {{host: \"localhost\", port: 8080}}");
+                                    let _ = rl.add_history_entry(trimmed);
                                     continue;
                                 }
-
                                 if expr_str.is_empty() {
                                     eprintln!("Error: Expression cannot be empty");
-                                    eprintln!("Usage: :let <name> = <expr>");
+                                    eprintln!("Usage: :let <name> = <expression>");
+                                    eprintln!("  Example: :let x = 42");
+                                    eprintln!("  Example: :let config = {{host: \"localhost\", port: 8080}}");
+                                    let _ = rl.add_history_entry(trimmed);
+                                    continue;
+                                }
+                                if expr_str.is_empty() {
+                                    eprintln!("Error: Expression cannot be empty");
+                                    eprintln!("Usage: :let <name> = <expression>");
+                                    eprintln!("  Example: :let x = 42");
+                                    eprintln!("  Example: :let config = {{host: \"localhost\", port: 8080}}");
+                                    let _ = rl.add_history_entry(trimmed);
                                     continue;
                                 }
 
@@ -1845,10 +1878,17 @@ fn execute_repl() -> i32 {
                                     }
                                 }
                             } else {
-                                eprintln!("Error: Missing '=' in :let command");
-                                eprintln!("Usage: :let <name> = <expr>");
+                                eprintln!(
+                                    "Error: Missing '=' sign between variable name and expression"
+                                );
+                                eprintln!("Usage: :let <name> = <expression>");
                                 eprintln!("  Example: :let x = 42");
-                                eprintln!("  Example: :let double = \\x x * 2");
+                                eprintln!(
+                                    "  Example: :let config = {{host: \"localhost\", port: 8080}}"
+                                );
+                                eprintln!("  Note: The '=' sign is required to separate the variable name from its value");
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
                             }
                             let _ = rl.add_history_entry(trimmed);
                             continue;
@@ -1883,8 +1923,13 @@ fn execute_repl() -> i32 {
                         cmd if cmd.starts_with("inspect ") => {
                             let var_name = cmd.trim_start_matches("inspect ").trim();
                             if var_name.is_empty() {
+                                eprintln!("Error: Missing variable name");
                                 eprintln!("Usage: :inspect <variable_name>");
                                 eprintln!("  Example: :inspect x");
+                                eprintln!(
+                                    "  Note: This shows detailed information about a variable"
+                                );
+                                let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
 
@@ -1960,8 +2005,11 @@ fn execute_repl() -> i32 {
                         cmd if cmd.starts_with("unlet ") => {
                             let var_name = cmd.trim_start_matches("unlet ").trim();
                             if var_name.is_empty() {
+                                eprintln!("Error: Missing variable name");
                                 eprintln!("Usage: :unlet <variable_name>");
                                 eprintln!("  Example: :unlet x");
+                                eprintln!("  Note: This removes a user-defined variable (cannot remove builtins)");
+                                let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
 
@@ -2039,7 +2087,11 @@ fn execute_repl() -> i32 {
                         cmd if cmd.starts_with("type ") => {
                             let expr_str = cmd.trim_start_matches("type ").trim();
                             if expr_str.is_empty() {
-                                println!("Usage: :type <expression>");
+                                eprintln!("Error: Missing expression");
+                                eprintln!("Usage: :type <expression>");
+                                eprintln!("  Example: :type [1, 2, 3]");
+                                eprintln!("  Example: :type \"hello\"");
+                                let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
                             // Evaluate expression to get type
@@ -2082,8 +2134,13 @@ fn execute_repl() -> i32 {
                         cmd if cmd.starts_with("read ") => {
                             let file_path = cmd.trim_start_matches("read ").trim();
                             if file_path.is_empty() {
+                                eprintln!("Error: Missing file path");
                                 eprintln!("Usage: :read <file_path>");
                                 eprintln!("  Example: :read config.av");
+                                eprintln!(
+                                    "  Note: This displays the contents of the specified file"
+                                );
+                                let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
 
@@ -2107,8 +2164,13 @@ fn execute_repl() -> i32 {
                         cmd if cmd.starts_with("run ") => {
                             let file_path = cmd.trim_start_matches("run ").trim();
                             if file_path.is_empty() {
+                                eprintln!("Error: Missing file path");
                                 eprintln!("Usage: :run <file_path>");
                                 eprintln!("  Example: :run config.av");
+                                eprintln!(
+                                    "  Note: This evaluates a file without modifying REPL state"
+                                );
+                                let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
 
@@ -2230,9 +2292,11 @@ fn execute_repl() -> i32 {
                         cmd if cmd.starts_with("eval ") => {
                             let file_path = cmd.trim_start_matches("eval ").trim();
                             if file_path.is_empty() {
+                                eprintln!("Error: Missing file path");
                                 eprintln!("Usage: :eval <file_path>");
                                 eprintln!("  Example: :eval config.av");
-                                eprintln!("  Note: If the file evaluates to a Dict, its keys will be added to REPL");
+                                eprintln!("  Note: If the file evaluates to a Dict, its keys will be added to REPL state");
+                                let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
 
@@ -2299,8 +2363,12 @@ fn execute_repl() -> i32 {
                         cmd if cmd.starts_with("preview ") => {
                             let file_path = cmd.trim_start_matches("preview ").trim();
                             if file_path.is_empty() {
-                                eprintln!("Usage: :preview <file_path>");
+                                eprintln!("Error: Missing file path");
+                                eprintln!("Usage: :preview <file_path> [flags...]");
                                 eprintln!("  Example: :preview config.av");
+                                eprintln!("  Example: :preview config.av --debug");
+                                eprintln!("  Note: This shows what would be deployed without writing files");
+                                let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
 
@@ -2359,12 +2427,17 @@ fn execute_repl() -> i32 {
                             let parts: Vec<&str> = rest.split_whitespace().collect();
 
                             if parts.is_empty() {
+                                eprintln!("Error: Missing file path");
                                 eprintln!("Usage: :deploy <file_path> [flags...]");
                                 eprintln!("  Flags: --root <dir>, --force, --backup, --append, --if-not-exists, --debug");
                                 eprintln!("  Example: :deploy config.av --root ./output --backup");
                                 eprintln!(
                                     "  Example: :deploy config.av --root ./out --force -env prod"
                                 );
+                                eprintln!(
+                                    "  Note: This deploys FileTemplates from the file to disk"
+                                );
+                                let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
 
@@ -2470,9 +2543,13 @@ fn execute_repl() -> i32 {
                             };
 
                             if expr_str.is_empty() {
+                                eprintln!("Error: Missing expression");
                                 eprintln!("Usage: :deploy-expr <expression> [--root <dir>]");
                                 eprintln!("  Example: :deploy-expr @test.txt {{\"Hello\"}}");
                                 eprintln!("  Example: :deploy-expr config --root ./output");
+                                eprintln!("  Note: The expression must evaluate to a FileTemplate or list of FileTemplates");
+                                eprintln!("  Note: --root is required for deployment");
+                                let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
 
@@ -2618,16 +2695,36 @@ fn execute_repl() -> i32 {
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
+                        "write" => {
+                            eprintln!("Error: Missing file path and expression");
+                            eprintln!("Usage: :write <file_path> <expression>");
+                            eprintln!("  Example: :write output.txt \"Hello, world!\"");
+                            eprintln!("  Example: :write result.json (json_parse config)");
+                            eprintln!("  Note: You must provide both a file path and an expression to write");
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
                         cmd if cmd.starts_with("write ") => {
                             // Parse: :write <file> <expr>
                             let rest = cmd.trim_start_matches("write ").trim();
+                            if rest.is_empty() {
+                                eprintln!("Error: Missing file path and expression");
+                                eprintln!("Usage: :write <file_path> <expression>");
+                                eprintln!("  Example: :write output.txt \"Hello, world!\"");
+                                eprintln!("  Example: :write result.json (json_parse config)");
+                                eprintln!("  Note: You must provide both a file path and an expression to write");
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
 
                             // Find the file path (first word) and expression (rest)
                             let parts: Vec<&str> = rest.splitn(2, char::is_whitespace).collect();
                             if parts.len() < 2 {
+                                eprintln!("Error: Missing expression after file path");
                                 eprintln!("Usage: :write <file_path> <expression>");
                                 eprintln!("  Example: :write output.txt \"Hello, world!\"");
                                 eprintln!("  Example: :write result.json (json_parse config)");
+                                eprintln!("  Note: The expression will be evaluated and written to the file");
                                 let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
@@ -2680,12 +2777,26 @@ fn execute_repl() -> i32 {
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
+                        "save-session" => {
+                            eprintln!("Error: Missing file path");
+                            eprintln!("Usage: :save-session <file_path>");
+                            eprintln!("  Example: :save-session my_session.avon");
+                            eprintln!("  Note: This will save all user-defined variables to the specified file");
+                            eprintln!("  Use :load-session to restore variables from a saved file");
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
                         cmd if cmd.starts_with("save-session ") => {
                             // Parse: :save-session <file>
                             let file_path = cmd.trim_start_matches("save-session ").trim();
                             if file_path.is_empty() {
+                                eprintln!("Error: Missing file path");
                                 eprintln!("Usage: :save-session <file_path>");
                                 eprintln!("  Example: :save-session my_session.avon");
+                                eprintln!("  Note: This will save all user-defined variables to the specified file");
+                                eprintln!(
+                                    "  Use :load-session to restore variables from a saved file"
+                                );
                                 let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
@@ -2756,12 +2867,22 @@ fn execute_repl() -> i32 {
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
+                        "load-session" => {
+                            eprintln!("Error: Missing file path");
+                            eprintln!("Usage: :load-session <file_path>");
+                            eprintln!("  Example: :load-session my_session.avon");
+                            eprintln!("  Note: This will load variables from a file saved with :save-session");
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
                         cmd if cmd.starts_with("load-session ") => {
                             // Parse: :load-session <file>
                             let file_path = cmd.trim_start_matches("load-session ").trim();
                             if file_path.is_empty() {
+                                eprintln!("Error: Missing file path");
                                 eprintln!("Usage: :load-session <file_path>");
                                 eprintln!("  Example: :load-session my_session.avon");
+                                eprintln!("  Note: This will load variables from a file saved with :save-session");
                                 let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
@@ -2834,13 +2955,26 @@ fn execute_repl() -> i32 {
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
+                        "assert" => {
+                            eprintln!("Error: Missing expression");
+                            eprintln!("Usage: :assert <expression>");
+                            eprintln!("  Example: :assert (x > 0)");
+                            eprintln!("  Example: :assert true");
+                            eprintln!(
+                                "  Note: The expression must evaluate to a boolean (true or false)"
+                            );
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
                         cmd if cmd.starts_with("assert ") => {
                             // Parse: :assert <expr>
                             let expr_str = cmd.trim_start_matches("assert ").trim();
                             if expr_str.is_empty() {
+                                eprintln!("Error: Missing expression");
                                 eprintln!("Usage: :assert <expression>");
                                 eprintln!("  Example: :assert (x > 0)");
                                 eprintln!("  Example: :assert true");
+                                eprintln!("  Note: The expression must evaluate to a boolean (true or false)");
                                 let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
@@ -2887,13 +3021,24 @@ fn execute_repl() -> i32 {
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
+                        "benchmark" => {
+                            eprintln!("Error: Missing expression");
+                            eprintln!("Usage: :benchmark <expression>");
+                            eprintln!("  Example: :benchmark map (\\x x * 2) [1..1000]");
+                            eprintln!("  Example: :benchmark map double [1..1000]");
+                            eprintln!("  Note: This command measures the evaluation time of an expression");
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
                         cmd if cmd.starts_with("benchmark ") => {
                             // Parse: :benchmark <expr>
                             let rest = cmd.trim_start_matches("benchmark ").trim();
                             if rest.is_empty() {
+                                eprintln!("Error: Missing expression");
                                 eprintln!("Usage: :benchmark <expression>");
                                 eprintln!("  Example: :benchmark map (\\x x * 2) [1..1000]");
                                 eprintln!("  Example: :benchmark map double [1..1000]");
+                                eprintln!("  Note: This command measures the evaluation time of an expression");
                                 let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
@@ -2929,6 +3074,17 @@ fn execute_repl() -> i32 {
                                     );
                                 }
                             }
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
+                        "benchmark-file" => {
+                            eprintln!("Error: Missing file path");
+                            eprintln!("Usage: :benchmark-file <file_path>");
+                            eprintln!("  Example: :benchmark-file config.av");
+                            eprintln!("  Example: :benchmark-file large_program.av");
+                            eprintln!(
+                                "  Note: This command measures the evaluation time of a file"
+                            );
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
@@ -2986,18 +3142,38 @@ fn execute_repl() -> i32 {
                             let _ = rl.add_history_entry(trimmed);
                             continue;
                         }
+                        "test" => {
+                            eprintln!("Error: Missing expression and expected value");
+                            eprintln!("Usage: :test <expression> <expected_value>");
+                            eprintln!("  Example: :test (double 21) 42");
+                            eprintln!("  Example: :test (length [1,2,3]) 3");
+                            eprintln!("  Note: This compares the expression result with the expected value");
+                            let _ = rl.add_history_entry(trimmed);
+                            continue;
+                        }
                         cmd if cmd.starts_with("test ") => {
                             // Parse: :test <expr> <expected>
                             let rest = cmd.trim_start_matches("test ").trim();
+                            if rest.is_empty() {
+                                eprintln!("Error: Missing expression and expected value");
+                                eprintln!("Usage: :test <expression> <expected_value>");
+                                eprintln!("  Example: :test (double 21) 42");
+                                eprintln!("  Example: :test (length [1,2,3]) 3");
+                                eprintln!("  Note: This compares the expression result with the expected value");
+                                let _ = rl.add_history_entry(trimmed);
+                                continue;
+                            }
 
                             // Find the boundary between expr and expected (look for last space before expected)
                             // This is tricky - we'll try to split on the last space, but that might not work for complex expressions
                             // For now, require the expected to be a simple value or use a separator
                             let parts: Vec<&str> = rest.rsplitn(2, char::is_whitespace).collect();
                             if parts.len() < 2 {
+                                eprintln!("Error: Missing expected value after expression");
                                 eprintln!("Usage: :test <expression> <expected_value>");
                                 eprintln!("  Example: :test (double 21) 42");
                                 eprintln!("  Example: :test (length [1,2,3]) 3");
+                                eprintln!("  Note: Separate the expression and expected value with a space");
                                 let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
@@ -3197,8 +3373,11 @@ fn execute_repl() -> i32 {
                             // Parse: :cd <dir>
                             let dir_path = cmd.trim_start_matches("cd ").trim();
                             if dir_path.is_empty() {
+                                eprintln!("Error: Missing directory path");
                                 eprintln!("Usage: :cd <directory>");
                                 eprintln!("  Example: :cd ./examples");
+                                eprintln!("  Example: :cd /tmp");
+                                eprintln!("  Note: This changes the current working directory");
                                 let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
@@ -3233,9 +3412,11 @@ fn execute_repl() -> i32 {
                             // Execute shell command: :sh <command>
                             let shell_cmd = cmd.trim_start_matches("sh ").trim();
                             if shell_cmd.is_empty() {
+                                eprintln!("Error: Missing shell command");
                                 eprintln!("Usage: :sh <command>");
                                 eprintln!("  Example: :sh ls -la");
                                 eprintln!("  Example: :sh echo hello");
+                                eprintln!("  Note: This executes a single shell command");
                                 let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
@@ -3270,11 +3451,13 @@ fn execute_repl() -> i32 {
                             // Parse: :watch <name>
                             let var_name = cmd.trim_start_matches("watch ").trim();
                             if var_name.is_empty() {
+                                eprintln!("Error: Missing variable name");
                                 eprintln!("Usage: :watch <variable_name>");
                                 eprintln!("  Example: :watch x");
                                 eprintln!(
-                                    "  Use :watch with no argument to list watched variables"
+                                    "  Note: Use :watch with no argument to list watched variables"
                                 );
+                                eprintln!("  Note: This will show a message when the variable's value changes");
                                 let _ = rl.add_history_entry(trimmed);
                                 continue;
                             }
@@ -3313,10 +3496,12 @@ fn execute_repl() -> i32 {
                             // Parse: :unwatch <name>
                             let var_name = cmd.trim_start_matches("unwatch ").trim();
                             if var_name.is_empty() {
+                                eprintln!("Error: Missing variable name");
                                 eprintln!("Usage: :unwatch <variable_name>");
                                 eprintln!("  Example: :unwatch x");
+                                eprintln!("  Note: This stops watching a variable for changes");
                                 eprintln!(
-                                    "  Use :watch with no argument to list watched variables"
+                                    "  Note: Use :watch with no argument to list watched variables"
                                 );
                                 let _ = rl.add_history_entry(trimmed);
                                 continue;
