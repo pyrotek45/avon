@@ -1,4 +1,4 @@
-# Avon Language Grammar
+:# Avon Language Grammar
 
 This document defines the formal grammar for the Avon language in Extended Backus-Naur Form (EBNF).
 

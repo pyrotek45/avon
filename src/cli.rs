@@ -56,28 +56,28 @@ fn get_repl_command_doc(cmd_name: &str) -> Option<String> {
 fn get_builtin_doc(func_name: &str) -> Option<String> {
     let docs: std::collections::HashMap<&str, &str> = [
         // String Operations
-        ("concat", "concat :: String -> String -> String\n  Concatenate two strings.\n  Example: concat \"hello\" \" world\" -> \"hello world\""),
-        ("upper", "upper :: String -> String\n  Convert string to uppercase.\n  Example: upper \"hello\" -> \"HELLO\""),
-        ("lower", "lower :: String -> String\n  Convert string to lowercase.\n  Example: lower \"HELLO\" -> \"hello\""),
-        ("trim", "trim :: String -> String\n  Remove leading and trailing whitespace.\n  Example: trim \"  hello  \" -> \"hello\""),
-        ("split", "split :: String -> String -> [String]\n  Split string by delimiter.\n  Example: split \"a,b,c\" \",\" -> [\"a\", \"b\", \"c\"]"),
-        ("join", "join :: [String] -> String -> String\n  Join list of strings with separator.\n  Example: join [\"a\", \"b\"] \", \" -> \"a, b\""),
-        ("replace", "replace :: String -> String -> String -> String\n  Replace all occurrences of substring.\n  Example: replace \"hello\" \"l\" \"L\" -> \"heLLo\""),
-        ("contains", "contains :: String -> String -> Bool\n  Check if string contains substring.\n  Example: contains \"hello\" \"ell\" -> true"),
-        ("starts_with", "starts_with :: String -> String -> Bool\n  Check if string starts with prefix.\n  Example: starts_with \"hello\" \"he\" -> true"),
-        ("ends_with", "ends_with :: String -> String -> Bool\n  Check if string ends with suffix.\n  Example: ends_with \"hello\" \"lo\" -> true"),
-        ("length", "length :: (String|List) -> Int\n  Get length of string or list.\n  Example: length \"hello\" -> 5, length [1,2,3] -> 3"),
-        ("repeat", "repeat :: String -> Int -> String\n  Repeat string n times.\n  Example: repeat \"x\" 3 -> \"xxx\""),
-        ("pad_left", "pad_left :: String -> Int -> String -> String\n  Pad string on left to specified length.\n  Example: pad_left \"7\" 3 \"0\" -> \"007\""),
-        ("pad_right", "pad_right :: String -> Int -> String -> String\n  Pad string on right to specified length.\n  Example: pad_right \"hi\" 5 \" \" -> \"hi   \""),
-        ("indent", "indent :: String -> Int -> String\n  Indent each line by n spaces.\n  Example: indent \"code\" 4 -> \"    code\""),
-        ("is_digit", "is_digit :: String -> Bool\n  Check if all characters are digits.\n  Example: is_digit \"123\" -> true"),
-        ("is_alpha", "is_alpha :: String -> Bool\n  Check if all characters are alphabetic.\n  Example: is_alpha \"abc\" -> true"),
-        ("is_alphanumeric", "is_alphanumeric :: String -> Bool\n  Check if all characters are alphanumeric.\n  Example: is_alphanumeric \"abc123\" -> true"),
-        ("is_whitespace", "is_whitespace :: String -> Bool\n  Check if all characters are whitespace.\n  Example: is_whitespace \"  \" -> true"),
-        ("is_uppercase", "is_uppercase :: String -> Bool\n  Check if all characters are uppercase.\n  Example: is_uppercase \"ABC\" -> true"),
-        ("is_lowercase", "is_lowercase :: String -> Bool\n  Check if all characters are lowercase.\n  Example: is_lowercase \"abc\" -> true"),
-        ("is_empty", "is_empty :: (String|List) -> Bool\n  Check if string or list is empty.\n  Example: is_empty \"\" -> true, is_empty [] -> true"),
+        ("concat", "concat :: (String|Template) -> (String|Template) -> String\n  Concatenate two strings.\n  Example: concat \"hello\" \" world\" -> \"hello world\"\n  Note: Both arguments accept both strings and templates (templates auto-convert to strings)"),
+        ("upper", "upper :: (String|Template) -> String\n  Convert string to uppercase.\n  Example: upper \"hello\" -> \"HELLO\"\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
+        ("lower", "lower :: (String|Template) -> String\n  Convert string to lowercase.\n  Example: lower \"HELLO\" -> \"hello\"\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
+        ("trim", "trim :: (String|Template) -> String\n  Remove leading and trailing whitespace.\n  Example: trim \"  hello  \" -> \"hello\"\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
+        ("split", "split :: (String|Template) -> (String|Template) -> [String]\n  Split string by delimiter.\n  Example: split \"a,b,c\" \",\" -> [\"a\", \"b\", \"c\"]\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
+        ("join", "join :: [String] -> (String|Template) -> String\n  Join list of strings with separator.\n  Example: join [\"a\", \"b\"] \", \" -> \"a, b\"\n  Note: Separator accepts both strings and templates (templates auto-convert to strings)"),
+        ("replace", "replace :: (String|Template) -> (String|Template) -> (String|Template) -> String\n  Replace all occurrences of substring.\n  Example: replace \"hello\" \"l\" \"L\" -> \"heLLo\"\n  Note: All arguments accept both strings and templates (templates auto-convert to strings)"),
+        ("contains", "contains :: (String|Template) -> (String|Template) -> Bool\n  Check if string contains substring.\n  Example: contains \"hello\" \"ell\" -> true\n  Note: Both arguments accept strings and templates (templates auto-convert to strings)"),
+        ("starts_with", "starts_with :: (String|Template) -> (String|Template) -> Bool\n  Check if string starts with prefix.\n  Example: starts_with \"hello\" \"he\" -> true\n  Note: Both arguments accept strings and templates (templates auto-convert to strings)"),
+        ("ends_with", "ends_with :: (String|Template) -> (String|Template) -> Bool\n  Check if string ends with suffix.\n  Example: ends_with \"hello\" \"lo\" -> true\n  Note: Both arguments accept strings and templates (templates auto-convert to strings)"),
+        ("length", "length :: (String|Template|List) -> Int\n  Get length of string, template, or list.\n  Example: length \"hello\" -> 5, length [1,2,3] -> 3\n  Note: Templates are converted to strings before measuring length"),
+        ("repeat", "repeat :: (String|Template) -> Int -> String\n  Repeat string n times.\n  Example: repeat \"x\" 3 -> \"xxx\"\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
+        ("pad_left", "pad_left :: (String|Template) -> Int -> (String|Template) -> String\n  Pad string on left to specified length.\n  Example: pad_left \"7\" 3 \"0\" -> \"007\"\n  Note: String and pad char accept both strings and templates (templates auto-convert to strings)"),
+        ("pad_right", "pad_right :: (String|Template) -> Int -> (String|Template) -> String\n  Pad string on right to specified length.\n  Example: pad_right \"hi\" 5 \" \" -> \"hi   \"\n  Note: String and pad char accept both strings and templates (templates auto-convert to strings)"),
+        ("indent", "indent :: (String|Template) -> Int -> String\n  Indent each line by n spaces.\n  Example: indent \"code\" 4 -> \"    code\"\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
+        ("is_digit", "is_digit :: (String|Template) -> Bool\n  Check if all characters are digits.\n  Example: is_digit \"123\" -> true\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
+        ("is_alpha", "is_alpha :: (String|Template) -> Bool\n  Check if all characters are alphabetic.\n  Example: is_alpha \"abc\" -> true\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
+        ("is_alphanumeric", "is_alphanumeric :: (String|Template) -> Bool\n  Check if all characters are alphanumeric.\n  Example: is_alphanumeric \"abc123\" -> true\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
+        ("is_whitespace", "is_whitespace :: (String|Template) -> Bool\n  Check if all characters are whitespace.\n  Example: is_whitespace \"  \" -> true\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
+        ("is_uppercase", "is_uppercase :: (String|Template) -> Bool\n  Check if all characters are uppercase.\n  Example: is_uppercase \"ABC\" -> true\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
+        ("is_lowercase", "is_lowercase :: (String|Template) -> Bool\n  Check if all characters are lowercase.\n  Example: is_lowercase \"abc\" -> true\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
+        ("is_empty", "is_empty :: (String|Template|List) -> Bool\n  Check if string, template, or list is empty.\n  Example: is_empty \"\" -> true, is_empty [] -> true\n  Note: Templates are converted to strings before checking"),
 
         // List Operations
         ("map", "map :: (a -> b) -> [a] -> [b]\n  Transform each item in list.\n  Example: map (\\x x * 2) [1, 2, 3] -> [2, 4, 6]"),
@@ -96,11 +96,11 @@ fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("tail", "tail :: [a] -> [a]\n  Get all items except first.\n  Example: tail [1, 2, 3] -> [2, 3]"),
 
         // Dict Operations
-        ("get", "get :: (Dict|Pairs) -> String -> a | None\n  Get value by key.\n  Example: get {a: 1} \"a\" -> 1"),
-        ("set", "set :: (Dict|Pairs) -> String -> a -> (Dict|Pairs)\n  Update or add key-value pair.\n  Example: set {a: 1} \"b\" 2 -> {a: 1, b: 2}"),
-        ("keys", "keys :: (Dict|Pairs) -> [String]\n  Get all keys.\n  Example: keys {a: 1, b: 2} -> [\"a\", \"b\"]"),
-        ("values", "values :: (Dict|Pairs) -> [a]\n  Get all values.\n  Example: values {a: 1, b: 2} -> [1, 2]"),
-        ("has_key", "has_key :: (Dict|Pairs) -> String -> Bool\n  Check if key exists.\n  Example: has_key {a: 1} \"a\" -> true"),
+        ("get", "get :: (Dict|[[String, a]]) -> String -> a | None\n  Get value by key.\n  Works with both dicts and list of pairs (list of 2-element lists).\n  Example: get {a: 1} \"a\" -> 1\n  Example: get [[\"a\", 1], [\"b\", 2]] \"a\" -> 1\n  Note: 'Pairs' is not a type - it's a list of pairs: [[\"key\", value], ...]"),
+        ("set", "set :: (Dict|[[String, a]]) -> String -> a -> (Dict|[[String, a]])\n  Update or add key-value pair.\n  Works with both dicts and list of pairs.\n  Example: set {a: 1} \"b\" 2 -> {a: 1, b: 2}\n  Note: 'Pairs' is not a type - it's a list of pairs: [[\"key\", value], ...]"),
+        ("keys", "keys :: (Dict|[[String, a]]) -> [String]\n  Get all keys.\n  Works with both dicts and list of pairs.\n  Example: keys {a: 1, b: 2} -> [\"a\", \"b\"]\n  Note: 'Pairs' is not a type - it's a list of pairs: [[\"key\", value], ...]"),
+        ("values", "values :: (Dict|[[String, a]]) -> [a]\n  Get all values.\n  Works with both dicts and list of pairs.\n  Example: values {a: 1, b: 2} -> [1, 2]\n  Note: 'Pairs' is not a type - it's a list of pairs: [[\"key\", value], ...]"),
+        ("has_key", "has_key :: (Dict|[[String, a]]) -> String -> Bool\n  Check if key exists.\n  Works with both dicts and list of pairs.\n  Example: has_key {a: 1} \"a\" -> true\n  Note: 'Pairs' is not a type - it's a list of pairs: [[\"key\", value], ...]"),
 
         // Type Conversion
         ("to_string", "to_string :: a -> String\n  Convert value to string.\n  Example: to_string 42 -> \"42\""),
@@ -136,6 +136,7 @@ fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("md_link", "md_link :: String -> String -> String\n  Create markdown link.\n  Example: md_link \"text\" \"url\" -> \"[text](url)\""),
         ("md_code", "md_code :: String -> String\n  Create inline code.\n  Example: md_code \"x = 1\" -> \"`x = 1`\""),
         ("md_list", "md_list :: [String] -> String\n  Create markdown list.\n  Example: md_list [\"a\", \"b\"] -> \"- a\\n- b\""),
+        ("markdown_to_html", "markdown_to_html :: (String|Template) -> String\n  Convert markdown text to HTML.\n  Supports headings (# through ######), bold (**text**), italic (*text*), inline code (`code`), paragraphs, and line breaks.\n  Example: markdown_to_html \"# Hello\\nWorld\" -> \"<h1>Hello</h1>\\n<p>World</p>\"\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
 
         // File Operations
         ("readfile", "readfile :: String|Path -> String\n  Read entire file as string.\n  Example: readfile \"config.json\" -> file contents\n  Note: Use relative paths only. Absolute paths blocked for security."),
@@ -297,6 +298,7 @@ impl Completer for AvonCompleter {
     }
 }
 
+#[allow(clippy::print_literal)]
 fn print_builtin_docs() {
     println!("Avon Builtin Functions Reference");
     println!("=================================\n");
@@ -304,130 +306,254 @@ fn print_builtin_docs() {
     // String Operations
     println!("String Operations:");
     println!("------------------");
-    println!("  concat       :: String -> String -> String");
-    println!("  upper        :: String -> String");
-    println!("  lower        :: String -> String");
-    println!("  trim         :: String -> String");
-    println!("  split        :: String -> String -> [String]");
-    println!("  join         :: [String] -> String -> String");
-    println!("  replace      :: String -> String -> String -> String");
-    println!("  contains     :: String -> String -> Bool");
-    println!("  starts_with  :: String -> String -> Bool");
-    println!("  ends_with    :: String -> String -> Bool");
-    println!("  length       :: String -> Int  (also works on lists)");
-    println!("  repeat       :: String -> Int -> String");
-    println!("  pad_left     :: String -> Int -> String -> String");
-    println!("  pad_right    :: String -> Int -> String -> String");
-    println!("  indent       :: String -> Int -> String");
-    println!("  is_digit     :: String -> Bool");
-    println!("  is_alpha     :: String -> Bool");
-    println!("  is_alphanumeric :: String -> Bool");
-    println!("  is_whitespace :: String -> Bool");
-    println!("  is_uppercase :: String -> Bool");
-    println!("  is_lowercase :: String -> Bool");
-    println!("  is_empty     :: String -> Bool  (also works on lists)");
+    println!("  Note: All string functions accept both String and Template types.");
+    println!("        Templates are automatically converted to strings before processing.");
+    println!();
+    println!(
+        "  {:<18} :: {}",
+        "concat", "(String|Template) -> (String|Template) -> String"
+    );
+    println!("  {:<18} :: {}", "upper", "(String|Template) -> String");
+    println!("  {:<18} :: {}", "lower", "(String|Template) -> String");
+    println!("  {:<18} :: {}", "trim", "(String|Template) -> String");
+    println!(
+        "  {:<18} :: {}",
+        "split", "(String|Template) -> (String|Template) -> [String]"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "join", "[String] -> (String|Template) -> String"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "replace", "(String|Template) -> (String|Template) -> (String|Template) -> String"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "contains", "(String|Template) -> (String|Template) -> Bool"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "starts_with", "(String|Template) -> (String|Template) -> Bool"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "ends_with", "(String|Template) -> (String|Template) -> Bool"
+    );
+    println!("  {:<18} :: {}", "length", "(String|Template|List) -> Int");
+    println!(
+        "  {:<18} :: {}",
+        "repeat", "(String|Template) -> Int -> String"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "pad_left", "(String|Template) -> Int -> (String|Template) -> String"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "pad_right", "(String|Template) -> Int -> (String|Template) -> String"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "indent", "(String|Template) -> Int -> String"
+    );
+    println!("  {:<18} :: {}", "is_digit", "(String|Template) -> Bool");
+    println!("  {:<18} :: {}", "is_alpha", "(String|Template) -> Bool");
+    println!(
+        "  {:<18} :: {}",
+        "is_alphanumeric", "(String|Template) -> Bool"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "is_whitespace", "(String|Template) -> Bool"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "is_uppercase", "(String|Template) -> Bool"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "is_lowercase", "(String|Template) -> Bool"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "is_empty", "(String|Template|List) -> Bool"
+    );
     println!();
 
     // List Operations
     println!("List Operations:");
     println!("----------------");
-    println!("  map          :: (a -> b) -> [a] -> [b]");
-    println!("  filter       :: (a -> Bool) -> [a] -> [a]");
-    println!("  fold         :: (acc -> a -> acc) -> acc -> [a] -> acc");
-    println!("  flatmap      :: (a -> [b]) -> [a] -> [b]");
-    println!("  flatten      :: [[a]] -> [a]");
-    println!("  length       :: [a] -> Int  (also works on strings)");
-    println!("  zip          :: [a] -> [b] -> [(a, b)]");
-    println!("  unzip        :: [(a, b)] -> ([a], [b])");
-    println!("  take         :: Int -> [a] -> [a]");
-    println!("  drop         :: Int -> [a] -> [a]");
-    println!("  split_at     :: Int -> [a] -> ([a], [a])");
-    println!("  partition    :: (a -> Bool) -> [a] -> ([a], [a])");
-    println!("  reverse      :: [a] -> [a]");
-    println!("  head         :: [a] -> a | None");
-    println!("  tail         :: [a] -> [a]");
+    println!("  {:<18} :: {}", "map", "(a -> b) -> [a] -> [b]");
+    println!("  {:<18} :: {}", "filter", "(a -> Bool) -> [a] -> [a]");
+    println!(
+        "  {:<18} :: {}",
+        "fold", "(acc -> a -> acc) -> acc -> [a] -> acc"
+    );
+    println!("  {:<18} :: {}", "flatmap", "(a -> [b]) -> [a] -> [b]");
+    println!("  {:<18} :: {}", "flatten", "[[a]] -> [a]");
+    println!(
+        "  {:<18} :: {}",
+        "length", "[a] -> Int  (also works on strings)"
+    );
+    println!("  {:<18} :: {}", "zip", "[a] -> [b] -> [(a, b)]");
+    println!("  {:<18} :: {}", "unzip", "[(a, b)] -> ([a], [b])");
+    println!("  {:<18} :: {}", "take", "Int -> [a] -> [a]");
+    println!("  {:<18} :: {}", "drop", "Int -> [a] -> [a]");
+    println!("  {:<18} :: {}", "split_at", "Int -> [a] -> ([a], [a])");
+    println!(
+        "  {:<18} :: {}",
+        "partition", "(a -> Bool) -> [a] -> ([a], [a])"
+    );
+    println!("  {:<18} :: {}", "reverse", "[a] -> [a]");
+    println!("  {:<18} :: {}", "head", "[a] -> a | None");
+    println!("  {:<18} :: {}", "tail", "[a] -> [a]");
     println!();
 
     // Map/Dictionary Operations
     println!("Map/Dictionary Operations:");
     println!("--------------------------");
-    println!("  dict_get     :: Dict -> String -> a | None       (get value by key - deprecated, use dot notation)");
-    println!("  get          :: (Dict|Pairs) -> String -> a | None");
-    println!("  set          :: (Dict|Pairs) -> String -> a -> (Dict|Pairs)");
     println!(
-        "  keys         :: (Dict|Pairs) -> [String]         (works with both dict and list pairs)"
+        "  {:<18} :: {}",
+        "dict_get", "Dict -> String -> a | None  (deprecated, use dot notation)"
     );
     println!(
-        "  values       :: (Dict|Pairs) -> [a]              (works with both dict and list pairs)"
+        "  {:<18} :: {}",
+        "get", "(Dict|[[String, a]]) -> String -> a | None"
     );
-    println!("  has_key      :: (Dict|Pairs) -> String -> Bool");
+    println!(
+        "  {:<18} :: {}",
+        "set", "(Dict|[[String, a]]) -> String -> a -> (Dict|[[String, a]])"
+    );
+    println!("  {:<18} :: {}", "keys", "(Dict|[[String, a]]) -> [String]");
+    println!("  {:<18} :: {}", "values", "(Dict|[[String, a]]) -> [a]");
+    println!(
+        "  {:<18} :: {}",
+        "has_key", "(Dict|[[String, a]]) -> String -> Bool"
+    );
     println!();
-    println!("  Modern syntax: let config = {{host: \"localhost\", port: 8080}} in");
-    println!("                 config.host  # Access with dot notation!");
-    println!("  Tip: Use keys/values/length with dicts and pairs for generic dict operations");
-    println!("  Legacy: get/set/keys/values/has_key work with both dicts and [[k,v]] pairs");
+    println!(
+        "  Note: 'Pairs' is not a type - it's a list of 2-element lists: [[\"key\", value], ...]"
+    );
+    println!("  Modern: let config = {{host: \"localhost\", port: 8080}} in config.host");
+    println!(
+        "  Legacy: let pairs = [[\"host\", \"localhost\"], [\"port\", 8080]] in get pairs \"host\""
+    );
     println!();
 
     // Type Conversion
     println!("Type Conversion:");
     println!("----------------");
-    println!("  to_string    :: a -> String");
-    println!("  to_int       :: String -> Int");
-    println!("  to_float     :: String -> Float");
-    println!("  to_bool      :: a -> Bool");
-    println!("  neg          :: Number -> Number                      (negate a number)");
+    println!("  {:<18} :: {}", "to_string", "a -> String");
+    println!("  {:<18} :: {}", "to_int", "String -> Int");
+    println!("  {:<18} :: {}", "to_float", "String -> Float");
+    println!("  {:<18} :: {}", "to_bool", "a -> Bool");
+    println!(
+        "  {:<18} :: {}",
+        "neg", "Number -> Number  (negate a number)"
+    );
     println!();
 
     // Formatting Functions
     println!("Formatting Functions:");
     println!("---------------------");
-    println!("  format_int        :: Number -> Int -> String          (zero-padded integers)");
-    println!("  format_float      :: Number -> Int -> String          (decimal precision)");
-    println!("  format_hex        :: Number -> String                 (hexadecimal)");
-    println!("  format_octal      :: Number -> String                 (octal)");
-    println!("  format_binary     :: Number -> String                 (binary)");
-    println!("  format_scientific :: Number -> Int -> String          (scientific notation)");
-    println!("  format_bytes      :: Number -> String                 (human-readable bytes)");
-    println!("  format_list       :: [a] -> String -> String          (join with separator)");
     println!(
-        "  format_table      :: ([[a]]|Dict) -> String -> String (2D table, also accepts dict)"
+        "  {:<18} :: {}",
+        "format_int", "Number -> Int -> String  (zero-padded integers)"
     );
-    println!("  format_json       :: a -> String                      (JSON representation)");
-    println!("  format_currency   :: Number -> String -> String       (currency with symbol)");
-    println!("  format_percent    :: Number -> Int -> String          (percentage)");
-    println!("  format_bool       :: Bool -> String -> String         (custom bool formatting)");
-    println!("  truncate          :: String -> Int -> String          (truncate with ...)");
-    println!("  center            :: String -> Int -> String          (center-align text)");
+    println!(
+        "  {:<18} :: {}",
+        "format_float", "Number -> Int -> String  (decimal precision)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_hex", "Number -> String  (hexadecimal)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_octal", "Number -> String  (octal)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_binary", "Number -> String  (binary)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_scientific", "Number -> Int -> String  (scientific notation)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_bytes", "Number -> String  (human-readable bytes)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_list", "[a] -> String -> String  (join with separator)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_table", "([[a]]|Dict) -> String -> String  (2D table)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_json", "a -> String  (JSON representation)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_currency", "Number -> String -> String  (currency)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_percent", "Number -> Int -> String  (percentage)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_bool", "Bool -> String -> String  (custom formatting)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "truncate", "String -> Int -> String  (truncate with ...)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "center", "String -> Int -> String  (center-align text)"
+    );
     println!();
 
     // HTML Helpers
     println!("HTML Helpers:");
     println!("-------------");
-    println!("  html_escape  :: String -> String");
-    println!("  html_tag     :: String -> String -> String");
-    println!("  html_attr    :: String -> String -> String");
+    println!("  {:<18} :: {}", "html_escape", "String -> String");
+    println!("  {:<18} :: {}", "html_tag", "String -> String -> String");
+    println!("  {:<18} :: {}", "html_attr", "String -> String -> String");
     println!();
 
     // Markdown Helpers
     println!("Markdown Helpers:");
     println!("-----------------");
-    println!("  md_heading   :: Int -> String -> String");
-    println!("  md_link      :: String -> String -> String");
-    println!("  md_code      :: String -> String");
-    println!("  md_list      :: [String] -> String");
+    println!("  {:<18} :: {}", "md_heading", "Int -> String -> String");
+    println!("  {:<18} :: {}", "md_link", "String -> String -> String");
+    println!("  {:<18} :: {}", "md_code", "String -> String");
+    println!("  {:<18} :: {}", "md_list", "[String] -> String");
+    println!(
+        "  {:<18} :: {}",
+        "markdown_to_html", "(String|Template) -> String"
+    );
     println!();
 
     // File Operations
     println!("File Operations:");
     println!("----------------");
-    println!("  readfile        :: String|Path -> String");
-    println!("  readlines       :: String|Path -> [String]");
-    println!("  fill_template   :: String|Path -> (Dict|[[String, String]]) -> String");
+    println!("  {:<18} :: {}", "readfile", "String|Path -> String");
+    println!("  {:<18} :: {}", "readlines", "String|Path -> [String]");
+    println!(
+        "  {:<18} :: {}",
+        "fill_template", "String|Path -> (Dict|[[String, String]]) -> String"
+    );
     println!("                     (reads file and fills {{placeholders}} with values)");
-    println!("  exists          :: String|Path -> Bool");
-    println!("  basename        :: String|Path -> String");
-    println!("  dirname         :: String|Path -> String");
-    println!("  walkdir         :: String|Path -> [String]");
+    println!("  {:<18} :: {}", "exists", "String|Path -> Bool");
+    println!("  {:<18} :: {}", "basename", "String|Path -> String");
+    println!("  {:<18} :: {}", "dirname", "String|Path -> String");
+    println!("  {:<18} :: {}", "walkdir", "String|Path -> [String]");
     println!();
     println!("  Note: Path values are created with @ syntax: @config/{{env}}.yml");
     println!("        Paths can be stored in variables and passed to file functions.");
@@ -436,53 +562,65 @@ fn print_builtin_docs() {
     // Data Utilities
     println!("Data Utilities:");
     println!("---------------");
-    println!("  json_parse   :: String -> a                       (JSON arrays → lists, objects → dicts)");
-    println!("  import       :: String|Path -> Value");
+    println!(
+        "  {:<18} :: {}",
+        "json_parse", "String -> a  (JSON arrays → lists, objects → dicts)"
+    );
+    println!("  {:<18} :: {}", "import", "String|Path -> Value");
     println!();
 
     // Type Checking & Introspection
     println!("Type Checking & Introspection:");
     println!("-------------------------------");
-    println!("  typeof       :: a -> String                       (returns type name: \"String\", \"Number\", \"List\", etc.)");
-    println!("  is_string    :: a -> Bool");
-    println!("  is_number    :: a -> Bool");
-    println!("  is_int       :: a -> Bool");
-    println!("  is_float     :: a -> Bool");
-    println!("  is_list      :: a -> Bool");
-    println!("  is_bool      :: a -> Bool");
-    println!("  is_function  :: a -> Bool");
-    println!();
-    println!("  assert       :: Bool -> a -> a                   (returns value if condition true, errors with debug info otherwise)");
-    println!();
-    println!("  Usage Examples:");
-    println!("    assert (is_number x) x              # Assert x is a number, return x");
-    println!("    assert (x > 0) x                    # Assert x is positive, return x");
-    println!("    assert (is_string s) s              # Assert s is a string, return s");
+    println!(
+        "  {:<18} :: {}",
+        "typeof", "a -> String  (returns type name)"
+    );
+    println!("  {:<18} :: {}", "is_string", "a -> Bool");
+    println!("  {:<18} :: {}", "is_number", "a -> Bool");
+    println!("  {:<18} :: {}", "is_int", "a -> Bool");
+    println!("  {:<18} :: {}", "is_float", "a -> Bool");
+    println!("  {:<18} :: {}", "is_list", "a -> Bool");
+    println!("  {:<18} :: {}", "is_bool", "a -> Bool");
+    println!("  {:<18} :: {}", "is_function", "a -> Bool");
+    println!(
+        "  {:<18} :: {}",
+        "assert", "Bool -> a -> a  (returns value if true, errors otherwise)"
+    );
     println!();
 
     // Debug & Error Handling
     println!("Debug & Error Handling:");
     println!("-----------------------");
-    println!("  trace        :: String -> a -> a                 (prints \"label: value\" to stderr, returns value)");
-    println!("  debug        :: a -> a                           (pretty-prints value structure, returns value)");
     println!(
-        "  error        :: String -> a                      (throws custom error with message)"
+        "  {:<18} :: {}",
+        "trace", "String -> a -> a  (prints label: value to stderr)"
     );
-    println!();
-    println!("  Examples:");
-    println!("    trace \"x\" 42                        # Prints \"x: 42\" to stderr, returns 42");
     println!(
-        "    debug [1, 2, 3]                     # Prints pretty list structure, returns [1, 2, 3]"
+        "  {:<18} :: {}",
+        "debug", "a -> a  (pretty-prints value structure)"
     );
-    println!("    if (x < 0) then error \"negative\"    # Throws error if x is negative");
+    println!(
+        "  {:<18} :: {}",
+        "error", "String -> a  (throws custom error)"
+    );
     println!();
 
     // System
     println!("System:");
     println!("-------");
-    println!("  os           :: String  (returns \"linux\", \"macos\", or \"windows\")");
-    println!("  env_var      :: String -> String  (reads env var, fails if missing)");
-    println!("  env_var_or   :: String -> String -> String  (reads env var with default)");
+    println!(
+        "  {:<18} :: {}",
+        "os", "String  (returns \"linux\", \"macos\", or \"windows\")"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "env_var", "String -> String  (reads env var, fails if missing)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "env_var_or", "String -> String -> String  (reads env var with default)"
+    );
     println!();
 
     println!("Notes:");

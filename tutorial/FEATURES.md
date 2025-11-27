@@ -422,6 +422,8 @@ Avon provides a first-class Dict type for structured data with key-value pairs:
 | `values` | 1 | Extract all values | `values {a: 1, b: 2}` -> `[1, 2]` |
 | `has_key` | 2 | Check if key exists | `has_key {a: 1} "a"` -> `true` |
 
+**Note:** These functions work with both dictionaries and lists of pairs (list of 2-element lists). "Pairs" is not a separate type—it's a list of pairs: `[["key", value], ...]`. For example, `get [[\"a\", 1], [\"b\", 2]] \"a\"` works the same as `get {a: 1, b: 2} \"a\"`.
+
 **Dict Syntax:**  
 Dictionaries use curly braces with colon notation:
 

@@ -1255,6 +1255,81 @@ mod tests {
     // Comprehensive builtin function tests
 
     #[test]
+    fn test_template_auto_conversion() {
+        // Test that templates are automatically converted to strings in string functions
+        let prog = r#"let name = "world" in let t = {"hello {name}"} in upper t"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "HELLO WORLD");
+
+        // Test with split
+        let prog2 = r#"let t = {"a,b,c"} in split t ",""#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        match v2 {
+            Value::List(items) => {
+                assert_eq!(items.len(), 3);
+                match &items[0] {
+                    Value::String(s) => assert_eq!(s, "a"),
+                    other => panic!("expected string 'a', got {:?}", other),
+                }
+            }
+            other => panic!("expected list, got {:?}", other),
+        }
+
+        // Test with replace
+        let prog3 = r#"let t = {"hello world"} in replace t "world" "avon""#.to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        assert_eq!(v3.to_string(&prog3), "hello avon");
+    }
+
+    #[test]
+    fn test_markdown_to_html() {
+        // Test basic markdown to HTML conversion
+        let prog = "markdown_to_html \"# Hello\\nThis is **bold** text.\"".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        let result = v.to_string(&prog);
+        assert!(
+            result.contains("<h1>Hello</h1>"),
+            "Expected <h1> tag, got: {}",
+            result
+        );
+        assert!(
+            result.contains("<strong>bold</strong>"),
+            "Expected <strong> tag, got: {}",
+            result
+        );
+
+        // Test with multiple headings
+        let prog2 = "markdown_to_html \"## Subtitle\\n### Sub-subtitle\"".to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        let result2 = v2.to_string(&prog2);
+        assert!(
+            result2.contains("<h2>Subtitle</h2>"),
+            "Expected <h2> tag, got: {}",
+            result2
+        );
+        assert!(
+            result2.contains("<h3>Sub-subtitle</h3>"),
+            "Expected <h3> tag, got: {}",
+            result2
+        );
+    }
+
+    #[test]
     fn test_string_builtins_concat() {
         let prog = r#"concat "hello" " world""#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
@@ -1812,6 +1887,10 @@ mod tests {
             ("html_escape \"<div>\"", "&lt;div&gt;"),
             ("html_tag \"div\" \"Hello\"", "<div>Hello</div>"),
             ("html_attr \"class\" \"btn\"", "class=\"btn\""),
+            (
+                "markdown_to_html \"# Hello\\nWorld\"",
+                "<h1>Hello</h1>\n<p>World</p>",
+            ),
             ("os", "linux|macos|windows"), // OS-specific output
         ];
         for (prog_str, expected_output) in builtins {

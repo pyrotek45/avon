@@ -1,0 +1,106 @@
+# Advanced Static Site Generator
+# Generates multiple pages from markdown files
+# Demonstrates: template placeholders, markdown conversion, multi-file generation
+
+let site_title = "My Awesome Blog" in
+let base_url = "https://example.com" in
+
+# Define blog posts
+let posts = [
+    {
+        title: "Getting Started with Avon",
+        slug: "getting-started",
+        date: "2024-01-15",
+        author: "Alice",
+        markdown: {"
+# Getting Started with Avon
+
+Avon is a powerful tool for generating files.
+
+## Why Avon?
+
+- **Simple**: Easy to learn
+- **Powerful**: Handles complex scenarios
+- **Fast**: Quick generation
+
+## Example
+
+Here's how you use it:
+
+\`\`\`bash
+avon deploy config.av --root ./output
+\`\`\`
+"}
+    },
+    {
+        title: "Building Static Sites",
+        slug: "static-sites",
+        date: "2024-01-20",
+        author: "Bob",
+        markdown: {"
+# Building Static Sites
+
+Learn how to build static sites with Avon.
+
+## Benefits
+
+1. Fast loading
+2. Easy to deploy
+3. No server needed
+
+## Conclusion
+
+Static sites are great!
+"}
+    }
+] in
+
+# HTML template with multiple placeholders
+let page_template = {"
+<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <title><!-- expand-title --> - {site_title}</title>
+    <link rel=\"stylesheet\" href=\"/style.css\">
+</head>
+<body>
+    <header>
+        <nav>
+            <a href=\"/\">Home</a>
+            <a href=\"/about.html\">About</a>
+        </nav>
+        <h1>{site_title}</h1>
+    </header>
+    <main>
+        <article>
+            <h1><!-- expand-title --></h1>
+            <div class=\"meta\">
+                <span>By <!-- expand-author --></span>
+                <span>On <!-- expand-date --></span>
+            </div>
+            <div class=\"content\">
+                <!-- expand-body -->
+            </div>
+        </article>
+    </main>
+    <footer>
+        <p>&copy; 2024 {site_title}</p>
+    </footer>
+</body>
+</html>
+"} in
+
+# Generate HTML for a single post using built-in markdown_to_html
+let generate_post = \post
+    let html_body = markdown_to_html post.markdown in
+    let html1 = replace page_template "<!-- expand-title -->" post.title in
+    let html2 = replace html1 "<!-- expand-author -->" post.author in
+    let html3 = replace html2 "<!-- expand-date -->" post.date in
+    let html4 = replace html3 "<!-- expand-body -->" html_body in
+    @posts/{post.slug}.html {"{html4}"}
+in
+
+# Generate all post pages
+map generate_post posts

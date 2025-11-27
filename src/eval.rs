@@ -341,6 +341,10 @@ pub fn initial_builtins() -> HashMap<String, Value> {
         "md_list".to_string(),
         Value::Builtin("md_list".to_string(), Vec::new()),
     );
+    m.insert(
+        "markdown_to_html".to_string(),
+        Value::Builtin("markdown_to_html".to_string(), Vec::new()),
+    );
 
     // Data structures (dict is now literal syntax {key: value})
     // Dict operations
@@ -1253,6 +1257,7 @@ pub fn apply_function(
                 "md_link" => 2,
                 "md_code" => 1,
                 "md_list" => 1,
+                "markdown_to_html" => 1,
                 "dict_get" => 2,
                 "dict_set" => 3,
                 "dict_has_key" => 2,
@@ -1340,6 +1345,20 @@ pub fn apply_function(
     }
 }
 
+// Helper function to convert Value to String, handling both String and Template
+fn value_to_string_auto(val: &Value, source: &str, line: usize) -> Result<String, EvalError> {
+    match val {
+        Value::String(s) => Ok(s.clone()),
+        Value::Template(chunks, symbols) => render_chunks_to_string(chunks, symbols, source)
+            .map_err(|e| EvalError::new(format!("template render error: {}", e), None, None, line)),
+        _ => Err(EvalError::type_mismatch(
+            "string or template",
+            val.to_string(source),
+            line,
+        )),
+    }
+}
+
 pub fn execute_builtin(
     name: &str,
     args: &[Value],
@@ -1348,19 +1367,9 @@ pub fn execute_builtin(
 ) -> Result<Value, EvalError> {
     match name {
         "concat" => {
-            let a = &args[0];
-            let b = &args[1];
-            if let (Value::String(sa), Value::String(sb)) = (a, b) {
-                let mut out = sa.clone();
-                out.push_str(sb);
-                Ok(Value::String(out))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    format!("{}, {}", a.to_string(source), b.to_string(source)),
-                    0,
-                ))
-            }
+            let sa = value_to_string_auto(&args[0], source, line)?;
+            let sb = value_to_string_auto(&args[1], source, line)?;
+            Ok(Value::String(format!("{}{}", sa, sb)))
         }
         "map" => {
             let func = &args[0];
@@ -1546,115 +1555,56 @@ pub fn execute_builtin(
             }
         }
         "upper" => {
-            let s = &args[0];
-            if let Value::String(st) = s {
-                Ok(Value::String(st.to_uppercase()))
-            } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
-            }
+            let s = value_to_string_auto(&args[0], source, line)?;
+            Ok(Value::String(s.to_uppercase()))
         }
         "lower" => {
-            let s = &args[0];
-            if let Value::String(st) = s {
-                Ok(Value::String(st.to_lowercase()))
-            } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
-            }
+            let s = value_to_string_auto(&args[0], source, line)?;
+            Ok(Value::String(s.to_lowercase()))
         }
         "trim" => {
-            let s = &args[0];
-            if let Value::String(st) = s {
-                Ok(Value::String(st.trim().to_string()))
-            } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
-            }
+            let s = value_to_string_auto(&args[0], source, line)?;
+            Ok(Value::String(s.trim().to_string()))
         }
         "contains" => {
-            let a = &args[0];
-            let b = &args[1];
-            if let (Value::String(sa), Value::String(sb)) = (a, b) {
-                Ok(Value::Bool(sa.contains(sb)))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    format!("{}, {}", a.to_string(source), b.to_string(source)),
-                    0,
-                ))
-            }
+            let sa = value_to_string_auto(&args[0], source, line)?;
+            let sb = value_to_string_auto(&args[1], source, line)?;
+            Ok(Value::Bool(sa.contains(&sb)))
         }
         "starts_with" => {
-            let a = &args[0];
-            let b = &args[1];
-            if let (Value::String(sa), Value::String(sb)) = (a, b) {
-                Ok(Value::Bool(sa.starts_with(sb)))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    format!("{}, {}", a.to_string(source), b.to_string(source)),
-                    0,
-                ))
-            }
+            let sa = value_to_string_auto(&args[0], source, line)?;
+            let sb = value_to_string_auto(&args[1], source, line)?;
+            Ok(Value::Bool(sa.starts_with(&sb)))
         }
         "ends_with" => {
-            let a = &args[0];
-            let b = &args[1];
-            if let (Value::String(sa), Value::String(sb)) = (a, b) {
-                Ok(Value::Bool(sa.ends_with(sb)))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    format!("{}, {}", a.to_string(source), b.to_string(source)),
-                    0,
-                ))
-            }
+            let sa = value_to_string_auto(&args[0], source, line)?;
+            let sb = value_to_string_auto(&args[1], source, line)?;
+            Ok(Value::Bool(sa.ends_with(&sb)))
         }
         "split" => {
-            let a = &args[0];
-            let b = &args[1];
-            if let (Value::String(sa), Value::String(sb)) = (a, b) {
-                let parts: Vec<Value> =
-                    sa.split(sb).map(|s| Value::String(s.to_string())).collect();
-                Ok(Value::List(parts))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    format!("{}, {}", a.to_string(source), b.to_string(source)),
-                    0,
-                ))
-            }
+            let sa = value_to_string_auto(&args[0], source, line)?;
+            let sb = value_to_string_auto(&args[1], source, line)?;
+            let parts: Vec<Value> = sa
+                .split(&sb)
+                .map(|s| Value::String(s.to_string()))
+                .collect();
+            Ok(Value::List(parts))
         }
         "join" => {
             let a = &args[0];
-            let b = &args[1];
-            if let (Value::List(list), Value::String(sep)) = (a, b) {
+            let sep = value_to_string_auto(&args[1], source, line)?;
+            if let Value::List(list) = a {
                 let parts: Vec<String> = list.iter().map(|it| it.to_string(source)).collect();
-                Ok(Value::String(parts.join(sep)))
+                Ok(Value::String(parts.join(&sep)))
             } else {
-                Err(EvalError::type_mismatch(
-                    "list/string",
-                    format!("{}, {}", a.to_string(source), b.to_string(source)),
-                    0,
-                ))
+                Err(EvalError::type_mismatch("list", a.to_string(source), line))
             }
         }
         "replace" => {
-            let a = &args[0];
-            let b = &args[1];
-            let c = &args[2];
-            if let (Value::String(sa), Value::String(sb), Value::String(sc)) = (a, b, c) {
-                Ok(Value::String(sa.replace(sb, sc)))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    format!(
-                        "{}, {}, {}",
-                        a.to_string(source),
-                        b.to_string(source),
-                        c.to_string(source)
-                    ),
-                    0,
-                ))
-            }
+            let sa = value_to_string_auto(&args[0], source, line)?;
+            let sb = value_to_string_auto(&args[1], source, line)?;
+            let sc = value_to_string_auto(&args[2], source, line)?;
+            Ok(Value::String(sa.replace(&sb, &sc)))
         }
         "readlines" => {
             let pathv = &args[0];
@@ -1754,83 +1704,68 @@ pub fn execute_builtin(
                 .to_string();
             Ok(Value::String(d))
         }
-        "length" => {
-            let val = &args[0];
-            match val {
-                Value::String(s) => Ok(Value::Number(Number::Int(s.len() as i64))),
-                Value::List(items) => Ok(Value::Number(Number::Int(items.len() as i64))),
-                other => Err(EvalError::type_mismatch(
-                    "string or list",
-                    other.to_string(source),
-                    0,
-                )),
+        "length" => match &args[0] {
+            Value::String(s) => Ok(Value::Number(Number::Int(s.len() as i64))),
+            Value::Template(_, _) => {
+                let s = value_to_string_auto(&args[0], source, line)?;
+                Ok(Value::Number(Number::Int(s.len() as i64)))
             }
-        }
+            Value::List(items) => Ok(Value::Number(Number::Int(items.len() as i64))),
+            other => Err(EvalError::type_mismatch(
+                "string, template, or list",
+                other.to_string(source),
+                line,
+            )),
+        },
         "repeat" => {
-            let s = &args[0];
-            let n = &args[1];
-            if let (Value::String(st), Value::Number(Number::Int(count))) = (s, n) {
+            let st = value_to_string_auto(&args[0], source, line)?;
+            if let Value::Number(Number::Int(count)) = &args[1] {
                 Ok(Value::String(st.repeat(*count as usize)))
             } else {
                 Err(EvalError::type_mismatch(
-                    "string, number",
-                    format!("{}, {}", s.to_string(source), n.to_string(source)),
-                    0,
+                    "number",
+                    args[1].to_string(source),
+                    line,
                 ))
             }
         }
         "pad_left" => {
-            let s = &args[0];
+            let st = value_to_string_auto(&args[0], source, line)?;
             let width = &args[1];
-            let pad = &args[2];
-            if let (Value::String(st), Value::Number(Number::Int(w)), Value::String(pc)) =
-                (s, width, pad)
-            {
-                let pad_char = pc.chars().next().unwrap_or(' ');
+            let pad = value_to_string_auto(&args[2], source, line)?;
+            if let Value::Number(Number::Int(w)) = width {
+                let pad_char = pad.chars().next().unwrap_or(' ');
                 let result = format!("{:>width$}", st, width = *w as usize)
                     .replace(' ', &pad_char.to_string());
                 Ok(Value::String(result))
             } else {
                 Err(EvalError::type_mismatch(
-                    "string, number, string",
-                    format!(
-                        "{}, {}, {}",
-                        s.to_string(source),
-                        width.to_string(source),
-                        pad.to_string(source)
-                    ),
-                    0,
+                    "number",
+                    width.to_string(source),
+                    line,
                 ))
             }
         }
         "pad_right" => {
-            let s = &args[0];
+            let st = value_to_string_auto(&args[0], source, line)?;
             let width = &args[1];
-            let pad = &args[2];
-            if let (Value::String(st), Value::Number(Number::Int(w)), Value::String(pc)) =
-                (s, width, pad)
-            {
-                let pad_char = pc.chars().next().unwrap_or(' ');
+            let pad = value_to_string_auto(&args[2], source, line)?;
+            if let Value::Number(Number::Int(w)) = width {
+                let pad_char = pad.chars().next().unwrap_or(' ');
                 let result = format!("{:<width$}", st, width = *w as usize)
                     .replace(' ', &pad_char.to_string());
                 Ok(Value::String(result))
             } else {
                 Err(EvalError::type_mismatch(
-                    "string, number, string",
-                    format!(
-                        "{}, {}, {}",
-                        s.to_string(source),
-                        width.to_string(source),
-                        pad.to_string(source)
-                    ),
-                    0,
+                    "number",
+                    width.to_string(source),
+                    line,
                 ))
             }
         }
         "indent" => {
-            let s = &args[0];
-            let spaces = &args[1];
-            if let (Value::String(st), Value::Number(Number::Int(n))) = (s, spaces) {
+            let st = value_to_string_auto(&args[0], source, line)?;
+            if let Value::Number(Number::Int(n)) = &args[1] {
                 let indent_str = " ".repeat(*n as usize);
                 let lines: Vec<String> = st
                     .lines()
@@ -1839,73 +1774,49 @@ pub fn execute_builtin(
                 Ok(Value::String(lines.join("\n")))
             } else {
                 Err(EvalError::type_mismatch(
-                    "string, number",
-                    format!("{}, {}", s.to_string(source), spaces.to_string(source)),
-                    0,
+                    "number",
+                    args[1].to_string(source),
+                    line,
                 ))
             }
         }
         "is_digit" => {
-            let s = &args[0];
-            if let Value::String(st) = s {
-                Ok(Value::Bool(
-                    !st.is_empty() && st.chars().all(|c| c.is_ascii_digit()),
-                ))
-            } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
-            }
+            let st = value_to_string_auto(&args[0], source, line)?;
+            Ok(Value::Bool(
+                !st.is_empty() && st.chars().all(|c| c.is_ascii_digit()),
+            ))
         }
         "is_alpha" => {
-            let s = &args[0];
-            if let Value::String(st) = s {
-                Ok(Value::Bool(
-                    !st.is_empty() && st.chars().all(|c| c.is_alphabetic()),
-                ))
-            } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
-            }
+            let st = value_to_string_auto(&args[0], source, line)?;
+            Ok(Value::Bool(
+                !st.is_empty() && st.chars().all(|c| c.is_alphabetic()),
+            ))
         }
         "is_alphanumeric" => {
-            let s = &args[0];
-            if let Value::String(st) = s {
-                Ok(Value::Bool(
-                    !st.is_empty() && st.chars().all(|c| c.is_alphanumeric()),
-                ))
-            } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
-            }
+            let st = value_to_string_auto(&args[0], source, line)?;
+            Ok(Value::Bool(
+                !st.is_empty() && st.chars().all(|c| c.is_alphanumeric()),
+            ))
         }
         "is_whitespace" => {
-            let s = &args[0];
-            if let Value::String(st) = s {
-                Ok(Value::Bool(
-                    !st.is_empty() && st.chars().all(|c| c.is_whitespace()),
-                ))
-            } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
-            }
+            let st = value_to_string_auto(&args[0], source, line)?;
+            Ok(Value::Bool(
+                !st.is_empty() && st.chars().all(|c| c.is_whitespace()),
+            ))
         }
         "is_uppercase" => {
-            let s = &args[0];
-            if let Value::String(st) = s {
-                let letters: Vec<char> = st.chars().filter(|c| c.is_alphabetic()).collect();
-                Ok(Value::Bool(
-                    !letters.is_empty() && letters.iter().all(|c| c.is_uppercase()),
-                ))
-            } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
-            }
+            let st = value_to_string_auto(&args[0], source, line)?;
+            let letters: Vec<char> = st.chars().filter(|c| c.is_alphabetic()).collect();
+            Ok(Value::Bool(
+                !letters.is_empty() && letters.iter().all(|c| c.is_uppercase()),
+            ))
         }
         "is_lowercase" => {
-            let s = &args[0];
-            if let Value::String(st) = s {
-                let letters: Vec<char> = st.chars().filter(|c| c.is_alphabetic()).collect();
-                Ok(Value::Bool(
-                    !letters.is_empty() && letters.iter().all(|c| c.is_lowercase()),
-                ))
-            } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
-            }
+            let st = value_to_string_auto(&args[0], source, line)?;
+            let letters: Vec<char> = st.chars().filter(|c| c.is_alphabetic()).collect();
+            Ok(Value::Bool(
+                !letters.is_empty() && letters.iter().all(|c| c.is_lowercase()),
+            ))
         }
         "is_empty" => {
             let s = &args[0];
@@ -1920,87 +1831,50 @@ pub fn execute_builtin(
             }
         }
         "html_escape" => {
-            let s = &args[0];
-            if let Value::String(st) = s {
-                let escaped = st
-                    .replace('&', "&amp;")
-                    .replace('<', "&lt;")
-                    .replace('>', "&gt;")
-                    .replace('"', "&quot;")
-                    .replace('\'', "&#x27;");
-                Ok(Value::String(escaped))
-            } else {
-                Err(EvalError::type_mismatch("string", s.to_string(source), 0))
-            }
+            let st = value_to_string_auto(&args[0], source, line)?;
+            let escaped = st
+                .replace('&', "&amp;")
+                .replace('<', "&lt;")
+                .replace('>', "&gt;")
+                .replace('"', "&quot;")
+                .replace('\'', "&#x27;");
+            Ok(Value::String(escaped))
         }
         "html_tag" => {
-            let tag = &args[0];
-            let content = &args[1];
-            if let (Value::String(t), Value::String(c)) = (tag, content) {
-                Ok(Value::String(format!("<{}>{}</{}>", t, c, t)))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    format!("{}, {}", tag.to_string(source), content.to_string(source)),
-                    0,
-                ))
-            }
+            let t = value_to_string_auto(&args[0], source, line)?;
+            let c = value_to_string_auto(&args[1], source, line)?;
+            Ok(Value::String(format!("<{}>{}</{}>", t, c, t)))
         }
         "html_attr" => {
-            let name = &args[0];
-            let value = &args[1];
-            if let (Value::String(n), Value::String(v)) = (name, value) {
-                let escaped = v
-                    .replace('&', "&amp;")
-                    .replace('"', "&quot;")
-                    .replace('\'', "&#x27;");
-                Ok(Value::String(format!("{}=\"{}\"", n, escaped)))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    format!("{}, {}", name.to_string(source), value.to_string(source)),
-                    0,
-                ))
-            }
+            let n = value_to_string_auto(&args[0], source, line)?;
+            let v = value_to_string_auto(&args[1], source, line)?;
+            let escaped = v
+                .replace('&', "&amp;")
+                .replace('"', "&quot;")
+                .replace('\'', "&#x27;");
+            Ok(Value::String(format!("{}=\"{}\"", n, escaped)))
         }
         "md_heading" => {
-            let level = &args[0];
-            let text = &args[1];
-            if let (Value::Number(Number::Int(lvl)), Value::String(txt)) = (level, text) {
+            if let Value::Number(Number::Int(lvl)) = &args[0] {
+                let txt = value_to_string_auto(&args[1], source, line)?;
                 let hashes = "#".repeat((*lvl).clamp(1, 6) as usize);
                 Ok(Value::String(format!("{} {}", hashes, txt)))
             } else {
                 Err(EvalError::type_mismatch(
-                    "number, string",
-                    format!("{}, {}", level.to_string(source), text.to_string(source)),
-                    0,
+                    "number",
+                    args[0].to_string(source),
+                    line,
                 ))
             }
         }
         "md_link" => {
-            let text = &args[0];
-            let url = &args[1];
-            if let (Value::String(txt), Value::String(u)) = (text, url) {
-                Ok(Value::String(format!("[{}]({})", txt, u)))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    format!("{}, {}", text.to_string(source), url.to_string(source)),
-                    0,
-                ))
-            }
+            let txt = value_to_string_auto(&args[0], source, line)?;
+            let u = value_to_string_auto(&args[1], source, line)?;
+            Ok(Value::String(format!("[{}]({})", txt, u)))
         }
         "md_code" => {
-            let code = &args[0];
-            if let Value::String(c) = code {
-                Ok(Value::String(format!("`{}`", c)))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "string",
-                    code.to_string(source),
-                    0,
-                ))
-            }
+            let c = value_to_string_auto(&args[0], source, line)?;
+            Ok(Value::String(format!("`{}`", c)))
         }
         "md_list" => {
             let items = &args[0];
@@ -2011,8 +1885,72 @@ pub fn execute_builtin(
                     .collect();
                 Ok(Value::String(lines.join("\n")))
             } else {
-                Err(EvalError::type_mismatch("list", items.to_string(source), 0))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    items.to_string(source),
+                    line,
+                ))
             }
+        }
+        "markdown_to_html" => {
+            let md = value_to_string_auto(&args[0], source, line)?;
+            // Simple markdown to HTML converter
+            let lines: Vec<&str> = md.lines().collect();
+            let mut html_lines = Vec::new();
+            for line in lines {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    html_lines.push("<br>".to_string());
+                } else if let Some(text) = trimmed.strip_prefix("# ") {
+                    html_lines.push(format!("<h1>{}</h1>", text.trim()));
+                } else if let Some(text) = trimmed.strip_prefix("## ") {
+                    html_lines.push(format!("<h2>{}</h2>", text.trim()));
+                } else if let Some(text) = trimmed.strip_prefix("### ") {
+                    html_lines.push(format!("<h3>{}</h3>", text.trim()));
+                } else if let Some(text) = trimmed.strip_prefix("#### ") {
+                    html_lines.push(format!("<h4>{}</h4>", text.trim()));
+                } else if let Some(text) = trimmed.strip_prefix("##### ") {
+                    html_lines.push(format!("<h5>{}</h5>", text.trim()));
+                } else if let Some(text) = trimmed.strip_prefix("###### ") {
+                    html_lines.push(format!("<h6>{}</h6>", text.trim()));
+                } else {
+                    // Process inline formatting: **bold**, *italic*, `code`
+                    // Bold: **text** -> <strong>text</strong>
+                    let mut result = String::new();
+                    let parts: Vec<&str> = trimmed.split("**").collect();
+                    for (i, part) in parts.iter().enumerate() {
+                        if i % 2 == 1 {
+                            result.push_str("<strong>");
+                            result.push_str(part);
+                            result.push_str("</strong>");
+                        } else {
+                            // Process italic and code within non-bold parts
+                            let italic_parts: Vec<&str> = part.split('*').collect();
+                            for (j, italic_part) in italic_parts.iter().enumerate() {
+                                if j > 0 && j % 2 == 1 {
+                                    result.push_str("<em>");
+                                }
+                                // Code: `text` -> <code>text</code>
+                                let code_parts: Vec<&str> = italic_part.split('`').collect();
+                                for (k, code_part) in code_parts.iter().enumerate() {
+                                    if k > 0 && k % 2 == 1 {
+                                        result.push_str("<code>");
+                                    }
+                                    result.push_str(code_part);
+                                    if k > 0 && k % 2 == 1 {
+                                        result.push_str("</code>");
+                                    }
+                                }
+                                if j > 0 && j % 2 == 1 {
+                                    result.push_str("</em>");
+                                }
+                            }
+                        }
+                    }
+                    html_lines.push(format!("<p>{}</p>", result));
+                }
+            }
+            Ok(Value::String(html_lines.join("\n")))
         }
         "to_string" => {
             let val = &args[0];

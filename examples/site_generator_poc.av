@@ -1,0 +1,73 @@
+# Proof of Concept: Static Site Generator with Avon
+# This demonstrates generating HTML from markdown using comment placeholders
+# Similar to tools like Jekyll, Hugo, or Rusto
+
+let title = "Hello, Avon!" in
+let author = "Developer" in
+
+# Markdown content
+let markdown = "
+# Welcome
+
+This is a **proof of concept** showing how Avon can generate static sites.
+
+## Features
+
+- Simple markdown to HTML conversion
+- Template placeholders like `<!-- expand-title -->`
+- Clean, readable code
+
+Try it yourself!
+" in
+
+# HTML template with placeholder
+let template = "
+<!DOCTYPE html>
+<html>
+<head>
+    <title>" + title + "</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+        h1 { color: #2563eb; }
+        h2 { color: #1e40af; }
+        code { background: #f3f4f6; padding: 2px 6px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>" + title + "</h1>
+        <p>By " + author + "</p>
+    </header>
+    <main>
+        <!-- expand-body -->
+    </main>
+</body>
+</html>
+" in
+
+# Simple markdown to HTML converter
+let md_to_html = \content
+    let lines = split content "\n" in
+    let convert = \line
+        if starts_with line "# " then
+            "<h1>" + (trim (replace line "# " "")) + "</h1>"
+        else if starts_with line "## " then
+            "<h2>" + (trim (replace line "## " "")) + "</h2>"
+        else if contains line "**" then
+            let bold1 = replace line "**" "<strong>" in
+            replace bold1 "**" "</strong>"
+        else if line == "" then
+            "<br>"
+        else
+            "<p>" + line + "</p>"
+    in
+    let processed = map convert lines in
+    join processed "\n"
+in
+
+# Replace placeholder with converted markdown
+let html = replace template "<!-- expand-body -->" (md_to_html markdown) in
+
+# Generate the file
+@index.html {"{html}"}
+

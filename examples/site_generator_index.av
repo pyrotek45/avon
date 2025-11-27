@@ -1,0 +1,71 @@
+# Generate index page listing all posts
+# Demonstrates: list generation, template interpolation, HTML helpers
+
+let site_title = "My Awesome Blog" in
+
+# Blog posts data (same structure as in site_generator_advanced.av)
+let posts = [
+    {
+        title: "Getting Started with Avon",
+        slug: "getting-started",
+        date: "2024-01-15",
+        excerpt: "Learn how to get started with Avon, a powerful file generation tool."
+    },
+    {
+        title: "Building Static Sites",
+        slug: "static-sites",
+        date: "2024-01-20",
+        excerpt: "Discover how to build static sites using Avon."
+    }
+] in
+
+# Index page template
+let index_template = {"
+<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <title>{site_title}</title>
+    <link rel=\"stylesheet\" href=\"/style.css\">
+</head>
+<body>
+    <header>
+        <h1>{site_title}</h1>
+        <nav>
+            <a href=\"/about.html\">About</a>
+        </nav>
+    </header>
+    <main>
+        <h2>Recent Posts</h2>
+        <!-- expand-posts -->
+    </main>
+    <footer>
+        <p>&copy; 2024 {site_title}</p>
+    </footer>
+</body>
+    </html>
+"} in
+
+# Generate HTML for a single post preview
+let generate_post_preview = \post
+    {"
+        <article class=\"post-preview\">
+            <h3><a href=\"/posts/{post.slug}.html\">{post.title}</a></h3>
+            <p class=\"meta\">Published on {post.date}</p>
+            <p class=\"excerpt\">{post.excerpt}</p>
+            <a href=\"/posts/{post.slug}.html\">Read more →</a>
+        </article>
+    "}
+in
+
+# Generate post list HTML
+let generate_post_list = \posts
+    let post_items = map generate_post_preview posts in
+    join post_items "\n"
+in
+
+# Generate the index page
+let index_html = replace index_template "<!-- expand-posts -->" (generate_post_list posts) in
+
+@index.html {"{index_html}"}

@@ -478,7 +478,9 @@ a || b                     # Logical OR (at least one must be true)
 a -> b                     # Pipe: pass a as first argument to b
 ```
 
-The pipe operator `->` chains expressions, passing the left-hand side as the first argument to the right-hand side. This eliminates nested parentheses and makes code more readable.
+The pipe operator `->` (not `|`) chains expressions, passing the left-hand side as the first argument to the right-hand side. This eliminates nested parentheses and makes code more readable.
+
+**Note:** Only `->` is a valid pipe operator. The single `|` character is not a pipe operator in Avon.
 
 **Basic pipe:**
 ```avon
@@ -1514,6 +1516,40 @@ template
 
 This is important for closures and function returns—templates remember the values from when they were defined, not when they're evaluated.
 
+### Template Auto-Conversion in String Functions
+
+**Important UX feature:** Any function that accepts a string argument will automatically accept a template as well. The template is converted to a string before the function processes it. This makes templates much easier to use throughout your code.
+
+**Functions that auto-convert templates:**
+- All string manipulation functions: `upper`, `lower`, `trim`, `split`, `join`, `replace`, `contains`, `starts_with`, `ends_with`, `length`, `repeat`, `pad_left`, `pad_right`, `indent`
+- All string predicate functions: `is_digit`, `is_alpha`, `is_alphanumeric`, `is_whitespace`, `is_uppercase`, `is_lowercase`, `is_empty`
+- HTML functions: `html_escape`, `html_tag`, `html_attr`
+- Markdown functions: `md_heading`, `md_link`, `md_code`, `markdown_to_html`
+- String operations: `concat`
+
+**Example:**
+```avon
+let name = "world" in
+let template = {"hello {name}"} in
+upper template
+# Result: "HELLO WORLD"
+# No need to call to_string first!
+```
+
+**Before (manual conversion):**
+```avon
+let t = {"hello {name}"} in
+upper (to_string t)
+```
+
+**After (automatic conversion):**
+```avon
+let t = {"hello {name}"} in
+upper t
+```
+
+This makes templates much more powerful and convenient to use. You can pass templates directly to any string function without explicit conversion.
+
 ### Template Escape Hatch: Variable Brace Delimiters
 
 Avon templates use a **variable-brace delimiter system** that lets you choose how many opening braces to use. This powerful feature lets you generate code and config files cleanly, even when they contain many curly braces.
@@ -1905,6 +1941,27 @@ reverse first_three_evens
 | `md_link text url` | Create markdown link | `md_link "Click" "/home"` → `"[Click](/home)"` |
 | `md_code code` | Wrap in inline code | `md_code "x = 1"` → `` "`x = 1`" `` |
 | `md_list items` | Convert list to markdown list | `md_list ["a","b"]` → `"- a\n- b"` |
+| `markdown_to_html md` | Convert markdown text to HTML | `markdown_to_html "# Hello\nWorld"` → `"<h1>Hello</h1>\n<p>World</p>"` |
+
+**Markdown to HTML conversion:**
+The `markdown_to_html` function converts markdown text to HTML. It supports:
+- Headings: `#` through `######` → `<h1>` through `<h6>`
+- Bold: `**text**` → `<strong>text</strong>`
+- Italic: `*text*` → `<em>text</em>`
+- Inline code: `` `code` `` → `<code>code</code>`
+- Paragraphs: Regular text → `<p>text</p>`
+- Empty lines → `<br>`
+
+**Example:**
+```avon
+let md = {"# Welcome
+This is **bold** and *italic* text.
+"} in
+markdown_to_html md
+# Result: "<h1>Welcome</h1>\n<p>This is <strong>bold</strong> and <em>italic</em> text.</p>"
+```
+
+**Note:** `markdown_to_html` accepts both strings and templates, automatically converting templates to strings before processing.
 
 ### Type Conversion & Casting
 

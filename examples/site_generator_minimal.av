@@ -1,0 +1,26 @@
+# Static Site Generator: HTML with comment placeholders + markdown
+# Problem: HTML with <!-- expand-title --> and <!-- expand-body -->, markdown file, replace placeholders
+# Solution: Use templates, convert markdown to HTML, replace comments
+
+let title = "My Site" in
+let markdown = {"# Hello World
+This is **markdown** content.
+"} in
+let html_template = {"
+<!DOCTYPE html>
+<html>
+<head><title><!-- expand-title --></title></head>
+<body>
+    <h1><!-- expand-title --></h1>
+    <!-- expand-body -->
+</body>
+</html>
+"} in
+
+# Convert markdown to HTML using built-in function
+let html_body = markdown_to_html markdown in
+
+# Replace placeholders (templates auto-convert to strings in string functions)
+let html = replace (replace html_template "<!-- expand-title -->" title) "<!-- expand-body -->" html_body in
+
+@index.html {"{html}"}

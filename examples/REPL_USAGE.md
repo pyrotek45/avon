@@ -54,7 +54,7 @@ Available builtin functions (use :doc <name> for details):
   is_int          is_list         is_lowercase    is_number
   is_string       is_uppercase    is_whitespace   join
   json_parse      keys            length          lower
-  map             md_code         md_heading      md_link
+  map             markdown_to_html md_code         md_heading      md_link
   md_list         neg             os              pad_left
   pad_right       readfile        readlines       replace
   reverse         set             split           starts_with
