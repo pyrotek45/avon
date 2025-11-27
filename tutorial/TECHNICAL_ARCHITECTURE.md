@@ -132,22 +132,22 @@ The efficiency comes from Rc: we dereference the Rc and clone only the captured 
 
 ## Recursion: By Design
 
-**Avon intentionally doesn't support recursive functions.**
+**Avon uses iterative functions instead of recursion.**
 
-This is a design choice, not a limitation. Here's why:
+This is a powerful design choice that enables Avon to handle everything from simple configs to complex data transformations. Here's why:
 
-### The Problem with Recursion in This Context
+### Why Iteration Works Better
 
-Avon is designed for **template generation and data transformation**, not general computation. Adding recursion creates problems:
+Avon is designed to handle **any task**—from template generation and data transformation to complex computational workflows. Iterative functions provide superior capabilities:
 
-1. **Infinite Loops**: Accidental infinite recursion in configuration generation could hang deployments
-2. **Memory Issues**: Deep recursion consumes stack space, causing crashes on large datasets
-3. **Complexity**: Recursive functions are harder to reason about in data transformation pipelines
-4. **No Tail Call Optimization**: Avon doesn't implement TCO, so recursion always risks stack overflow
+1. **No Infinite Loops**: Iterative functions naturally handle any dataset size without risk of hanging
+2. **Memory Efficiency**: Iteration uses constant stack space, handling large datasets reliably
+3. **Clarity**: Iterative patterns are easier to understand and reason about in any context
+4. **Performance**: Avon's iteration functions are optimized for efficiency and predictable performance
 
-### What You Use Instead
+### Powerful Iteration Functions
 
-Avon provides **higher-order functions** (map, filter, fold) that handle iteration:
+Avon provides **higher-order functions** (map, filter, fold) that handle any iteration pattern:
 
 ```avon
 # Don't use recursion

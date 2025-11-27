@@ -4,7 +4,7 @@ Welcome to **Avon**. You're about to give your configuration workflow superpower
 
 Avon is designed for developers who are tired of copy-pasting. Whether you're building Kubernetes manifests, setting up CI/CD pipelines, or generating boilerplate code, Avon turns repetitive tasks into elegant, maintainable code.
 
-But Avon isn't just for complex infrastructure projects. It's a **powerful workflow layer** that makes any file more maintainable and shareable—even if you're just managing a single config or sharing dotfiles. Avon brings variables, functions, and 80+ built-in utilities to **any text format**, making it perfect for developers, non-developers, and hobbyists alike.
+Avon is a **powerful, general-purpose tool** that handles everything from complex infrastructure projects to simple single-file configs. It's a comprehensive workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 80+ built-in utilities to **any text format**, making it perfect for developers, non-developers, and hobbyists alike.
 
 **Pro tip:** Throughout this guide, look at the `examples/` directory for real-world use cases. Each example demonstrates practical Avon patterns you can adapt for your own projects.
 
@@ -259,7 +259,7 @@ This creates three files: `config-dev.yml`, `config-staging.yml`, and `config-pr
 
 ### Avon for Single Files and Dotfiles
 
-Avon isn't just for generating hundreds of files. It's a powerful workflow layer that makes **any file** more maintainable and shareable, even if you're just managing a single config.
+Avon is a powerful, general-purpose tool that excels at generating hundreds of files, but it's equally powerful for single files. It's a comprehensive workflow layer that makes **any file** more maintainable and shareable, whether you're managing a single config or building complex multi-file systems.
 
 **Perfect for:**
 - **Dotfiles** — Easy way to download and deploy configs to your system

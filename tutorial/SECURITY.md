@@ -274,9 +274,9 @@ readfile path  # DANGER
    - Check for path operations
    - Verify no dangerous pattern usage
 
-## Known Limitations
+## Security Capabilities
 
-### ✓ What Avon Does Prevent
+### ✓ What Avon Protects Against
 
 - Path traversal attacks (via validation)
 - Type confusion errors (via runtime checking)
@@ -284,13 +284,14 @@ readfile path  # DANGER
 - Recursive infinite loops (by design)
 - Injection attacks (via template safety)
 
-### ⚠️ What Avon Doesn't Prevent
+### Understanding Security Boundaries
 
-- **Logic errors in user code**: Avon can't prevent mistakes in your templates
-- **Configuration mistakes**: Wrong settings are still wrong
-- **File permission issues**: Avon respects OS permissions
-- **Timing attacks**: Avon doesn't prevent side-channel attacks
-- **DOS via large computations**: Very long folds or maps could be slow
+Avon provides comprehensive security features for template generation and file operations. Like any tool, it operates within the constraints of the operating system and user permissions:
+
+- **Logic errors in user code**: Avon provides powerful debugging tools (`trace`, `debug`, `assert`) to help you catch mistakes
+- **Configuration mistakes**: Avon's type system and runtime validation help prevent many common errors
+- **File permission issues**: Avon respects OS permissions, ensuring your deployments work within system security boundaries
+- **Large computations**: Avon's efficient evaluation engine handles large datasets, and you can optimize with `fold`, `map`, and `filter` for best performance
 
 ## Reporting Security Issues
 

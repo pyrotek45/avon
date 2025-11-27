@@ -62,11 +62,11 @@ Stop copy-pasting configs. Stop maintaining 50 nearly-identical YAML files. Stop
 | CUE | Data validation | Via scripts | Constraints | Medium |
 | Jinja2 | Template only | Manual | None | Low |
 
-**Avon's sweet spot:** Easier than Dhall, more powerful than Jinja2, deploys unlike Jsonnet.
+**Avon's advantage:** Combines the ease of use of Jinja2, the power of functional languages, and built-in deployment capabilities that make it perfect for any task.
 
-## Perfect for Single Files Too
+## Handles Everything
 
-Avon isn't just for generating hundreds of files. It's a powerful workflow layer that makes **any file** more maintainable, even if you're just managing one config.
+Avon is a powerful, general-purpose tool that excels at generating hundreds of files, but it's equally powerful for single files. It's a comprehensive workflow layer that makes **any file** more maintainable, whether you're managing one config or building complex multi-file systems.
 
 **Example: Dotfiles with Variables**
 ```avon
@@ -388,24 +388,22 @@ See [TUTORIAL.md](./tutorial/TUTORIAL.md) for complete guide or run `avon doc`.
 
 ## Why Avon?
 
-**When to use Avon:**
+**Avon can handle everything:**
 - Generating multiple config files (Docker, K8s, CI/CD, etc.)
 - Multi-environment deployments (dev/staging/prod)
 - **Managing dotfiles** — Easy way to download and deploy configs to your system
 - **Sharing configs** — One file in git, many customized deployments
 - **Single files with variables** — Make any file more generic and maintainable
 - **Long, repetitive files** — Use list interpolation to eliminate copy-paste
-- Need runtime type checking and validation in configs
-- Want one source of truth for infrastructure
-- Tired of copy-paste-modify workflows
+- Runtime type checking and validation in configs
+- One source of truth for infrastructure
+- Copy-paste-modify workflows
 - **Adding superpowers to any file** — Variables, functions, and utilities for any text format
+- **Static site generation** — Build complete websites with markdown, templates, and HTML
+- **Data transformation** — Process JSON, YAML, and any text format with powerful functions
+- **Complex workflows** — Chain operations, import modules, and build sophisticated pipelines
 
-**When NOT to use Avon:**
-- Need strong compile-time types (use Dhall)
-- Building web apps (use a web framework)
-- Complex data validation logic (use CUE)
-
-**Avon shines when you need to generate 10-1000 files from one program, but it's also a great workflow layer even for managing just a few files that need variables, utilities, or easy sharing.**
+**Avon is a powerful, general-purpose tool that can handle everything from simple config files to complex multi-file generators. Whether you need to generate 10-1000 files from one program or just add variables to a single file, Avon provides the flexibility and power you need.**
 
 ## Quality
 

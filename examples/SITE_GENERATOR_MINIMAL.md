@@ -96,4 +96,4 @@ cat /tmp/site/index.html
 - **Powerful**: Template interpolation means you can use variables, functions, and expressions
 - **Convenient**: No manual `to_string` calls needed—templates auto-convert in string functions
 
-This demonstrates that Avon is powerful enough to be used as a static site generator, similar to tools like Jekyll or Hugo, but with a much simpler and more flexible approach.
+This demonstrates Avon's full capabilities as a static site generator. Avon provides everything you need to build complete websites—from simple blogs to complex multi-page sites—with a clean, powerful, and flexible approach that rivals tools like Jekyll or Hugo.

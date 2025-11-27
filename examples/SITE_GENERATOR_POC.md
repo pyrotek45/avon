@@ -8,7 +8,7 @@ See `site_generator_poc.av` for a complete, working example that:
 
 1. **Defines markdown content** as a string
 2. **Uses HTML comment placeholders** like `<!-- expand-body -->`
-3. **Converts markdown to HTML** using simple string operations
+3. **Converts markdown to HTML** using Avon's powerful built-in `markdown_to_html` function
 4. **Replaces placeholders** with the converted content
 5. **Generates the final HTML file**
 
