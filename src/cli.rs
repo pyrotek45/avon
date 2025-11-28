@@ -106,6 +106,7 @@ fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("keys", "keys :: (Dict|[[String, a]]) -> [String]\n  Get all keys.\n  Works with both dicts and list of pairs.\n  Example: keys {a: 1, b: 2} -> [\"a\", \"b\"]\n  Note: 'Pairs' is not a type - it's a list of pairs: [[\"key\", value], ...]"),
         ("values", "values :: (Dict|[[String, a]]) -> [a]\n  Get all values.\n  Works with both dicts and list of pairs.\n  Example: values {a: 1, b: 2} -> [1, 2]\n  Note: 'Pairs' is not a type - it's a list of pairs: [[\"key\", value], ...]"),
         ("has_key", "has_key :: (Dict|[[String, a]]) -> String -> Bool\n  Check if key exists.\n  Works with both dicts and list of pairs.\n  Example: has_key {a: 1} \"a\" -> true\n  Note: 'Pairs' is not a type - it's a list of pairs: [[\"key\", value], ...]"),
+        ("dict_merge", "dict_merge :: Dict -> Dict -> Dict\n  Merge two dictionaries, with second dict values overriding first.\n  Example: dict_merge {a: 1} {b: 2} -> {a: 1, b: 2}\n  Example: dict_merge {a: 1} {a: 2} -> {a: 2}"),
 
         // Type Conversion
         ("to_string", "to_string :: a -> String\n  Convert value to string.\n  Example: to_string 42 -> \"42\""),
@@ -169,6 +170,7 @@ fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("is_function", "is_function :: a -> Bool\n  Check if value is function.\n  Example: is_function (\\x x) -> true"),
         ("is_dict", "is_dict :: a -> Bool\n  Check if value is dictionary.\n  Example: is_dict {a: 1} -> true"),
         ("is_none", "is_none :: a -> Bool\n  Check if value is None.\n  None is returned by: head on empty list, get on missing key, JSON null values.\n  Example: is_none none -> true\n  Example: is_none (head []) -> true\n  Example: is_none (get {a: 1} \"b\") -> true\n  Pattern: let x = get config \"key\" in if is_none x then default else x"),
+        ("not", "not :: Bool -> Bool\n  Logical negation - returns true if false, false if true.\n  Example: not true -> false\n  Example: not false -> true\n  Example: not (1 == 2) -> true\n  Pattern: filter (\\x not (is_empty x)) list"),
 
         // Assert & Debug
         ("assert", "assert :: Bool -> a -> a\n  Assert condition, return value or error with debug info.\n  Example: assert (is_number x) x\n  Example: assert (x > 0) x\n  Use for input validation and type checking."),
@@ -459,6 +461,7 @@ fn print_builtin_docs() {
         "  {:<18} :: {}",
         "has_key", "(Dict|[[String, a]]) -> String -> Bool"
     );
+    println!("  {:<18} :: {}", "dict_merge", "Dict -> Dict -> Dict");
     println!();
     println!(
         "  Note: 'Pairs' is not a type - it's a list of 2-element lists: [[\"key\", value], ...]"
@@ -623,6 +626,7 @@ fn print_builtin_docs() {
         "  {:<18} :: {}",
         "is_none", "a -> Bool  (None from head [], get missing key, JSON null)"
     );
+    println!("  {:<18} :: {}", "not", "Bool -> Bool  (logical negation)");
     println!(
         "  {:<18} :: {}",
         "assert", "Bool -> a -> a  (returns value if true, errors otherwise)"

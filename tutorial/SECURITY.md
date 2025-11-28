@@ -60,7 +60,7 @@ Error: +: type mismatch: expected number/string/list, found number
 - String concat (`+`): Both operands must be strings
 - List concat (`+`): Both operands must be lists
 - Comparison (`==`, `!=`, `>`, `<`, `>=`, `<=`): Operands must be same type
-- Logical (`&&`, `||`): Both operands must be booleans
+- Logical (`&&`, `||`, `not`): Operands must be booleans
 
 No implicit coercion. `"5" + 3` is an error, not `"53"` or `8` depending on the phase of the moon.
 

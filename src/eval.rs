@@ -338,6 +338,10 @@ pub fn initial_builtins() -> HashMap<String, Value> {
         "has_key".to_string(),
         Value::Builtin("has_key".to_string(), Vec::new()),
     );
+    m.insert(
+        "dict_merge".to_string(),
+        Value::Builtin("dict_merge".to_string(), Vec::new()),
+    );
 
     // HTML helpers
     m.insert(
@@ -455,6 +459,10 @@ pub fn initial_builtins() -> HashMap<String, Value> {
     m.insert(
         "is_none".to_string(),
         Value::Builtin("is_none".to_string(), Vec::new()),
+    );
+    m.insert(
+        "not".to_string(),
+        Value::Builtin("not".to_string(), Vec::new()),
     );
 
     // Assertions
@@ -1259,18 +1267,108 @@ fn eval_with_depth(
                                 ))
                             }
                         },
-                        (a, b) => {
-                            let sa = a.to_string(source);
-                            let sb = b.to_string(source);
+                        (Value::List(la), Value::List(lb)) => {
+                            // Compare lists element by element
+                            let lists_equal = la.len() == lb.len()
+                                && la
+                                    .iter()
+                                    .zip(lb.iter())
+                                    .all(|(a, b)| a.to_string(source) == b.to_string(source));
                             match op {
-                                Token::DoubleEqual(_) => sa == sb,
-                                Token::NotEqual(_) => sa != sb,
-                                Token::Greater(_) => sa > sb,
-                                Token::Less(_) => sa < sb,
-                                Token::GreaterEqual(_) => sa >= sb,
-                                Token::LessEqual(_) => sa <= sb,
-                                _ => false,
+                                Token::DoubleEqual(_) => lists_equal,
+                                Token::NotEqual(_) => !lists_equal,
+                                _ => {
+                                    return Err(EvalError::new(
+                                        "lists only support == and != comparison",
+                                        None,
+                                        None,
+                                        line,
+                                    ))
+                                }
                             }
+                        }
+                        (Value::Dict(da), Value::Dict(db)) => {
+                            // Compare dicts key by key
+                            let dicts_equal = da.len() == db.len()
+                                && da.iter().all(|(k, v)| {
+                                    db.get(k)
+                                        .map(|v2| v.to_string(source) == v2.to_string(source))
+                                        .unwrap_or(false)
+                                });
+                            match op {
+                                Token::DoubleEqual(_) => dicts_equal,
+                                Token::NotEqual(_) => !dicts_equal,
+                                _ => {
+                                    return Err(EvalError::new(
+                                        "dicts only support == and != comparison",
+                                        None,
+                                        None,
+                                        line,
+                                    ))
+                                }
+                            }
+                        }
+                        (Value::None, Value::None) => match op {
+                            Token::DoubleEqual(_) => true,
+                            Token::NotEqual(_) => false,
+                            _ => {
+                                return Err(EvalError::new(
+                                    "none only supports == and != comparison",
+                                    None,
+                                    None,
+                                    line,
+                                ))
+                            }
+                        },
+                        (Value::None, _) | (_, Value::None) => match op {
+                            Token::DoubleEqual(_) => false,
+                            Token::NotEqual(_) => true,
+                            _ => {
+                                return Err(EvalError::new(
+                                    "none only supports == and != comparison",
+                                    None,
+                                    None,
+                                    line,
+                                ))
+                            }
+                        },
+                        (a, b) => {
+                            // Type mismatch - different types cannot be compared
+                            let type_a = match a {
+                                Value::None => "None",
+                                Value::Bool(_) => "Bool",
+                                Value::Number(_) => "Number",
+                                Value::String(_) => "String",
+                                Value::Function { .. } => "Function",
+                                Value::Builtin(_, _) => "Builtin",
+                                Value::Template(_, _) => "Template",
+                                Value::Path(_, _) => "Path",
+                                Value::FileTemplate { .. } => "FileTemplate",
+                                Value::List(_) => "List",
+                                Value::Dict(_) => "Dict",
+                            };
+                            let type_b = match b {
+                                Value::None => "None",
+                                Value::Bool(_) => "Bool",
+                                Value::Number(_) => "Number",
+                                Value::String(_) => "String",
+                                Value::Function { .. } => "Function",
+                                Value::Builtin(_, _) => "Builtin",
+                                Value::Template(_, _) => "Template",
+                                Value::Path(_, _) => "Path",
+                                Value::FileTemplate { .. } => "FileTemplate",
+                                Value::List(_) => "List",
+                                Value::Dict(_) => "Dict",
+                            };
+                            return Err(EvalError::new(
+                                format!(
+                                    "comparison type mismatch: cannot compare {} with {}",
+                                    type_a, type_b
+                                ),
+                                Some("operands must be the same type".to_string()),
+                                None,
+                                line,
+                            ));
                         }
                     };
                     Ok(Value::Bool(eq))
@@ -1782,6 +1880,7 @@ pub fn apply_function(
                 "keys" => 1,
                 "values" => 1,
                 "has_key" => 2,
+                "dict_merge" => 2,
                 "typeof" => 1,
                 "is_string" => 1,
                 "is_number" => 1,
@@ -1792,6 +1891,7 @@ pub fn apply_function(
                 "is_function" => 1,
                 "is_dict" => 1,
                 "is_none" => 1,
+                "not" => 1,
                 "assert" => 2,
                 "error" => 1,
                 "trace" => 2,
@@ -3592,6 +3692,25 @@ pub fn execute_builtin(
                 ))
             }
         }
+        "dict_merge" => {
+            // dict_merge :: Dict -> Dict -> Dict
+            // Merges two dictionaries, with second dict values overriding first
+            // Usage: dict_merge {a: 1} {b: 2} => {a: 1, b: 2}
+            //        dict_merge {a: 1} {a: 2} => {a: 2}
+            match (&args[0], &args[1]) {
+                (Value::Dict(dict1), Value::Dict(dict2)) => {
+                    let mut result = dict1.clone();
+                    for (k, v) in dict2.iter() {
+                        result.insert(k.clone(), v.clone());
+                    }
+                    Ok(Value::Dict(result))
+                }
+                (Value::Dict(_), other) => {
+                    Err(EvalError::type_mismatch("Dict", other.to_string(source), 1))
+                }
+                (other, _) => Err(EvalError::type_mismatch("Dict", other.to_string(source), 0)),
+            }
+        }
 
         // Type introspection
         "env_var" => {
@@ -3853,6 +3972,14 @@ pub fn execute_builtin(
             // is_none :: a -> Bool
             // Check if a value is None (from empty list head, missing dict key, or JSON null)
             Ok(Value::Bool(matches!(args[0], Value::None)))
+        }
+        "not" => {
+            // not :: Bool -> Bool
+            // Logical negation - returns true if false, false if true
+            match &args[0] {
+                Value::Bool(b) => Ok(Value::Bool(!b)),
+                other => Err(EvalError::type_mismatch("Bool", format!("{:?}", other), 0)),
+            }
         }
 
         // Assertions

@@ -1,10 +1,10 @@
 # Avon — The Modern Template Language for Developers
 
-Welcome to Avon! You're about to give your configuration workflow superpowers.
+Welcome to Avon! A template language for people who have better things to do than copy-paste.
 
 Avon is designed for developers who are tired of copy-pasting. Whether you're building Kubernetes manifests, setting up CI/CD pipelines, or generating boilerplate code, Avon turns repetitive tasks into elegant, maintainable code. Life's too short to manually update 47 YAML files.
 
-Avon is a powerful, general-purpose tool that handles everything from complex infrastructure projects to simple single-file configs. It's a comprehensive workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 89+ built-in utilities to any text format, making it perfect for developers, non-developers, and hobbyists alike.
+Avon is a general-purpose tool that handles everything from complex infrastructure projects to simple single-file configs. It's a workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 100+ built-in utilities to any text format.
 
 > Tip: Throughout this guide, look at the `examples/` directory for real-world use cases. Each example demonstrates practical Avon patterns you can adapt for your own projects.
 
@@ -31,7 +31,7 @@ Avon is a powerful, general-purpose tool that handles everything from complex in
    - Operators
      - Arithmetic (`+`, `-`, `*`, `/`, unary `-` for negative numbers)
      - Comparison (`==`, `!=`, `>`, `<`, `>=`, `<=`)
-     - Logical (`&&`, `||`)
+     - Logical (`&&`, `||`, `not`)
      - Pipe Operator (`->`)
    - Path Values (file system paths)
    - Conditionals (`if then else`)
@@ -83,7 +83,7 @@ Avon is a powerful, general-purpose tool that handles everything from complex in
    - Deploying Multiple Files
    - Dynamic File Paths
    - Important Deploy Flags
-     - `--root` (required for safety)
+     - `--root` (recommended for safety)
      - `--force` (overwrite)
      - `--backup` (safe overwrite)
      - `--append` (additive)
@@ -299,11 +299,11 @@ let plugins = ["vim-fugitive", "vim-surround", "vim-commentary", "vim-repeat"] i
 
 When you interpolate a list in a template, each item appears on its own line. This eliminates copy-paste even in a single file.
 
-Language Agnostic: Avon works with any text format—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 89+ built-in utilities to any file, making even single files more powerful.
+Language Agnostic: Avon works with any text format—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 100+ built-in utilities to any file.
 
 Runtime Type Safety: Avon won't deploy if there's a type error. No static types needed—if a type error occurs, deployment simply doesn't happen. Sleep soundly knowing your configs are valid. (Unlike that bash script you wrote at 2am.)
 
-Built-in Utilities: Avon comes with 89+ built-in functions for string operations, list operations (map, filter, fold, sort, unique, range), formatting (15 functions), date/time operations, JSON manipulation, file I/O, and HTML/Markdown helpers.
+Built-in Utilities: Avon comes with 100+ built-in functions for string operations, list operations (map, filter, fold, sort, unique, range), formatting (15 functions), date/time operations, JSON manipulation, file I/O, and HTML/Markdown helpers.
 
 Debugging Tools: Use `trace`, `debug`, `assert`, and the `--debug` flag to troubleshoot quickly.
 
@@ -315,7 +315,7 @@ Debugging Tools: Use `trace`, `debug`, `assert`, and the `--debug` flag to troub
 
 Each Avon file contains exactly one expression. This keeps Avon simple and predictable. When you run an Avon file, it evaluates that single expression to a value.
 
-This simplicity enables powerful modularity: the `import` function allows any file to return any Avon type (a string, number, list, dict, function, FileTemplate, or any other value). Files can be libraries that export functions, data files that return dictionaries, or generators that return FileTemplates—all using the same simple model.
+This simplicity enables modularity: the `import` function allows any file to return any Avon type (a string, number, list, dict, function, FileTemplate, or any other value). Files can be libraries that export functions, data files that return dictionaries, or generators that return FileTemplates—all using the same simple model.
 
 Example: Library file (`math.av`):
 ```avon
@@ -490,6 +490,7 @@ Logical Operators:
 ```avon
 a && b                     # Logical AND (both must be true)
 a || b                     # Logical OR (at least one must be true)
+not a                      # Logical NOT (returns true if false, false if true)
 ```
 
 These work on actual booleans, not "truthy" values. `0`, `""`, and `[]` aren't secretly `false` here.
@@ -685,11 +686,12 @@ Important: The condition must evaluate to a boolean (`true` or `false`). Type er
 
 #### Logical Operators
 
-Avon provides `&&` (AND) and `||` (OR) for combining boolean expressions:
+Avon provides `&&` (AND), `||` (OR), and `not` (NOT) for combining boolean expressions:
 
 ```avon
 a && b                     # Returns true only if both a and b are true
 a || b                     # Returns true if at least one of a or b is true
+not a                      # Returns true if a is false, false if a is true
 ```
 
 Examples:
@@ -697,6 +699,8 @@ Examples:
 if (age >= 18) && (has_license) then "can drive" else "cannot drive"
 
 if (x > 0) || (y > 0) then "at least one positive" else "both non-positive"
+
+if not (is_empty list) then head list else "no items"
 ```
 
 Important: Both operands must be booleans. Type errors occur if you use non-boolean values.
@@ -1054,15 +1058,51 @@ The function cannot reference itself because it's not added to its own environme
 
 ### Default Parameters
 
-When deploying, you can provide default values for parameters using `?`:
+You can provide default values for lambda parameters using `?`:
+
+```avon
+let greet = \name ? "Guest" {"Hello {name}!"} in greet
+# Returns: "Hello Guest!"
+
+let greet = \name ? "Guest" {"Hello {name}!"} in greet "Alice"
+# Returns: "Hello Alice!"
+```
+
+**Syntax:** `\param ? default_value expression`
+
+**Multiple parameters with defaults:**
+```avon
+let config = \host ? "localhost" \port ? 8080 {"{host}:{port}"} in
+
+config                     # "localhost:8080" (both defaults)
+config "example.com"       # "example.com:8080" (first overridden)
+config "example.com" 443   # "example.com:443" (both overridden)
+```
+
+**Mixed required and optional parameters:**
+```avon
+let make_url = \scheme \host ? "localhost" \port ? 80 {"{scheme}://{host}:{port}"} in
+
+make_url "https"                   # "https://localhost:80"
+make_url "https" "api.example.com" # "https://api.example.com:80"
+make_url "https" "api.example.com" 443  # "https://api.example.com:443"
+```
+
+**Default values are evaluated at function definition time:**
+```avon
+let x = 10 in
+let f = \y ? x y + 1 in
+f         # 11 (uses x=10 as default)
+f 5       # 6 (uses provided value)
+```
+
+This works for any lambda, whether used directly or in a deploy file. When deploying, the default is used if no argument is provided:
 
 ```avon
 \name ? "Guest" @welcome.txt {"
     Welcome, {name}!
 "}
 ```
-
-When you deploy this without a named argument, `name` defaults to `"Guest"`.
 
 ```bash
 avon deploy examples/greet.av
@@ -1171,7 +1211,7 @@ Avon provides a convenient syntax for generating sequences of numbers using rang
 - `[start .. end]` - Generates integers from `start` to `end` (inclusive), step of 1
 - `[start, step .. end]` - Generates integers from `start` to `end` (inclusive), incrementing by `step`
 
-Important: The `..` operator requires spaces around it: `[1 .. 5]` (not `[1..5]`).
+Spaces around `..` are optional: both `[1..5]` and `[1 .. 5]` work.
 
 **What ranges return:**
 Ranges evaluate to a `List` of integers. You can use all list operations on ranges:
@@ -1827,11 +1867,11 @@ This generates `config-dev.yml` and `config-prod.yml`.
 
 **`--root <dir>`** — Prepend this directory to all generated paths
 - **Default behavior:** If `--root` is not specified, files are written relative to the current working directory where `avon` is executed
-- **Required for safety:** Prevents accidental writes to system directories
+- **Recommended for safety:** Prevents accidental writes to system directories
 - All file paths are resolved relative to this directory (or current directory if not specified)
 - Example: `--root ./output` means `@config.yml` becomes `./output/config.yml`
 - Example: Without `--root`, running `avon deploy config.av` from `/home/user/project/` writes `@config.yml` to `/home/user/project/config.yml`
-- **Always use this flag** to keep your deployments contained and predictable
+- **Use this flag** to keep your deployments contained and predictable
 
 **`--force`** — Overwrite existing files without warning
 - **Destructive:** Permanently replaces existing files
@@ -1871,16 +1911,16 @@ This generates `config-dev.yml` and `config-prod.yml`.
 - By default, Avon **will not overwrite** existing files. It skips them and prints a warning.
 - `--force` overrides this safety check (destructive).
 - `--backup` allows overwriting but preserves the old file as `filename.bak` (safe).
-- `--root` ensures you don't accidentally write to system directories (required for safety).
+- `--root` confines all writes to a specific directory (recommended for safety).
 - If any error occurs during deployment preparation or validation, **zero files are written** (truly atomic deployment). All files are validated before any writes occur.
 
 ---
 
 ## Builtin Functions
 
-Avon comes with a toolkit of **89+ built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
+Avon comes with a toolkit of **100+ built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
 
-These utilities make any file more powerful—whether you're generating hundreds of config files or just managing a single dotfile. You can leverage functions like `upper`, `lower`, `format_table`, `json_parse`, `html_escape`, and many more to add superpowers to any text format, even if it's just one file.
+These utilities work with any file format—whether you're generating hundreds of config files or just managing a single dotfile. Functions like `upper`, `lower`, `format_table`, `json_parse`, and `html_escape` help you manipulate text however you need.
 
 ### String Operations
 

@@ -81,9 +81,21 @@ add5 3                  # Result: 8
 ```
 
 ### Default Parameters
-Provide fallback values:
+Provide fallback values using `?` after the parameter name:
 
 ```avon
+# Single parameter with default
+let greet = \name ? "Guest" {"Hello {name}!"} in
+greet              # "Hello Guest!"
+greet "Alice"      # "Hello Alice!"
+
+# Multiple parameters with defaults
+let config = \host ? "localhost" \port ? 8080 {"{host}:{port}"} in
+config                     # "localhost:8080"
+config "example.com"       # "example.com:8080"
+config "example.com" 443   # "example.com:443"
+
+# In deploy files
 \name ? "Guest" @welcome.txt {"
     Welcome, {name}!
 "}
