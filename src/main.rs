@@ -43,7 +43,7 @@ mod tests {
     // Lexer edge cases
     #[test]
     fn test_lexer_unterminated_string_error() {
-    let prog = r#"\"unterminated"#.to_string();
+        let prog = r#"\"unterminated"#.to_string();
         let tokens = crate::lexer::tokenize(prog.clone());
         assert!(tokens.is_err(), "expected error for unterminated string");
         let err = tokens.err().unwrap();
@@ -57,7 +57,7 @@ mod tests {
     #[test]
     fn test_lexer_template_unexpected_eof_inside_template() {
         // Start a single-brace template but do not close
-    let prog = r#"{"hello""#.to_string();
+        let prog = r#"{"hello""#.to_string();
         let tokens = crate::lexer::tokenize(prog.clone());
         assert!(tokens.is_err(), "expected error for EOF inside template");
         let err = tokens.err().unwrap();
@@ -67,9 +67,12 @@ mod tests {
     #[test]
     fn test_lexer_path_eof_in_interpolation() {
         // Path with an unclosed interpolation @{...
-    let prog = r#"@/{foo"#.to_string();
+        let prog = r#"@/{foo"#.to_string();
         let tokens = crate::lexer::tokenize(prog.clone());
-        assert!(tokens.is_err(), "expected error for EOF in path interpolation");
+        assert!(
+            tokens.is_err(),
+            "expected error for EOF in path interpolation"
+        );
         let err = tokens.err().unwrap();
         assert!(err.message.contains("EOF in path interpolation"));
     }
@@ -77,22 +80,61 @@ mod tests {
     // Parser edge cases
     #[test]
     fn test_parser_unexpected_closing_paren() {
-    let prog = r#")"#.to_string();
+        let prog = r#")"#.to_string();
         let tokens = crate::lexer::tokenize(prog.clone()).expect("tokenize");
         let ast = crate::parser::parse(tokens);
         match ast.program {
-            Expr::None(_) => {},
+            Expr::None(_) => {}
             other => panic!("expected None for parse error, got {:?}", other),
         }
     }
 
     #[test]
+    fn test_parser_list_trailing_comma() {
+        // Test that trailing commas in lists are allowed
+        use crate::common::Value;
+
+        // Single element with trailing comma
+        let prog1 = r#"[1,]"#.to_string();
+        let tokens1 = crate::lexer::tokenize(prog1.clone()).expect("tokenize");
+        let ast1 = crate::parser::parse(tokens1);
+        let mut symbols1 = initial_builtins();
+        let v1 = eval(ast1.program, &mut symbols1, &prog1).expect("eval");
+        match v1 {
+            Value::List(items) => assert_eq!(items.len(), 1),
+            other => panic!("expected list, got {:?}", other),
+        }
+
+        // Multiple elements with trailing comma
+        let prog2 = r#"[1, 2, 3,]"#.to_string();
+        let tokens2 = crate::lexer::tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = crate::parser::parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        match v2 {
+            Value::List(items) => assert_eq!(items.len(), 3),
+            other => panic!("expected list, got {:?}", other),
+        }
+
+        // Strings with trailing comma
+        let prog3 = r#"["a", "b",]"#.to_string();
+        let tokens3 = crate::lexer::tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = crate::parser::parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        match v3 {
+            Value::List(items) => assert_eq!(items.len(), 2),
+            other => panic!("expected list, got {:?}", other),
+        }
+    }
+
+    #[test]
     fn test_parser_unbalanced_list_missing_bracket() {
-    let prog = r#"[1, 2"#.to_string();
+        let prog = r#"[1, 2"#.to_string();
         let tokens = crate::lexer::tokenize(prog.clone()).expect("tokenize");
         let ast = crate::parser::parse(tokens);
         match ast.program {
-            Expr::None(_) => {},
+            Expr::None(_) => {}
             other => panic!("expected None for parse error, got {:?}", other),
         }
     }
@@ -103,7 +145,10 @@ mod tests {
         // Because lexer determines dict vs template based on colon after key,
         // this input is treated as a template and should error about missing '"' after braces.
         let tokens = crate::lexer::tokenize(prog.clone());
-        assert!(tokens.is_err(), "expected tokenize error for template-like input without quote");
+        assert!(
+            tokens.is_err(),
+            "expected tokenize error for template-like input without quote"
+        );
     }
 
     // Skipped: lambda missing identifier causes parser to exit; covered by other parser tests
@@ -1668,8 +1713,9 @@ mod tests {
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         assert_eq!(v.to_string(&prog), "[b, aa, ddd, cccc]");
 
-    // sort_by numeric key on pair-like lists (use head(tail(pair)) to get second element)
-    let prog2 = r#"sort_by (\pair head (tail pair)) [["a", 3], ["b", 1], ["c", 2]]"#.to_string();
+        // sort_by numeric key on pair-like lists (use head(tail(pair)) to get second element)
+        let prog2 =
+            r#"sort_by (\pair head (tail pair)) [["a", 3], ["b", 1], ["c", 2]]"#.to_string();
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();

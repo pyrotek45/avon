@@ -1,0 +1,29 @@
+# Ultra-tiny C preprocessor-style demo (Discord-size)
+# Preview:
+#   avon eval examples/cpp_tiny.av -platform linux
+#   avon eval examples/cpp_tiny.av -platform windows
+# Write files:
+#   avon deploy examples/cpp_tiny.av --root ./out -platform linux
+#   avon deploy examples/cpp_tiny.av --root ./out -platform windows
+
+\platform ? "linux"
+
+@/include/sources_unified.h {{"
+    #ifndef SOURCES_UNIFIED_H
+    #define SOURCES_UNIFIED_H
+
+    /* A single macro listing sources per platform */
+    #ifdef __linux__
+    #define PLATFORM_SOURCES \
+        "src/main.c" \
+        "src/platform_linux.c"
+    #endif
+
+    #ifdef _WIN32
+    #define PLATFORM_SOURCES \
+        "src/main.c" \
+        "src/platform_windows.c"
+    #endif
+
+    #endif /* SOURCES_UNIFIED_H */
+"}}

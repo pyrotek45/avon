@@ -3180,15 +3180,24 @@ pub fn execute_builtin(
                         (Value::Number(Number::Int(a_int)), Value::Number(Number::Int(b_int))) => {
                             a_int.cmp(b_int)
                         }
-                        (Value::Number(Number::Float(a_float)), Value::Number(Number::Float(b_float))) => {
-                            a_float.partial_cmp(b_float).unwrap_or(std::cmp::Ordering::Equal)
-                        }
-                        (Value::Number(Number::Int(a_int)), Value::Number(Number::Float(b_float))) => {
-                            (*a_int as f64).partial_cmp(b_float).unwrap_or(std::cmp::Ordering::Equal)
-                        }
-                        (Value::Number(Number::Float(a_float)), Value::Number(Number::Int(b_int))) => {
-                            a_float.partial_cmp(&(*b_int as f64)).unwrap_or(std::cmp::Ordering::Equal)
-                        }
+                        (
+                            Value::Number(Number::Float(a_float)),
+                            Value::Number(Number::Float(b_float)),
+                        ) => a_float
+                            .partial_cmp(b_float)
+                            .unwrap_or(std::cmp::Ordering::Equal),
+                        (
+                            Value::Number(Number::Int(a_int)),
+                            Value::Number(Number::Float(b_float)),
+                        ) => (*a_int as f64)
+                            .partial_cmp(b_float)
+                            .unwrap_or(std::cmp::Ordering::Equal),
+                        (
+                            Value::Number(Number::Float(a_float)),
+                            Value::Number(Number::Int(b_int)),
+                        ) => a_float
+                            .partial_cmp(&(*b_int as f64))
+                            .unwrap_or(std::cmp::Ordering::Equal),
                         // For non-numeric, use string comparison
                         _ => a_str.cmp(&b_str),
                     }
@@ -3205,15 +3214,16 @@ pub fn execute_builtin(
                 // Create pairs of (original_item, sort_key)
                 let mut pairs: Vec<(Value, Value)> = Vec::new();
                 for item in items {
-                    let key = apply_function(func, item.clone(), source, line).map_err(|mut err| {
-                        if !err.message.starts_with("sort_by:") {
-                            err.message = format!("sort_by: {}", err.message);
-                        }
-                        err
-                    })?;
+                    let key =
+                        apply_function(func, item.clone(), source, line).map_err(|mut err| {
+                            if !err.message.starts_with("sort_by:") {
+                                err.message = format!("sort_by: {}", err.message);
+                            }
+                            err
+                        })?;
                     pairs.push((item.clone(), key));
                 }
-                
+
                 // Sort by keys
                 pairs.sort_by(|(_, a_key), (_, b_key)| {
                     let a_str = a_key.to_string(source);
@@ -3222,19 +3232,28 @@ pub fn execute_builtin(
                         (Value::Number(Number::Int(a_int)), Value::Number(Number::Int(b_int))) => {
                             a_int.cmp(b_int)
                         }
-                        (Value::Number(Number::Float(a_float)), Value::Number(Number::Float(b_float))) => {
-                            a_float.partial_cmp(b_float).unwrap_or(std::cmp::Ordering::Equal)
-                        }
-                        (Value::Number(Number::Int(a_int)), Value::Number(Number::Float(b_float))) => {
-                            (*a_int as f64).partial_cmp(b_float).unwrap_or(std::cmp::Ordering::Equal)
-                        }
-                        (Value::Number(Number::Float(a_float)), Value::Number(Number::Int(b_int))) => {
-                            a_float.partial_cmp(&(*b_int as f64)).unwrap_or(std::cmp::Ordering::Equal)
-                        }
+                        (
+                            Value::Number(Number::Float(a_float)),
+                            Value::Number(Number::Float(b_float)),
+                        ) => a_float
+                            .partial_cmp(b_float)
+                            .unwrap_or(std::cmp::Ordering::Equal),
+                        (
+                            Value::Number(Number::Int(a_int)),
+                            Value::Number(Number::Float(b_float)),
+                        ) => (*a_int as f64)
+                            .partial_cmp(b_float)
+                            .unwrap_or(std::cmp::Ordering::Equal),
+                        (
+                            Value::Number(Number::Float(a_float)),
+                            Value::Number(Number::Int(b_int)),
+                        ) => a_float
+                            .partial_cmp(&(*b_int as f64))
+                            .unwrap_or(std::cmp::Ordering::Equal),
                         _ => a_str.cmp(&b_str),
                     }
                 });
-                
+
                 // Extract sorted items
                 let sorted: Vec<Value> = pairs.into_iter().map(|(item, _)| item).collect();
                 Ok(Value::List(sorted))
@@ -3262,13 +3281,12 @@ pub fn execute_builtin(
         "range" => {
             let start = &args[0];
             let end = &args[1];
-            
+
             match (start, end) {
                 (Value::Number(Number::Int(s)), Value::Number(Number::Int(e))) => {
                     if s <= e {
-                        let result: Vec<Value> = (*s..=*e)
-                            .map(|i| Value::Number(Number::Int(i)))
-                            .collect();
+                        let result: Vec<Value> =
+                            (*s..=*e).map(|i| Value::Number(Number::Int(i))).collect();
                         Ok(Value::List(result))
                     } else {
                         // Empty list for invalid range
@@ -3289,10 +3307,7 @@ pub fn execute_builtin(
                     .iter()
                     .enumerate()
                     .map(|(idx, item)| {
-                        Value::List(vec![
-                            Value::Number(Number::Int(idx as i64)),
-                            item.clone(),
-                        ])
+                        Value::List(vec![Value::Number(Number::Int(idx as i64)), item.clone()])
                     })
                     .collect();
                 Ok(Value::List(result))

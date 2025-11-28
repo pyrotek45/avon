@@ -1,0 +1,260 @@
+# Neovim Configuration Generator (Compact Functional Edition)
+# Deploy: avon deploy neovim_config.av --root ~/.config/nvim --force
+
+\shell ? "/bin/zsh" \theme ? "ayu" \color_column ? "80"
+
+let c = { shell: shell, theme: theme, col: color_column } in
+
+let opts_lua = join [
+  "vim.opt.shell = '" + c.shell + "'",
+  "vim.opt.relativenumber = true",
+  "vim.opt.tabstop = 4",
+  "vim.opt.softtabstop = 4",
+  "vim.opt.shiftwidth = 4",
+  "vim.opt.expandtab = true",
+  "vim.opt.smartindent = true",
+  "vim.opt.wrap = false",
+  "vim.opt.swapfile = false",
+  "vim.opt.backup = false",
+  "vim.opt.undofile = true",
+  "vim.opt.hlsearch = false",
+  "vim.opt.incsearch = true",
+  "vim.opt.termguicolors = true",
+  "vim.opt.scrolloff = 8",
+  "vim.opt.signcolumn = 'yes'",
+  "vim.opt.colorcolumn = '" + c.col + "'"
+] "\n" in
+
+let plugin_lua = join [
+  "use {'wbthomason/packer.nvim'}",
+  "use {'nvim-telescope/telescope.nvim', tag = '0.1.5', requires = { {'nvim-lua/plenary.nvim'} }}",
+  "use({'nvim-treesitter/nvim-treesitter'}, {run = ':TSUpdate'})",
+  "use({'nvim-treesitter/playground'})",
+  "use({'theprimeagen/harpoon'})",
+  "use({'mbbill/undotree'})",
+  "use({'tpope/vim-fugitive'})",
+  "use({'folke/todo-comments.nvim'})",
+  "use({'folke/trouble.nvim'})",
+  "use({'weilbith/nvim-code-action-menu'})",
+  "use({'smithbm2316/centerpad.nvim'})",
+  "use({'wakatime/vim-wakatime'})",
+  "use({'williamboman/mason.nvim'})",
+  "use {'vyfor/cord.nvim', run = ':Cord update'}",
+  "use 'nvim-tree/nvim-web-devicons'",
+  "use({ 'rose-pine/neovim', as = 'rose-pine' })",
+  "use({ 'Shatur/neovim-ayu', as = 'ayu' })"
+] "\n" in
+
+let km_lua = join [
+  "vim.keymap.set('n', '<leader>pp', vim.cmd.Ex)",
+  "vim.keymap.set('v', 'J', \":m '>+1<CR>gv=gv\")",
+  "vim.keymap.set('v', 'K', \":m '<-2<CR>gv=gv\")",
+  "vim.keymap.set('n', 'J', 'mzJ`z')",
+  "vim.keymap.set('n', '<C-d>', '<C-d>zz')",
+  "vim.keymap.set('n', '<C-u>', '<C-u>zz')",
+  "vim.keymap.set('n', 'n', 'nzzzv')",
+  "vim.keymap.set('n', 'N', 'Nzzzv')",
+  "vim.keymap.set('x', '<leader>p', [[\"_dP]])",
+  "vim.keymap.set('n', 'Q', '<nop>')",
+  "vim.keymap.set('n', '<C-f>', '<cmd>silent !tmux neww tmux-sessionizer<CR>')",
+  "vim.keymap.set('n', '<leader>f', vim.lsp.buf.format)",
+  "vim.keymap.set('n', '<C-k>', '<cmd>cnext<CR>zz')",
+  "vim.keymap.set('n', '<C-j>', '<cmd>cprev<CR>zz')",
+  "vim.keymap.set('n', '<leader>k', '<cmd>lnext<CR>zz')",
+  "vim.keymap.set('n', '<leader>j', '<cmd>lprev<CR>zz')",
+  "vim.keymap.set('n', '<leader>s', [[:%s/\\<<C-r><C-w>\\>/<C-r><C-w>/gI<Left><Left><Left>]])",
+  "vim.keymap.set('n', '<leader>x', '<cmd>!chmod +x %<CR>', { silent = true })",
+  "vim.keymap.set('n', '<leader>vpp', '<cmd>e ~/.config/nvim/lua/my/packer.lua<CR>')",
+  "vim.keymap.set('n', '<leader>mr', '<cmd>CellularAutomaton make_it_rain<CR>')",
+  "vim.keymap.set('n', '<leader><leader>', function() vim.cmd('so') end)"
+] "\n" in
+
+[
+    @/init.lua {{"require('my')"}},
+
+    @/lua/my/init.lua {{"
+        require('my.set')
+        require('my.remap')
+        require('my.packer')
+        "}},
+
+        @/lua/my/set.lua {{"
+        {{ opts_lua }}
+        vim.g.mapleader = ' '
+        vim.o.pumheight = 15
+    "}},
+
+    @/lua/my/packer.lua {{"
+        local ensure_packer = function()
+        local fn = vim.fn
+        local install_path = fn.stdpath('data')..'/site/pack/packer/start/packer.nvim'
+        if fn.empty(fn.glob(install_path)) > 0 then
+            fn.system({'git', 'clone', '--depth', '1', 'https://github.com/wbthomason/packer.nvim', install_path})
+            vim.cmd [[packadd packer.nvim]]
+            return true
+        end
+        return false
+        end
+        local packer_bootstrap = ensure_packer()
+        local status, packer = pcall(require, 'packer')
+        if status then
+        return packer.startup(function(use)
+            {{ plugin_lua }}
+            use {'folke/which-key.nvim', config = function()
+                vim.o.timeout = true
+                vim.o.timeoutlen = 0
+                require('which-key').setup()
+            end
+            }
+            use {
+            'VonHeikemen/lsp-zero.nvim', branch = 'v3.x',
+            requires = {
+                {'williamboman/mason.nvim'},
+                {'williamboman/mason-lspconfig.nvim'},
+                {'neovim/nvim-lspconfig'},
+                {'hrsh7th/nvim-cmp'},
+                {'hrsh7th/cmp-nvim-lsp'},
+                {'L3MON4D3/LuaSnip'},
+            }
+            }
+            if packer_bootstrap then
+            require('packer').sync()
+            end
+        end)
+        end
+    "}},
+
+    @/lua/my/remap.lua {{"
+        {{ km_lua }}
+    "}},
+
+    @/after/plugin/colors.lua {{"
+        function ApplyTheme(color)
+            color = color or '{{ c.theme }}'
+            pcall(vim.cmd.colorscheme, color)
+        end
+        function RemoveBackground()
+            vim.api.nvim_set_hl(0, 'Normal', { bg = 'none' })
+            vim.api.nvim_set_hl(0, 'NormalFloat', { bg = 'none' })
+        end
+        local status, ayu = pcall(require, 'ayu')
+        if status then
+            ayu.setup({ mirage = true, overrides = {} })
+        end
+        ApplyTheme('{{ c.theme }}')
+    "}},
+
+    @/after/plugin/telescope.lua {{"
+    local status, builtin = pcall(require, 'telescope.builtin')
+        if status then
+            vim.keymap.set('n', '<leader>pf', builtin.find_files, {})
+            vim.keymap.set('n', '<leader>pl', builtin.live_grep, {})
+            vim.keymap.set('n', '<C-p>', builtin.git_files, {})
+            vim.keymap.set('n', '<leader>ps', function() builtin.grep_string({ search = vim.fn.input('Grep > ') }) end)
+        end
+    "}},
+
+    @/after/plugin/treesitter.lua {{"
+        local status, configs = pcall(require, 'nvim-treesitter.configs')
+        if status then
+            configs.setup {
+            ensure_installed = { 'vimdoc', 'toml', 'c', 'lua', 'rust' },
+            sync_install = false,
+            auto_install = true,
+            highlight = { enable = true, additional_vim_regex_highlighting = false },
+            }
+        end
+    "}},
+
+    @/after/plugin/harpoon.lua {{"
+        local status_mark, mark = pcall(require, 'harpoon.mark')
+        local status_ui, ui = pcall(require, 'harpoon.ui')
+
+        if status_mark and status_ui then
+            vim.keymap.set('n', '<leader>a', mark.add_file)
+            vim.keymap.set('n', '<C-e>', ui.toggle_quick_menu)
+            vim.keymap.set('n', '<C-h>', function() ui.nav_file(1) end)
+            vim.keymap.set('n', '<C-t>', function() ui.nav_file(2) end)
+            vim.keymap.set('n', '<C-n>', function() ui.nav_file(3) end)
+            vim.keymap.set('n', '<C-s>', function() ui.nav_file(4) end)
+        end
+    "}},
+
+    @/after/plugin/undotree.lua {{"vim.keymap.set('n', '<leader>u', vim.cmd.UndotreeToggle)"}},
+    @/after/plugin/fugitive.lua {{"vim.keymap.set('n', '<leader>gs', vim.cmd.Git)"}},
+    @/after/plugin/todocomments.lua {{"pcall(function() require('todo-comments').setup() end)"}},
+    @/after/plugin/whichkey.lua {{"pcall(function() require('which-key').setup() end)"}},
+    @/after/plugin/centerpad.lua {{"pcall(function() require('centerpad').setup() end)"}},
+
+    @/after/plugin/trouble.lua {{"
+        local status, trouble = pcall(require, 'trouble')
+        if status then
+            trouble.setup()
+            vim.keymap.set('n', '<leader>h', function() trouble.toggle('diagnostics') end, { desc = 'Toggle Trouble diagnostics' })
+        end
+    "}},
+
+    @/after/plugin/lsp.lua {{"
+        local status, lsp_zero = pcall(require, 'lsp-zero')
+        if status then
+            local lsp = lsp_zero.preset({})
+            lsp.on_attach(function(client, bufnr)
+                lsp.default_keymaps({buffer = bufnr})
+                local opts = {buffer = bufnr, remap = false}
+                vim.keymap.set('i', '<C-s>',      vim.lsp.buf.signature_help, opts)
+                vim.keymap.set('n', '<leader>la', ':CodeActionMenu<CR>', opts)
+                vim.keymap.set('v', '<leader>la', ':CodeActionMenu<CR>', opts)
+                vim.keymap.set('n', '<leader>lk', vim.lsp.buf.hover, opts)
+                vim.keymap.set('n', '<leader>lr', vim.lsp.buf.rename, opts)
+                vim.keymap.set('n', '<leader>c', vim.lsp.buf.document_highlight, opts)
+                vim.keymap.set('n', '<leader>c', vim.lsp.buf.clear_references, opts)
+                vim.keymap.set('n', 'gD', '<cmd>lua vim.lsp.buf.declaration()<CR>', opts)
+                vim.keymap.set('n', 'gO', '<cmd>lua vim.lsp.buf.references()<CR>', opts)
+                vim.keymap.set('n', 'gd', '<cmd>lua vim.lsp.buf.definition()<CR>', opts)
+            end)
+            
+            local status_lspconfig, lspconfig = pcall(require, 'lspconfig')
+            if status_lspconfig then
+                lspconfig.rust_analyzer.setup({
+                    settings = {
+                        ['cargo'] = { ['buildScripts'] = { ['enable'] = true } },
+                        ['procMacro'] = { ['enable'] = true }
+                    },
+                })
+                lspconfig.lua_ls.setup({
+                    cmd = {'lua-language-server'},
+                    filetypes = {'lua'},
+                    root_dir = lspconfig.util.root_pattern('.luarc.json', '.luarc.jsonc', '.git'),
+                })
+                -- Manual setup for wgsl if not standard
+                if not lspconfig.wgsl_analyzer then
+                    require('lspconfig.configs').wgsl_analyzer = {
+                        default_config = {
+                            cmd = {'wgsl-analyzer'},
+                            filetypes = {'wgsl'},
+                            root_dir = lspconfig.util.root_pattern('.git'),
+                        },
+                    }
+                end
+                lspconfig.wgsl_analyzer.setup({})
+            end
+
+            lsp.setup()
+
+            local status_cmp, cmp = pcall(require, 'cmp')
+            if status_cmp then
+                local cmp_action = lsp_zero.cmp_action()
+                cmp.setup({
+                    preselect = 'item',
+                    completion = { completeopt = 'menu,menuone,noinsert' },
+                    mapping = {
+                        ['<Tab>'] = cmp_action.tab_complete(),
+                        ['<S-Tab>'] = cmp_action.select_prev_or_fallback(),
+                        ['<CR>'] = cmp.mapping.confirm({select = false}),
+                        ['<C-Space>'] = cmp.mapping.complete(),
+                    }
+                })
+            end
+        end
+    "}}
+]

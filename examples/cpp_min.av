@@ -1,0 +1,73 @@
+# Minimal C Preprocessor-style demo
+# Send-friendly example (tiny)
+# Usage:
+#   avon deploy examples/cpp_min.av --root ./out -platform linux
+#   avon deploy examples/cpp_min.av --root ./out -platform windows
+
+
+\platform ? "linux"
+
+[
+    # Unified tiny platform API (static #ifdef blocks)
+    @/include/platform.h {{"
+        #ifndef PLATFORM_H
+        #define PLATFORM_H
+
+        #ifdef __linux__
+            #include <unistd.h>
+            static inline void platform_sleep(int ms){ usleep(ms*1000); }
+        #endif
+
+        #ifdef _WIN32
+            #include <windows.h>
+            static inline void platform_sleep(int ms){ Sleep(ms); }
+        #endif
+
+        #endif /* PLATFORM_H */
+    "}},
+
+    # One include that gathers file paths via #ifdefs
+    @/include/sources_unified.h {{"
+        #ifndef SOURCES_UNIFIED_H
+        #define SOURCES_UNIFIED_H
+
+        /* Unified platform-specific source list */
+        #ifdef __linux__
+            /* Files for Linux */
+            #define PLATFORM_SOURCES \
+                "src/main.c" \
+                "src/platform_linux.c"
+        #endif
+
+        #ifdef _WIN32
+            /* Files for Windows */
+            #define PLATFORM_SOURCES \
+                "src/main.c" \
+                "src/platform_windows.c"
+        #endif
+
+        #endif /* SOURCES_UNIFIED_H */
+    "}},
+
+    # Simple per-platform list using path interpolation
+    @/sources.txt {{"
+            # Platform: {{ platform }}
+            src/main.c
+            src/platform_{{ platform }}.c
+    "}},
+
+    # Demonstrate path interpolation in output filenames
+    @/include/platform_{platform}.h {{"
+            #ifndef PLATFORM_{{ upper platform }}_H
+            #define PLATFORM_{{ upper platform }}_H
+            /* Per-platform header generated for {{ platform }} */
+        #endif
+    "}},
+
+    @/sources_{platform}.txt {{"
+        # Platform: {{ platform }}
+        src/main.c
+        src/platform_{{ platform }}.c
+    "}}
+]
+

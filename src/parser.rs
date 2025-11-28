@@ -78,7 +78,14 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
                         Some(Token::Comma(_)) => {
                             // Could be [start, step..end] or regular list [start, second, ...]
                             stream.next(); // consume comma
-                                           // Parse the expression after comma (could be step or second element)
+
+                            // Check for trailing comma after first element: [first,]
+                            if let Some(Token::RBracket(_)) = stream.peek() {
+                                stream.next();
+                                return Expr::List(vec![first_expr], line);
+                            }
+
+                            // Parse the expression after comma (could be step or second element)
                             let second_expr = parse_expr(stream);
                             // Check if next is DoubleDot (range with step) or something else (regular list)
                             match stream.peek() {
@@ -111,6 +118,11 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
                                         match stream.peek() {
                                             Some(Token::Comma(_)) => {
                                                 stream.next();
+                                                // Check for trailing comma
+                                                if let Some(Token::RBracket(_)) = stream.peek() {
+                                                    stream.next();
+                                                    break;
+                                                }
                                                 let next_expr = parse_expr(stream);
                                                 items.push(next_expr);
                                                 continue;
