@@ -676,6 +676,8 @@ in
 | `to_int` | 1 | Convert to integer | `to_int "42"` -> `42` |
 | `to_float` | 1 | Convert to float | `to_float "3.14"` -> `3.14` |
 | `to_bool` | 1 | Convert to boolean | `to_bool "yes"` -> `true` |
+| `to_char` | 1 | Codepoint to character | `to_char 72` -> `"H"` |
+| `to_list` | 1 | String to char list | `to_list "Hi"` -> `["H", "i"]` |
 
 Type conversions are explicit. None of that "let me guess what type you meant" sorcery.
 

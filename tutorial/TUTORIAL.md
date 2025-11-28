@@ -2027,6 +2027,8 @@ Note: `markdown_to_html` accepts both strings and templates, automatically conve
 | `to_float val` | Convert to float | `to_float "3.14"` | `3.14` |
 | `to_bool val` | Convert to boolean | `to_bool "yes"` | `true` |
 | `to_bool val` | Number to bool (0=false) | `to_bool 0` | `false` |
+| `to_char code` | Unicode codepoint to char | `to_char 72` | `"H"` |
+| `to_list str` | String to list of chars | `to_list "Hi"` | `["H", "i"]` |
 | `format_int num width` | Format integer with zero-padding | `format_int 7 3` | `"007"` |
 | `format_float num prec` | Format float with precision | `format_float 3.14159 2` | `"3.14"` |
 
@@ -3369,6 +3371,6 @@ If you have questions or want to contribute examples, the Avon project welcomes 
 Happy generating!
 
 <!-- 
-Secret: Run `avon run 'join (map (\x to_string x) [72,101,108,108,111]) ""'` for a surprise.
+Secret: Run `avon run 'join (map to_char [72, 101, 108, 108, 111]) ""'` for a surprise.
 If you found this, you're the kind of person who reads source code. We respect that.
 -->

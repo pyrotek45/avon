@@ -177,6 +177,14 @@ pub fn initial_builtins() -> HashMap<String, Value> {
         Value::Builtin("to_bool".to_string(), Vec::new()),
     );
     m.insert(
+        "to_char".to_string(),
+        Value::Builtin("to_char".to_string(), Vec::new()),
+    );
+    m.insert(
+        "to_list".to_string(),
+        Value::Builtin("to_list".to_string(), Vec::new()),
+    );
+    m.insert(
         "neg".to_string(),
         Value::Builtin("neg".to_string(), Vec::new()),
     );
@@ -1735,6 +1743,8 @@ pub fn apply_function(
                 "to_int" => 1,
                 "to_float" => 1,
                 "to_bool" => 1,
+                "to_char" => 1,
+                "to_list" => 1,
                 "neg" => 1,
                 "format_int" => 2,
                 "format_float" => 2,
@@ -2554,6 +2564,60 @@ pub fn execute_builtin(
                 }
                 Value::List(items) => Ok(Value::Bool(!items.is_empty())),
                 _ => Ok(Value::Bool(true)), // Other values are truthy
+            }
+        }
+        "to_char" => {
+            // to_char :: Number -> String
+            // Converts a Unicode codepoint (integer) to a single-character string
+            let val = &args[0];
+            match val {
+                Value::Number(Number::Int(i)) => {
+                    let codepoint = *i as u32;
+                    match char::from_u32(codepoint) {
+                        Some(c) => Ok(Value::String(c.to_string())),
+                        None => Err(EvalError::new(
+                            format!("to_char: {} is not a valid Unicode codepoint", i),
+                            None,
+                            None,
+                            line,
+                        )),
+                    }
+                }
+                Value::Number(Number::Float(f)) => {
+                    let codepoint = *f as u32;
+                    match char::from_u32(codepoint) {
+                        Some(c) => Ok(Value::String(c.to_string())),
+                        None => Err(EvalError::new(
+                            format!("to_char: {} is not a valid Unicode codepoint", f),
+                            None,
+                            None,
+                            line,
+                        )),
+                    }
+                }
+                other => Err(EvalError::type_mismatch(
+                    "Number (Unicode codepoint)",
+                    other.to_string(source),
+                    line,
+                )),
+            }
+        }
+        "to_list" => {
+            // to_list :: String -> [String]
+            // Converts a string to a list of single-character strings
+            let val = &args[0];
+            match val {
+                Value::String(s) => {
+                    let chars: Vec<Value> =
+                        s.chars().map(|c| Value::String(c.to_string())).collect();
+                    Ok(Value::List(chars))
+                }
+                Value::List(items) => Ok(Value::List(items.clone())), // Already a list
+                other => Err(EvalError::type_mismatch(
+                    "String or List",
+                    other.to_string(source),
+                    line,
+                )),
             }
         }
         "neg" => {

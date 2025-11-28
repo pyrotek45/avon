@@ -32,7 +32,7 @@ Hello, {name}!
 "}
 ```
 
-**Reason:** The template opening `{"` must appear on the same line as the path `@file`. This is a syntax requirement in Avon.
+**Reason:** Keeping the template on the same line as `in` makes the relationship clear, though the parser does allow them on separate lines.
 
 ### Indent Template Content (Leverage Automatic Dedent)
 
@@ -519,6 +519,7 @@ Avon automatically converts templates to strings when used with string functions
 let template = "Hello <!-- title -->" in
 let title = {"My Site"} in
 let html = replace template "<!-- title -->" title in  # Template auto-converts
+html
 ```
 
 **Avoid:**
@@ -526,10 +527,11 @@ let html = replace template "<!-- title -->" title in  # Template auto-converts
 let template = "Hello <!-- title -->" in
 let title = {"My Site"} in
 let html = replace template "<!-- title -->" (to_string title) in  # Unnecessary - replace auto-converts templates
+html
 ```
 
 **String functions that accept templates (auto-convert to string):**
-- `concat` - concatenates strings/templates
+- `concat` - concatenates two strings/templates (takes exactly 2 arguments)
 - `upper`, `lower`, `trim` - case and whitespace operations
 - `split`, `join`, `replace` - string manipulation
 - `contains`, `starts_with`, `ends_with` - string predicates
@@ -539,9 +541,10 @@ let html = replace template "<!-- title -->" (to_string title) in  # Unnecessary
 **Example showing auto-conversion:**
 ```avon
 let title = {"My Site"} in
-let header = concat "<h1>" title "</h1>" in  # title auto-converts, no to_string needed
-let upper_title = upper title in  # Also auto-converts
-header
+let header = concat "<h1>" title in  # title auto-converts, no to_string needed
+let full = concat header "</h1>" in  # chain concat calls for multiple parts
+let upper_title = upper title in     # Also auto-converts
+full
 ```
 
 ## Pipe Operator

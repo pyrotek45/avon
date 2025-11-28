@@ -112,6 +112,8 @@ fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("to_int", "to_int :: String -> Int\n  Convert string to integer.\n  Example: to_int \"42\" -> 42"),
         ("to_float", "to_float :: String -> Float\n  Convert string to float.\n  Example: to_float \"3.14\" -> 3.14"),
         ("to_bool", "to_bool :: a -> Bool\n  Convert value to boolean.\n  Example: to_bool \"yes\" -> true"),
+        ("to_char", "to_char :: Int -> String\n  Convert Unicode codepoint to character.\n  Example: to_char 72 -> \"H\""),
+        ("to_list", "to_list :: String -> [String]\n  Convert string to list of characters.\n  Example: to_list \"Hi\" -> [\"H\", \"i\"]"),
         ("neg", "neg :: Number -> Number\n  Negate a number.\n  Example: neg 5 -> -5"),
 
         // Formatting
@@ -474,6 +476,14 @@ fn print_builtin_docs() {
     println!("  {:<18} :: {}", "to_int", "String -> Int");
     println!("  {:<18} :: {}", "to_float", "String -> Float");
     println!("  {:<18} :: {}", "to_bool", "a -> Bool");
+    println!(
+        "  {:<18} :: {}",
+        "to_char", "Int -> String  (codepoint to character)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "to_list", "String -> [String]  (string to char list)"
+    );
     println!(
         "  {:<18} :: {}",
         "neg", "Number -> Number  (negate a number)"
