@@ -134,7 +134,7 @@ Count: {length items}
 - **Indentation is automatically dedented** (based on first non-whitespace character)
 - Any expression can be interpolated with `{expr}`
 - Lists expand to newline-separated items
-- Escape hatch for literal braces (see below)
+- Multi-brace delimiters for literal braces (see below)
 
 **Indentation:** The column position of the first non-whitespace character in a template becomes the baseline. All lines are dedented by that amount. This lets you indent templates naturally to match your code structure:
 
@@ -155,7 +155,7 @@ This works with any nesting level and preserves relative indentation (useful for
 
 **Examples:** `examples/list_insert.av`, `examples/complex_template.av`, `examples/baseline_indentation_demo.av`
 
-#### Template Escape Hatch: Variable Brace Delimiters
+#### Multi-Brace Delimiters for Literal Braces
 
 Avon templates use a **variable-brace delimiter system** that lets you choose how many opening braces to use. This is a powerful feature that adapts to your content's needs:
 
@@ -165,17 +165,17 @@ Avon templates use a **variable-brace delimiter system** that lets you choose ho
 @file.txt {{{" ... "}}}  # triple-brace template (open_count = 3)
 ```
 
-Why this design?**
+**Why this design?**
 
-When your template output contains curly braces (JSON, HCL, Lua, Python, etc.), you need a way to distinguish:
-- **Literal braces in the output** (e.g., `{` for Lua tables, JSON objects)
+When your template output contains curly braces (JSON, CSS, Lua, Nginx, etc.), you need a way to distinguish:
+- **Literal braces in the output** (e.g., `{` for Lua tables, JSON objects, CSS rules)
 - **Interpolation braces** (e.g., `{variable_name}` to substitute values)
 
-By allowing multiple opening braces, you can choose a delimiter that requires **minimal escaping** for your specific use case. It's like regex escaping, but actually sane.
+By choosing a higher delimiter level, braces with fewer than that count become literal. No escaping needed.
 
-How it works:**
+**How it works:**
 
-Interpolation uses exactly the same number of leading braces as the template opener:
+Interpolation uses exactly the same number of braces as the template opener:
 
 ```
 @single.txt {"Value: { 1 + 2 }"}        # interpolation with { }
@@ -183,11 +183,13 @@ Interpolation uses exactly the same number of leading braces as the template ope
 @triple.txt {{{" Value: {{{ 1 + 2 }}} "}}}  # interpolation with {{{ }}}
 ```
 
-To produce literal braces without starting interpolation, use one more brace than the opener:
+In higher-level templates, fewer braces are literal:
 
-| Template opener | Interpolation | Literal `{` | Literal `}` | When to use |
-|-----------------|--------------|-------------|-------------|---------|
-| `{`             | `{ expr }`   | `{{` -> `{`  | `}}` -> `}`  | Few/no braces in output (rarely needs escaping) |
+| Template | Interpolate with | Literal braces | Use case |
+|----------|-----------------|----------------|----------|
+| `{" "}` | `{expr}` | (none) | Plain text, YAML |
+| `{{" "}}` | `{{expr}}` | `{` `}` | JSON, CSS, Lua, Nginx |
+| `{{{" "}}}` | `{{{expr}}}` | `{` `{{` `}` `}}` | GitHub Actions, Mustache |
 | `{{`            | `{{ expr }}` | `{{{` -> `{` | `}}}` -> `}` | Many braces in output (JSON, HCL, Terraform) |
 | `{{{`           | `{{{ expr }}}` | `{{{{` -> `{` | `}}}}` -> `}` | Output full of triple-braces (rare) |
 
@@ -334,7 +336,7 @@ def get_config():
 
 With this system, your templates stay readable even in brace-heavy contexts—you simply choose the delimiter that fits your content.
 
-See `examples/escape_hatch.av` for comprehensive demonstrations of all delimiter levels.
+See `tutorial/TEMPLATE_SYNTAX.md` for comprehensive documentation of the multi-brace delimiter system.
 
 ### Path Values
 Paths are first-class values that can be stored in variables, passed to functions, and interpolated with variables.

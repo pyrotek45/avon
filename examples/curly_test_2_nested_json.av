@@ -1,12 +1,13 @@
 # Test 2: Nested JSON objects with multiple levels of braces
+# Uses double-brace template {{" "}} so single braces are literal
 let name = "test" in
 
-@/test2_nested.txt {"
-{{
-  "outer": {{
-    "inner": {{
-      "key": "{name}"
-    }}
-  }}
-}}
-"}
+@/test2_nested.txt {{"
+{
+  "outer": {
+    "inner": {
+      "key": "{{name}}"
+    }
+  }
+}
+"}}

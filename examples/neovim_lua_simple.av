@@ -1,11 +1,12 @@
 # Neovim Lua Configuration (Modern)
 # Simple init.lua for Neovim using Lua instead of VimScript
+# Uses double-brace template {{" "}} so Lua braces are literal
 
 let user = "nvimuser" in
 let theme = "tokyonight" in
 let tab_spaces = "2" in
 
-@home/{user}/.config/nvim/init.lua {"
+@home/{user}/.config/nvim/init.lua {{"
 -- Neovim Lua Configuration
 -- Generated with Avon
 
@@ -18,81 +19,32 @@ vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.hlsearch = true
 vim.opt.incsearch = true
+vim.opt.tabstop = {{tab_spaces}}
+vim.opt.shiftwidth = {{tab_spaces}}
 vim.opt.expandtab = true
-vim.opt.tabstop = {tab_spaces}
-vim.opt.shiftwidth = {tab_spaces}
+vim.opt.autoindent = true
 vim.opt.smartindent = true
 vim.opt.wrap = false
 vim.opt.cursorline = true
 vim.opt.termguicolors = true
-vim.opt.signcolumn = 'yes'
-vim.opt.updatetime = 250
-vim.opt.timeoutlen = 300
-vim.opt.splitbelow = true
-vim.opt.splitright = true
-vim.opt.undofile = true
-vim.opt.scrolloff = 8
 
 -- Leader key
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
--- Keymaps
-local keymap = vim.keymap.set
-local opts = {{ silent = true }}
+-- Basic keymaps
+vim.keymap.set('n', '<leader>w', '<cmd>w<CR>')
+vim.keymap.set('n', '<leader>q', '<cmd>q<CR>')
+vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
--- Essential
-keymap('n', '<leader>w', ':w<CR>', opts)
-keymap('n', '<leader>q', ':q<CR>', opts)
-keymap('n', '<Esc>', ':nohl<CR>', opts)
+-- Window navigation
+vim.keymap.set('n', '<C-h>', '<C-w>h')
+vim.keymap.set('n', '<C-j>', '<C-w>j')
+vim.keymap.set('n', '<C-k>', '<C-w>k')
+vim.keymap.set('n', '<C-l>', '<C-w>l')
 
--- Better window navigation
-keymap('n', '<C-h>', '<C-w>h', opts)
-keymap('n', '<C-j>', '<C-w>j', opts)
-keymap('n', '<C-k>', '<C-w>k', opts)
-keymap('n', '<C-l>', '<C-w>l', opts)
+-- Theme (if installed)
+pcall(vim.cmd, 'colorscheme {{theme}}')
 
--- Resize windows
-keymap('n', '<C-Up>', ':resize +2<CR>', opts)
-keymap('n', '<C-Down>', ':resize -2<CR>', opts)
-keymap('n', '<C-Left>', ':vertical resize -2<CR>', opts)
-keymap('n', '<C-Right>', ':vertical resize +2<CR>', opts)
-
--- Better indenting
-keymap('v', '<', '<gv', opts)
-keymap('v', '>', '>gv', opts)
-
--- Move text up and down
-keymap('n', '<A-j>', ':m .+1<CR>==', opts)
-keymap('n', '<A-k>', ':m .-2<CR>==', opts)
-keymap('v', '<A-j>', \":m '>+1<CR>gv=gv\", opts)
-keymap('v', '<A-k>', \":m '<-2<CR>gv=gv\", opts)
-
--- File explorer
-keymap('n', '<leader>e', ':Explore<CR>', opts)
-
--- Buffer navigation
-keymap('n', '<S-l>', ':bnext<CR>', opts)
-keymap('n', '<S-h>', ':bprevious<CR>', opts)
-
--- Colorscheme (will use default if theme not installed)
-pcall(vim.cmd, 'colorscheme {theme}')
-
--- Highlight on yank
-vim.api.nvim_create_autocmd('TextYankPost', {{
-  group = vim.api.nvim_create_augroup('highlight_yank', {{ clear = true }}),
-  callback = function()
-    vim.highlight.on_yank()
-  end,
-}})
-
--- Auto-format on save for specific filetypes
-vim.api.nvim_create_autocmd('BufWritePre', {{
-  pattern = {{ '*.lua', '*.py', '*.rs', '*.js', '*.ts' }},
-  callback = function()
-    vim.lsp.buf.format({{ async = false }})
-  end,
-}})
-
-print('Neovim configured successfully!')
-"}
+print('Neovim ready!')
+"}}

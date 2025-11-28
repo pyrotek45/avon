@@ -1,5 +1,6 @@
 # Vim Config with Basic Plugins
 # Simple plugin setup using vim-plug
+# Uses double-brace template {{" "}} so VimScript braces are literal
 
 let user = "coder" in
 let color_theme = "gruvbox" in
@@ -14,23 +15,23 @@ let plugins = [
 
 let plugin_declarations = map (\p concat "Plug '" (concat p "'")) plugins in
 
-@home/{user}/.vimrc {"
-" Vim Configuration with Plugins
-" Generated with Avon
+@home/{user}/.vimrc {{"
+\" Vim Configuration with Plugins
+\" Generated with Avon
 
-" Install vim-plug if not present
+\" Install vim-plug if not present
 if empty(glob('~/.vim/autoload/plug.vim'))
   silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
     \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
   autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
 endif
 
-" Plugin Section
+\" Plugin Section
 call plug#begin('~/.vim/plugged')
-{join plugin_declarations "\n"}
+{{join plugin_declarations "\n"}}
 call plug#end()
 
-" Basic Settings
+\" Basic Settings
 set number relativenumber
 set tabstop=4 shiftwidth=4 expandtab
 set ignorecase smartcase
@@ -38,33 +39,33 @@ set incsearch hlsearch
 syntax on
 filetype plugin indent on
 
-" Theme
+\" Theme
 set background=dark
-colorscheme {color_theme}
+colorscheme {{color_theme}}
 
-" Leader Key
-let mapleader = ","
+\" Leader Key
+let mapleader = \",\"
 
-" Essential Keybindings
+\" Essential Keybindings
 nnoremap <leader>w :w<CR>
 nnoremap <leader>q :q<CR>
 
-" NERDTree Configuration
+\" NERDTree Configuration
 nnoremap <leader>n :NERDTreeToggle<CR>
 nnoremap <leader>f :NERDTreeFind<CR>
 let NERDTreeShowHidden=1
 
-" FZF Configuration
+\" FZF Configuration
 nnoremap <leader>p :Files<CR>
 nnoremap <leader>b :Buffers<CR>
 nnoremap <leader>/ :Rg<CR>
 
-" Status Line
+\" Status Line
 set laststatus=2
 set statusline=%f\ %m%r%h%w
 set statusline+=%=
-set statusline+=\ [%{{&ff}}]
+set statusline+=\ [%{&ff}]
 set statusline+=\ %y
 set statusline+=\ %l:%c
 set statusline+=\ %p%%
-"}
+"}}

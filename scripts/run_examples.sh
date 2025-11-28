@@ -119,26 +119,8 @@ else
   echo "FAIL: features_demo produced no output"; fail=1
 fi
 
-echo "Test: deploy escape_hatch.av"
-if cargo run --quiet -- examples/escape_hatch.av --deploy --root "$root"; then
-  if [ -f "$root/single_demo.txt" ] && [ -f "$root/double_demo.txt" ]; then
-    # Verify single-brace template output: {{ should produce {
-    if grep -q "One brace escape: {" "$root/single_demo.txt" && grep -q "Three literal opens: {{{" "$root/single_demo.txt"; then
-      # Verify double-brace template output: {{ expr }} should work
-      if grep -q "Computed in double braces: 30" "$root/double_demo.txt"; then
-        echo "OK"
-      else
-        echo "FAIL: double-brace interpolation failed"; fail=1
-      fi
-    else
-      echo "FAIL: single-brace escape hatch output mismatch"; fail=1
-    fi
-  else
-    echo "FAIL: escape_hatch files not created"; fail=1
-  fi
-else
-  echo "FAIL: escape_hatch deploy failed"; fail=1
-fi
+# escape_hatch.av removed - escape hatch functionality deprecated
+
 if cargo run --quiet -- examples/complex_usage_1.av --deploy --root "$root"; then
   if [ -f "$root/tmp/complex_usage_1.txt" ]; then
     echo "OK"

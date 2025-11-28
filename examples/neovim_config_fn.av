@@ -1,11 +1,12 @@
 # Neovim Config Function Example
-# Demonstrates: function returning file template, named args with defaults, escape hatch for braces, conditional sections.
+# Demonstrates: function returning file template, named args with defaults, multi-brace templates for Lua braces, conditional sections.
 # Usage examples:
 #   avon deploy examples/neovim_config_fn.av -username alice
 #   avon deploy examples/neovim_config_fn.av -username bob -theme gruvbox -profile minimal -lsp false -treesitter false -telescope false -leader "," -tab 4
 # Boolean flags: pass true/false. Strings: pass raw value. Numbers: pass integer.
 # Required: username. Optional with defaults: theme, profile, lsp, treesitter, telescope, leader, tab.
 
+# Uses double-brace template {{" "}} so Lua braces are literal
 \username ? "user"
 \theme ? "tokyonight" 
 \profile ? "standard" 
@@ -13,87 +14,87 @@
 \treesitter ? "true"
 \telescope ? "true" 
 \leader ? "space" 
-\tab ? 2 @/nvim/init.lua {"
--- init.lua generated for {username}
--- Theme: {theme} | Profile: {profile}
--- LSP: {lsp} | Treesitter: {treesitter} | Telescope: {telescope}
+\tab ? 2 @/nvim/init.lua {{"
+-- init.lua generated for {{username}}
+-- Theme: {{theme}} | Profile: {{profile}}
+-- LSP: {{lsp}} | Treesitter: {{treesitter}} | Telescope: {{telescope}}
 
-vim.g.mapleader = '{leader}'
-vim.g.maplocalleader = '{leader}'
+vim.g.mapleader = '{{leader}}'
+vim.g.maplocalleader = '{{leader}}'
 
 vim.opt.number = true
 vim.opt.relativenumber = true
-vim.opt.tabstop = {tab}
-vim.opt.shiftwidth = {tab}
+vim.opt.tabstop = {{tab}}
+vim.opt.shiftwidth = {{tab}}
 vim.opt.expandtab = true
 vim.opt.termguicolors = true
 
 -- Plugin manager (lazy.nvim) bootstrap
 local lazypath = vim.fn.stdpath('data') .. '/lazy/lazy.nvim'
 if not vim.loop.fs_stat(lazypath) then
-  vim.fn.system({{
+  vim.fn.system({
     'git','clone','--filter=blob:none','https://github.com/folke/lazy.nvim.git','--branch=stable',lazypath
-  }})
+  })
 end
 vim.opt.rtp:prepend(lazypath)
 
 -- Build plugin list from profile
-local plugins = {{}}
-if '{profile}' == 'minimal' then
-  plugins = {{ '{theme}', 'nvim-lualine/lualine.nvim' }}
-elseif '{profile}' == 'standard' then
-  plugins = {{ '{theme}', 'nvim-lualine/lualine.nvim', 'nvim-tree/nvim-tree.lua', 'numToStr/Comment.nvim' }}
+local plugins = {}
+if '{{profile}}' == 'minimal' then
+  plugins = { '{{theme}}', 'nvim-lualine/lualine.nvim' }
+elseif '{{profile}}' == 'standard' then
+  plugins = { '{{theme}}', 'nvim-lualine/lualine.nvim', 'nvim-tree/nvim-tree.lua', 'numToStr/Comment.nvim' }
 else -- full
-  plugins = {{ '{theme}', 'nvim-lualine/lualine.nvim', 'nvim-tree/nvim-tree.lua', 'numToStr/Comment.nvim', 'lewis6991/gitsigns.nvim', 'folke/which-key.nvim', 'hrsh7th/nvim-cmp', 'L3MON4D3/LuaSnip' }}
+  plugins = { '{{theme}}', 'nvim-lualine/lualine.nvim', 'nvim-tree/nvim-tree.lua', 'numToStr/Comment.nvim', 'lewis6991/gitsigns.nvim', 'folke/which-key.nvim', 'hrsh7th/nvim-cmp', 'L3MON4D3/LuaSnip' }
 end
 
-if {telescope} then
+if {{telescope}} then
   table.insert(plugins, 'nvim-telescope/telescope.nvim')
 end
-if {treesitter} then
+if {{treesitter}} then
   table.insert(plugins, 'nvim-treesitter/nvim-treesitter')
 end
-if {lsp} then
+if {{lsp}} then
   table.insert(plugins, 'neovim/nvim-lspconfig')
 end
 
 require('lazy').setup(plugins)
 
 -- Apply theme
-pcall(vim.cmd, 'colorscheme {theme}')
+pcall(vim.cmd, 'colorscheme {{theme}}')
 
 -- Basic keymaps
 vim.keymap.set('n','<leader>w','<cmd>w<cr>')
 vim.keymap.set('n','<leader>q','<cmd>q<cr>')
 
 -- Profile conditionals
-if '{profile}' == 'full' then
+if '{{profile}}' == 'full' then
   vim.keymap.set('n','<leader>tt','<cmd>tabnew<cr>')
 end
 
 -- Telescope mappings (conditional)
-if {telescope} then
+if {{telescope}} then
   vim.keymap.set('n','<leader>ff','<cmd>Telescope find_files<cr>')
   vim.keymap.set('n','<leader>fg','<cmd>Telescope live_grep<cr>')
 end
 
 -- Treesitter config (conditional)
-if {treesitter} then
-  require('nvim-treesitter.configs').setup {{
-    highlight = {{ enable = true }},
-    indent = {{ enable = true }}
-  }}
+if {{treesitter}} then
+  require('nvim-treesitter.configs').setup {
+    highlight = { enable = true },
+    indent = { enable = true }
+  }
 end
 
 -- LSP config (conditional)
-if {lsp} then
+if {{lsp}} then
   local lspconfig = require('lspconfig')
-  for _, server in ipairs({{ 'lua_ls','pyright','tsserver' }}) do
-    lspconfig[server].setup {{}}
+  for _, server in ipairs({ 'lua_ls','pyright','tsserver' }) do
+    lspconfig[server].setup {}
   end
   vim.keymap.set('n','gd',vim.lsp.buf.definition)
   vim.keymap.set('n','K',vim.lsp.buf.hover)
 end
 
-print('Neovim config ready for {username}!')
-"}
+print('Neovim config ready for {{username}}!')
+"}}

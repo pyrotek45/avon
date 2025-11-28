@@ -1,6 +1,7 @@
 # Neovim Configuration Generator
 # Demonstrates: command-line parameter handling, conditional config sections, plugin management
 # Usage: avon eval neovim_config_gen.av -username "john" -theme "gruvbox" -lsp true -plugins "minimal"
+# Uses double-brace template {{" "}} so Lua braces are literal
 
 let username = "developer" in
 let theme = "catppuccin" in
@@ -47,19 +48,19 @@ let selected_plugins =
     else full_plugins in
 
 # Generate plugin spec for lazy.nvim
-let make_plugin_spec = \plugin concat "  {{ \"{plugin}\" }}," in
+let make_plugin_spec = \plugin {{"  { \"{{plugin}}\" },"}} in
 let plugin_specs = map make_plugin_spec selected_plugins in
 let plugins_block = join plugin_specs "\n" in
 
 # LSP configuration
-let lsp_config = if enable_lsp then "
+let lsp_config = if enable_lsp then {{"
 -- LSP Configuration
 local lspconfig = require('lspconfig')
 
 -- Setup common LSP servers
-local servers = {{ 'lua_ls', 'tsserver', 'pyright', 'rust_analyzer', 'gopls' }}
+local servers = { 'lua_ls', 'tsserver', 'pyright', 'rust_analyzer', 'gopls' }
 for _, server in ipairs(servers) do
-  lspconfig[server].setup{{}}
+  lspconfig[server].setup{}
 end
 
 -- LSP keymaps
@@ -67,47 +68,47 @@ vim.keymap.set('n', 'gd', vim.lsp.buf.definition)
 vim.keymap.set('n', 'K', vim.lsp.buf.hover)
 vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename)
 vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action)
-" else "-- LSP disabled" in
+"}} else "-- LSP disabled" in
 
 # Treesitter configuration
-let treesitter_config = if enable_treesitter then "
+let treesitter_config = if enable_treesitter then {{"
 -- Treesitter Configuration
-require('nvim-treesitter.configs').setup {{
-  ensure_installed = {{ 'lua', 'python', 'javascript', 'typescript', 'rust', 'go', 'json', 'yaml' }},
-  highlight = {{ enable = true }},
-  indent = {{ enable = true }},
-}}
-" else "-- Treesitter disabled" in
+require('nvim-treesitter.configs').setup {
+  ensure_installed = { 'lua', 'python', 'javascript', 'typescript', 'rust', 'go', 'json', 'yaml' },
+  highlight = { enable = true },
+  indent = { enable = true },
+}
+"}} else "-- Treesitter disabled" in
 
 # Telescope configuration
-let telescope_config = if enable_telescope then "
+let telescope_config = if enable_telescope then {{"
 -- Telescope Configuration
-require('telescope').setup{{}}
+require('telescope').setup{}
 
 -- Telescope keymaps
 vim.keymap.set('n', '<leader>ff', '<cmd>Telescope find_files<cr>')
 vim.keymap.set('n', '<leader>fg', '<cmd>Telescope live_grep<cr>')
 vim.keymap.set('n', '<leader>fb', '<cmd>Telescope buffers<cr>')
 vim.keymap.set('n', '<leader>fh', '<cmd>Telescope help_tags<cr>')
-" else "-- Telescope disabled" in
+"}} else "-- Telescope disabled" in
 
-# Generate the complete init.lua
-@/nvim/init.lua {"
+# Generate the complete init.lua - using double-brace template
+@/nvim/init.lua {{"
 -- Neovim Configuration
--- Generated for user: {username}
--- Theme: {theme}
--- Plugin Profile: {plugin_profile}
+-- Generated for user: {{username}}
+-- Theme: {{theme}}
+-- Plugin Profile: {{plugin_profile}}
 -- Generated on: $(date)
 
 -- Basic Settings
-vim.g.mapleader = '{leader_key}'
-vim.g.maplocalleader = '{leader_key}'
+vim.g.mapleader = '{{leader_key}}'
+vim.g.maplocalleader = '{{leader_key}}'
 
 -- Editor Settings
-vim.opt.number = {show_line_numbers}
-vim.opt.relativenumber = {show_line_numbers}
-vim.opt.tabstop = {tab_width}
-vim.opt.shiftwidth = {tab_width}
+vim.opt.number = {{show_line_numbers}}
+vim.opt.relativenumber = {{show_line_numbers}}
+vim.opt.tabstop = {{tab_width}}
+vim.opt.shiftwidth = {{tab_width}}
 vim.opt.expandtab = true
 vim.opt.smartindent = true
 vim.opt.wrap = false
@@ -123,53 +124,53 @@ vim.opt.updatetime = 50
 -- Plugin Manager Setup (lazy.nvim)
 local lazypath = vim.fn.stdpath('data') .. '/lazy/lazy.nvim'
 if not vim.loop.fs_stat(lazypath) then
-  vim.fn.system({{
+  vim.fn.system({
     'git',
     'clone',
     '--filter=blob:none',
     'https://github.com/folke/lazy.nvim.git',
     '--branch=stable',
     lazypath,
-  }})
+  })
 end
 vim.opt.rtp:prepend(lazypath)
 
 -- Plugin Specifications
-require('lazy').setup({{
-{plugins_block}
+require('lazy').setup({
+{{plugins_block}}
   
   -- Theme
-  {{
-    '{theme}',
+  {
+    '{{theme}}',
     config = function()
-      vim.cmd('colorscheme {theme}')
+      vim.cmd('colorscheme {{theme}}')
     end
-  }},
+  },
   
   -- File Explorer
-  {{
+  {
     'nvim-tree/nvim-tree.lua',
     config = function()
-      require('nvim-tree').setup{{}}
+      require('nvim-tree').setup{}
       vim.keymap.set('n', '<leader>e', '<cmd>NvimTreeToggle<cr>')
     end
-  }},
+  },
   
   -- Status Line
-  {{
+  {
     'nvim-lualine/lualine.nvim',
     config = function()
-      require('lualine').setup{{
-        options = {{ theme = '{theme}' }}
-      }}
+      require('lualine').setup{
+        options = { theme = '{{theme}}' }
+      }
     end
-  }},
-}})
+  },
+})
 
 -- Basic Keymaps
-vim.keymap.set('n', '<leader>w', '<cmd>w<cr>', {{ desc = 'Save file' }})
-vim.keymap.set('n', '<leader>q', '<cmd>q<cr>', {{ desc = 'Quit' }})
-vim.keymap.set('n', '<leader>h', '<cmd>nohlsearch<cr>', {{ desc = 'Clear highlights' }})
+vim.keymap.set('n', '<leader>w', '<cmd>w<cr>', { desc = 'Save file' })
+vim.keymap.set('n', '<leader>q', '<cmd>q<cr>', { desc = 'Quit' })
+vim.keymap.set('n', '<leader>h', '<cmd>nohlsearch<cr>', { desc = 'Clear highlights' })
 
 -- Window navigation
 vim.keymap.set('n', '<C-h>', '<C-w>h')
@@ -182,33 +183,33 @@ vim.keymap.set('n', '<leader>bn', '<cmd>bnext<cr>')
 vim.keymap.set('n', '<leader>bp', '<cmd>bprevious<cr>')
 vim.keymap.set('n', '<leader>bd', '<cmd>bdelete<cr>')
 
-{lsp_config}
+{{lsp_config}}
 
-{treesitter_config}
+{{treesitter_config}}
 
-{telescope_config}
+{{telescope_config}}
 
--- User-specific settings for {username}
+-- User-specific settings for {{username}}
 -- Add your custom configurations below:
 
 -- Auto-save on focus lost
-vim.api.nvim_create_autocmd('FocusLost', {{
+vim.api.nvim_create_autocmd('FocusLost', {
   pattern = '*',
   command = 'silent! wa'
-}})
+})
 
 -- Highlight on yank
-vim.api.nvim_create_autocmd('TextYankPost', {{
+vim.api.nvim_create_autocmd('TextYankPost', {
   callback = function()
-    vim.highlight.on_yank({{ timeout = 200 }})
+    vim.highlight.on_yank({ timeout = 200 })
   end
-}})
+})
 
 -- Remove trailing whitespace on save
-vim.api.nvim_create_autocmd('BufWritePre', {{
+vim.api.nvim_create_autocmd('BufWritePre', {
   pattern = '*',
   command = ':%s/\\s\\+$//e'
-}})
+})
 
-print('Welcome to Neovim, {username}!')
-"}
+print('Welcome to Neovim, {{username}}!')
+"}}

@@ -1,12 +1,13 @@
 # Test 5: Curly braces in code/script blocks (JavaScript)
+# Uses double-brace template {{" "}} so single braces are literal
 let name = "test" in
 let value = "123" in
 
-@/test5_script.js {"
-function test() {{
-  const data = {{ key: "{name}" }};
-  if (data.key === "{value}") {{
+@/test5_script.js {{"
+function test() {
+  const data = { key: "{{name}}" };
+  if (data.key === "{{value}}") {
     console.log("match");
-  }}
-}}
-"}
+  }
+}
+"}}

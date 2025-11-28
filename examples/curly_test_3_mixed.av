@@ -1,9 +1,10 @@
 # Test 3: Mixed interpolation and literal braces
+# Uses double-brace template {{" "}} so single braces are literal
 let name = "test" in
 
-@/test3_mixed.txt {"
-Config {{
-  item: {name}
-  data: {{ nested }}
-}}
-"}
+@/test3_mixed.txt {{"
+Config {
+  item: {{name}}
+  data: { nested }
+}
+"}}

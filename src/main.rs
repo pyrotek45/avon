@@ -1057,24 +1057,25 @@ mod tests {
 
     #[test]
     fn test_single_brace_template_with_literal_braces() {
-        // In single-brace template {" "}, {{ produces {, }} produces }
+        // In single-brace template {" "}, braces other than interpolation delimiters are literal
+        // After escape hatch removal, {{ and }} are preserved as-is
         let prog = r#"{"literal {{ and }} here"}"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        assert_eq!(v.to_string(&prog), "literal { and } here");
+        assert_eq!(v.to_string(&prog), "literal {{ and }} here");
     }
 
     #[test]
     fn test_single_brace_template_with_three_braces() {
-        // In single-brace template, {{{ produces {{
+        // In single-brace template, {{{ stays as {{{ (no escape hatch)
         let prog = r#"{"pattern {{{version}}}"}"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        assert_eq!(v.to_string(&prog), "pattern {{version}}");
+        assert_eq!(v.to_string(&prog), "pattern {{{version}}}");
     }
 
     #[test]
@@ -1101,8 +1102,8 @@ mod tests {
 
     #[test]
     fn test_github_actions_style_dollar_braces() {
-        // Simulates ${{ github.ref }} in single-brace template
-        let prog = r#"{"workflow: ${{{ github.ref }}}"}"#.to_string();
+        // Simulates ${{ github.ref }} - use triple-brace template for literal double braces
+        let prog = r#"{{{"workflow: ${{ github.ref }}"}}}"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -1112,8 +1113,8 @@ mod tests {
 
     #[test]
     fn test_javascript_object_literal_in_template() {
-        // JavaScript object { key: value } should be preserved with escaping
-        let prog = r#"{"script: func(){{ return {{ key: 'val' }}; }}"}"#.to_string();
+        // JavaScript object { key: value } - use double-brace template for literal single braces
+        let prog = r#"{{"script: func(){ return { key: 'val' }; }"}}"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -1126,8 +1127,8 @@ mod tests {
 
     #[test]
     fn test_nested_json_with_escaped_braces() {
-        // Nested JSON objects with proper brace escaping
-        let prog = r#"{"{{ "outer": {{ "inner": {{ "key": "value" }} }} }}"}"#.to_string();
+        // Nested JSON objects - use double-brace template for literal braces
+        let prog = r#"{{"{ "outer": { "inner": { "key": "value" } } }"}}"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -1150,9 +1151,9 @@ mod tests {
     }
 
     #[test]
-    fn test_template_with_mixed_interpolation_and_escapes() {
-        // Mix of interpolation and literal braces
-        let prog = r#"let x = "VAL" in {"start {{ literal {x} interpolated }} end"}"#.to_string();
+    fn test_template_with_mixed_interpolation_and_braces() {
+        // Mix of interpolation and literal text - use double-brace for literal single braces
+        let prog = r#"let x = "VAL" in {{"start { literal {{x}} interpolated } end"}}"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -1161,17 +1162,17 @@ mod tests {
     }
 
     #[test]
-    fn test_complex_curly_brace_escaping_patterns() {
-        // Test various brace patterns in single template
-        let prog = r#"{"one: {{, two: {{{, three: {{{{, four: {{{{{"}"#.to_string();
+    fn test_brace_patterns_at_different_levels() {
+        // Test that single-brace template preserves multi-brace sequences
+        let prog = r#"{"one: {{, two: {{{, three: {{{{, four: {{{{{"}}"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
-        // {{->{ {{{->{{ {{{{->{{{ {{{{{->{{{{
+        // No escape hatch - all braces preserved as-is
         assert_eq!(
             v.to_string(&prog),
-            "one: {, two: {{, three: {{{, four: {{{{"
+            "one: {{, two: {{{, three: {{{{, four: {{{{{"
         );
     }
 

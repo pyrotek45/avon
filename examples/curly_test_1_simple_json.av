@@ -1,10 +1,11 @@
-# Test 1: Simple JSON object with escaped braces
+# Test 1: Simple JSON object with literal braces
+# Uses double-brace template {{" "}} so single braces are literal
 let name = "test" in
 let value = "123" in
 
-@/test1_json.txt {"
-{{
-  "name": "{name}",
-  "value": "{value}"
-}}
-"}
+@/test1_json.txt {{"
+{
+  "name": "{{name}}",
+  "value": "{{value}}"
+}
+"}}

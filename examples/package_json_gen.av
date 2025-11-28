@@ -1,5 +1,5 @@
 # package.json Generator
-# Demonstrates: JSON generation, nested data structures, filtering
+# Demonstrates: JSON generation with multi-brace templates, nested data structures, filtering
 
 let app_name = "awesome-app" in
 let version = "1.0.0" in
@@ -29,41 +29,42 @@ let all_dev_deps = lint_deps + (if include_testing then test_deps else []) in
 let format_dep = \d concat "    \"" (concat d "\": \"^1.0.0\"") in
 let dep_lines = map format_dep all_deps in
 
-@/package.json {"
-{{
-  "name": "{app_name}",
-  "version": "{version}",
-  "description": "{description}",
-  "author": "{author}",
-  "license": "{license}",
+# Uses double-brace template {{" "}} so JSON braces are literal
+@/package.json {{"
+{
+  "name": "{{app_name}}",
+  "version": "{{version}}",
+  "description": "{{description}}",
+  "author": "{{author}}",
+  "license": "{{license}}",
   "type": "module",
-  "engines": {{
-    "node": "{node_version}"
-  }},
-  "scripts": {{
+  "engines": {
+    "node": "{{node_version}}"
+  },
+  "scripts": {
     "dev": "node --loader tsx src/index.ts",
-    "build": {if include_typescript then "\"tsc\"" else "\"echo 'No build step needed'\""},
+    "build": {{if include_typescript then "\"tsc\"" else "\"echo 'No build step needed'\""}},
     "start": "node dist/index.js",
-    {if include_testing then "\"test\": \"vitest\"," else ""}
-    {if include_linting then "\"lint\": \"eslint src --ext .ts\"," else ""}
+    {{if include_testing then "\"test\": \"vitest\"," else ""}}
+    {{if include_linting then "\"lint\": \"eslint src --ext .ts\"," else ""}}
     "format": "prettier --write \"src/**/*.ts\""
-  }},
-  "dependencies": {{
-    {join dep_lines ",\n"}
-  }},
-  "devDependencies": {{
+  },
+  "dependencies": {
+    {{join dep_lines ",\n"}}
+  },
+  "devDependencies": {
     "tsx": "^4.0.0",
-    {if include_typescript then "\"@types/express\": \"^4.17.0\"," else ""}
-    {if include_testing then "\"vitest\": \"^1.0.0\"," else ""}
-    {if include_linting then "\"eslint\": \"^8.0.0\",\n    \"prettier\": \"^3.0.0\"," else ""}
+    {{if include_typescript then "\"@types/express\": \"^4.17.0\"," else ""}}
+    {{if include_testing then "\"vitest\": \"^1.0.0\"," else ""}}
+    {{if include_linting then "\"eslint\": \"^8.0.0\",\n    \"prettier\": \"^3.0.0\"," else ""}}
     "nodemon": "^3.0.0"
-  }},
+  },
   "keywords": [
     "awesome",
     "app",
     "typescript",
-    {if include_react then "\"react\"," else ""}
+    {{if include_react then "\"react\"," else ""}}
     "modern"
   ]
-}}
-"}
+}
+"}}

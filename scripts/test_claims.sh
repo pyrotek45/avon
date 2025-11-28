@@ -245,6 +245,95 @@ test_error "assert false errors" "assert false 42" "assertion"
 echo ""
 
 echo ""
+echo "=== Template Syntax Claims (TEMPLATE_SYNTAX.md) ==="
+
+# Helper for file-based tests (avoids shell escaping issues)
+test_file_claim() {
+    local name="$1"
+    local code="$2"
+    local expected="$3"
+    
+    echo "$code" > /tmp/avon_claim_test.av
+    result=$($AVON eval /tmp/avon_claim_test.av 2>&1)
+    
+    if [ "$result" = "$expected" ]; then
+        echo "✓ $name"
+        ((PASSED++))
+    else
+        echo "✗ $name"
+        echo "  Expected: $expected"
+        echo "  Got: $result"
+        ((FAILED++))
+    fi
+}
+
+echo "--- Single-Brace Delimiter ---"
+test_file_claim "basic template" '{"Hello, world!"}' "Hello, world!"
+test_file_claim "single brace interpolation" 'let x = 5 in {"Value: {x}"}' "Value: 5"
+test_file_claim "expression interpolation" 'let x = 5 in {"Result: {x * 2}"}' "Result: 10"
+
+echo "--- Double-Brace Delimiter ---"
+test_file_claim "double brace interpolation" 'let x = 5 in {{"Value: {{x}}"}}' "Value: 5"
+test_file_claim "single braces literal in double" '{{"literal {braces} here"}}' "literal {braces} here"
+test_file_claim "double brace mixed" 'let name = "test" in {{"Hello {{name}}, use {var}"}}' "Hello test, use {var}"
+
+echo "--- Triple-Brace Delimiter ---"
+test_file_claim "triple brace interpolation" 'let x = 5 in {{{"Value: {{{x}}}"}}}' "Value: 5"
+test_file_claim "single braces literal in triple" '{{{"use {x}"}}}' "use {x}"
+test_file_claim "double braces literal in triple" '{{{"use {{x}}"}}}' "use {{x}}"
+test_file_claim "triple brace mixed" 'let v = 1 in {{{"val={{{v}}}, {{lit}}, {also}"}}}' "val=1, {{lit}}, {also}"
+
+echo "--- Braces in Single-Brace Templates (no escape hatch) ---"
+# After removing escape hatch, braces that don't match interpolation count stay literal
+test_file_claim "double braces stay literal" '{"Hello {{ world"}' "Hello {{ world"
+test_file_claim "double close braces stay literal" '{"Hello }} world"}' "Hello }} world"
+test_file_claim "both double braces stay literal" '{"Set: {{ x }}"}' "Set: {{ x }}"
+
+echo "--- Practical Use Cases ---"
+# JSON generation
+cat > /tmp/avon_json.av << 'AVONEOF'
+let name = "Alice" in
+let age = 30 in
+{{"{"name": "{{name}}", "age": {{age}}}"}}
+AVONEOF
+result=$($AVON eval /tmp/avon_json.av 2>&1)
+expected='{"name": "Alice", "age": 30}'
+if [ "$result" = "$expected" ]; then
+    echo "✓ JSON generation"
+    ((PASSED++))
+else
+    echo "✗ JSON generation"
+    echo "  Expected: $expected"
+    echo "  Got: $result"
+    ((FAILED++))
+fi
+
+# Shell/Bash generation - use helper function for shell variable syntax
+cat > /tmp/avon_shell.av << 'AVONEOF'
+let shell_var = \v "$" + "{" + v + "}" in
+let var = "PATH" in
+"echo " + (shell_var var)
+AVONEOF
+result=$($AVON eval /tmp/avon_shell.av 2>&1)
+expected='echo ${PATH}'
+if [ "$result" = "$expected" ]; then
+    echo "✓ Shell variable generation"
+    ((PASSED++))
+else
+    echo "✗ Shell variable generation"
+    echo "  Expected: $expected"
+    echo "  Got: $result"
+    ((FAILED++))
+fi
+
+# JSX curly braces
+test_file_claim "JSX literal braces" 'let value = "hello" in {{"<div>{{value}} and {props}</div>"}}' "<div>hello and {props}</div>"
+
+# Template nesting at different levels
+test_file_claim "level 1 nesting" 'let inner = {"world"} in {"Hello {inner}!"}' "Hello world!"
+test_file_claim "level 2 nesting" 'let inner = {{"val"}} in {{"got {{inner}}"}}' "got val"
+
+echo ""
 echo "=== Summary ==="
 echo "Passed: $PASSED"
 echo "Failed: $FAILED"

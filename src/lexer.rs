@@ -188,18 +188,8 @@ pub fn chunk(stream: &mut Peekable<Chars<'_>>, line: &mut usize) -> Result<Token
                 }
                 chunks.push(Chunk::Expr(expr));
                 continue;
-            } else if brace_count == open_count + 1 {
-                // Escape hatch: one literal '{'
-                cur.push('{');
-                continue;
-            } else if brace_count > open_count + 1 {
-                // For K > open_count+1 output (K - open_count) literal '{' characters.
-                for _ in 0..(brace_count - open_count) {
-                    cur.push('{');
-                }
-                continue;
             } else {
-                // brace_count < open_count (should not normally happen) -> treat all as literal
+                // brace_count != open_count: treat all collected braces as literal
                 for _ in 0..brace_count {
                     cur.push('{');
                 }
@@ -208,30 +198,17 @@ pub fn chunk(stream: &mut Peekable<Chars<'_>>, line: &mut usize) -> Result<Token
         }
 
         if ch == '}' {
-            // Count consecutive closing braces for escape hatch in literals.
+            // Count consecutive closing braces.
             let mut brace_count = 1;
             while let Some('}') = stream.peek().cloned() {
                 stream.next();
                 brace_count += 1;
             }
-            if brace_count == open_count + 1 {
+            // All closing braces are literal (no escape hatch)
+            for _ in 0..brace_count {
                 cur.push('}');
-                continue;
-            } else if brace_count > open_count + 1 {
-                for _ in 0..(brace_count - open_count) {
-                    cur.push('}');
-                }
-                continue;
-            } else if open_count == 1 && brace_count == 2 {
-                // Legacy special-case (covered above, but retained for clarity)
-                cur.push('}');
-                continue;
-            } else {
-                for _ in 0..brace_count {
-                    cur.push('}');
-                }
-                continue;
             }
+            continue;
         }
 
         cur.push(ch);

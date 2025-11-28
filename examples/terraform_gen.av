@@ -1,5 +1,5 @@
 # Terraform Infrastructure Code Generator
-# Demonstrates: escape hatch for HCL, multi-file outputs, environment variables
+# Demonstrates: multi-brace delimiters for HCL, multi-file outputs, environment variables
 
 let environment = "production" in
 let region = "us-east-1" in

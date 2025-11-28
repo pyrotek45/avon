@@ -410,7 +410,7 @@ to_int "5" + 10
 
 **Cause:** You opened a template with `{{"` but tried to close it with `}"` or used interpolation `{...}` inside a double-brace template without double braces.
 
-**Fix:** Ensure your interpolation delimiters match your template definition (see `tutorial/TUTORIAL.md` for the full Escape Hatch guide).
+**Fix:** Ensure your interpolation delimiters match your template definition. In a double-brace template `{{" "}}`, use `{{expr}}` for interpolation. In a triple-brace template `{{{" "}}}`, use `{{{expr}}}`. See `tutorial/TEMPLATE_SYNTAX.md` for the full guide.
 
 ---
 

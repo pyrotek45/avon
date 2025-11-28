@@ -71,7 +71,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
    - Indentation and Dedent
    - Interpolating Lists
    - String vs Template (escape sequences)
-   - Template Escape Hatch (variable brace delimiters)
+   - Multi-Brace Delimiters for Literal Braces
      - Single-brace templates
      - Double-brace templates
      - Triple-brace templates
@@ -172,14 +172,14 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Example 5: Kubernetes Manifests
     - Example 6: GitHub Actions Workflow
     - Example 7: Package.json Generator
-    - Example 8: Escape Hatch Demonstration
+    - Example 8: Multi-Brace Template Demo
 
 14. **[Troubleshooting](#troubleshooting)**
     - Common Errors
       - "expected '\"' after opening braces"
       - "unexpected EOF"
       - "undefined identifier"
-    - Escape Hatch Troubleshooting
+    - Template Brace Troubleshooting
       - Literal braces not showing
       - Lots of braces getting confusing
       - Interpolation not working
@@ -1643,7 +1643,7 @@ upper t
 
 This makes templates much more powerful and convenient to use. You can pass templates directly to any string function without explicit conversion.
 
-### Template Escape Hatch: Variable Brace Delimiters
+### Multi-Brace Delimiters for Literal Braces
 
 Avon templates use a **variable-brace delimiter system** that lets you choose how many opening braces to use. This powerful feature lets you generate code and config files cleanly, even when they contain many curly braces.
 
@@ -1656,12 +1656,12 @@ When generating code that uses braces (Lua, JSON, Terraform, HCL, Python, etc.),
 Avon solves this by letting you choose how many braces delimit the template:
 
 ```avon
-{" ... "}        # Single-brace: interpolate with { }, escape literals with {{
+{" ... "}        # Single-brace: interpolate with { }
 {{"  ... "}}     # Double-brace: interpolate with {{ }}, single braces are literal
-{{{" ... "}}}    # Triple-brace: interpolate with {{{ }}}, double braces are literal
+{{{" ... "}}}    # Triple-brace: interpolate with {{{ }}}, single and double braces are literal
 ```
 
-This way, you choose the delimiter that matches your content's brace density, minimizing escaping.
+This way, you choose the delimiter that matches your content's brace density, avoiding escaping entirely.
 
 #### How the System Works
 
@@ -1669,26 +1669,24 @@ This way, you choose the delimiter that matches your content's brace density, mi
 
 ```avon
 {"Value: { 1 + 2 }"}              # Single-brace interpolation: { }
-{{"Value: {{ 1 + 2 }}"}           # Double-brace interpolation: {{ }}
-{{{" Value: {{{ 1 + 2 }}} "}}}     # Triple-brace interpolation: {{{ }}}
+{{"Value: {{ 1 + 2 }}"}}          # Double-brace interpolation: {{ }}
+{{{"Value: {{{ 1 + 2 }}}"}}}      # Triple-brace interpolation: {{{ }}}
 ```
 
-**Literal braces** are created by using more braces than the delimiter requires. The output has (k - open_count) braces:
+**Literal braces** are any braces with fewer than the delimiter count:
 
-| Delimiter | To output `{` | To output `{{` | To output `}` | To output `}}` |
-|-----------|---------------|----------------|---------------|----------------|
-| `{" "}` | `{{` | `{{{{` | `}}` | `}}}}` |
-| `{{"  "}}` | `{{{` | `{{{{` | `}}}` | `}}}}` |
-| `{{{" "}}}` | `{{{{` | `{{{{{` | `}}}}` | `}}}}}` |
+| Delimiter | Interpolate with | Literal braces |
+|-----------|------------------|----------------|
+| `{" "}` | `{x}` | (none) |
+| `{{" "}}` | `{{x}}` | `{` `}` |
+| `{{{" "}}}` | `{{{x}}}` | `{` `{{` `}` `}}` |
 
 #### Single-Brace Templates
 
-Use when your output has **few or no literal braces**:
+Use when your output has **no literal braces**:
 
 ```avon
 {"Value: { 1 + 2 }"}       # Output: Value: 3
-{"Literal open: {{"}       # Output: Literal open: {
-{"Literal close: }}"}      # Output: Literal close: }
 ```
 
 **Example: Simple YAML config**
@@ -1702,7 +1700,7 @@ app:
 
 #### Double-Brace Templates
 
-Use when your output has **many literal braces** (JSON, HCL, Terraform, Lua dicts, etc.):
+Use when your output has **single braces** (JSON, CSS, Lua, Nginx, etc.):
 
 ```avon
 @config.lua {{"
@@ -1713,7 +1711,7 @@ Use when your output has **many literal braces** (JSON, HCL, Terraform, Lua dict
 "}}
 ```
 
-**Rule:** In double-brace templates, single braces are literal (no escaping needed):
+**Rule:** In double-brace templates, single braces are literal:
 
 ```avon
 @output.json {{"
@@ -1726,22 +1724,23 @@ Use when your output has **many literal braces** (JSON, HCL, Terraform, Lua dict
 "}}
 ```
 
-#### Example: Generating Lua Code
+#### Triple-Brace Templates
 
-With single-brace, you must escape braces:
+Use when your output has **double braces** (GitHub Actions, Mustache templates, etc.):
 
 ```avon
-@config.lua {"
-    local config = {{
-      name = "myapp",
-      debug = true
-    }}
-
-    function init()
-      return config
-    end
-"}
+@workflow.yml {{{"
+    name: CI
+    env:
+      VAR: ${{ github.repository }}
+    jobs:
+      build:
+        steps:
+          - run: echo "Value is {{{value}}}"
+"}}}
 ```
+
+#### Example: Generating Lua Code
 
 With double-brace, braces are literal:
 
@@ -1758,21 +1757,19 @@ With double-brace, braces are literal:
 "}}
 ```
 
-#### Strategic Choice: Brace Density
+#### Strategic Choice: Match Your Content
 
-Choose your template delimiter based on how many braces are in your output:
+Choose your template delimiter based on what braces appear in your output:
 
-| Output Type | Delimiter | Reason |
-|-------------|-----------|--------|
-| YAML, INI, simple configs | `{" "}` | Few braces, no escaping needed |
-| Lua, shell scripts | `{" "}` | Occasional braces, light escaping |
-| JSON, HCL, Terraform | `{{"  "}}` | Many braces, double-brace is cleaner |
-| Python code | `{{"  "}}` or higher | Dict literals and f-strings require clean syntax |
-| Extreme cases | `{{{" "}}}` | Custom DSLs with heavy brace syntax (rare) |
+| Output Type | Delimiter | Why |
+|-------------|-----------|-----|
+| Plain text, YAML | `{" "}` | No braces needed |
+| JSON, CSS, Lua, Nginx | `{{" "}}` | Single braces are literal |
+| GitHub Actions, Mustache | `{{{" "}}}` | Double braces are literal |
 
-The key insight: **choose the delimiter that lets your template stay readable**.
+The key insight: **level up your delimiter to make lower-level braces literal**.
 
-See `examples/escape_hatch.av` for comprehensive demonstrations of all delimiter levels.
+See `tutorial/TEMPLATE_SYNTAX.md` for comprehensive documentation of the template system.
 
 ### Complex Interpolations
 
@@ -3290,23 +3287,23 @@ See `examples/github_actions_gen.av`. Demonstrates:
 - Conditional job configuration
 - Matrix builds and multi-file generation
 - Secrets and environment variable handling
-- Complex nested YAML structures
+- Complex nested YAML structures using triple-brace templates
 
 ### Example 7: Package.json Generator
 
 See `examples/package_json_gen.av`. Shows:
-- JSON generation from Avon code
+- JSON generation from Avon code using double-brace templates
 - Conditional dependency lists
 - NPM script generation
 - Dynamic package configuration
 
-### Example 8: Escape Hatch Demonstration
+### Example 8: Multi-Brace Template Demo
 
-See `examples/escape_hatch.av`. Comprehensive example of the template escape hatch:
-- Single-brace templates: `{" ... "}` with `{{ }}` for literal braces
-- Double-brace templates: `{{" ... "}}` with `{{{ }}}` for literal braces
-- Interpolation and literal brace sequences side-by-side
-- Use this as a reference when generating code with lots of braces
+See `examples/nginx_gen.av` or `examples/neovim_config.av`. These demonstrate:
+- Double-brace templates `{{" "}}` for configs with literal braces
+- Single braces are literal (no escaping needed)
+- `{{expr}}` for interpolation within double-brace templates
+- Use this pattern when generating JSON, Lua, Nginx, CSS, etc.
 
 ---
 
@@ -3325,46 +3322,46 @@ You have an unclosed expression, list, or template. Check your brackets and brac
 **"undefined identifier"**  
 You referenced a variable that doesn't exist. Check spelling and make sure it's in scope (within a `let` binding or function parameter).
 
-### Escape Hatch Troubleshooting
+### Template Brace Troubleshooting
 
 **Problem:** My literal braces aren't showing up.
 
-**Solution:** Remember the rule: use one MORE brace than the template's opening count to get a literal brace.
+**Solution:** Level up your delimiter. Use double-brace `{{" "}}` instead of single-brace `{" "}` to make single braces literal.
 
 ```avon
 # Wrong (in a single-brace template, { starts interpolation)
 @f.txt {"name: {"}    # Tries to interpolate {, expects closing }
 
-# Correct (use {{ to escape)
-@f.txt {"name: {{"}   # Outputs: name: {
+# Correct (use double-brace template)
+@f.txt {{"name: {"}}  # Outputs: name: {
 ```
 
 **Problem:** I have lots of braces and it's getting confusing.
 
-**Solution:** Use a double-brace template to reduce brace nesting. When in doubt, add more braces:
+**Solution:** Use double or triple-brace templates so fewer braces require special handling:
 
 ```avon
-# Single-brace (awkward with 3+ braces)
-@f.txt {"obj: {{{x}}}}"}   # Hard to count!
+# Single-brace (can't have literal braces easily)
+@f.txt {"value: {x}"}
 
-# Double-brace (clearer)
-@f.txt {{"obj: {{{x}}}}"}}  # Easier to read
+# Double-brace (single braces are literal)
+@f.txt {{"obj: {value: {{x}}}}"}}  # Much clearer
 ```
 
 **Problem:** Interpolation not working as expected.
 
-**Solution:** Verify you're using the correct brace count:
-- Single-brace template: use `{ expr }` for interpolation
-- Double-brace template: use `{{ expr }}` for interpolation
+**Solution:** Verify you're using the correct brace count. Interpolation uses the same number of braces as the delimiter:
+- Single-brace template `{" "}`: use `{ expr }` for interpolation
+- Double-brace template `{{" "}}`: use `{{ expr }}` for interpolation
+- Triple-brace template `{{{" "}}}`: use `{{{ expr }}}` for interpolation
 
 ```avon
 # Single-brace template
-@f.txt {"Result: { 5 + 5 }"}     # Works
-@f.txt {"Result: {{ 5 + 5 }}"}   # No interpolation, just literals
+@f.txt {"Result: { 5 + 5 }"}     # Works, outputs: Result: 10
 
-# Double-brace template
-@f.txt {{"Result: { 5 + 5 }"}}   # No interpolation
-@f.txt {{"Result: {{ 5 + 5 }}"}} # Works
+# Double-brace template  
+@f.txt {{"Result: {{ 5 + 5 }}"}} # Works, outputs: Result: 10
+@f.txt {{"Result: { 5 + 5 }"}}   # Literal braces, outputs: Result: { 5 + 5 }
 ```
 
 ### Debugging Tips
@@ -3386,10 +3383,10 @@ You referenced a variable that doesn't exist. Check spelling and make sure it's 
    avon eval program.av  # Shows what will be generated
    ```
 
-4. **Isolate escape hatch issues:** Test brace escaping independently:
+4. **Test template braces:** When in doubt, test your template syntax:
    ```bash
-   avon run '@t.txt {"{{ {{{{ }}}}"}' 
-   # Outputs: { {{{ }}}
+   avon run '{{"Value: {{5}} and {literal}"}}' 
+   # Outputs: Value: 5 and {literal}
    ```
 
 ---
