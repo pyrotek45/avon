@@ -1232,6 +1232,15 @@ fn eval_with_depth(
             }
         }
         Expr::Ident(ident, line) => {
+            // Underscore cannot be used as a variable - it's only for discarding values
+            if ident == "_" {
+                return Err(EvalError::new(
+                    "underscore '_' cannot be used as a variable - it's only for discarding values in let bindings".to_string(),
+                    Some("use a named variable".to_string()),
+                    Some("_".to_string()),
+                    line,
+                ));
+            }
             if let Some(value) = symbols.get(&ident) {
                 Ok(value.clone())
             } else {

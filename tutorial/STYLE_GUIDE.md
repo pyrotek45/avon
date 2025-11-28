@@ -515,21 +515,33 @@ Avon automatically converts templates to strings when used with string functions
 
 **Preferred:**
 ```avon
+let template = "Hello <!-- title -->" in
 let title = {"My Site"} in
 let html = replace template "<!-- title -->" title in  # Template auto-converts
 ```
 
 **Avoid:**
 ```avon
+let template = "Hello <!-- title -->" in
 let title = {"My Site"} in
-let html = replace template "<!-- title -->" (to_string title) in  # Unnecessary
+let html = replace template "<!-- title -->" (to_string title) in  # Unnecessary - replace auto-converts templates
 ```
 
-**String functions that accept templates:**
-- `concat`, `upper`, `lower`, `trim`, `split`, `join`, `replace`
-- `contains`, `starts_with`, `ends_with`, `repeat`
-- `pad_left`, `pad_right`, `indent`
-- All string predicate functions (`is_digit`, `is_alpha`, etc.)
+**String functions that accept templates (auto-convert to string):**
+- `concat` - concatenates strings/templates
+- `upper`, `lower`, `trim` - case and whitespace operations
+- `split`, `join`, `replace` - string manipulation
+- `contains`, `starts_with`, `ends_with` - string predicates
+- `repeat`, `pad_left`, `pad_right`, `indent` - formatting
+- All string predicate functions (`is_digit`, `is_alpha`, `is_alphanumeric`, etc.)
+
+**Example showing auto-conversion:**
+```avon
+let title = {"My Site"} in
+let header = concat "<h1>" title "</h1>" in  # title auto-converts, no to_string needed
+let upper_title = upper title in  # Also auto-converts
+header
+```
 
 ## Pipe Operator
 

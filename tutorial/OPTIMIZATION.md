@@ -26,8 +26,8 @@ Let bindings modify the symbol table in place without cloning:
 
 ```rust
 symbols.insert(ident, value);           // Add binding
-let result = eval(body, symbols);       // Evaluate with binding available
-symbols.remove(&ident);                 // Remove binding when done
+let result = eval(body, symbols);       // Evaluate expression after 'in' with binding available
+symbols.remove(&ident);                 // Remove binding after expression is evaluated
 ```
 
 This approach:
@@ -35,7 +35,9 @@ This approach:
 - Avoids cloning the symbol table for each let binding
 - Maintains proper lexical scoping through add/remove sequencing
 - Uses a single mutable reference to the symbol table during evaluation
-- Properly restores scope when let bindings end
+- Variables are removed immediately after their expression (after `in`) is fully evaluated, not after the entire file
+
+**Key point:** In nested lets like `let x = let y = 29 in y in x`, the inner variable `y` is removed before the outer variable `x` is even used in the final expression. This ensures variables are only available within their proper scope.
 
 ## Performance Characteristics
 

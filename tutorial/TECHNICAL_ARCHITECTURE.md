@@ -30,26 +30,48 @@ The interpreter maintains a symbol table that tracks:
 
 ### Stack-Based Scoping
 
-Avon uses **stack-based scoping** with a single mutable symbol table. When you create a new scope with `let`, variables are added to the table, evaluated, then removed—no cloning:
+Avon uses **stack-based scoping** with a single mutable symbol table. When you create a new scope with `let`, variables are added to the table, the expression after `in` is evaluated, then the variable is removed—no cloning:
 
 ```avon
 let x = 5 in
-let x = 10 in
-x
+let y = 10 in
+x + y
 ```
 
 Evaluation process:
-1. Add `x=5` to table: `{x: 5}`
-2. Add `x=10` (shadows): `{x: 10}`
-3. Evaluate inner expression: result is `10`
-4. Remove `x=10`: back to `{x: 5}`
+1. Insert `x=5` into table: `{x: 5}`
+2. Evaluate `let y = 10 in x + y`:
+   - Insert `y=10` into table: `{x: 5, y: 10}`
+   - Evaluate `x + y` (both available): result is `15`
+   - Remove `y` from table (after `x + y` is evaluated): `{x: 5}`
+3. Remove `x` from table (after inner let expression is evaluated): `{}`
+4. Return result `15`
+4. Remove `y=10`: back to `{x: 5}`
 5. Continue with outer scope
+
+**Important: No Variable Shadowing**
+
+Avon does **not** allow variable shadowing. If you try to redefine a variable in the same scope, you'll get an error:
+
+```avon
+let x = 5 in
+let x = 10 in  # Error: variable 'x' is already defined in this scope
+x
+```
+
+**Exception:** The underscore `_` can be reused (common pattern for ignoring values):
+```avon
+let _ = compute_value() in
+let _ = another_value() in  # OK: underscore can be reused
+result
+```
 
 **Why this approach?**
 - Efficient: Only insert/remove operations, no cloning per binding
 - Memory-light: Single mutable reference passed through evaluation
 - Correct: Naturally respects lexical scoping rules
 - Fast: Even 200+ let bindings complete in milliseconds
+- Clear: No shadowing means no confusion about which variable is being used
 
 ### HashMap Performance
 
@@ -232,7 +254,56 @@ Instead of cloning, Avon uses three techniques:
    When a function captures its environment, it wraps it in Rc (reference counting). This lets multiple functions share the same environment without deep copying.
 
 2. **Stack-Based Scope Management**
-   Let bindings don't clone the table—they add/remove from one mutable table. This is like a call stack: push a variable, evaluate, pop it back off.
+   Let bindings don't clone the table—they add/remove from one mutable table. This is like a call stack: push a variable, evaluate the expression after `in`, then pop it back off. Each variable is removed immediately after its expression (the part after `in`) is **fully evaluated**—the variable remains available throughout the entire evaluation of that expression. Note: Avon does not allow variable shadowing (except `_` can be reused in let bindings, but cannot be used as a variable in expressions), so each variable name must be unique within its scope.
+   
+   **Key point:** Variables are removed after their expression is fully evaluated, not during evaluation. This means expressions like `x + x` work correctly—both sides are evaluated while `x` is still in the symbol table, and `x` is only removed after the entire `x + x` expression completes. In nested lets, inner variables are removed before outer ones.
+   
+   **Example 1: Nested lets in value position**
+   ```avon
+   let x = let y = 29 in y in x
+   ```
+   Evaluation process:
+   1. Evaluate `let y = 29 in y`:
+      - Insert `y = 29` into symbol table
+      - Evaluate `y` (returns `29`)
+      - Remove `y` from symbol table (after `y` is evaluated)
+      - Return `29`
+   2. Insert `x = 29` into symbol table
+   3. Evaluate `x` (returns `29`, only `x` is available, `y` is already removed)
+   4. Remove `x` from symbol table (after `x` is evaluated)
+   5. Return result `29`
+   
+   **Example 2: Sequential lets**
+   ```avon
+   let x = 5 in
+   let y = 10 in
+   x + y
+   ```
+   Evaluation process:
+   1. Insert `x = 5` into symbol table
+   2. Evaluate `let y = 10 in x + y`:
+      - Insert `y = 10` into symbol table
+      - Evaluate `x + y` (both `x` and `y` are available throughout this evaluation)
+      - Remove `y` from symbol table (after `x + y` is fully evaluated)
+      - Return `15`
+   3. Remove `x` from symbol table (after inner let expression is evaluated)
+   4. Return result `15`
+   
+   **Example 3: Variable used multiple times**
+   ```avon
+   let x = 5 in x + x
+   ```
+   Evaluation process:
+   1. Insert `x = 5` into symbol table
+   2. Evaluate `x + x`:
+      - Evaluate left `x` (looks up `x` in symbol table, gets `5`)
+      - Evaluate right `x` (looks up `x` in symbol table, gets `5`)
+      - Add them: `5 + 5 = 10`
+      - Return `10`
+   3. Remove `x` from symbol table (after `x + x` is fully evaluated)
+   4. Return result `10`
+   
+   Note: Both sides of `x + x` are evaluated while `x` is still in the symbol table. The variable is only removed after the entire expression completes.
 
 3. **Minimal Symbol Table Capture for Templates** 
    Templates only capture the variables they actually reference, not the entire symbol table. This eliminates exponential symbol table growth during template concatenation.
@@ -349,15 +420,36 @@ Result: **11** (not 12)
 
 Why? Function `f` was created in the environment where `x=1`, so it captures `x=1`. The later `let x = 2` doesn't affect `f`'s captured environment.
 
-### Shadowing
+### No Variable Shadowing
 
-Variables can be redefined, but only explicitly:
+Avon does **not** allow variable shadowing. Once a variable is defined in a scope, it cannot be redefined in that same scope:
 
 ```avon
 let x = 5 in
-let x = 10 in    # OK: explicit new binding
-x                # Result: 10
+let x = 10 in    # Error: variable 'x' is already defined in this scope
+x
 ```
+
+**Exception:** The underscore `_` can be reused in `let` bindings (common pattern for ignoring values), but it **cannot be used as a variable** in expressions:
+```avon
+let _ = compute_value() in
+let _ = another_value() in  # OK: underscore can be reused in let bindings
+result  # OK: using result, not _
+```
+
+**Not allowed:**
+```avon
+let _ = 5 in _  # Error: underscore cannot be used as a variable
+let _ = 5 in _ + 1  # Error: underscore cannot be used as a variable
+```
+
+The underscore is **only** for discarding values in `let` bindings, not for referencing values.
+
+**Why no shadowing?**
+- Prevents confusion about which variable is being used
+- Makes code easier to reason about
+- Encourages clear, descriptive variable names
+- Aligns with functional programming principles
 
 ## Built-in Functions vs Language Features
 

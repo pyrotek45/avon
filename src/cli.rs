@@ -271,6 +271,16 @@ impl Completer for AvonCompleter {
             })
             .collect();
 
+        // Complete boolean literals
+        for &literal in &["true", "false"] {
+            if literal.starts_with(search) {
+                matches.push(Pair {
+                    display: literal.to_string(),
+                    replacement: literal.to_string(),
+                });
+            }
+        }
+
         // Complete user-defined variables (excluding builtins)
         if !search.is_empty() && word_start < pos {
             let symbols = self.symbols.borrow();
