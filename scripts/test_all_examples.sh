@@ -17,6 +17,8 @@ fi
 echo "Building avon..."
 cargo build --quiet 2>&1 || { echo "Build failed"; exit 1; }
 
+AVON_BIN="./target/debug/avon"
+
 echo ""
 echo "Testing all examples in $EXAMPLES_DIR..."
 echo "=========================================="
@@ -61,19 +63,18 @@ for file in "$EXAMPLES_DIR"/*.av; do
     else
         echo -n "Testing $filename... "
     fi
-    
-    # Set env vars for secrets examples
-    if [[ "$filename" == "secrets_test.av" ]]; then
-        export API_KEY="dummy_key"
-    fi
-    if [[ "$filename" == "secure_config.av" ]]; then
-        export DB_HOST="localhost"
-        export DB_PASS="pass"
-        export API_KEY="key"
-    fi
 
-    # Run the example and capture output
-    if output=$(cargo run --quiet -- eval "$file" 2>&1); then
+    # Run the example directly with the binary and capture both stdout and stderr
+    # This ensures we catch all errors including those that might not exit with error code
+    if output=$("$AVON_BIN" eval "$file" 2>&1); then
+        exit_code=$?
+    else
+        exit_code=$?
+    fi
+    
+    # Check both exit code and output for actual error messages
+    # Only match errors at the start of a line or prefixed with "<eval error:"
+    if [ $exit_code -eq 0 ] && ! echo "$output" | grep -q "^<eval error:\|^error:\|unknown symbol\|type mismatch"; then
         if [[ "$SHOW_OUTPUT" == true ]]; then
             echo "✅ SUCCESS"
             echo ""

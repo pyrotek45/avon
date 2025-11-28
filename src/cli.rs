@@ -444,10 +444,6 @@ fn print_builtin_docs() {
     println!("--------------------------");
     println!(
         "  {:<18} :: {}",
-        "dict_get", "Dict -> String -> a | None  (deprecated, use dot notation)"
-    );
-    println!(
-        "  {:<18} :: {}",
         "get", "(Dict|[[String, a]]) -> String -> a | None"
     );
     println!(

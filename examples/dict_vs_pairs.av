@@ -13,9 +13,9 @@ let person = {name: "Alice", age: 30, city: "San Francisco"} in
 
 # Key Differences:
 
-# Access: Lists are accessed by iteration, Dicts use dot notation or dict_get
+# Access: Lists are accessed by iteration, Dicts use dot notation or get
 let person_name = person.name in  # Gets "Alice" directly via dot notation
-let person_age_alt = dict_get person "age" in  # Gets 30 via dict_get
+let person_age_alt = get person "age" in  # Gets 30 via get
 
 # Type checking
 let pairs_is_list = is_list pairs in
@@ -46,7 +46,7 @@ let person_is_dict = is_dict person in
    Dict (key-based):
    - person.name = {person_name}
    - person.age = {person.age}
-   - Access via dot notation or dict_get
+   - Access via dot notation or get
    - Good for: lookup tables, structured data
 
 4. AVAILABLE OPERATIONS
@@ -57,10 +57,10 @@ let person_is_dict = is_dict person in
    - Can append, prepend, transform
    
    Dict operations on person:
-   - dict_keys: {dict_keys person}
-   - dict_values: {dict_values person}
-   - dict_has_key person \"email\": {dict_has_key person "email"}
-   - dict_size: {dict_size person}
+   - keys: {keys person}
+   - values: {values person}
+   - has_key person \"email\": {has_key person "email"}
+   - size: {length (keys person)}
 
 5. WHEN TO USE EACH
    
@@ -78,12 +78,14 @@ let person_is_dict = is_dict person in
 
 6. CONVERSION
    
-   Pairs to Dict:  dict pairs
-   Dict to Pairs:  dict_to_list person
+   Note: Avon dicts and pairs are different types.
+   Use keys/values functions to extract from dicts.
    
-   Round trip test:
-   Original pairs: {pairs}
-   After dict conversion and back: {dict_to_list person}
+   Dict keys: {keys person}
+   Dict values: {values person}
+   
+   To build pairs-like structure from dict:
+   {zip (keys person) (values person)}
 
 7. PRACTICAL EXAMPLE
    

@@ -368,19 +368,8 @@ pub fn initial_builtins() -> HashMap<String, Value> {
     );
 
     // Data structures (dict is now literal syntax {key: value})
-    // Dict operations
-    m.insert(
-        "dict_get".to_string(),
-        Value::Builtin("dict_get".to_string(), Vec::new()),
-    );
-    m.insert(
-        "dict_set".to_string(),
-        Value::Builtin("dict_set".to_string(), Vec::new()),
-    );
-    m.insert(
-        "dict_has_key".to_string(),
-        Value::Builtin("dict_has_key".to_string(), Vec::new()),
-    );
+    // Note: dict_get, dict_set, dict_has_key were deprecated and removed
+    // Use get, set, has_key instead (they work with both dicts and pairs)
 
     // System
     m.insert(
@@ -1738,9 +1727,6 @@ pub fn apply_function(
                 "md_code" => 1,
                 "md_list" => 1,
                 "markdown_to_html" => 1,
-                "dict_get" => 2,
-                "dict_set" => 3,
-                "dict_has_key" => 2,
                 "to_string" => 1,
                 "to_int" => 1,
                 "to_float" => 1,
@@ -3312,53 +3298,6 @@ pub fn execute_builtin(
                 Ok(Value::List(result))
             } else {
                 Err(EvalError::type_mismatch("list", list.to_string(source), 0))
-            }
-        }
-        "dict_get" => {
-            let dict = &args[0];
-            let key = &args[1];
-            if let (Value::Dict(map), Value::String(k)) = (dict, key) {
-                Ok(map.get(k).cloned().unwrap_or(Value::None))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "Dict and String key",
-                    format!("{}, {}", dict.to_string(source), key.to_string(source)),
-                    0,
-                ))
-            }
-        }
-        "dict_set" => {
-            let dict = &args[0];
-            let key = &args[1];
-            let value = &args[2];
-            if let (Value::Dict(map), Value::String(k)) = (dict, key) {
-                let mut new_map = map.clone();
-                new_map.insert(k.clone(), value.clone());
-                Ok(Value::Dict(new_map))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "Dict, String key, and value",
-                    format!(
-                        "{}, {}, {}",
-                        dict.to_string(source),
-                        key.to_string(source),
-                        value.to_string(source)
-                    ),
-                    0,
-                ))
-            }
-        }
-        "dict_has_key" => {
-            let dict = &args[0];
-            let key = &args[1];
-            if let (Value::Dict(map), Value::String(k)) = (dict, key) {
-                Ok(Value::Bool(map.contains_key(k)))
-            } else {
-                Err(EvalError::type_mismatch(
-                    "Dict and String key",
-                    format!("{}, {}", dict.to_string(source), key.to_string(source)),
-                    0,
-                ))
             }
         }
         "get" => {

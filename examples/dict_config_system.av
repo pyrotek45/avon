@@ -38,13 +38,13 @@ PRODUCTION CONFIGURATION:
   Debug Mode: {prod_config.debug}
 
 CONFIGURATION STATISTICS:
-  Dev Dict Size: {dict_size dev_config}
-  Prod Dict Size: {dict_size prod_config}
-  Dev Keys: {format_json (dict_keys dev_config)}
-  Prod Keys: {format_json (dict_keys prod_config)}
+  Dev Dict Size: {length (keys dev_config)}
+  Prod Dict Size: {length (keys prod_config)}
+  Dev Keys: {format_json (keys dev_config)}
+  Prod Keys: {format_json (keys prod_config)}
 
 CONFIGURATION COMPARISON:
   Same host: {dev_config.host == prod_config.host}
   Dev workers < Prod workers: {dev_config.workers < prod_config.workers}
-  Total config entries: {(dict_size dev_config) + (dict_size prod_config)}
+  Total config entries: {(length (keys dev_config)) + (length (keys prod_config))}
 "}

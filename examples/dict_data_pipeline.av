@@ -11,23 +11,23 @@ let users = [
 
 # Transform user by adding a new field
 let add_status = \user 
-  dict_set user "status" "active"
+  set user "status" "active"
 in
 
 # Filter function: check if user has specific role
 let is_admin = \user 
-  let role = dict_get user "role" in
+  let role = get user "role" in
   role == "admin"
 in
 
 # Extract specific fields to create a summary dict
 let to_summary = \user 
-  {name: dict_get user "name", role: dict_get user "role"}
+  {name: get user "name", role: get user "role"}
 in
 
 # Calculate average age from user list
 let avg_age = \user_list
-  let ages = map (\u dict_get u "age") user_list in
+  let ages = map (\u get u "age") user_list in
   let total = fold (\sum \age sum + age) 0 ages in
   let count = length user_list in
   total / count
@@ -56,12 +56,12 @@ let analytics = {
 User Analytics Report
 =====================
 
-Total Users: {dict_get analytics "total_users"}
-Active Users: {dict_get analytics "active_users"}
-Admin Count: {dict_get analytics "admin_count"}
-Average Age: {dict_get analytics "average_age"}
+Total Users: {get analytics "total_users"}
+Active Users: {get analytics "active_users"}
+Admin Count: {get analytics "admin_count"}
+Average Age: {get analytics "average_age"}
 
-Total Roles in System: {length (dict_get analytics "roles")}
+Total Roles in System: {length (get analytics "roles")}
 
 Data Pipeline Demonstration:
 - Transformed {length users} user records

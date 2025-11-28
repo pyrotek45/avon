@@ -46,9 +46,10 @@ Dict Template Interpolation Examples
    String value: {mixed.string}
    Number value: {mixed.number}
 
-5. COMPARISON WITH PAIRS
+5. DICT OPERATIONS
    As dict: {config}
-   As pairs: {dict_to_list config}
+   Keys: {keys config}
+   Values: {values config}
 
 Visual Clarity:
 - Dicts use curly braces with key: value format

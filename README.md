@@ -44,7 +44,7 @@ Stop copy-pasting configs. Stop maintaining 50 nearly-identical YAML files. Stop
 
 **Result:** One command generates and deploys everything. No intermediate steps.
 
-**Language Agnostic:** Avon works with **any text format**—YAML, JSON, TOML, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 80+ built-in utilities to any file, making even single files more powerful and maintainable.
+**Language Agnostic:** Avon works with **any text format**—YAML, JSON, TOML, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 89+ built-in utilities to any file, making even single files more powerful and maintainable.
 
 **Share Templates with `--git`:** One of Avon's key features is the `--git` flag, which lets you fetch and deploy templates directly from GitHub. Keep one template in git, deploy customized versions everywhere with a single command. Perfect for sharing dotfiles, team configs, and infrastructure templates.
 
@@ -242,7 +242,7 @@ config.host     # Returns "localhost"
 
 **Runtime Type Safety** — Avon doesn't deploy if there's a type error. No static types needed—if a type error occurs, deployment simply doesn't happen. This flexible approach brings type safety to any file without the complexity of compile-time type systems.
 
-**92+ Builtins** — String ops, list ops (map, filter, fold, sort, unique, range, enumerate), formatting (15 functions), date/time operations, JSON, file I/O, HTML/Markdown helpers. These utilities make any file more powerful, even if you're just managing a single config.
+**89+ Builtins** — String ops, list ops (map, filter, fold, sort, unique, range, enumerate), formatting (15 functions), date/time operations, JSON, file I/O, HTML/Markdown helpers. These utilities make any file more powerful, even if you're just managing a single config.
 
 **List Interpolation** — Perfect for long, repetitive files. Write one small program that generates extensive content using `map`, `filter`, and list interpolation features.
 

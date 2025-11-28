@@ -1,17 +1,21 @@
 # Example: Secure Configuration
 #
 # This demonstrates best practices for handling secrets.
-# None of these values are hardcoded.
+# Uses env_var_or to provide defaults for testing while allowing production overrides.
 #
 # Usage:
+#   # For testing (uses defaults):
+#   avon eval examples/secure_config.av
+#
+#   # For production (override with real secrets):
 #   export DB_HOST="db.prod.internal"
 #   export DB_PASS="s3cr3t"
 #   export API_KEY="key_12345"
 #   avon deploy examples/secure_config.av --root ./out --force
 
-let db_host = env_var "DB_HOST" in
-let db_pass = env_var "DB_PASS" in
-let api_key = env_var "API_KEY" in
+let db_host = env_var_or "DB_HOST" "localhost" in
+let db_pass = env_var_or "DB_PASS" "test-password" in
+let api_key = env_var_or "API_KEY" "test-api-key" in
 let port = env_var_or "PORT" "8080" in
 
 @/config/production.yml {"

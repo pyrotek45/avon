@@ -45,7 +45,7 @@ Cache and Lookup Table Examples
 ================================
 
 Math Constants Cache (using dicts):
-  - Total constants: {dict_size math_constants}
+  - Total constants: {length (keys math_constants)}
   - π ≈ {math_constants.pi}
   - e ≈ {math_constants.e}
   - φ ≈ {math_constants.phi}
@@ -63,8 +63,8 @@ Database Connection Strings (using dicts):
   - prod: {db_configs.prod}
 
 Cache Statistics:
-  - Math constants: {dict_size math_constants}
+  - Math constants: {length (keys math_constants)}
   - Status codes: {length status_codes}
-  - DB configs: {dict_size db_configs}
-  - Total entries: {(dict_size math_constants) + (length status_codes) + (dict_size db_configs)}
+  - DB configs: {length (keys db_configs)}
+  - Total entries: {(length (keys math_constants)) + (length status_codes) + (length (keys db_configs))}
 "}
