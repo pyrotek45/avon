@@ -288,6 +288,26 @@ pub fn initial_builtins() -> HashMap<String, Value> {
         "reverse".to_string(),
         Value::Builtin("reverse".to_string(), Vec::new()),
     );
+    m.insert(
+        "sort".to_string(),
+        Value::Builtin("sort".to_string(), Vec::new()),
+    );
+    m.insert(
+        "sort_by".to_string(),
+        Value::Builtin("sort_by".to_string(), Vec::new()),
+    );
+    m.insert(
+        "unique".to_string(),
+        Value::Builtin("unique".to_string(), Vec::new()),
+    );
+    m.insert(
+        "range".to_string(),
+        Value::Builtin("range".to_string(), Vec::new()),
+    );
+    m.insert(
+        "enumerate".to_string(),
+        Value::Builtin("enumerate".to_string(), Vec::new()),
+    );
 
     // Map/Dictionary operations (using list of pairs)
     m.insert(
@@ -1752,6 +1772,11 @@ pub fn apply_function(
                 "split_at" => 2,
                 "partition" => 2,
                 "reverse" => 1,
+                "sort" => 1,
+                "sort_by" => 2,
+                "unique" => 1,
+                "range" => 2,
+                "enumerate" => 1,
                 "get" => 2,
                 "set" => 3,
                 "keys" => 1,
@@ -3152,6 +3177,139 @@ pub fn execute_builtin(
                 let mut reversed = items.clone();
                 reversed.reverse();
                 Ok(Value::List(reversed))
+            } else {
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
+            }
+        }
+        "sort" => {
+            let list = &args[0];
+            if let Value::List(items) = list {
+                let mut sorted = items.clone();
+                // Sort by converting to strings and comparing
+                sorted.sort_by(|a, b| {
+                    let a_str = a.to_string(source);
+                    let b_str = b.to_string(source);
+                    // Try numeric comparison first
+                    match (a, b) {
+                        (Value::Number(Number::Int(a_int)), Value::Number(Number::Int(b_int))) => {
+                            a_int.cmp(b_int)
+                        }
+                        (Value::Number(Number::Float(a_float)), Value::Number(Number::Float(b_float))) => {
+                            a_float.partial_cmp(b_float).unwrap_or(std::cmp::Ordering::Equal)
+                        }
+                        (Value::Number(Number::Int(a_int)), Value::Number(Number::Float(b_float))) => {
+                            (*a_int as f64).partial_cmp(b_float).unwrap_or(std::cmp::Ordering::Equal)
+                        }
+                        (Value::Number(Number::Float(a_float)), Value::Number(Number::Int(b_int))) => {
+                            a_float.partial_cmp(&(*b_int as f64)).unwrap_or(std::cmp::Ordering::Equal)
+                        }
+                        // For non-numeric, use string comparison
+                        _ => a_str.cmp(&b_str),
+                    }
+                });
+                Ok(Value::List(sorted))
+            } else {
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
+            }
+        }
+        "sort_by" => {
+            let func = &args[0];
+            let list = &args[1];
+            if let Value::List(items) = list {
+                // Create pairs of (original_item, sort_key)
+                let mut pairs: Vec<(Value, Value)> = Vec::new();
+                for item in items {
+                    let key = apply_function(func, item.clone(), source, line).map_err(|mut err| {
+                        if !err.message.starts_with("sort_by:") {
+                            err.message = format!("sort_by: {}", err.message);
+                        }
+                        err
+                    })?;
+                    pairs.push((item.clone(), key));
+                }
+                
+                // Sort by keys
+                pairs.sort_by(|(_, a_key), (_, b_key)| {
+                    let a_str = a_key.to_string(source);
+                    let b_str = b_key.to_string(source);
+                    match (a_key, b_key) {
+                        (Value::Number(Number::Int(a_int)), Value::Number(Number::Int(b_int))) => {
+                            a_int.cmp(b_int)
+                        }
+                        (Value::Number(Number::Float(a_float)), Value::Number(Number::Float(b_float))) => {
+                            a_float.partial_cmp(b_float).unwrap_or(std::cmp::Ordering::Equal)
+                        }
+                        (Value::Number(Number::Int(a_int)), Value::Number(Number::Float(b_float))) => {
+                            (*a_int as f64).partial_cmp(b_float).unwrap_or(std::cmp::Ordering::Equal)
+                        }
+                        (Value::Number(Number::Float(a_float)), Value::Number(Number::Int(b_int))) => {
+                            a_float.partial_cmp(&(*b_int as f64)).unwrap_or(std::cmp::Ordering::Equal)
+                        }
+                        _ => a_str.cmp(&b_str),
+                    }
+                });
+                
+                // Extract sorted items
+                let sorted: Vec<Value> = pairs.into_iter().map(|(item, _)| item).collect();
+                Ok(Value::List(sorted))
+            } else {
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
+            }
+        }
+        "unique" => {
+            let list = &args[0];
+            if let Value::List(items) = list {
+                let mut seen = HashSet::new();
+                let mut result = Vec::new();
+                for item in items {
+                    // Use string representation for uniqueness check
+                    let key = item.to_string(source);
+                    if seen.insert(key) {
+                        result.push(item.clone());
+                    }
+                }
+                Ok(Value::List(result))
+            } else {
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
+            }
+        }
+        "range" => {
+            let start = &args[0];
+            let end = &args[1];
+            
+            match (start, end) {
+                (Value::Number(Number::Int(s)), Value::Number(Number::Int(e))) => {
+                    if s <= e {
+                        let result: Vec<Value> = (*s..=*e)
+                            .map(|i| Value::Number(Number::Int(i)))
+                            .collect();
+                        Ok(Value::List(result))
+                    } else {
+                        // Empty list for invalid range
+                        Ok(Value::List(Vec::new()))
+                    }
+                }
+                _ => Err(EvalError::type_mismatch(
+                    "two integers",
+                    format!("{}, {}", start.to_string(source), end.to_string(source)),
+                    0,
+                )),
+            }
+        }
+        "enumerate" => {
+            let list = &args[0];
+            if let Value::List(items) = list {
+                let result: Vec<Value> = items
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, item)| {
+                        Value::List(vec![
+                            Value::Number(Number::Int(idx as i64)),
+                            item.clone(),
+                        ])
+                    })
+                    .collect();
+                Ok(Value::List(result))
             } else {
                 Err(EvalError::type_mismatch("list", list.to_string(source), 0))
             }

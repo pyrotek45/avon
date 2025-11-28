@@ -92,6 +92,11 @@ fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("split_at", "split_at :: Int -> [a] -> ([a], [a])\n  Split list at index.\n  Example: split_at 2 [1, 2, 3, 4] -> ([1, 2], [3, 4])"),
         ("partition", "partition :: (a -> Bool) -> [a] -> ([a], [a])\n  Split list into matching and non-matching.\n  Example: partition (\\x x > 2) [1, 2, 3, 4] -> ([3, 4], [1, 2])"),
         ("reverse", "reverse :: [a] -> [a]\n  Reverse list order.\n  Example: reverse [1, 2, 3] -> [3, 2, 1]"),
+        ("sort", "sort :: [a] -> [a]\n  Sort list in ascending order (numbers numerically, others lexically).\n  Example: sort [3, 1, 2] -> [1, 2, 3]\n  Example: sort [\"c\", \"a\", \"b\"] -> [\"a\", \"b\", \"c\"]"),
+        ("sort_by", "sort_by :: (a -> b) -> [a] -> [a]\n  Sort list by applying function to each element.\n  Example: sort_by (\\x x.age) users -> users sorted by age\n  Example: sort_by lower [\"Bob\", \"alice\", \"Charlie\"] -> case-insensitive sort"),
+        ("unique", "unique :: [a] -> [a]\n  Remove duplicate elements (keeps first occurrence).\n  Example: unique [1, 2, 1, 3, 2] -> [1, 2, 3]\n  Example: unique [\"a\", \"b\", \"a\"] -> [\"a\", \"b\"]"),
+        ("range", "range :: Int -> Int -> [Int]\n  Generate range of integers from start to end (inclusive).\n  Example: range 1 5 -> [1, 2, 3, 4, 5]\n  Note: Returns empty list if start > end"),
+        ("enumerate", "enumerate :: [a] -> [[Int, a]]\n  Add index to each element (returns list of [index, value] pairs).\n  Example: enumerate [\"a\", \"b\", \"c\"] -> [[0, \"a\"], [1, \"b\"], [2, \"c\"]]"),
         ("head", "head :: [a] -> a | None\n  Get first item or None.\n  Example: head [1, 2, 3] -> 1"),
         ("tail", "tail :: [a] -> [a]\n  Get all items except first.\n  Example: tail [1, 2, 3] -> [2, 3]"),
 
@@ -425,6 +430,11 @@ fn print_builtin_docs() {
         "partition", "(a -> Bool) -> [a] -> ([a], [a])"
     );
     println!("  {:<18} :: {}", "reverse", "[a] -> [a]");
+    println!("  {:<18} :: {}", "sort", "[a] -> [a]");
+    println!("  {:<18} :: {}", "sort_by", "(a -> b) -> [a] -> [a]");
+    println!("  {:<18} :: {}", "unique", "[a] -> [a]");
+    println!("  {:<18} :: {}", "range", "Int -> Int -> [Int]");
+    println!("  {:<18} :: {}", "enumerate", "[a] -> [[Int, a]]");
     println!("  {:<18} :: {}", "head", "[a] -> a | None");
     println!("  {:<18} :: {}", "tail", "[a] -> [a]");
     println!();

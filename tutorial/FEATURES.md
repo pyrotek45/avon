@@ -429,8 +429,45 @@ content
 | `flatmap` | 2 | Map then flatten | `flatmap (\x [x,x]) [1,2]` -> `[1,1,2,2]` |
 | `flatten` | 1 | Flatten one level | `flatten [[1,2],[3]]` -> `[1,2,3]` |
 | `length` | 1 | Count items | `length [1,2,3]` -> `3` |
+| `sort` | 1 | Sort list (numbers numerically, others lexically) | `sort [3,1,4,1,5]` -> `[1,1,3,4,5]` |
+| `sort_by` | 2 | Sort by key function | `sort_by (\x neg x) [1,2,3]` -> `[3,2,1]` |
+| `unique` | 1 | Remove duplicates (preserve order) | `unique [1,2,2,3,1]` -> `[1,2,3]` |
+| `range` | 2 | Generate integer range (inclusive) | `range 1 5` -> `[1,2,3,4,5]` |
+| `enumerate` | 1 | Add indices | `enumerate ["a","b","c"]` -> `[[0,"a"],[1,"b"],[2,"c"]]` |
 
-**Examples:** `examples/map_example.av`, `examples/filter_example.av`, `examples/fold_example.av`, `examples/map_filter_fold.av`
+**Sorting Examples:**
+```avon
+# Sort numbers
+sort [3, 1, 4, 1, 5, 9, 2, 6]  # [1, 1, 2, 3, 4, 5, 6, 9]
+
+# Sort strings
+sort ["zebra", "apple", "banana"]  # ["apple", "banana", "zebra"]
+
+# Reverse sort using sort_by
+sort_by (\x neg x) [5, 2, 8, 1]  # [8, 5, 2, 1]
+
+# Sort by string length
+sort_by (\x length x) ["aaa", "a", "aa"]  # ["a", "aa", "aaa"]
+
+# Remove duplicates
+unique [1, 2, 2, 3, 1, 4, 3, 5]  # [1, 2, 3, 4, 5]
+
+# Generate ranges
+range 1 10  # [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+range 5 8   # [5, 6, 7, 8]
+
+# Enumerate for index tracking
+enumerate ["apple", "banana", "cherry"]
+# [[0, "apple"], [1, "banana"], [2, "cherry"]]
+
+# Practical: Sort and enumerate
+let items = ["zebra", "apple", "banana"] in
+let sorted = sort items in
+enumerate sorted
+# [[0, "apple"], [1, "banana"], [2, "zebra"]]
+```
+
+**Examples:** `examples/map_example.av`, `examples/filter_example.av`, `examples/fold_example.av`, `examples/map_filter_fold.av`, `examples/list_operations.av`
 
 ### Map/Dictionary Operations
 

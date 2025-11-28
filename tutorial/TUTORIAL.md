@@ -4,7 +4,7 @@ Welcome to **Avon**. You're about to give your configuration workflow superpower
 
 Avon is designed for developers who are tired of copy-pasting. Whether you're building Kubernetes manifests, setting up CI/CD pipelines, or generating boilerplate code, Avon turns repetitive tasks into elegant, maintainable code.
 
-Avon is a **powerful, general-purpose tool** that handles everything from complex infrastructure projects to simple single-file configs. It's a comprehensive workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 80+ built-in utilities to **any text format**, making it perfect for developers, non-developers, and hobbyists alike.
+Avon is a **powerful, general-purpose tool** that handles everything from complex infrastructure projects to simple single-file configs. It's a comprehensive workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 92+ built-in utilities to **any text format**, making it perfect for developers, non-developers, and hobbyists alike.
 
 **Pro tip:** Throughout this guide, look at the `examples/` directory for real-world use cases. Each example demonstrates practical Avon patterns you can adapt for your own projects.
 
@@ -93,7 +93,7 @@ Avon is a **powerful, general-purpose tool** that handles everything from comple
 
 8. **[Builtin Functions](#builtin-functions)**
    - String Operations (`concat`, `upper`, `lower`, `split`, `replace`, etc.)
-   - List Operations (`map`, `filter`, `fold`, `join`, `length`, `zip`, `unzip`, `take`, `drop`, `split_at`, `partition`, `reverse`, `head`, `tail`)
+   - List Operations (`map`, `filter`, `fold`, `join`, `length`, `zip`, `unzip`, `take`, `drop`, `split_at`, `partition`, `reverse`, `head`, `tail`, `sort`, `sort_by`, `unique`, `range`, `enumerate`)
    - File & Filesystem (`readfile`, `readlines`, `exists`, `basename`, `dirname`)
    - HTML Generation Helpers (`html_escape`, `html_tag`, `html_attr`)
    - Markdown Generation Helpers (`md_heading`, `md_link`, `md_code`, `md_list`)
@@ -299,11 +299,11 @@ let plugins = ["vim-fugitive", "vim-surround", "vim-commentary", "vim-repeat"] i
 
 When you interpolate a list in a template, each item appears on its own line. This eliminates copy-paste even in a single file.
 
-**Language Agnostic:** Avon works with **any text format**—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 80+ built-in utilities to any file, making even single files more powerful.
+**Language Agnostic:** Avon works with **any text format**—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 92+ built-in utilities to any file, making even single files more powerful.
 
 **Runtime Type Safety:** Avon doesn't deploy if there's a type error. No static types needed—if a type error occurs, deployment simply doesn't happen. This flexible approach brings type safety to any file without the complexity of compile-time type systems.
 
-**Built-in Utilities:** Avon comes with 80+ built-in functions for string operations, list operations, formatting, JSON manipulation, file I/O, and HTML/Markdown helpers. These utilities make any file more powerful, even if you're just managing a single config.
+**Built-in Utilities:** Avon comes with 92+ built-in functions for string operations, list operations (map, filter, fold, sort, unique, range), formatting (15 functions), date/time operations, JSON manipulation, file I/O, and HTML/Markdown helpers. These utilities make any file more powerful, even if you're just managing a single config.
 
 **Debugging Tools:** Use `trace`, `debug`, `assert`, and the `--debug` flag to troubleshoot quickly, whether you're working with complex infrastructure or a simple config file.
 
@@ -1391,6 +1391,36 @@ let join_names = fold (\acc \n (concat acc (concat ", " n))) "" names in
 | `fold f init list` | Reduce with accumulator |
 | `join list sep` | Join list items with separator |
 | `length list` | Get number of items in list |
+| `sort list` | Sort list (numbers numerically, others lexically) |
+| `sort_by f list` | Sort by applying key function to each item |
+| `unique list` | Remove duplicates (preserves order) |
+| `range start end` | Generate inclusive integer range |
+| `enumerate list` | Convert to `[[index, item], ...]` pairs |
+
+**Sorting and deduplication examples:**
+```avon
+# Sort numbers
+sort [3, 1, 4, 1, 5, 9, 2, 6]  # [1, 1, 2, 3, 4, 5, 6, 9]
+
+# Sort strings
+sort ["zebra", "apple", "banana"]  # ["apple", "banana", "zebra"]
+
+# Reverse sort with sort_by
+sort_by (\x neg x) [5, 2, 8, 1]  # [8, 5, 2, 1]
+
+# Sort by string length
+sort_by (\x length x) ["aaa", "a", "aa"]  # ["a", "aa", "aaa"]
+
+# Remove duplicates
+unique [1, 2, 2, 3, 1, 4, 3, 5]  # [1, 2, 3, 4, 5]
+
+# Generate ranges (alternative to [1..10] syntax)
+range 1 10  # [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+# Enumerate for index tracking
+enumerate ["apple", "banana", "cherry"]
+# [[0, "apple"], [1, "banana"], [2, "cherry"]]
+```
 
 ---
 
@@ -1827,7 +1857,7 @@ This generates `config-dev.yml` and `config-prod.yml`.
 
 ## Builtin Functions
 
-Avon comes with a toolkit of **80+ built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
+Avon comes with a toolkit of **92+ built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
 
 These utilities make any file more powerful—whether you're generating hundreds of config files or just managing a single dotfile. You can leverage functions like `upper`, `lower`, `format_table`, `json_parse`, `html_escape`, and many more to add superpowers to any text format, even if it's just one file.
 

@@ -1,0 +1,123 @@
+# New List Operations Demo
+# Demonstrates sort, sort_by, unique, range, and enumerate functions
+# Added November 2025
+
+# ============================================
+# SORTING
+# ============================================
+
+let numbers = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3] in
+let strings = ["zebra", "apple", "mango", "banana", "cherry"] in
+
+let sorted_nums = sort numbers in
+let sorted_strs = sort strings in
+
+# Sort by custom key function (reverse order)
+let reverse_sorted = sort_by (\x neg x) [1, 2, 3, 4, 5] in
+
+# Sort strings by length
+let words = ["a", "aaa", "aa", "aaaa", "aaaaa"] in
+let by_length = sort_by (\x length x) words in
+
+# ============================================
+# DEDUPLICATION
+# ============================================
+
+let with_dups = [1, 2, 2, 3, 1, 4, 3, 5, 1, 2] in
+let deduped = unique with_dups in
+
+# Combine sort and unique
+let sorted_unique = unique (sort numbers) in
+
+# ============================================
+# RANGE GENERATION
+# ============================================
+
+let range_1_10 = range 1 10 in
+let range_ports = range 8080 8085 in
+
+# Use range to generate numbered items
+let item_numbers = range 1 5 in
+
+# ============================================
+# ENUMERATE
+# ============================================
+
+let fruits = ["apple", "banana", "cherry", "date"] in
+let indexed = enumerate fruits in
+
+# Enumerate sorted list
+let indexed_sorted = enumerate (sort fruits) in
+
+# ============================================
+# PRACTICAL EXAMPLES
+# ============================================
+
+# Example 1: Numbered list
+let items = ["First item", "Second item", "Third item"] in
+let numbered = map (\pair 
+  let idx = head pair in
+  let item = head (tail pair) in
+  concat (concat (to_string (idx + 1)) ". ") item
+) (enumerate items) in
+
+# Example 2: Top N with sort_by
+let scores = [85, 92, 78, 95, 88, 91] in
+let top_3 = take 3 (sort_by (\x neg x) scores) in
+
+# Example 3: Generate config for port range
+let ports = range 3000 3003 in
+let port_configs = map (\p {"Port {p} configuration"}) ports in
+
+# ============================================
+# OUTPUT
+# ============================================
+
+@new_list_ops_demo.txt {"
+===============================================
+  NEW LIST OPERATIONS DEMONSTRATION
+===============================================
+
+1. SORTING
+   -------
+   Original:     {format_list numbers ", "}
+   Sorted:       {format_list sorted_nums ", "}
+   
+   Strings:      {format_list strings ", "}
+   Sorted:       {format_list sorted_strs ", "}
+   
+   Reverse sort: {format_list reverse_sorted ", "}
+   By length:    {format_list by_length " < "}
+
+2. UNIQUE (Deduplication)
+   ----------------------
+   With dups:    {format_list with_dups ", "}
+   Deduplicated: {format_list deduped ", "}
+   Sorted+unique:{format_list sorted_unique ", "}
+
+3. RANGE GENERATION
+   ----------------
+   Range 1-10:   {format_list range_1_10 ", "}
+   Port range:   {format_list range_ports ", "}
+
+4. ENUMERATE (Add Indices)
+   -----------------------
+   Fruits:       {format_list fruits ", "}
+   Indexed:      {format_json indexed}
+   
+   Sorted indexed: {format_json indexed_sorted}
+
+5. PRACTICAL EXAMPLES
+   ------------------
+   Numbered list:
+   {numbered}
+   
+   Top 3 scores: {format_list top_3 ", "}
+   
+   Port configs:
+   {port_configs}
+
+===============================================
+  All new list operations working!
+===============================================
+"}

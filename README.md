@@ -242,7 +242,7 @@ config.host     # Returns "localhost"
 
 **Runtime Type Safety** — Avon doesn't deploy if there's a type error. No static types needed—if a type error occurs, deployment simply doesn't happen. This flexible approach brings type safety to any file without the complexity of compile-time type systems.
 
-**80+ Builtins** — String ops, list ops, formatting, JSON, file I/O, HTML/Markdown helpers. These utilities make any file more powerful, even if you're just managing a single config.
+**92+ Builtins** — String ops, list ops (map, filter, fold, sort, unique, range, enumerate), formatting (15 functions), date/time operations, JSON, file I/O, HTML/Markdown helpers. These utilities make any file more powerful, even if you're just managing a single config.
 
 **List Interpolation** — Perfect for long, repetitive files. Write one small program that generates extensive content using `map`, `filter`, and list interpolation features.
 
