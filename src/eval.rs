@@ -444,6 +444,10 @@ pub fn initial_builtins() -> HashMap<String, Value> {
         "is_dict".to_string(),
         Value::Builtin("is_dict".to_string(), Vec::new()),
     );
+    m.insert(
+        "is_none".to_string(),
+        Value::Builtin("is_none".to_string(), Vec::new()),
+    );
 
     // Assertions
     m.insert(
@@ -1777,6 +1781,7 @@ pub fn apply_function(
                 "is_bool" => 1,
                 "is_function" => 1,
                 "is_dict" => 1,
+                "is_none" => 1,
                 "assert" => 2,
                 "error" => 1,
                 "trace" => 2,
@@ -3009,6 +3014,8 @@ pub fn execute_builtin(
             }
         }
         "head" => {
+            // head :: [a] -> a | None
+            // Returns first element of list, or None if list is empty
             let list = &args[0];
             if let Value::List(items) = list {
                 Ok(items.first().cloned().unwrap_or(Value::None))
@@ -3017,6 +3024,8 @@ pub fn execute_builtin(
             }
         }
         "tail" => {
+            // tail :: [a] -> [a]
+            // Returns all elements except first, or empty list if already empty
             let list = &args[0];
             if let Value::List(items) = list {
                 if items.is_empty() {
@@ -3316,10 +3325,11 @@ pub fn execute_builtin(
             }
         }
         "get" => {
-            // get :: (Dict|[[String, a]]) -> String -> a | None
+            // get :: (Dict|[[String, a]]) -> String -> a
             // Works with both dicts and list of pairs
             // Usage: get {name: "alice", age: 30} "name" => "alice"
             //        get [["name", "alice"], ["age", "30"]] "name" => "alice"
+            // Returns None if key not found - use has_key to check first, or is_none after
             let map = &args[0];
             let key = &args[1];
             if let Value::String(k) = key {
@@ -3523,14 +3533,15 @@ pub fn execute_builtin(
         "env_var" => {
             // env_var :: String -> String
             // Returns the value of an environment variable.
-            // Errors if the variable is not set (fail-safe by default).
+            // Errors if the variable is not set (fail-fast behavior).
+            // Use env_var_or for graceful handling with a default.
             let name = &args[0];
             if let Value::String(key) = name {
                 match std::env::var(key) {
                     Ok(val) => Ok(Value::String(val)),
                     Err(_) => Err(EvalError::new(
-                        format!("Missing environment variable: {}", key),
-                        None,
+                        format!("env_var: environment variable '{}' is not set", key),
+                        Some("use env_var_or for a default value".to_string()),
                         None,
                         0,
                     )),
@@ -3773,6 +3784,11 @@ pub fn execute_builtin(
         "is_dict" => {
             // is_dict :: a -> Bool
             Ok(Value::Bool(matches!(args[0], Value::Dict(_))))
+        }
+        "is_none" => {
+            // is_none :: a -> Bool
+            // Check if a value is None (from empty list head, missing dict key, or JSON null)
+            Ok(Value::Bool(matches!(args[0], Value::None)))
         }
 
         // Assertions

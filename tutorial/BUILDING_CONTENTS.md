@@ -1,6 +1,6 @@
 # Building Up File Contents
 
-Avon provides several ways to build up file contents incrementally. This guide shows you the different patterns, when to use each, and why.
+Avon provides several ways to build up file contents incrementally. This guide shows you the different patterns, when to use each, and why. Pick the right tool for the job—you wouldn't use a hammer to make coffee.
 
 ## Quick Decision Guide
 
@@ -60,7 +60,7 @@ let full_config = header + database_section + app_section + footer in
 @config.ini {"{full_config}"}
 ```
 
-**Why templates here:** Multi-line content, easy to read, no escaping needed, and the `+` operator works seamlessly with templates.
+Why templates here:** Multi-line content, easy to read, no escaping needed, and the `+` operator works seamlessly with templates.
 
 ### Using a Single Template (Simplest)
 
@@ -85,7 +85,7 @@ debug = true
 @config.ini {"{full_config}"}
 ```
 
-**Why this approach:** Simplest when you don't need to build sections separately. All content in one place, easy to maintain.
+Why this approach:** Simplest when you don't need to build sections separately. All content in one place, easy to maintain.
 
 ### Using `join` for Lists
 
@@ -112,7 +112,7 @@ let full_config = join sections "\n" in
 @config.ini {"{full_config}"}
 ```
 
-**Why `join`:** Perfect for lists of strings. Cleaner than chaining `+` or `concat`. Use strings here since each line is simple.
+Why `join`:** Perfect for lists of strings. Cleaner than chaining `+` or `concat`. Use strings here since each line is simple.
 
 ### Using the Pipe Operator
 
@@ -137,7 +137,7 @@ sections
   -> (\content @config.ini {"{content}"})
 ```
 
-**Why pipe operator:** Makes data transformations readable and composable. Good for complex processing pipelines.
+Why pipe operator:** Makes data transformations readable and composable. Good for complex processing pipelines. Also makes you feel like a functional programming wizard, which is nice for the ego.
 
 ## Method 2: Using `--append` Flag (Multiple Runs)
 
@@ -178,7 +178,7 @@ avon deploy log.av --root ./logs --append
 - Each deployment adds content to the end of the file
 - Useful for logs, accumulating reports, or building files over multiple runs
 
-**When to use:** Only when you truly need to accumulate over multiple runs. For most cases, prefer building everything in memory (Method 1).
+When to use:** Only when you truly need to accumulate over multiple runs. For most cases, prefer building everything in memory (Method 1). Your disk I/O will thank you.
 
 ## Method 3: Read, Modify, Write
 
@@ -206,7 +206,7 @@ let updated_content = existing_content + new_section in
 avon deploy update.av --root . --force
 ```
 
-**Why templates here:** When adding multi-line sections, templates are cleaner than string concatenation with `\n`.
+Why templates here:** When adding multi-line sections, templates are cleaner than string concatenation with `\n`.
 
 ## Method 4: Building from Lists with `map` and `join`
 
@@ -230,7 +230,7 @@ let content = header + (join user_lines "\n") in
 @users.txt {"{content}"}
 ```
 
-**Why this pattern:** 
+Why this pattern:** 
 - `map` transforms each item using a template (clean interpolation)
 - `join` combines the list with separators
 - Header uses template for consistency, then `+` to merge with joined lines
@@ -247,7 +247,7 @@ let build_list = fold (\acc \item acc + {"- {item}
 @list.txt {"{build_list}"}
 ```
 
-**Why `fold`:** When you need custom accumulation logic. However, `map` + `join` is usually simpler and preferred:
+Why `fold`:** When you need custom accumulation logic. However, `map` + `join` is usually simpler and preferred:
 
 ```avon
 let items = ["item1", "item2", "item3"] in
@@ -257,13 +257,13 @@ let content = join list_lines "\n" in
 @list.txt {"{content}"}
 ```
 
-**Why prefer `map` + `join`:** More readable, easier to understand, and follows functional programming best practices.
+Why prefer `map` + `join`:** More readable, easier to understand, and follows functional programming best practices.
 
 ## Method 5: Conditional Content Building
 
 **Best for:** Building files with optional sections based on conditions.
 
-**Why:** Some configs have optional features. Building conditionally is cleaner than maintaining separate files.
+**Why:** Some configs have optional features. Building conditionally is cleaner than maintaining separate files. And unlike languages with 47 different ways to check for null, we just use `if then else`.
 
 ```avon
 let include_debug = "true" in
@@ -287,7 +287,7 @@ let full_config = base_config + debug_section + metrics_section in
 @config.ini {"{full_config}"}
 ```
 
-**Why templates + `+`:** 
+Why templates + `+`:** 
 - Templates handle multi-line content cleanly
 - `+` operator merges sections easily
 - Empty template `{""}` works as a no-op when condition is false
@@ -311,7 +311,7 @@ let log_content = join log_lines "\n" in
 @app.log {"{log_content}"}
 ```
 
-**Why this approach:** 
+Why this approach:** 
 - Simple strings in the list (no interpolation needed per item)
 - Template in `map` for interpolation (`{timestamp} - {event}`)
 - `join` to combine lines
@@ -345,7 +345,7 @@ let full_config = header + database_config + app_config in
 @config.ini {"{full_config}"}
 ```
 
-**Why templates + `+`:** 
+Why templates + `+`:** 
 - Each section is multi-line with interpolation
 - Templates handle this cleanly
 - `+` operator merges sections intuitively
@@ -383,7 +383,7 @@ let html = header + nav + footer in
 @index.html {"{html}"}
 ```
 
-**Why this approach:**
+Why this approach:**
 - Templates for multi-line HTML sections
 - Template interpolation in `nav` for the `join` result
 - `+` operator chains sections together
@@ -413,9 +413,11 @@ let html = header + nav + footer in
 
 6. **Use pipe operator for transformations**: Makes data transformations readable and composable. Good for complex processing pipelines.
 
-7. **Use `--append` sparingly**: Only when you truly need to accumulate over multiple runs. Most cases should build everything in memory.
+7. **Use `--append` sparingly**: Only when you truly need to accumulate over multiple runs. Most cases should build everything in memory. Appending is like duct tape—useful in emergencies, but you probably shouldn't build your whole house with it.
 
 8. **Read existing files when needed**: Use `readfile` to extend files created outside Avon, then merge with `+`.
+
+<!-- TODO: Add section on handling legacy configs. Just kidding, we don't talk about legacy configs. They know what they did. -->
 
 ## When to Use Strings vs Templates
 

@@ -1,12 +1,12 @@
 # Avon — The Modern Template Language for Developers
 
-Welcome to **Avon**. You're about to give your configuration workflow superpowers.
+Welcome to Avon! You're about to give your configuration workflow superpowers.
 
-Avon is designed for developers who are tired of copy-pasting. Whether you're building Kubernetes manifests, setting up CI/CD pipelines, or generating boilerplate code, Avon turns repetitive tasks into elegant, maintainable code.
+Avon is designed for developers who are tired of copy-pasting. Whether you're building Kubernetes manifests, setting up CI/CD pipelines, or generating boilerplate code, Avon turns repetitive tasks into elegant, maintainable code. Life's too short to manually update 47 YAML files.
 
-Avon is a **powerful, general-purpose tool** that handles everything from complex infrastructure projects to simple single-file configs. It's a comprehensive workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 89+ built-in utilities to **any text format**, making it perfect for developers, non-developers, and hobbyists alike.
+Avon is a powerful, general-purpose tool that handles everything from complex infrastructure projects to simple single-file configs. It's a comprehensive workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 89+ built-in utilities to any text format, making it perfect for developers, non-developers, and hobbyists alike.
 
-**Pro tip:** Throughout this guide, look at the `examples/` directory for real-world use cases. Each example demonstrates practical Avon patterns you can adapt for your own projects.
+> Tip: Throughout this guide, look at the `examples/` directory for real-world use cases. Each example demonstrates practical Avon patterns you can adapt for your own projects.
 
 ---
 
@@ -204,7 +204,7 @@ avon eval examples/hello.av
 # Output: Hello, world!
 ```
 
-Congratulations! You've just run your first Avon program.
+Congratulations! You've just run your first Avon program. Not quite "Hello, World" in C, but at least you didn't have to include stdio.h. 
 
 ### Generate a Single File
 
@@ -229,15 +229,15 @@ Hello, Alice!
 Welcome to Avon.
 ```
 
-**What happened?**
-- `\name` defines a function parameter
+What happened?
+- `\name` defines a function parameter (that backslash is the lambda—more on that later)
 - `@greeting.txt` specifies the output file path (relative to `--root`)
 - `{"..."}` is a template that interpolates the `{name}` variable
 - `--root ./output` ensures files are written to `./output/greeting.txt`
 
 ### Generate Multiple Files
 
-Here's where Avon shines. Let's generate a config file for each environment:
+Here's where Avon gets fun. Let's generate a config file for each environment:
 
 ```avon
 let environments = ["dev", "staging", "prod"] in
@@ -253,24 +253,24 @@ Deploy it:
 avon deploy examples/gen_configs.av --root ./configs --force
 ```
 
-This creates three files: `config-dev.yml`, `config-staging.yml`, and `config-prod.yml` — each with appropriate settings.
+This creates three files: `config-dev.yml`, `config-staging.yml`, and `config-prod.yml`—each with appropriate settings.
 
-**Key insight:** Return a list of file templates and Avon generates them all in one go!
+Key insight: Return a list of file templates and Avon generates them all in one go! No loops, no scripts, no glue code. No "wait, which file did I forget to update?"
 
 ### Avon for Single Files and Dotfiles
 
-Avon is a powerful, general-purpose tool that excels at generating hundreds of files, but it's equally powerful for single files. It's a comprehensive workflow layer that makes **any file** more maintainable and shareable, whether you're managing a single config or building complex multi-file systems.
+Avon excels at generating hundreds of files, but it's equally powerful for single files. It's a comprehensive workflow layer that makes any file more maintainable and shareable, whether you're managing a single config or building complex multi-file systems.
 
-> **📖 For simple config file examples, see [SIMPLE_CONFIGS.md](./SIMPLE_CONFIGS.md)**
+> See also: For simple config file examples, see [SIMPLE_CONFIGS.md](./SIMPLE_CONFIGS.md)
 
-**Perfect for:**
-- **Dotfiles** — Easy way to download and deploy configs to your system
-- **Sharing configs** — One file in git, many customized deployments
-- **Single files with variables** — Make any file more generic and maintainable
-- **Long, repetitive files** — Use list interpolation to eliminate copy-paste
-- **Non-developers** — Simple way to manage and share personal configs
+Perfect for:
+- Dotfiles — Easy way to download and deploy configs to your system
+- Sharing configs — One file in git, many customized deployments
+- Single files with variables — Make any file more generic and maintainable
+- Long, repetitive files — Use list interpolation to eliminate copy-paste
+- Non-developers — Simple way to manage and share personal configs
 
-**Example: Dotfile with Variables**
+Example: Dotfile with Variables
 ```avon
 \username ? "developer" @.vimrc {"
   " Vim configuration for {username}
@@ -281,14 +281,14 @@ Avon is a powerful, general-purpose tool that excels at generating hundreds of f
 "}
 ```
 
-**Deploy:**
+Deploy:
 ```bash
 avon deploy vimrc.av --root ~ -username alice
 ```
 
-**Share:** Keep one `.vimrc.av` in git. Each person deploys their customized version. No more maintaining separate dotfiles for each machine.
+Share: Keep one `.vimrc.av` in git. Each person deploys their customized version. No more maintaining separate dotfiles for each machine. No more "which version of my vimrc is this again?" No more archaeological expeditions through your dotfiles repo.
 
-**Example: Long Config with List Interpolation**
+Example: Long Config with List Interpolation
 ```avon
 let plugins = ["vim-fugitive", "vim-surround", "vim-commentary", "vim-repeat"] in
 @.vimrc {"
@@ -299,13 +299,13 @@ let plugins = ["vim-fugitive", "vim-surround", "vim-commentary", "vim-repeat"] i
 
 When you interpolate a list in a template, each item appears on its own line. This eliminates copy-paste even in a single file.
 
-**Language Agnostic:** Avon works with **any text format**—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 89+ built-in utilities to any file, making even single files more powerful.
+Language Agnostic: Avon works with any text format—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 89+ built-in utilities to any file, making even single files more powerful.
 
-**Runtime Type Safety:** Avon doesn't deploy if there's a type error. No static types needed—if a type error occurs, deployment simply doesn't happen. This flexible approach brings type safety to any file without the complexity of compile-time type systems.
+Runtime Type Safety: Avon won't deploy if there's a type error. No static types needed—if a type error occurs, deployment simply doesn't happen. Sleep soundly knowing your configs are valid. (Unlike that bash script you wrote at 2am.)
 
-**Built-in Utilities:** Avon comes with 89+ built-in functions for string operations, list operations (map, filter, fold, sort, unique, range), formatting (15 functions), date/time operations, JSON manipulation, file I/O, and HTML/Markdown helpers. These utilities make any file more powerful, even if you're just managing a single config.
+Built-in Utilities: Avon comes with 89+ built-in functions for string operations, list operations (map, filter, fold, sort, unique, range), formatting (15 functions), date/time operations, JSON manipulation, file I/O, and HTML/Markdown helpers.
 
-**Debugging Tools:** Use `trace`, `debug`, `assert`, and the `--debug` flag to troubleshoot quickly, whether you're working with complex infrastructure or a simple config file.
+Debugging Tools: Use `trace`, `debug`, `assert`, and the `--debug` flag to troubleshoot quickly.
 
 ---
 
@@ -313,21 +313,21 @@ When you interpolate a list in a template, each item appears on its own line. Th
 
 ### Simple File Model
 
-**Each Avon file contains exactly one expression.** This keeps Avon simple and predictable. When you run an Avon file, it evaluates that single expression to a value.
+Each Avon file contains exactly one expression. This keeps Avon simple and predictable. When you run an Avon file, it evaluates that single expression to a value.
 
 This simplicity enables powerful modularity: the `import` function allows any file to return any Avon type (a string, number, list, dict, function, FileTemplate, or any other value). Files can be libraries that export functions, data files that return dictionaries, or generators that return FileTemplates—all using the same simple model.
 
-**Example: Library file (`math.av`):**
+Example: Library file (`math.av`):
 ```avon
 {double: \x x * 2, triple: \x x * 3, square: \x x * x}
 ```
 
-**Example: Data file (`config.av`):**
+Example: Data file (`config.av`):
 ```avon
 {host: "localhost", port: 8080, debug: true}
 ```
 
-**Example: Generator file (`deploy.av`):**
+Example: Generator file (`deploy.av`):
 ```avon
 @config.yml {"host: localhost"}
 ```
@@ -336,7 +336,7 @@ All three are valid Avon files. The `import` function evaluates the file and ret
 
 ### The Avon Runtime Model
 
-When you run an Avon program, it evaluates to a **Value**. Here are the types of values you'll encounter:
+When you run an Avon program, it evaluates to a Value. Here are the types of values you'll encounter:
 
 | Type | Example | Use Case |
 |------|---------|----------|
@@ -353,14 +353,14 @@ When evaluation is complete, `avon` either:
 1. **Prints the result** (for `eval` command) - Shows the value as a string representation
 2. **Materializes files** (for `deploy` command) - Writes FileTemplate values to disk
 
-**How `eval` works:**
+How `eval` works:**
 - Evaluates the expression in the file
 - Converts the result to a string representation
 - Prints it to stdout
 - If the result is a FileTemplate or list of FileTemplates, it shows the paths and content that would be generated (but doesn't write them)
 - Exit code: 0 on success, 1 on error
 
-**How `deploy` works:**
+How `deploy` works:**
 - Evaluates the expression in the file
 - If the result is a FileTemplate, writes it to disk
 - If the result is a list containing FileTemplates, writes all of them
@@ -395,11 +395,26 @@ Avon is a small, elegant language optimized for readability and powerful file ge
 3.14                       # Float
 -3.14                      # Negative float
 true false                 # Booleans
+none                       # None (absence of value)
 [1, 2, 3]                  # List
 {host: "localhost", port: 8080}  # Dictionary (key: value syntax)
 ```
 
-**Negative Numbers:** You can write negative numbers directly using the `-` prefix:
+None: The `none` literal represents the absence of a value. It's returned by:
+- `head` on an empty list: `head []` returns `none`
+- `get` on a missing key: `get {a: 1} "b"` returns `none`
+- JSON null values when parsing JSON
+
+Use `is_none` to check for None values:
+```avon
+let x = head [] in
+if is_none x then "list was empty" else x
+
+let val = get config "optional_key" in
+if is_none val then "default" else val
+```
+
+Negative Numbers: You can write negative numbers directly using the `-` prefix:
 ```avon
 -5                         # Negative integer
 -3.14                      # Negative float
@@ -407,11 +422,11 @@ true false                 # Booleans
 [10, -1 .. 0]              # Range with negative step
 ```
 
-**Note:** For variables, use the `neg` function: `let x = 5 in -x` (uses `neg` function internally).
+Note: For variables, use the `neg` function: `let x = 5 in -x` (uses `neg` function internally).
 
-**Strings support escape sequences:** `"\n"` is a newline, `"\t"` is a tab, `"\\"` is a backslash, `"\""` is a quote.
+Strings support escape sequences: `"\n"` is a newline, `"\t"` is a tab, `"\\"` is a backslash, `"\""` is a quote.
 
-**Dictionary syntax:** Keys are identifiers (unquoted), values can be any type:
+Dictionary syntax: Keys are identifiers (unquoted), values can be any type:
 ```avon
 {a: 1, b: 2}               # Simple dict
 {host: "localhost", port: 8080, debug: true}  # Mixed types
@@ -434,7 +449,7 @@ _private                   # Underscores are valid
 \a \b \c (a + b) * c       # Curried function of three parameters
 ```
 
-Functions are automatically curried, so `\x \y x + y` is equivalent to `\x (\y x + y)`.
+Functions are automatically curried, so `\x \y x + y` is equivalent to `\x (\y x + y)`. If you've never seen currying before, don't panic—it just means multi-argument functions are really chains of single-argument functions. You can call them the same way either way. If you've used Haskell, welcome home. If not, you'll be fine.
 
 #### Function Application (Calling)
 
@@ -444,13 +459,13 @@ f x y                      # Apply f to x, then apply result to y
 map (\n n + 1) [1,2,3]    # Pass a function and a list to map
 ```
 
-Application is **left-associative**, so `f a b` means `(f a) b`.
+Application is left-associative, so `f a b` means `(f a) b`.
 
 #### Operators
 
 Avon supports these binary operators:
 
-**Arithmetic Operators:**
+Arithmetic Operators:
 ```avon
 a + b                      # Addition (numbers), concatenation (strings/lists/templates/paths)
 a - b                      # Subtraction (numbers only)
@@ -459,7 +474,9 @@ a / b                      # Division (numbers only)
 a % b                      # Modulo/Remainder (numbers only)
 ```
 
-**Comparison Operators:**
+<!-- In Avon, "5" + 3 is a type error, not "53". You're welcome. -->
+
+Comparison Operators:
 ```avon
 a == b                     # Equality (works for all types)
 a != b                     # Inequality (works for all types)
@@ -469,20 +486,22 @@ a >= b                     # Greater or equal (numbers only)
 a <= b                     # Less or equal (numbers only)
 ```
 
-**Logical Operators:**
+Logical Operators:
 ```avon
 a && b                     # Logical AND (both must be true)
 a || b                     # Logical OR (at least one must be true)
 ```
 
-**Pipe Operator:**
+These work on actual booleans, not "truthy" values. `0`, `""`, and `[]` aren't secretly `false` here.
+
+Pipe Operator:
 ```avon
 a -> b                     # Pipe: pass a as first argument to b
 ```
 
 The pipe operator `->` (not `|`) chains expressions, passing the left-hand side as the first argument to the right-hand side. This eliminates nested parentheses and makes code more readable.
 
-**Note:** Only `->` is a valid pipe operator. The single `|` character is not a pipe operator in Avon.
+Note: Only `->` is a valid pipe operator. The single `|` character is not a pipe operator in Avon.
 
 **Basic pipe:**
 ```avon
@@ -515,7 +534,7 @@ The pipe operator `->` (not `|`) chains expressions, passing the left-hand side 
 @config.json -> exists     # Equivalent to: exists @config.json
 ```
 
-**Why use pipes?** Pipes make code more readable by showing the flow of data from left to right, rather than nested function calls. Compare:
+Why use pipes?** Pipes make code more readable by showing the flow of data from left to right, rather than nested function calls. Compare:
 
 ```avon
 # Without pipe (nested)
@@ -648,7 +667,7 @@ if condition then true_expr else false_expr
 
 The `if` expression evaluates the condition. If it's `true`, it returns `true_expr`; otherwise, it returns `false_expr`. Both branches must be present (`then` and `else`).
 
-**Examples:**
+Examples:
 ```avon
 if age > 18 then "adult" else "minor"
 
@@ -662,7 +681,7 @@ if debug then "verbose" else "quiet"
 if x > 0 then "positive" else (if x < 0 then "negative" else "zero")
 ```
 
-**Important:** The condition must evaluate to a boolean (`true` or `false`). Type errors occur if you use a non-boolean value.
+Important: The condition must evaluate to a boolean (`true` or `false`). Type errors occur if you use a non-boolean value.
 
 #### Logical Operators
 
@@ -673,14 +692,14 @@ a && b                     # Returns true only if both a and b are true
 a || b                     # Returns true if at least one of a or b is true
 ```
 
-**Examples:**
+Examples:
 ```avon
 if (age >= 18) && (has_license) then "can drive" else "cannot drive"
 
 if (x > 0) || (y > 0) then "at least one positive" else "both non-positive"
 ```
 
-**Important:** Both operands must be booleans. Type errors occur if you use non-boolean values.
+Important: Both operands must be booleans. Type errors occur if you use non-boolean values.
 
 **Precedence:** Logical operators have lower precedence than comparison operators, so parentheses are often needed:
 ```avon
@@ -722,7 +741,7 @@ sum * 2
 # Evaluates to: 60
 ```
 
-**How Scoping Works:**
+How Scoping Works:**
 
 Avon uses **lexical scoping** (also called static scoping), which means variable visibility is determined by the structure of your code, not by when code executes. Here's how it works:
 
@@ -769,7 +788,7 @@ result
 
 Variables are visible in the expression following `in`. They are not visible before their definition or outside their scope.
 
-**Example:**
+Example:
 ```avon
 let x = 10 in
 x * 2  # ✓ x is visible here
@@ -793,7 +812,7 @@ let b = "B" in
 concat a b  # Both a and b are visible here
 ```
 
-**How it works:**
+How it works:**
 1. First `let` creates scope 1: `{a: "A"}`
 2. Second `let` creates scope 2: `{a: "A", b: "B"}` (includes a from scope 1)
 3. Expression `concat a b` evaluates in scope 2 (can see both a and b)
@@ -838,13 +857,15 @@ let x = 2 in  # Error: variable 'x' is already defined in this scope
 x
 ```
 
-**Why no shadowing?**
-- Prevents confusion and makes code more predictable
+Why no shadowing?**
+- Prevents confusion and makes code more predictable (no more "which x is this?")
 - Each variable name is unique within its scope
 - Easier to reason about code—you always know which variable you're referring to
 - Aligns with functional programming principles (immutability)
+- Saves you from yourself at 2am
+- Unlike certain languages, `var` won't suddenly hoist your variable to the shadow realm
 
-**Exception:** The variable `_` (underscore) can be reused. This is a special case for ignoring values:
+**Exception:** The variable `_` (underscore) can be reused. This is a special case for ignoring values (the "I don't care" variable):
 ```avon
 let _ = trace "step 1" value1 in
 let _ = trace "step 2" value2 in  # OK: _ can be reused
@@ -874,7 +895,7 @@ template
 # Template captured "Alice" from the surrounding scope when created
 ```
 
-**Important:** The template captures the value at creation time, not evaluation time:
+Important: The template captures the value at creation time, not evaluation time:
 ```avon
 let name = "Alice" in
 let template = {"Hello, {name}"} in
@@ -895,7 +916,7 @@ add_x 5
 # Function captured x=10 from when it was created
 ```
 
-**How closures work:**
+How closures work:**
 1. When `add_x` is created, it captures the current scope: `{x: 10}`
 2. This captured scope is stored with the function
 3. When `add_x 5` is called, it uses the captured `x=10`, not any later definition
@@ -940,7 +961,7 @@ let outer = x + y in
 - Use descriptive names that reflect the variable's purpose
 - The `_` variable can be reused when you want to ignore a value
 
-**Important:** Always include the `in` keyword! `let` bindings require an `in` to specify the expression where the binding is visible. Without `in`, the parser will report an error.
+Important: Always include the `in` keyword! `let` bindings require an `in` to specify the expression where the binding is visible. Without `in`, the parser will report an error.
 
 **Common mistake:**
 ```avon
@@ -984,6 +1005,7 @@ Avon does **not** support recursive functions (functions that call themselves). 
 - Recursion tracking requires overhead (depth counters, stack management)
 - Iterative solutions using `fold`, `map`, and `filter` are often more efficient
 - No risk of stack overflow from deep recursion
+- Your laptop won't sound like a jet engine taking off
 
 **3. Encourages Better Patterns**
 - Avon's built-in functions (`fold`, `map`, `filter`) are designed for iteration
@@ -995,12 +1017,13 @@ Avon does **not** support recursive functions (functions that call themselves). 
 - No need for recursion depth limits
 - Predictable execution behavior
 
-**How to achieve recursive-like behavior:**
+How to achieve recursive-like behavior:**
 
 Instead of recursion, use Avon's built-in iteration functions:
 
 ```avon
 # Instead of recursive factorial, use fold:
+# (Yes, every programming tutorial must include factorial. It's the law.)
 let factorial = \n
   fold (\acc \x acc * x) 1 [1 .. n] in
 factorial 5
@@ -1097,7 +1120,7 @@ Lists are the workhorse of Avon. They're written with square brackets:
 
 ```avon
 [1, 2, 3]
-["alice", "bob", "charlie"]
+["alice", "bob", "charlie"]  # A list, not a database of users who owe you money
 []                          # Empty list
 ```
 
@@ -1125,6 +1148,8 @@ You can concatenate lists with `+`:
 [1, 2] + [3, 4]           # Result: [1, 2, 3, 4]
 ```
 
+<!-- Easter egg: In some languages, [1, 2] + [3, 4] equals 10. Or "1,23,4". Or throws. We just concatenate lists like sane people. -->
+
 ### Range Syntax
 
 Avon provides a convenient syntax for generating sequences of numbers using ranges:
@@ -1146,7 +1171,7 @@ Avon provides a convenient syntax for generating sequences of numbers using rang
 - `[start .. end]` - Generates integers from `start` to `end` (inclusive), step of 1
 - `[start, step .. end]` - Generates integers from `start` to `end` (inclusive), incrementing by `step`
 
-**Important:** The `..` operator requires spaces around it: `[1 .. 5]` (not `[1..5]`).
+Important: The `..` operator requires spaces around it: `[1 .. 5]` (not `[1..5]`).
 
 **What ranges return:**
 Ranges evaluate to a `List` of integers. You can use all list operations on ranges:
@@ -1272,7 +1297,7 @@ db_host
 # Result: "db.local"
 ```
 
-**Why use dicts instead of list of pairs?**
+Why use dicts instead of list of pairs?**
 
 - **Clearer intent** - `{host: "localhost"}` is more readable than `[["host", "localhost"]]`
 - **Dot notation** - Access fields naturally: `config.host` instead of `get config "host"`
@@ -1281,7 +1306,7 @@ db_host
 - **Better for JSON** - JSON objects naturally parse to dicts
 - **Backward compatible** - `get`, `set`, `has_key`, `keys`, `values` work with both dicts and list-of-pairs
 
-**When to use each:**
+When to use each:**
 
 - **Use dictionaries when:**
   - You need fast key lookup
@@ -1303,7 +1328,7 @@ Instead of building a list of pairs and converting later:
 # Modern approach with dict
 let service_config = {
   name: "api-service",
-  port: 8080,
+  port: 8080,           # Not 80, because we're not savages running as root
   replicas: 3,
   health_check: {interval: 30, timeout: 5}
 } in
@@ -1380,7 +1405,7 @@ let join_names = fold (\acc \n (concat acc (concat ", " n))) "" names in
 @names.txt {"{join_names}"}
 ```
 
-(Note: Avon has a `join` builtin to make this easier!)
+(Note: Avon has a `join` builtin to make this easier! We just wanted to show you the hard way first so you'd appreciate it.)
 
 ### Builtins for Lists
 
@@ -1530,7 +1555,7 @@ world
 # world
 ```
 
-**When to use each:**
+When to use each:**
 - **Use strings for:** Data values, single-line content, escape sequences needed
 - **Use templates for:** File content, multi-line output, variable interpolation needed
 
@@ -1559,20 +1584,16 @@ This is important for closures and function returns—templates remember the val
 - Markdown functions: `md_heading`, `md_link`, `md_code`, `markdown_to_html`
 - String operations: `concat`
 
-**Example:**
+Example:
 ```avon
 let name = "world" in
 let template = {"hello {name}"} in
 upper template
 # Result: "HELLO WORLD"
 # No need to call to_string first!
+# (Fun fact: this example has been written 10 million times in every language tutorial ever)
 ```
 
-**Before (manual conversion):**
-```avon
-let t = {"hello {name}"} in
-upper (to_string t)
-```
 
 **After (automatic conversion):**
 ```avon
@@ -1645,10 +1666,10 @@ Use when your output has **many literal braces** (JSON, HCL, Terraform, Lua dict
 
 ```avon
 @config.lua {{"
-local config = {
-  name = "{{ app_name }}",
-  debug = {{ if dev then "true" else "false" }}
-}
+    local config = {
+      name = "{{ app_name }}",
+      debug = {{ if dev then "true" else "false" }}
+    }
 "}}
 ```
 
@@ -1656,12 +1677,12 @@ local config = {
 
 ```avon
 @output.json {{"
-{
-  "app": "{{ app_name }}",
-  "nested": {
-    "value": {{ port }}
-  }
-}
+    {
+      "app": "{{ app_name }}",
+      "nested": {
+        "value": {{ port }}
+      }
+    }
 "}}
 ```
 
@@ -1671,14 +1692,14 @@ With single-brace, you must escape braces:
 
 ```avon
 @config.lua {"
-local config = {{
-  name = "myapp",
-  debug = true
-}}
+    local config = {{
+      name = "myapp",
+      debug = true
+    }}
 
-function init()
-  return config
-end
+    function init()
+      return config
+    end
 "}
 ```
 
@@ -1686,14 +1707,14 @@ With double-brace, braces are literal:
 
 ```avon
 @config.lua {{"
-local config = {
-  name = "{{ app_name }}",
-  debug = true
-}
+    local config = {
+      name = "{{ app_name }}",
+      debug = true
+    }
 
-function init()
-  return config
-end
+    function init()
+      return config
+    end
 "}}
 ```
 
@@ -1828,7 +1849,7 @@ This generates `config-dev.yml` and `config-prod.yml`.
 - **Additive:** Adds new content to the end of existing files
 - Useful for logs, accumulating data, or building files incrementally
 - If file doesn't exist, creates it (same as normal write)
-- > **📖 For comprehensive guide on building file contents, see [BUILDING_CONTENTS.md](./BUILDING_CONTENTS.md)**
+- > See also: For comprehensive guide on building file contents, see [BUILDING_CONTENTS.md](./BUILDING_CONTENTS.md)**
 
 **`--if-not-exists`** — Only create file if it doesn't already exist
 - **Initialization mode:** Skips files that already exist
@@ -1906,7 +1927,7 @@ Lists are the heart of Avon, and Avon provides comprehensive list operations:
 | `head list` | Get first element (or `None` if empty) | `head [1,2,3]` → `1` |
 | `tail list` | Get all but first element | `tail [1,2,3,4]` → `[2,3,4]` |
 
-**Examples:**
+Examples:
 ```avon
 # Zip two lists together
 let numbers = [1, 2, 3] in
@@ -1985,7 +2006,7 @@ The `markdown_to_html` function converts markdown text to HTML. It supports:
 - Paragraphs: Regular text → `<p>text</p>`
 - Empty lines → `<br>`
 
-**Example:**
+Example:
 ```avon
 let md = {"# Welcome
 This is **bold** and *italic* text.
@@ -1994,7 +2015,7 @@ markdown_to_html md
 # Result: "<h1>Welcome</h1>\n<p>This is <strong>bold</strong> and <em>italic</em> text.</p>"
 ```
 
-**Note:** `markdown_to_html` accepts both strings and templates, automatically converting templates to strings before processing.
+Note: `markdown_to_html` accepts both strings and templates, automatically converting templates to strings before processing.
 
 ### Type Conversion & Casting
 
@@ -2010,6 +2031,8 @@ markdown_to_html md
 | `format_float num prec` | Format float with precision | `format_float 3.14159 2` | `"3.14"` |
 
 **String to bool conversions:** `"true"`, `"yes"`, `"1"`, `"on"` -> `true`; `"false"`, `"no"`, `"0"`, `"off"`, `""` -> `false`
+
+<!-- Fun fact: The number of ways to convert a string to a boolean is inversely proportional to the number of production incidents it will cause. -->
 
 ### Advanced List Operations
 
@@ -2032,13 +2055,13 @@ Avon's simplicity enables powerful modularity. Since each file contains exactly 
 
 - **Library files** return dictionaries of functions:
   ```avon
-  # math.av
+  # math.av - The answer to life, the universe, and everything
   {double: \x x * 2, triple: \x x * 3, square: \x x * x}
   ```
   ```avon
   # main.av
   let math = import "math.av" in
-  math.double 21  # Returns 42
+  math.double 21  # Returns 42 (of course)
   ```
 
 - **Data files** return dictionaries or lists:
@@ -2153,7 +2176,7 @@ This means you can use any name for your function parameters (including single l
 
 #### How It Works
 
-**When a file evaluates to a function:**
+When a file evaluates to a function:**
 1. Avon evaluates the file's expression
 2. If the result is a function, Avon checks for arguments you provided
 3. Arguments are applied to the function (named arguments first, then positional)
@@ -2232,7 +2255,7 @@ avon deploy greet.av -name "Alice" -role "Admin" --root ./out --force
 # Actually writes the file
 ```
 
-**How it works:**
+How it works:**
 - The CLI looks for `-name` and passes "Alice" to the `name` parameter
 - It looks for `-role` and passes "Admin" to the `role` parameter
 - Arguments are received as **strings** (see "Argument Types" below)
@@ -2249,12 +2272,12 @@ avon eval greet.av "Alice" "Admin"
 avon deploy greet.av "Alice" "Admin" --root ./out --force
 ```
 
-**How positional arguments work:**
+How positional arguments work:**
 - Arguments are applied in the order they appear
 - Named arguments are applied first, then positional arguments fill remaining parameters
 - If you mix named and positional, named arguments take priority
 
-**Example:**
+Example:
 ```avon
 # config.av
 \env \port \debug @config.yml {"
@@ -2310,7 +2333,7 @@ avon deploy config.av -env prod --root ./out --force
 avon deploy config.av -env prod -port 9090 --root ./out --force
 ```
 
-**How defaults work:**
+How defaults work:**
 - If a named argument is provided, it's used
 - If a positional argument is available, it's used
 - If neither is provided, the default value is used
@@ -2320,7 +2343,7 @@ avon deploy config.av -env prod -port 9090 --root ./out --force
 
 While possible, mixing named and positional arguments can be confusing. Avon prioritizes named arguments first, then fills remaining parameters with positional arguments in order.
 
-**Example:**
+Example:
 ```avon
 # multi.av
 \a \b \c \d [a, b, c, d]
@@ -2333,15 +2356,15 @@ avon eval multi.av -a 1 -c 3 2 4
 # Result: [1, 2, 3, 4]
 ```
 
-**Important:** Single-dash arguments (like `-a`, `-c`) are always treated as named function parameters, not CLI flags. Only double-dash arguments (like `--force`, `--root`) are CLI options. This means you can use any single-letter or short name for your function parameters without conflicts.
+Important: Single-dash arguments (like `-a`, `-c`) are always treated as named function parameters, not CLI flags. Only double-dash arguments (like `--force`, `--root`) are CLI options. This means you can use any single-letter or short name for your function parameters without conflicts.
 
 **Best Practice:** Stick to either all named or all positional arguments for a single command invocation to avoid confusion.
 
 #### 5. Argument Types
 
-> **Important:** All command-line arguments passed to your Avon program are received as **strings**—even if you intend to use them as numbers or booleans, you must explicitly convert them inside your program.
+> Important: All command-line arguments passed to your Avon program are received as **strings**—even if you intend to use them as numbers or booleans, you must explicitly convert them inside your program.
 
-**Example:**
+Example:
 ```bash
 avon eval math.av -x 5 -y 40
 ```
@@ -2452,7 +2475,7 @@ avon eval data.av -x 5
 #### Summary
 
 - **Both `eval` and `deploy` accept arguments** - use `eval` to preview, `deploy` to write files
-- **When a file evaluates to a function**, arguments are automatically applied
+- When a file evaluates to a function**, arguments are automatically applied
 - **Named arguments** use `-param value` syntax
 - **Positional arguments** are passed in order without names
 - **Default values** are used when arguments aren't provided
@@ -2463,9 +2486,9 @@ avon eval data.av -x 5
 
 The REPL (Read-Eval-Print Loop) is an interactive shell for exploring Avon. It's perfect for learning the language, testing expressions, and debugging. The REPL maintains a persistent symbol table, so variables you define persist across expressions, making it ideal for building up complex computations step by step.
 
-> **📖 For comprehensive REPL documentation, see [REPL_USAGE.md](./REPL_USAGE.md)**
+> See also: For comprehensive REPL documentation, see [REPL_USAGE.md](./REPL_USAGE.md)**
 
-**Why Use the REPL?**
+Why Use the REPL?**
 
 The REPL is an essential tool for Avon development:
 
@@ -2782,7 +2805,7 @@ After an error, you can continue working—the REPL doesn't crash.
 4. **Use `:type` for verification**: Check types of complex expressions
 5. **Clear when needed**: Use `:clear` to reset if you make mistakes
 
-**When to Use REPL vs Files:**
+When to Use REPL vs Files:**
 
 - **Use REPL for**: Quick tests, learning, debugging, one-off calculations
 - **Use files for**: Production code, reusable programs, version-controlled configs
@@ -2894,7 +2917,7 @@ Avon uses **runtime type checking** rather than static compile-time types. This 
 
 **Key behavior:** Avon **does not deploy** if there's a type error. If a type error occurs during evaluation, deployment simply doesn't happen. This protects you from bad or improperly typed configurations being written to disk.
 
-**How type checking works:**
+How type checking works:**
 - Types are checked at runtime when operations are performed
 - If you try to add a string to a number, Avon immediately reports a type error
 - If you try to call a non-function value, Avon reports a type error
@@ -2939,7 +2962,7 @@ If an error occurs during file materialization (writing files), Avon:
 
 **Error recovery:**
 - After an error, you can fix the issue and try again
-- No files are left in an inconsistent state
+- No files are left in an inconsistent state (unlike your git history)
 - Use `--debug` flag for more detailed error information
 
 ### Debugging Tools
@@ -2963,7 +2986,7 @@ These tools ensure that whether you're debugging a simple type mismatch in a sin
 
 ## Best Practices
 
-> **📖 For style guidelines and best practices, see [STYLE_GUIDE.md](./STYLE_GUIDE.md)**
+> See also: For style guidelines and best practices, see [STYLE_GUIDE.md](./STYLE_GUIDE.md)**
 
 ### Write Clear, Composable Code
 
@@ -3005,7 +3028,7 @@ avon deploy program.av myservice prod 1.0
 
 ### Always Use `--root`
 
-Avoid accidentally writing to system directories:
+Avoid accidentally writing to system directories. Your `/etc` will thank you:
 
 ```bash
 # Good: files go to ./generated/
@@ -3059,12 +3082,12 @@ let db_password = env_var "DB_PASSWORD" in
 "}
 ```
 
-**How it works:**
+How it works:**
 1. Export the variable in your shell: `export DB_PASSWORD="my-secret-pass"`
 2. Run Avon: `avon deploy config.av`
 
 **Fail-Safe Behavior:**
-If the environment variable `DB_PASSWORD` is missing, `env_var` will **fail immediately** with an error. This prevents you from accidentally deploying a configuration with empty or missing secrets.
+If the environment variable `DB_PASSWORD` is missing, `env_var` will **fail immediately** with an error. This prevents you from accidentally deploying a configuration with empty or missing secrets. Unlike that one time in production. You know the one.
 
 For optional variables, use `env_var_or`:
 ```avon
@@ -3176,7 +3199,7 @@ If the backup fails (e.g., permissions), the deployment aborts and the original 
 
 ### Example 1: Site Generator
 
-> **📖 For comprehensive site generator guide with examples from minimal to advanced, see [SITE_GENERATOR.md](./SITE_GENERATOR.md)**
+> See also: For comprehensive site generator guide with examples from minimal to advanced, see [SITE_GENERATOR.md](./SITE_GENERATOR.md)**
 
 See `examples/site_generator.av`. This generates a full website with multiple HTML pages, including:
 - Shared CSS styling
@@ -3215,7 +3238,7 @@ See `examples/docker_compose_gen.av`. Shows:
 
 See `examples/kubernetes_gen.av`. Comprehensive example with:
 - Multiple Kubernetes resource types
-- ConfigMaps and Secrets
+- ConfigMaps and Secrets (please don't actually put secrets here)
 - Deployment with probes and resource limits
 - Ingress, Service, and HPA configurations
 
@@ -3247,13 +3270,15 @@ See `examples/escape_hatch.av`. Comprehensive example of the template escape hat
 
 ## Troubleshooting
 
+Don't panic. Everyone hits these at some point.
+
 ### Common Errors
 
 **"expected '\"' after opening braces"**  
 This means a template isn't properly quoted. Templates require the syntax `{...}` with literal content or quotes if you need special formatting.
 
 **"unexpected EOF"**  
-You have an unclosed expression, list, or template. Check your brackets and braces.
+You have an unclosed expression, list, or template. Check your brackets and braces. Count them. Count them again.
 
 **"undefined identifier"**  
 You referenced a variable that doesn't exist. Check spelling and make sure it's in scope (within a `let` binding or function parameter).
@@ -3274,7 +3299,7 @@ You referenced a variable that doesn't exist. Check spelling and make sure it's 
 
 **Problem:** I have lots of braces and it's getting confusing.
 
-**Solution:** Use a double-brace template to reduce brace nesting:
+**Solution:** Use a double-brace template to reduce brace nesting. When in doubt, add more braces:
 
 ```avon
 # Single-brace (awkward with 3+ braces)
@@ -3343,3 +3368,7 @@ If you have questions or want to contribute examples, the Avon project welcomes 
 
 Happy generating!
 
+<!-- 
+Secret: Run `avon run 'join (map (\x to_string x) [72,101,108,108,111]) ""'` for a surprise.
+If you found this, you're the kind of person who reads source code. We respect that.
+-->

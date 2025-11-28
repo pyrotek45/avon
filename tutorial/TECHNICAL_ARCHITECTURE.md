@@ -65,7 +65,7 @@ let _ = another_value() in  # OK: underscore can be reused
 result
 ```
 
-**Why this approach?**
+Why this approach?**
 - Efficient: Only insert/remove operations, no cloning per binding
 - Memory-light: Single mutable reference passed through evaluation
 - Correct: Naturally respects lexical scoping rules
@@ -418,7 +418,7 @@ Result: **11**
 
 Why? Function `f` was created in the environment where `x=1`, so it captures `x=1` in its closure. When `f 10` is called, it uses the captured `x=1`, resulting in `1 + 10 = 11`.
 
-**Note:** Avon does not allow variable shadowing, so you cannot redefine `x` in the same scope. The function captures the variable value from when it was created, not from when it's called.
+Note: Avon does not allow variable shadowing, so you cannot redefine `x` in the same scope. The function captures the variable value from when it was created, not from when it's called.
 
 ### No Variable Shadowing
 
@@ -445,7 +445,7 @@ let _ = 5 in _ + 1  # Error: underscore cannot be used as a variable
 
 The underscore is **only** for discarding values in `let` bindings, not for referencing values.
 
-**Why no shadowing?**
+Why no shadowing?**
 - Prevents confusion about which variable is being used
 - Makes code easier to reason about
 - Encourages clear, descriptive variable names

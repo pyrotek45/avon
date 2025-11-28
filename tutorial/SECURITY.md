@@ -2,9 +2,9 @@
 
 ## Overview
 
-Avon is designed with security as a core principle. This document explains the security measures implemented and how to use Avon safely.
+Avon is designed with security as a core principle. This document explains the security measures implemented and how to use Avon safely. Because nobody wants to be "that person" who accidentally deployed credentials to production.
 
-> **💡 Using `--git` Safely:** The `--git` flag fetches templates from GitHub's raw content API. Only use `--git` with repositories you trust. Review the template code before deploying, especially when using templates from unknown sources. The `--git` flag is a powerful feature for sharing templates, but always verify the source.
+> Tip: Using `--git` Safely:** The `--git` flag fetches templates from GitHub's raw content API. Only use `--git` with repositories you trust. Review the template code before deploying, especially when using templates from unknown sources. The `--git` flag is a powerful feature for sharing templates, but always verify the source.
 
 ## Security Principles
 
@@ -62,6 +62,8 @@ Error: +: type mismatch: expected number/string/list, found number
 - Comparison (`==`, `!=`, `>`, `<`, `>=`, `<=`): Operands must be same type
 - Logical (`&&`, `||`): Both operands must be booleans
 
+No implicit coercion. `"5" + 3` is an error, not `"53"` or `8` depending on the phase of the moon.
+
 ### 3. Malformed Syntax Rejection
 
 **Problem**: Incomplete or malformed code could be silently accepted
@@ -86,6 +88,7 @@ let f = \x f x in f 1  # Would infinite loop (if recursion allowed)
 **Solution**: Recursion is intentionally not supported
 - No recursive function calls
 - No circular dependencies
+- Your code will always terminate (unlike some meetings)
 - See `tutorial/WHY_NO_RECURSION.md` for rationale
 
 ### 5. Template Injection Prevention
@@ -228,6 +231,8 @@ let safe_dir = assert (contains allowed "config") "config" in
 
 ### ❌ Unsafe Patterns
 
+These will get you a 3am phone call. Or worse, a Slack message from your CTO.
+
 ```avon
 # Don't import user-specified files
 import user_input  # DANGER
@@ -351,7 +356,7 @@ Before deploying Avon templates in production:
 - [ ] No recursion attempts in code
 - [ ] File permissions set correctly
 - [ ] Security tests pass: `bash scripts/test_security_comprehensive.sh`
-- [ ] Code reviewed by another person
+- [ ] Code reviewed by another person (or at minimum, by yourself after coffee)
 - [ ] Deployment rollout plan documented
 
 ## Further Reading
@@ -366,3 +371,9 @@ Before deploying Avon templates in production:
 This document applies to Avon v0.2+
 
 Last updated: November 2025
+
+<!-- 
+If you're reading this, you either really care about security (good) or you're 
+looking for vulnerabilities (less good, but at least you're reading the docs).
+Either way, thanks for being thorough.
+-->

@@ -3003,6 +3003,116 @@ mod tests {
     }
 
     #[test]
+    fn test_is_none_builtin() {
+        // Test: is_none none => true
+        let prog = r#"is_none none"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "true");
+
+        // Test: is_none 42 => false
+        let prog2 = r#"is_none 42"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "false");
+
+        // Test: is_none "hello" => false
+        let prog3 = r#"is_none "hello""#.to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        assert_eq!(v3.to_string(&prog3), "false");
+    }
+
+    #[test]
+    fn test_head_returns_none_on_empty() {
+        // Test: head [] => None
+        let prog = r#"head []"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "None");
+
+        // Test: is_none (head []) => true
+        let prog2 = r#"is_none (head [])"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "true");
+
+        // Test: head [1, 2, 3] => 1 (non-empty list still works)
+        let prog3 = r#"head [1, 2, 3]"#.to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        assert_eq!(v3.to_string(&prog3), "1");
+    }
+
+    #[test]
+    fn test_get_returns_none_on_missing_key() {
+        // Test: get {a: 1} "b" => None
+        let prog = r#"get {a: 1} "b""#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "None");
+
+        // Test: is_none (get {a: 1} "b") => true
+        let prog2 = r#"is_none (get {a: 1} "b")"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "true");
+
+        // Test: get {a: 1} "a" => 1 (existing key still works)
+        let prog3 = r#"get {a: 1} "a""#.to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        assert_eq!(v3.to_string(&prog3), "1");
+    }
+
+    #[test]
+    fn test_none_conditional_pattern() {
+        // Test the common pattern: if is_none x then default else x
+        let prog = r#"let x = head [] in if is_none x then "empty" else x"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "empty");
+
+        // Test with non-empty list
+        let prog2 = r#"let x = head [42] in if is_none x then "empty" else x"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "42");
+
+        // Test with dict get pattern
+        let prog3 =
+            r#"let val = get {port: 8080} "host" in if is_none val then "localhost" else val"#
+                .to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        assert_eq!(v3.to_string(&prog3), "localhost");
+    }
+
+    #[test]
     fn test_error_function() {
         let prog = r#"error "Custom error message""#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
@@ -3975,7 +4085,7 @@ mod tests {
         let result = eval(ast.program, &mut symbols, &prog);
         assert!(result.is_err());
         let err = result.err().unwrap();
-        assert!(err.message.contains("Missing environment variable"));
+        assert!(err.message.contains("is not set"));
     }
 
     #[test]
@@ -4337,7 +4447,7 @@ mod tests {
         // Evaluation should fail because env_var fails
         assert!(result.is_err());
         let err = result.err().unwrap();
-        assert!(err.message.contains("Missing environment variable"));
+        assert!(err.message.contains("is not set"));
 
         // Since evaluation failed, no file templates can be collected
         // This verifies that missing secrets prevent deployment

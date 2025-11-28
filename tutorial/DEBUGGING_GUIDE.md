@@ -2,9 +2,9 @@
 
 ## Overview
 
-Avon provides multiple debugging strategies to understand and troubleshoot your programs. This guide explains the complete debugging toolkit and how to use each tool effectively.
+Avon provides multiple debugging strategies to understand and troubleshoot your programs. This guide explains the complete debugging toolkit and how to use each tool effectively. Because even the best code sometimes does unexpected things (and by "unexpected" we mean "wrong").
 
-> **💡 Debugging Templates from GitHub:** When debugging templates fetched with `--git`, use `avon eval --git user/repo/template.av --debug` to see detailed output. You can also use the REPL (`avon repl`) with `:read` or `:run` commands to interactively test templates before deploying them.
+> Tip: Debugging Templates from GitHub:** When debugging templates fetched with `--git`, use `avon eval --git user/repo/template.av --debug` to see detailed output. You can also use the REPL (`avon repl`) with `:read` or `:run` commands to interactively test templates before deploying them.
 
 ## The Debugging Philosophy
 
@@ -43,7 +43,7 @@ In the example `map: add_one: +: ...`, read from right to left (inner to outer):
 **Advantages:**
 - **Precise location** - The line number and source context help you find the error quickly
 - **Direct causality** - The error chain shows exactly which function/operator failed
-- **Actionable** - You know *where* and *what* the problem is
+- **Actionable** - You know *where* and *what* the problem is (not "Object reference not set to an instance of an object")
 
 ---
 
@@ -57,7 +57,7 @@ These are the **primary debugging tools** for understanding program behavior at 
 
 **Signature:** `trace :: String -> a -> a`
 
-**How it works:**
+How it works:**
 - Takes a **label** (String) and a **value** (any type)  
 - Prints `[TRACE] label: value` to stderr
 - Returns the value unchanged
@@ -129,14 +129,14 @@ You can see the value at each transformation step.
 
 **Signature:** `debug :: a -> a`
 
-**How it works:**
+How it works:**
 - Takes any value
 - Prints its internal structure to stderr
 - Returns the value unchanged
 
-**When to use:** When you need to see the exact shape of complex data.
+When to use:** When you need to see the exact shape of complex data. When `trace` isn't cutting it and you need to go deeper.
 
-**Example:**
+Example:
 
 ```avon
 let config = {host: "localhost", port: "8080", debug: "true"} in
@@ -221,7 +221,7 @@ process_numbers [1, 2, 3]    # Works
 process_numbers ["1", "2"]   # Error: assertion failed
 ```
 
-Assertions give you **early failure** with **clear debug information**, showing both the failing test and the actual value.
+Assertions give you **early failure** with **clear debug information**, showing both the failing test and the actual value. Much better than finding out in production at 3am while your phone explodes with alerts.
 
 ---
 
@@ -247,7 +247,7 @@ avon eval program.av --debug
 [DEBUG] Starting evaluator...
 ```
 
-**When to use:**
+When to use:**
 - Suspecting syntax errors
 - Learning how Avon parses your code
 - Understanding evaluation order
@@ -440,6 +440,8 @@ let safe_divide = \a \b
 in
 ```
 
+<!-- The universe contains approximately 10^80 atoms. None of them care about your division by zero error. But Avon does. -->
+
 Assertions catch type errors early with clear debug information showing the failing value.
 
 ### Pattern 3: Debugging List Transformations
@@ -514,7 +516,7 @@ If your files aren't appearing where you expect:
    - **With `--root ./out`**: This writes to `./out/config.yml`
    - **Without `--root`**: Files are written relative to the current working directory where `avon` is executed
      - Example: Running `avon deploy config.av` from `/home/user/project/` writes `@config.yml` to `/home/user/project/config.yml`
-     - **Note:** Always use `--root` for predictable, contained deployments
+     - Note: Always use `--root` for predictable, contained deployments
 
 3. **Absolute vs Relative**: 
    - **Without `--root`**: 
@@ -555,6 +557,7 @@ If you get "permission denied":
 - **Assume data types** - use type checks to verify assumptions
 - **Nest traces too deeply** - use intermediate `let` bindings to keep code clear
 - **Deploy without testing** - always `eval` first to catch errors early
+- **Debug in production** - we shouldn't have to say this, but here we are
 
 ---
 
@@ -668,5 +671,10 @@ Re-run:
 ```bash
 avon eval program.av
 ```
+
+<!-- 
+Debugging tip: If you've been staring at the same bug for 2 hours, 
+go get some water. The bug will still be there, but at least you'll be hydrated.
+-->
 
 Now it works correctly!

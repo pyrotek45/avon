@@ -1,5 +1,5 @@
 # C Preprocessor Style - Platform-Dependent Code Generation
-# Deploy: avon deploy c_preprocessor.av --root ./build --set platform=linux
+# Deploy: avon deploy c_preprocessor.av --root ./build -platform linux
 
 \platform ? "linux"
 

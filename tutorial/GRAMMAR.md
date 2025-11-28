@@ -1,6 +1,6 @@
 :# Avon Language Grammar
 
-This document defines the formal grammar for the Avon language in Extended Backus-Naur Form (EBNF).
+This document defines the formal grammar for the Avon language in Extended Backus-Naur Form (EBNF). If you're the kind of person who reads grammars for fun, you're in the right place. For everyone else, the examples in TUTORIAL.md might be more useful.
 
 ## Lexical Structure
 
@@ -63,6 +63,8 @@ ApplicationExpr ::= AtomExpr+
 
 Function application is left-associative: `f x y` is `((f x) y)`.
 
+<!-- If you understood that without reading it three times, you're either lying or a Haskell programmer. Same thing, really. -->
+
 ### Atomic Expressions
 
 ```
@@ -89,9 +91,12 @@ Literal ::= INTEGER
          | FLOAT
          | STRING
          | BOOLEAN
+         | NONE
+
+NONE    ::= 'none'
 ```
 
-Note: `None` is not a literal but a value returned by certain functions (e.g., `head []`).
+`none` is a literal representing the absence of a value. It's returned by `head` on empty lists, `get` on missing keys, and JSON null values. Check for it with `is_none`. There is exactly one `none`, not three different flavors of "nothing" that all behave slightly differently.
 
 ### Let Binding
 
@@ -307,6 +312,7 @@ Avon intentionally does **not** support recursive functions (functions that call
 2. **Performance**: No overhead from recursion tracking or depth limits
 3. **Safety**: No risk of infinite recursion or stack overflow
 4. **Clarity**: Error messages are clearer (unknown symbol vs infinite recursion)
+5. **Survival**: The call stack has feelings too
 
 ### How It Works
 

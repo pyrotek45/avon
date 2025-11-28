@@ -1,8 +1,8 @@
 # Static Site Generator Guide
 
-This guide demonstrates how to use Avon as a static site generator, similar to tools like Jekyll, Hugo, or Rusto. Avon can generate HTML pages from markdown content using template placeholders like `<!-- expand-title -->` and `<!-- expand-body -->`.
+This guide demonstrates how to use Avon as a static site generator, similar to tools like Jekyll, Hugo, or Rusto. Avon can generate HTML pages from markdown content using template placeholders like `<!-- expand-title -->` and `<!-- expand-body -->`. No npm install required. No 847 dependencies. Just Avon.
 
-> **💡 Share Your Site Generators:** Use the `--git` flag to share your site generator templates! Put your `.av` file in GitHub, and others can deploy it with custom content. Example: `avon deploy --git user/repo/site_generator.av --root ./site -title "My Blog"`. This makes it easy to share and collaborate on site generator templates.
+> Tip: Share Your Site Generators:** Use the `--git` flag to share your site generator templates! Put your `.av` file in GitHub, and others can deploy it with custom content. Example: `avon deploy --git user/repo/site_generator.av --root ./site -title "My Blog"`. This makes it easy to share and collaborate on site generator templates.
 
 ## Quick Start: Minimal Example
 
@@ -109,6 +109,7 @@ let posts = [
         slug: "static-sites",
         content: {"# Static Sites\nStatic sites are great!"}
     }
+    # Add more posts here. Or don't. We're not your manager.
 ] in
 
 let generate_post = \post
@@ -281,6 +282,7 @@ This approach gives you:
 5. **Fast** - Single command generates everything
 6. **Powerful** - 80+ built-in functions for string manipulation, list operations, and more
 7. **Template auto-conversion** - Templates automatically convert to strings in string functions
+8. **Job security** - Nobody else will understand your build system (just kidding, the docs are great)
 
 ## Examples in the Repository
 

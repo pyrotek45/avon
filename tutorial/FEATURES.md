@@ -4,16 +4,16 @@ A quick reference to all Avon language features, builtins, and examples demonstr
 
 ## Key Feature: Share Templates with `--git`
 
-**One of Avon's most powerful features is the `--git` flag**, which enables easy sharing and deployment of templates directly from GitHub. This makes it incredibly easy to:
+One of Avon's most powerful features is the `--git` flag, which enables easy sharing and deployment of templates directly from GitHub. This makes it incredibly easy to:
 
-- **Share your templates**: Put templates in GitHub, others can deploy with custom values
-- **Use others' templates**: Deploy templates from GitHub repositories with your own settings
-- **Centralized management**: One template in git, many customized deployments
-- **Easy updates**: When templates are updated, everyone can redeploy with latest changes
+- Share your templates: Put templates in GitHub, others can deploy with custom values
+- Use others' templates: Deploy templates from GitHub repositories with your own settings
+- Centralized management: One template in git, many customized deployments
+- Easy updates: When templates are updated, everyone can redeploy with latest changes
 
-**Format:** `avon deploy --git user/repo/path/to/file.av --root <destination> [arguments]`
+Format: `avon deploy --git user/repo/path/to/file.av --root <destination> [arguments]`
 
-**Example:**
+Example:
 ```bash
 # Deploy a vim config from GitHub with custom settings
 avon deploy --git user/repo/vimrc.av --root ~ -username alice -theme gruvbox
@@ -38,6 +38,7 @@ This workflow is perfect for dotfiles, team configs, infrastructure templates, a
 | Number | Decimal or float | `42`, `3.14` | Calculations, versions, counts |
 | String | Double-quoted | `"hello"` | Text data, file names |
 | Boolean | Keywords | `true`, `false` | Conditionals and flags |
+| None | Keyword | `none` | Absence of value (empty list head, missing key) |
 | List | Bracketed | `[1, 2, 3]` | Collections, multiple items |
 
 ### Identifiers
@@ -62,7 +63,7 @@ let name = "Alice" in
 concat greeting name
 ```
 
-**Examples:** `examples/nested_let.av`, `examples/let_cascade.av`
+Examples: `examples/nested_let.av`, `examples/let_cascade.av`
 
 ### Functions
 Define reusable logic with parameters:
@@ -72,7 +73,7 @@ let double = \x x * 2 in
 map double [1, 2, 3]
 ```
 
-**Currying:** Functions are automatically curried:
+Currying: Functions are automatically curried:
 ```avon
 let add = \x \y x + y in
 let add5 = add 5 in     # Partially applied
@@ -152,15 +153,15 @@ Avon templates use a **variable-brace delimiter system** that lets you choose ho
 @file.txt {{{" ... "}}}  # triple-brace template (open_count = 3)
 ```
 
-**Why this design?**
+Why this design?**
 
 When your template output contains curly braces (JSON, HCL, Lua, Python, etc.), you need a way to distinguish:
 - **Literal braces in the output** (e.g., `{` for Lua tables, JSON objects)
 - **Interpolation braces** (e.g., `{variable_name}` to substitute values)
 
-By allowing multiple opening braces, you can choose a delimiter that requires **minimal escaping** for your specific use case.
+By allowing multiple opening braces, you can choose a delimiter that requires **minimal escaping** for your specific use case. It's like regex escaping, but actually sane.
 
-**How it works:**
+How it works:**
 
 Interpolation uses exactly the same number of leading braces as the template opener:
 
@@ -286,6 +287,8 @@ The key insight is choosing your template delimiter based on brace density in yo
 | Data formats | `{{" "}}` | Cleaner than escaping | JSON, HCL, TOML |
 | Code with many braces | `{{" "}}` or higher | Minimize escaping burden | Python, JavaScript, Go |
 | Extreme cases (rare) | `{{{" "}}}` or more | Only when absolutely necessary | Custom DSLs with brace syntax |
+
+<!-- If you find yourself using quadruple braces, take a step back. Go outside. Touch grass. Reconsider your life choices. Then come back and refactor. -->
 
 **Examples by brace density:**
 
@@ -481,7 +484,7 @@ Avon provides a first-class Dict type for structured data with key-value pairs:
 | `values` | 1 | Extract all values | `values {a: 1, b: 2}` -> `[1, 2]` |
 | `has_key` | 2 | Check if key exists | `has_key {a: 1} "a"` -> `true` |
 
-**Note:** These functions work with both dictionaries and lists of pairs (list of 2-element lists). "Pairs" is not a separate type—it's a list of pairs: `[["key", value], ...]`. For example, `get [[\"a\", 1], [\"b\", 2]] \"a\"` works the same as `get {a: 1, b: 2} \"a\"`.
+Note: These functions work with both dictionaries and lists of pairs (list of 2-element lists). "Pairs" is not a separate type—it's a list of pairs: `[["key", value], ...]`. For example, `get [[\"a\", 1], [\"b\", 2]] \"a\"` works the same as `get {a: 1, b: 2} \"a\"`.
 
 **Dict Syntax:**  
 Dictionaries use curly braces with colon notation:
@@ -503,10 +506,10 @@ let all_values = values config in  # ["localhost", 8080, true]
 JSON objects are automatically parsed as dicts:
 
 ```avon
-# config.json: {"app": "myapp", "version": "1.0", "debug": true}
+# config.json: {"app": "myapp", "version": "1.0.0-beta.42", "debug": true}
 let data = json_parse "config.json" in
 let app_name = data.app in         # "myapp" (dot notation)
-let version = get data "version" in # "1.0" (get function)
+let version = get data "version" in # "1.0.0-beta.42" (get function)
 let all_keys = keys data in        # ["app", "version", "debug"]
 has_key data "version"              # true
 ```
@@ -570,6 +573,26 @@ Avon provides comprehensive type introspection and validation utilities:
 | `is_list` | 1 | Check if list | `is_list [1,2,3]` | `true` |
 | `is_bool` | 1 | Check if boolean | `is_bool true` | `true` |
 | `is_function` | 1 | Check if function | `is_function (\x x)` | `true` |
+| `is_none` | 1 | Check if None | `is_none (head [])` | `true` |
+
+#### Working with None
+
+`None` represents the absence of a value. Functions that might not find what they're looking for return `none`:
+
+```avon
+head []                     # Returns none (empty list)
+get {a: 1} "b"              # Returns none (missing key)
+```
+
+Check for None values with `is_none`:
+
+```avon
+let x = head [] in
+if is_none x then "empty" else x
+
+let val = get config "key" in
+if is_none val then "default" else val
+```
 
 #### Assertions & Error Handling
 
@@ -579,6 +602,8 @@ Avon provides comprehensive type introspection and validation utilities:
 | `trace` | 2 | Print label + value to stderr | `trace "x" 42` | `42` (prints `[TRACE] x: 42`) |
 | `debug` | 1 | Pretty-print structure to stderr | `debug [1,2,3]` | `[1,2,3]` (prints `[DEBUG] List([...])`) |
 | `error` | 1 | Throw custom error | `error "Invalid port"` | Throws error with message |
+
+<!-- Easter egg: If you're reading the raw markdown, congrats! Run `avon run '6 * 9'` and ponder the universe. -->
 
 **Common assertion patterns:**
 
@@ -652,6 +677,8 @@ in
 | `to_float` | 1 | Convert to float | `to_float "3.14"` -> `3.14` |
 | `to_bool` | 1 | Convert to boolean | `to_bool "yes"` -> `true` |
 
+Type conversions are explicit. None of that "let me guess what type you meant" sorcery.
+
 ### Formatting Functions
 
 Avon provides a comprehensive suite of 15 formatting functions for various data types:
@@ -695,7 +722,7 @@ Avon provides a comprehensive suite of 15 formatting functions for various data 
 - `"success"` -> Success/Failure
 - `"1/0"` -> 1/0
 
-**Examples:**
+Examples:
 ```avon
 # Number bases
 format_hex 255           # "ff"
@@ -739,7 +766,7 @@ center "Title" 20                  # "       Title        "
 | `json_parse` | 1 | Parse JSON (objects -> dicts, arrays -> lists) | `json_parse "{\"x\": 1}"` -> `{x: 1}` |
 | `os` | 0 | Get operating system | `os` -> `"linux"`, `"windows"`, `"macos"` |
 
-**Note:** `json_parse` converts JSON objects to Dict types (e.g., `{"a": 1}` -> `{a: 1}`), which support dot notation access like `data.a` and functions like `keys`, `values`, `has_key`, etc.
+Note: `json_parse` converts JSON objects to Dict types (e.g., `{"a": 1}` -> `{a: 1}`), which support dot notation access like `data.a` and functions like `keys`, `values`, `has_key`, etc.
 
 **Examples:** `examples/import_example.av`, `examples/json_map_demo.av`
 
@@ -820,7 +847,7 @@ The pipe operator `->` allows you to chain expressions without nested parenthese
 3. **Lambda expressions:** `value -> \x x * 2` (equivalent to `(\x x * 2) value`)
 4. **Path literals:** `@path -> exists` (equivalent to `exists @path`)
 
-**Examples:**
+Examples:
 ```avon
 # Lambda on RHS
 10 -> \x x * 2  # 20
@@ -848,7 +875,7 @@ Deploy the program, generate files in the specified directory.
 
 **Flags:**
 - `--root <dir>` — Prepend to all generated paths
-- `--force` — Overwrite existing files without warning
+- `--force` — Overwrite existing files without warning (use with caution, or reckless abandon)
 - `--append` — Append to existing files instead of overwriting
 - `--if-not-exists` — Only write file if it doesn't already exist
 - `-param value` — Named argument (e.g., `-name Alice`)
@@ -1015,7 +1042,7 @@ All 21+ examples pass, including complex multi-file generation and conditional l
 Instead of deeply nested expressions, use `let` to name intermediate values.
 
 ### 2. Debug with Eval
-Always test with `eval` before deploying:
+Always test with `eval` before deploying. Trust, but verify. Actually, just verify. Trust is for people who don't write tests.
 ```bash
 avon eval program.av             # Check output first
 avon deploy program.av --force   # Then generate files
@@ -1027,7 +1054,7 @@ Use indentation in templates — Avon's dedent removes it based on the first lin
 ```avon
 @config.yml {"
     server:
-      host: localhost
+      host: localhost    # There's no place like 127.0.0.1
       port: 8080
 "}
 ```
@@ -1056,8 +1083,8 @@ let envs = ["dev", "staging", "prod"] in
 - **Evaluation:** O(1) for primitives, O(n) for lists (one-time cost)
 - **File I/O:** Linear in number of files generated
 
-For most use cases (100s of files), Avon runs in milliseconds.
+For most use cases (100s of files), Avon runs in milliseconds. For pathological cases (1000s of files), it still runs in milliseconds. We tested. We have no life.
 
 ---
 
-Have fun generating! 🚀 For more details, see `tutorial/TUTORIAL.md`.
+Have fun generating! For more details, see `tutorial/TUTORIAL.md`.

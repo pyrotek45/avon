@@ -1,6 +1,6 @@
 # Neovim Configuration Generator
 # Demonstrates: command-line parameter handling, conditional config sections, plugin management
-# Usage: avon eval neovim_config_gen.av -- --username "john" --theme "gruvbox" --lsp true --plugins "minimal"
+# Usage: avon eval neovim_config_gen.av -username "john" -theme "gruvbox" -lsp true -plugins "minimal"
 
 let username = "developer" in
 let theme = "catppuccin" in

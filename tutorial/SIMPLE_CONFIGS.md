@@ -1,6 +1,6 @@
 # Simple Config File Examples
 
-This guide demonstrates how to use Avon to generate common configuration files. These examples are perfect for beginners and show practical patterns you can adapt for your own needs.
+This guide demonstrates how to use Avon to generate common configuration files. These examples are perfect for beginners and show practical patterns you can adapt for your own needs. No PhD in YAML required.
 
 ## Why Use Avon for Config Files?
 
@@ -21,7 +21,7 @@ Instead of copying config files around or maintaining separate versions, you can
 2. Anyone can deploy it with custom values using CLI arguments
 3. Updates to the template are automatically available to everyone
 
-**Example:**
+Example:
 ```bash
 # Deploy a vim config from GitHub with your custom settings
 avon deploy --git user/repo/vimrc.av --root ~ -username alice -theme gruvbox
@@ -209,6 +209,7 @@ let show_git_branch = "true" in
   alias ga='git add'
   alias gc='git commit'
   alias gp='git push'
+  # alias gf='git push --force' # We don't talk about --force
 "}
 ```
 
@@ -251,6 +252,7 @@ let editor = "nvim" in
   [core]
     editor = {editor}
     autocrlf = input
+    # Because CRLF vs LF is the real enemy, not the competition
   
   [init]
     defaultBranch = main
@@ -359,6 +361,8 @@ let redis_version = "7" in
         POSTGRES_DB: {app_name}
         POSTGRES_USER: postgres
         POSTGRES_PASSWORD: postgres
+        # Yes, we're putting passwords in plain text. No, you shouldn't do this. 
+        # This is an example. Please use secrets management. Please.
       volumes:
         - db_data:/var/lib/postgresql/data
     
@@ -644,7 +648,7 @@ sudo avon deploy nginx.av --root /etc/nginx --force
 sudo avon deploy --git user/repo/nginx.av --root /etc/nginx --force -domain example.com
 ```
 
-**Important:** Always use `--root` to specify where files should be written. This prevents accidental writes to system directories.
+Important: Always use `--root` to specify where files should be written. This prevents accidental writes to system directories.
 
 ## Common Patterns
 
@@ -706,10 +710,10 @@ let feature_config = if enable_feature == "true" then {"
 ## Best Practices
 
 1. **Use `--git` for sharing**: Keep templates in GitHub and deploy with `--git` flag for easy sharing and updates
-2. **Use meaningful variable names**: `user` instead of `u`, `tab_width` instead of `tw`
+2. **Use meaningful variable names**: `user` instead of `u`, `tab_width` instead of `tw` (your future self will thank you)
 3. **Provide sensible defaults**: Use `?` syntax for optional parameters, especially in templates shared via `--git`
 4. **Document your configs**: Add comments explaining what each section does
-5. **Test before deploying**: Use `avon eval` to preview output
+5. **Test before deploying**: Use `avon eval` to preview output. Measure twice, cut once.
 6. **Use `--root` always**: Prevents accidental writes to wrong locations
 7. **Version control your templates**: Keep `.av` files in git, not generated configs
 8. **Share templates with `--git`**: One template in git, many customized deployments - this is a key workflow pattern
@@ -727,3 +731,9 @@ let feature_config = if enable_feature == "true" then {"
 - Try combining multiple configs into one generator
 - Use the REPL (`avon repl`) to experiment with templates
 - Read the full [TUTORIAL.md](./TUTORIAL.md) for advanced patterns
+
+<!-- 
+Achievement Unlocked: You read the entire SIMPLE_CONFIGS.md file.
+Reward: The knowledge that you're more thorough than 99% of developers.
+Punishment: You now have to maintain the configs you learned to generate.
+-->

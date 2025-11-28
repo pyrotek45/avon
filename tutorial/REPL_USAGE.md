@@ -1,8 +1,8 @@
 # Example: Using the REPL for Development
 
-This example demonstrates how to use Avon's REPL for interactive development and debugging.
+This example demonstrates how to use Avon's REPL for interactive development and debugging. Think of it as a playground where mistakes are cheap and experiments are encouraged.
 
-> **💡 Tip:** You can use the `:read` command in the REPL to load templates from GitHub using the `--git` flag format, or use `:run` to evaluate templates fetched from GitHub. This makes it easy to experiment with shared templates before deploying them.
+> Tip: Tip:** You can use the `:read` command in the REPL to load templates from GitHub using the `--git` flag format, or use `:run` to evaluate templates fetched from GitHub. This makes it easy to experiment with shared templates before deploying them.
 
 ## Starting the REPL
 
@@ -103,6 +103,8 @@ String : String
 
 ### 4. Debugging with trace
 
+Pro tip: `trace` is like `console.log` but you don't have to feel guilty about leaving it in.
+
 ```avon
 avon> trace "intermediate" (1 + 2)
 [TRACE] intermediate: 3
@@ -135,6 +137,8 @@ localhost : String
 ```
 
 ## REPL Commands
+
+No `npm install` required. No `node_modules` folder eating your disk. Just commands.
 
 - `:help` or `:h` - Show all available commands
 - `:let <name> = <expr>` - Store a value in the REPL (persists across commands)
@@ -364,4 +368,5 @@ No variables being watched.
 6. **Interactive Development**: Build up configurations incrementally
 7. **File Management**: Read, evaluate, and deploy files without leaving REPL
 8. **Rapid Iteration**: Test and deploy in the same session
+9. **Procrastination**: Look busy while technically doing nothing (we won't judge)
 

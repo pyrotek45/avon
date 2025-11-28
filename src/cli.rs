@@ -166,6 +166,7 @@ fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("is_bool", "is_bool :: a -> Bool\n  Check if value is boolean.\n  Example: is_bool true -> true"),
         ("is_function", "is_function :: a -> Bool\n  Check if value is function.\n  Example: is_function (\\x x) -> true"),
         ("is_dict", "is_dict :: a -> Bool\n  Check if value is dictionary.\n  Example: is_dict {a: 1} -> true"),
+        ("is_none", "is_none :: a -> Bool\n  Check if value is None.\n  None is returned by: head on empty list, get on missing key, JSON null values.\n  Example: is_none none -> true\n  Example: is_none (head []) -> true\n  Example: is_none (get {a: 1} \"b\") -> true\n  Pattern: let x = get config \"key\" in if is_none x then default else x"),
 
         // Assert & Debug
         ("assert", "assert :: Bool -> a -> a\n  Assert condition, return value or error with debug info.\n  Example: assert (is_number x) x\n  Example: assert (x > 0) x\n  Use for input validation and type checking."),
@@ -608,6 +609,10 @@ fn print_builtin_docs() {
     println!("  {:<18} :: {}", "is_list", "a -> Bool");
     println!("  {:<18} :: {}", "is_bool", "a -> Bool");
     println!("  {:<18} :: {}", "is_function", "a -> Bool");
+    println!(
+        "  {:<18} :: {}",
+        "is_none", "a -> Bool  (None from head [], get missing key, JSON null)"
+    );
     println!(
         "  {:<18} :: {}",
         "assert", "Bool -> a -> a  (returns value if true, errors otherwise)"

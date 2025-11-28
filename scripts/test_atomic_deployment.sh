@@ -40,7 +40,7 @@ let secret = env_var "MISSING_SECRET" in
 @/config.yml {"key: {secret}"}
 EOF
 
-$AVON deploy "$TEST_DIR/secret_program.av" --root "$TEST_DIR/output2" 2>&1 | grep -q "Missing environment variable" || {
+$AVON deploy "$TEST_DIR/secret_program.av" --root "$TEST_DIR/output2" 2>&1 | grep -q "is not set" || {
     echo "FAIL: Should have reported missing env var"
     exit 1
 }

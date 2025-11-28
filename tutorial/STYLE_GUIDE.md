@@ -1,8 +1,8 @@
 # Avon Style Guide
 
-This guide describes the recommended formatting conventions for writing Avon code.
+This guide describes the recommended formatting conventions for writing Avon code. You don't have to follow these, but your teammates (and future you) will appreciate it if you do.
 
-> **💡 Sharing Templates:** If you plan to share your templates via the `--git` flag (highly recommended!), use function parameters with defaults (`\param ? "default"`) instead of top-level `let` bindings. This makes templates flexible and easy to customize when deployed from GitHub. See [SIMPLE_CONFIGS.md](./SIMPLE_CONFIGS.md) for examples.
+> Tip: Sharing Templates:** If you plan to share your templates via the `--git` flag (highly recommended!), use function parameters with defaults (`\param ? "default"`) instead of top-level `let` bindings. This makes templates flexible and easy to customize when deployed from GitHub. See [SIMPLE_CONFIGS.md](./SIMPLE_CONFIGS.md) for examples.
 
 ## Core Principles
 
@@ -58,7 +58,7 @@ database:
 "}
 ```
 
-**Why this matters:** 
+Why this matters:** 
 - Avon's **automatic dedent** removes the common leading whitespace from all template lines
 - This means you can indent your template content in source code for readability without affecting the generated output
 - The generated file will have correct formatting: no extra leading spaces
@@ -76,7 +76,7 @@ Avon's automatic dedent means you have flexibility in how you indent source code
   - Code (Lua, JS, etc.): 2-4 spaces (match target style)
   - Configs: Match existing style
 
-**How Dedent Works:**
+How Dedent Works:**
 1. Avon strips leading and trailing blank lines
 2. Finds the first line with non-whitespace content—that line's indentation becomes the **baseline**
 3. Removes that baseline amount of whitespace from every line
@@ -85,7 +85,7 @@ Avon's automatic dedent means you have flexibility in how you indent source code
 
 This lets you indent your template in source code without padding your output.
 
-**Example:**
+Example:
 ```avon
 # Avon code is indented 2 spaces inside the function
 let make_config = \service @config/{service}.yml {"
@@ -125,7 +125,7 @@ Avon finds the **first line with non-whitespace content** and uses its indentati
 2. **Strips leading and trailing blank lines** automatically
 3. **Removes baseline indentation from all lines** (if they have it)
 4. **Preserves relative indentation** between lines
-5. **Works with mixed tabs and spaces** (though spaces are recommended)
+5. **Works with mixed tabs and spaces** (though spaces are recommended—we have standards here)
 
 ### Best Practices
 
@@ -420,6 +420,7 @@ Use `#` for comments. Place them above the code they describe:
 
 ```avon
 # Generate configuration for each environment
+# (because someone thought 3 environments wasn't enough)
 let environments = ["dev", "staging", "prod"] in
 
 # Create a config file for each environment
@@ -562,7 +563,7 @@ result
 fold (\acc \x acc + x) 0 (map (\x x * 2) (filter (\x x > 2) [1, 2, 3, 4, 5]))
 ```
 
-**Note:** Only `->` is a valid pipe operator. The single `|` character is not a pipe operator in Avon.
+Note: Only `->` is a valid pipe operator. The single `|` character is not a pipe operator in Avon.
 
 ## Error Handling Patterns
 
@@ -599,7 +600,7 @@ readfile config_path
 5. **Use pipe operator for chaining** - Makes data transformations readable
 6. **Validate inputs with `assert`** - Catch errors early
 7. **Use default parameters** - Make functions flexible with `?` syntax
-8. **Comment the "why"** - Explain design decisions, not obvious code
+8. **Comment the "why"** - Explain design decisions, not obvious code. Future you doesn't remember what past you was thinking. Past you was probably caffeinated anyway.
 
 ## Additional Resources
 
@@ -609,3 +610,9 @@ readfile config_path
 - **[examples/](../examples/)** — 92+ real-world examples
 
 Happy coding!
+
+<!-- 
+Style is subjective. These are guidelines, not laws. 
+If your code works, ships, and doesn't wake anyone up at night, you're doing fine.
+If it does wake people up at night, maybe read this guide again.
+-->
