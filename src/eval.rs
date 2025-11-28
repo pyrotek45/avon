@@ -1,7 +1,7 @@
 use crate::common::{Chunk, EvalError, Expr, Number, Token, Value};
 use crate::lexer::tokenize;
 use crate::parser::parse;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub fn initial_builtins() -> HashMap<String, Value> {
     let mut m = HashMap::new();
@@ -430,6 +430,15 @@ pub fn initial_builtins() -> HashMap<String, Value> {
 
 impl Value {
     pub fn to_string(&self, source: &str) -> String {
+        self.to_string_with_depth(source, 0)
+    }
+
+    fn to_string_with_depth(&self, source: &str, depth: usize) -> String {
+        const MAX_DEPTH: usize = 100;
+        if depth > MAX_DEPTH {
+            return format!("<recursion limit exceeded (depth > {})>", MAX_DEPTH);
+        }
+
         match self {
             Value::None => "None".to_string(),
             Value::Bool(b) => b.to_string(),
@@ -437,12 +446,12 @@ impl Value {
             Value::Number(Number::Float(v)) => v.to_string(),
             Value::String(s) => s.clone(),
             Value::Template(chunks, symbols) => {
-                let raw = render_chunks_to_string(chunks, symbols, source)
+                let raw = render_chunks_to_string_with_depth(chunks, symbols, source, depth)
                     .unwrap_or_else(|e| format!("<eval error: {}>", e));
                 dedent(&raw)
             }
             Value::Path(chunks, symbols) => {
-                let raw = render_chunks_to_string(chunks, symbols, source)
+                let raw = render_chunks_to_string_with_depth(chunks, symbols, source, depth)
                     .unwrap_or_else(|e| format!("<eval error: {}>", e));
                 dedent(&raw)
             }
@@ -450,22 +459,34 @@ impl Value {
                 path: _p,
                 template: t,
             } => {
-                let raw = render_chunks_to_string(&t.0, &t.1, source)
+                let raw = render_chunks_to_string_with_depth(&t.0, &t.1, source, depth)
                     .unwrap_or_else(|e| format!("<eval error: {}>", e));
                 dedent(&raw)
             }
             Value::List(items) => {
-                let inner: Vec<String> = items.iter().map(|v| v.to_string(source)).collect();
+                let inner: Vec<String> = items
+                    .iter()
+                    .map(|v| v.to_string_with_depth(source, depth + 1))
+                    .collect();
                 format!("[{}]", inner.join(", "))
             }
             Value::Function { .. } => "<function>".to_string(),
             Value::Builtin(name, _collected) => format!("<builtin:{}>", name),
             Value::Dict(map) => {
+                const MAX_DICT_ENTRIES: usize = 100;
+                if map.len() > MAX_DICT_ENTRIES {
+                    return format!(
+                        "<dict with {} entries (max {} for display)>",
+                        map.len(),
+                        MAX_DICT_ENTRIES
+                    );
+                }
+
                 let mut entries: Vec<String> = Vec::new();
                 for (k, v) in map.iter() {
                     let val_str = match v {
                         Value::String(s) => format!("\"{}\"", s),
-                        _ => v.to_string(source),
+                        _ => v.to_string_with_depth(source, depth + 1),
                     };
                     entries.push(format!("{}: {}", k, val_str));
                 }
@@ -521,24 +542,242 @@ pub fn value_to_path_string(val: &Value, source: &str) -> Result<String, EvalErr
     Ok(path_str)
 }
 
+/// Extract all variable references from template chunks
+/// This finds all identifiers used in expression chunks
+fn extract_template_variables(chunks: &[Chunk]) -> HashSet<String> {
+    let mut vars = HashSet::new();
+
+    for chunk in chunks {
+        if let Chunk::Expr(expr_str) = chunk {
+            // Parse the expression to find variable references
+            if let Ok(tokens) = tokenize(expr_str.clone()) {
+                let ast = parse(tokens);
+                extract_vars_from_expr(&ast.program, &mut vars);
+            }
+        }
+    }
+
+    vars
+}
+
+/// Recursively extract variable identifiers from an expression
+fn extract_vars_from_expr(expr: &Expr, vars: &mut HashSet<String>) {
+    match expr {
+        Expr::Ident(name, _) => {
+            vars.insert(name.clone());
+        }
+        Expr::Let { value, expr, .. } => {
+            extract_vars_from_expr(value, vars);
+            extract_vars_from_expr(expr, vars);
+        }
+        Expr::Function { default, expr, .. } => {
+            if let Some(def) = default {
+                extract_vars_from_expr(def, vars);
+            }
+            extract_vars_from_expr(expr, vars);
+        }
+        Expr::Application { lhs, rhs, .. } => {
+            extract_vars_from_expr(lhs, vars);
+            extract_vars_from_expr(rhs, vars);
+        }
+        Expr::Template(chunks, _) => {
+            for chunk in chunks {
+                if let Chunk::Expr(expr_str) = chunk {
+                    if let Ok(tokens) = tokenize(expr_str.clone()) {
+                        let ast = parse(tokens);
+                        extract_vars_from_expr(&ast.program, vars);
+                    }
+                }
+            }
+        }
+        Expr::Path(chunks, _) => {
+            for chunk in chunks {
+                if let Chunk::Expr(expr_str) = chunk {
+                    if let Ok(tokens) = tokenize(expr_str.clone()) {
+                        let ast = parse(tokens);
+                        extract_vars_from_expr(&ast.program, vars);
+                    }
+                }
+            }
+        }
+        Expr::FileTemplate { path, template, .. } => {
+            for chunk in path {
+                if let Chunk::Expr(expr_str) = chunk {
+                    if let Ok(tokens) = tokenize(expr_str.clone()) {
+                        let ast = parse(tokens);
+                        extract_vars_from_expr(&ast.program, vars);
+                    }
+                }
+            }
+            for chunk in template {
+                if let Chunk::Expr(expr_str) = chunk {
+                    if let Ok(tokens) = tokenize(expr_str.clone()) {
+                        let ast = parse(tokens);
+                        extract_vars_from_expr(&ast.program, vars);
+                    }
+                }
+            }
+        }
+        Expr::List(items, _) => {
+            for item in items {
+                extract_vars_from_expr(item, vars);
+            }
+        }
+        Expr::Range {
+            start, step, end, ..
+        } => {
+            extract_vars_from_expr(start, vars);
+            if let Some(s) = step {
+                extract_vars_from_expr(s, vars);
+            }
+            extract_vars_from_expr(end, vars);
+        }
+        Expr::Dict(pairs, _) => {
+            for (_, expr) in pairs {
+                extract_vars_from_expr(expr, vars);
+            }
+        }
+        Expr::If { cond, t, f, .. } => {
+            extract_vars_from_expr(cond, vars);
+            extract_vars_from_expr(t, vars);
+            extract_vars_from_expr(f, vars);
+        }
+        Expr::Binary { lhs, rhs, .. } => {
+            extract_vars_from_expr(lhs, vars);
+            extract_vars_from_expr(rhs, vars);
+        }
+        Expr::Member { object, .. } => {
+            extract_vars_from_expr(object, vars);
+        }
+        Expr::Pipe { lhs, rhs, .. } => {
+            extract_vars_from_expr(lhs, vars);
+            extract_vars_from_expr(rhs, vars);
+        }
+        // These don't contain variable references
+        Expr::None(_)
+        | Expr::Bool(_, _)
+        | Expr::Number(_, _)
+        | Expr::String(_, _)
+        | Expr::Builtin(_, _, _) => {}
+    }
+}
+
+/// Create a minimal symbol table containing only the variables referenced in a template
+fn create_minimal_symbol_table(
+    chunks: &[Chunk],
+    symbols: &HashMap<String, Value>,
+) -> HashMap<String, Value> {
+    let referenced_vars = extract_template_variables(chunks);
+    let mut minimal = HashMap::new();
+
+    // Only copy variables that are actually referenced
+    for var_name in referenced_vars {
+        if let Some(value) = symbols.get(&var_name) {
+            minimal.insert(var_name, value.clone());
+        }
+    }
+
+    minimal
+}
+
 pub fn render_chunks_to_string(
     chunks: &[Chunk],
     symbols: &HashMap<String, Value>,
     source: &str,
 ) -> Result<String, EvalError> {
+    render_chunks_to_string_with_depth(chunks, symbols, source, 0)
+}
+
+fn render_chunks_to_string_with_depth(
+    chunks: &[Chunk],
+    symbols: &HashMap<String, Value>,
+    source: &str,
+    depth: usize,
+) -> Result<String, EvalError> {
+    const MAX_DEPTH: usize = 100;
+    const MAX_CHUNKS: usize = 100000; // Increased - slow is OK
+    const MAX_ITERATIONS: usize = 1000000; // Increased to 1 million - catches infinite loops, not slow evaluation
+
+    // Note: Removed MAX_RENDER_TIME_MS timeout - slow template rendering is OK
+    // The iteration counter and depth limit catch infinite loops
+
+    if depth > MAX_DEPTH {
+        return Err(EvalError::new(
+            format!("template recursion limit exceeded (depth > {})", MAX_DEPTH),
+            None,
+            None,
+            0,
+        ));
+    }
+
+    if chunks.len() > MAX_CHUNKS {
+        return Err(EvalError::new(
+            format!(
+                "template too large ({} chunks, max {})",
+                chunks.len(),
+                MAX_CHUNKS
+            ),
+            None,
+            None,
+            0,
+        ));
+    }
+
     let mut out = String::new();
+    let mut iteration_count = 0;
     for c in chunks.iter() {
+        // Check iteration limit - this catches infinite loops, not slow evaluation
+        iteration_count += 1;
+        if iteration_count > MAX_ITERATIONS {
+            return Err(EvalError::new(
+                format!(
+                    "template rendering iteration limit exceeded (>{}) - possible infinite loop",
+                    MAX_ITERATIONS
+                ),
+                None,
+                None,
+                0,
+            ));
+        }
         match c {
             Chunk::String(s) => out.push_str(s),
             Chunk::Expr(e) => {
+                // Limit symbol table size to prevent performance issues
+                if symbols.len() > 1000 {
+                    return Err(EvalError::new(
+                        format!(
+                            "template symbol table too large ({} symbols, max 1000)",
+                            symbols.len()
+                        ),
+                        None,
+                        None,
+                        0,
+                    ));
+                }
+
+                // Limit symbol table size to prevent memory exhaustion (not performance)
+                // This catches unbounded growth, not slow evaluation
+                const MAX_TEMPLATE_SYMBOLS: usize = 100000; // 100k symbols
+                if symbols.len() > MAX_TEMPLATE_SYMBOLS {
+                    return Err(EvalError::new(
+                        format!("template symbol table too large ({} symbols, max {}) - possible infinite loop", symbols.len(), MAX_TEMPLATE_SYMBOLS),
+                        None,
+                        None,
+                        0,
+                    ));
+                }
+
                 let tokens = tokenize(e.to_string())?;
                 let ast = parse(tokens);
                 let mut env = symbols.clone();
-                let v = eval(ast.program, &mut env, source)?;
+                // Use eval_with_depth to prevent infinite recursion during template rendering
+                let v = eval_with_depth(ast.program, &mut env, source, depth + 1)?;
                 match v {
                     Value::List(ref items) => {
-                        let items_str: Vec<String> =
-                            items.iter().map(|it| it.to_string(source)).collect();
+                        let items_str: Vec<String> = items
+                            .iter()
+                            .map(|it| it.to_string_with_depth(source, depth + 1))
+                            .collect();
                         let indent = out.rsplit('\n').next().unwrap_or("");
                         let indent_prefix: String = indent
                             .chars()
@@ -563,7 +802,7 @@ pub fn render_chunks_to_string(
                             first_item = false;
                         }
                     }
-                    _ => out.push_str(&v.to_string(source)),
+                    _ => out.push_str(&v.to_string_with_depth(source, depth + 1)),
                 }
             }
         }
@@ -636,18 +875,84 @@ pub fn dedent(s: &str) -> String {
     out_lines.join("\n")
 }
 
+// Global counter to track total evaluation steps (prevents infinite loops)
+thread_local! {
+    static EVAL_COUNTER: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
 pub fn eval(
     expr: Expr,
     symbols: &mut HashMap<String, Value>,
     source: &str,
 ) -> Result<Value, EvalError> {
+    EVAL_COUNTER.with(|counter| {
+        counter.set(0);
+    });
+    eval_with_depth(expr, symbols, source, 0)
+}
+
+fn eval_with_depth(
+    expr: Expr,
+    symbols: &mut HashMap<String, Value>,
+    source: &str,
+    depth: usize,
+) -> Result<Value, EvalError> {
+    const MAX_EVAL_DEPTH: usize = 100;
+    const MAX_EVAL_STEPS: usize = 1000000; // Increased to 1 million - catches infinite loops, not slow evaluation
+
+    // Note: We removed the timeout check - slow evaluation is OK, we only need to catch infinite loops
+    // The step counter and depth limit are sufficient to catch infinite loops
+
+    // Check global step counter - this prevents infinite loops
+    EVAL_COUNTER.with(|counter| {
+        let steps = counter.get();
+        if steps > MAX_EVAL_STEPS {
+            return Err(EvalError::new(
+                format!(
+                    "evaluation step limit exceeded (>{}) - possible infinite loop",
+                    MAX_EVAL_STEPS
+                ),
+                None,
+                None,
+                expr.line(),
+            ));
+        }
+        counter.set(steps + 1);
+        Ok(())
+    })?;
+
+    if depth > MAX_EVAL_DEPTH {
+        return Err(EvalError::new(
+            format!(
+                "evaluation depth limit exceeded (depth > {})",
+                MAX_EVAL_DEPTH
+            ),
+            None,
+            None,
+            expr.line(),
+        ));
+    }
+
+    // Limit symbol table size to prevent memory exhaustion (not performance)
+    // This catches cases where symbol table grows unbounded (infinite loop indicator)
+    // Set high enough to allow legitimate large programs
+    const MAX_SYMBOL_TABLE_SIZE: usize = 100000; // 100k symbols - catches unbounded growth
+    if symbols.len() > MAX_SYMBOL_TABLE_SIZE {
+        return Err(EvalError::new(
+            format!("symbol table too large ({} symbols, max {}) - possible infinite loop causing unbounded growth", symbols.len(), MAX_SYMBOL_TABLE_SIZE),
+            None,
+            None,
+            expr.line(),
+        ));
+    }
+
     let _line = expr.line();
     match expr {
         Expr::Number(value, _) => Ok(Value::Number(value)),
         Expr::String(value, _) => Ok(Value::String(value)),
         Expr::Binary { lhs, op, rhs, line } => {
-            let l_eval = eval(*lhs.clone(), symbols, source)?;
-            let r_eval = eval(*rhs.clone(), symbols, source)?;
+            let l_eval = eval_with_depth(*lhs.clone(), symbols, source, depth + 1)?;
+            let r_eval = eval_with_depth(*rhs.clone(), symbols, source, depth + 1)?;
 
             match op {
                 // handle logical operators
@@ -719,12 +1024,39 @@ pub fn eval(
                         Ok(Value::List(la))
                     }
                     (Value::Template(lchunks, lsyms), Value::Template(rchunks, rsyms)) => {
+                        // Limit total chunks to prevent memory issues
+                        const MAX_TOTAL_CHUNKS: usize = 100000; // Increased - slow is OK
+                        if lchunks.len() + rchunks.len() > MAX_TOTAL_CHUNKS {
+                            return Err(EvalError::new(
+                                format!("template concatenation would exceed chunk limit ({} + {} > {})", 
+                                    lchunks.len(), rchunks.len(), MAX_TOTAL_CHUNKS),
+                                None,
+                                None,
+                                line,
+                            ));
+                        }
+
+                        // Merge symbol tables - with minimal symbol tables, this is much faster
+                        // Both templates already only contain referenced variables, so merging is efficient
+                        let mut combined_symbols = lsyms.clone();
+                        combined_symbols.extend(rsyms.clone());
+
+                        // Limit symbol table size to prevent memory exhaustion (not performance)
+                        // This catches unbounded growth from infinite loops, not slow evaluation
+                        const MAX_SYMBOLS: usize = 100000; // 100k symbols - catches unbounded growth
+                        if combined_symbols.len() > MAX_SYMBOLS {
+                            return Err(EvalError::new(
+                                format!("template concatenation would exceed symbol table limit ({} > {}) - possible infinite loop", 
+                                    combined_symbols.len(), MAX_SYMBOLS),
+                                None,
+                                None,
+                                line,
+                            ));
+                        }
+
                         // Concatenate template chunks
                         let mut combined_chunks = lchunks.clone();
                         combined_chunks.extend(rchunks.clone());
-                        // Merge symbol tables
-                        let mut combined_symbols = lsyms.clone();
-                        combined_symbols.extend(rsyms.clone());
                         Ok(Value::Template(combined_chunks, combined_symbols))
                     }
                     (Value::Path(lchunks, lsyms), Value::Path(rchunks, rsyms)) => {
@@ -924,14 +1256,14 @@ pub fn eval(
             }
 
             // Evaluate the value in the current scope
-            let mut evalue = eval(*value, symbols, source)?;
+            let mut evalue = eval_with_depth(*value, symbols, source, depth + 1)?;
             if let Value::Function { ref mut name, .. } = evalue {
                 *name = Some(ident.clone());
             }
 
             // Add binding to current scope, evaluate expression, then remove (stack-based scoping)
             symbols.insert(ident.clone(), evalue);
-            let result = eval(*expr, symbols, source);
+            let result = eval_with_depth(*expr, symbols, source, depth + 1);
             symbols.remove(&ident); // Restore previous state
             result
         }
@@ -942,7 +1274,12 @@ pub fn eval(
             line: _,
         } => {
             let default_val = if let Some(def_expr_box) = default {
-                Some(Box::new(eval(*def_expr_box, symbols, source)?))
+                Some(Box::new(eval_with_depth(
+                    *def_expr_box,
+                    symbols,
+                    source,
+                    depth + 1,
+                )?))
             } else {
                 None
             };
@@ -955,8 +1292,8 @@ pub fn eval(
             })
         }
         Expr::Application { lhs, rhs, line } => {
-            let lhs_eval = eval(*lhs, symbols, source)?;
-            let arg_val = eval(*rhs, symbols, source)?;
+            let lhs_eval = eval_with_depth(*lhs, symbols, source, depth + 1)?;
+            let arg_val = eval_with_depth(*rhs, symbols, source, depth + 1)?;
             match lhs_eval {
                 Value::Function { .. } => apply_function(&lhs_eval, arg_val, source, line),
                 builtin @ Value::Builtin(_, _) => apply_function(&builtin, arg_val, source, line),
@@ -978,7 +1315,27 @@ pub fn eval(
             }
         }
         Expr::None(_) => Ok(Value::None),
-        Expr::Template(chunks, _) => Ok(Value::Template(chunks, symbols.clone())),
+        Expr::Template(ref chunks, _) => {
+            // Only capture variables that are actually referenced in the template
+            // This is the long-term fix: templates only capture what they need
+            let minimal_symbols = create_minimal_symbol_table(chunks, symbols);
+
+            // Limit symbol table size to prevent memory exhaustion (not performance)
+            // This catches unbounded growth, not slow evaluation
+            const MAX_TEMPLATE_CREATE_SYMBOLS: usize = 100000; // 100k symbols
+            if minimal_symbols.len() > MAX_TEMPLATE_CREATE_SYMBOLS {
+                return Err(EvalError::new(
+                    format!(
+                        "symbol table too large ({} symbols, max {}) when creating template - possible infinite loop",
+                        minimal_symbols.len(), MAX_TEMPLATE_CREATE_SYMBOLS
+                    ),
+                    None,
+                    None,
+                    expr.line(),
+                ));
+            }
+            Ok(Value::Template(chunks.clone(), minimal_symbols))
+        }
         Expr::Builtin(function, args, line) => match function.as_str() {
             "concat" => {
                 let arg1 = symbols
@@ -1024,12 +1381,12 @@ pub fn eval(
         },
         Expr::Bool(value, _) => Ok(Value::Bool(value)),
         Expr::If { cond, t, f, line } => {
-            let cond_eval = eval(*cond, symbols, source)?;
+            let cond_eval = eval_with_depth(*cond, symbols, source, depth + 1)?;
             if let Value::Bool(cond_value) = cond_eval {
                 if cond_value {
-                    eval(*t, symbols, source)
+                    eval_with_depth(*t, symbols, source, depth + 1)
                 } else {
-                    eval(*f, symbols, source)
+                    eval_with_depth(*f, symbols, source, depth + 1)
                 }
             } else {
                 Err(EvalError::type_mismatch(
@@ -1039,17 +1396,36 @@ pub fn eval(
                 ))
             }
         }
-        Expr::Path(chunks, _) => Ok(Value::Path(chunks, symbols.clone())),
+        Expr::Path(ref chunks, _) => {
+            // Only capture variables that are actually referenced in the path
+            let minimal_symbols = create_minimal_symbol_table(chunks, symbols);
+
+            // Limit symbol table size to prevent memory exhaustion (not performance)
+            // This catches unbounded growth, not slow evaluation
+            const MAX_PATH_CREATE_SYMBOLS: usize = 100000; // 100k symbols
+            if minimal_symbols.len() > MAX_PATH_CREATE_SYMBOLS {
+                return Err(EvalError::new(
+                    format!(
+                        "symbol table too large ({} symbols, max {}) when creating path - possible infinite loop",
+                        minimal_symbols.len(), MAX_PATH_CREATE_SYMBOLS
+                    ),
+                    None,
+                    None,
+                    expr.line(),
+                ));
+            }
+            Ok(Value::Path(chunks.clone(), minimal_symbols))
+        }
         Expr::Range {
             start,
             step,
             end,
             line,
         } => {
-            let start_val = eval(*start, symbols, source)?;
-            let end_val = eval(*end, symbols, source)?;
+            let start_val = eval_with_depth(*start, symbols, source, depth + 1)?;
+            let end_val = eval_with_depth(*end, symbols, source, depth + 1)?;
             let step_val = if let Some(step_expr) = step {
-                Some(eval(*step_expr, symbols, source)?)
+                Some(eval_with_depth(*step_expr, symbols, source, depth + 1)?)
             } else {
                 None
             };
@@ -1121,14 +1497,14 @@ pub fn eval(
         Expr::List(items, _) => {
             let mut evaluated = Vec::new();
             for item in items {
-                evaluated.push(eval(item, symbols, source)?);
+                evaluated.push(eval_with_depth(item, symbols, source, depth + 1)?);
             }
             Ok(Value::List(evaluated))
         }
         Expr::Dict(pairs, _) => {
             let mut map = HashMap::new();
             for (key, value_expr) in pairs {
-                let value = eval(value_expr, symbols, source)?;
+                let value = eval_with_depth(value_expr, symbols, source, depth + 1)?;
                 map.insert(key.clone(), value);
             }
             Ok(Value::Dict(map))
@@ -1138,7 +1514,7 @@ pub fn eval(
             field,
             line,
         } => {
-            let obj_val = eval(*object, symbols, source)?;
+            let obj_val = eval_with_depth(*object, symbols, source, depth + 1)?;
             match obj_val {
                 Value::Dict(map) => map.get(&field).cloned().ok_or_else(|| {
                     EvalError::new(
@@ -1163,16 +1539,45 @@ pub fn eval(
             }
         }
         Expr::FileTemplate {
-            path,
-            template,
-            line: _,
-        } => Ok(Value::FileTemplate {
-            path: (path, symbols.clone()),
-            template: (template, symbols.clone()),
-        }),
+            ref path,
+            ref template,
+            line,
+        } => {
+            // Only capture variables that are actually referenced in the path and template
+            let path_vars = extract_template_variables(path);
+            let template_vars = extract_template_variables(template);
+            let mut all_vars = path_vars;
+            all_vars.extend(template_vars);
+
+            let mut minimal_symbols = HashMap::new();
+            for var_name in all_vars {
+                if let Some(value) = symbols.get(&var_name) {
+                    minimal_symbols.insert(var_name, value.clone());
+                }
+            }
+
+            // Limit symbol table size to prevent memory exhaustion (not performance)
+            // This catches unbounded growth, not slow evaluation
+            const MAX_FILETEMPLATE_CREATE_SYMBOLS: usize = 100000; // 100k symbols
+            if minimal_symbols.len() > MAX_FILETEMPLATE_CREATE_SYMBOLS {
+                return Err(EvalError::new(
+                    format!(
+                        "symbol table too large ({} symbols, max {}) when creating file template - possible infinite loop",
+                        minimal_symbols.len(), MAX_FILETEMPLATE_CREATE_SYMBOLS
+                    ),
+                    None,
+                    None,
+                    line,
+                ));
+            }
+            Ok(Value::FileTemplate {
+                path: (path.clone(), minimal_symbols.clone()),
+                template: (template.clone(), minimal_symbols),
+            })
+        }
         Expr::Pipe { lhs, rhs, line } => {
-            let lhs_val = eval(*lhs, symbols, source)?;
-            let rhs_fn = eval(*rhs, symbols, source)?;
+            let lhs_val = eval_with_depth(*lhs, symbols, source, depth + 1)?;
+            let rhs_fn = eval_with_depth(*rhs, symbols, source, depth + 1)?;
             apply_function(&rhs_fn, lhs_val, source, line)
         }
     }
@@ -1204,7 +1609,7 @@ pub fn apply_function(
             // 4. Encourages iterative solutions using fold/map/filter
             // If a function tries to call itself, it will get an "unknown symbol" error.
             let func_name = name.as_ref().unwrap_or(ident).clone();
-            eval(*expr.clone(), &mut new_env, source).map_err(|mut err| {
+            eval_with_depth(*expr.clone(), &mut new_env, source, 0).map_err(|mut err| {
                 if !err.message.starts_with(&format!("{}:", func_name)) {
                     err.message = format!("{}: {}", func_name, err.message);
                 }
@@ -1825,8 +2230,9 @@ pub fn execute_builtin(
                 Ok(Value::Bool(st.is_empty()))
             }
             Value::List(items) => Ok(Value::Bool(items.is_empty())),
+            Value::Dict(map) => Ok(Value::Bool(map.is_empty())),
             other => Err(EvalError::type_mismatch(
-                "string, template, or list",
+                "string, template, list, or dict",
                 other.to_string(source),
                 line,
             )),

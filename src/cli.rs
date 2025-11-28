@@ -77,7 +77,7 @@ fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("is_whitespace", "is_whitespace :: (String|Template) -> Bool\n  Check if all characters are whitespace.\n  Example: is_whitespace \"  \" -> true\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
         ("is_uppercase", "is_uppercase :: (String|Template) -> Bool\n  Check if all characters are uppercase.\n  Example: is_uppercase \"ABC\" -> true\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
         ("is_lowercase", "is_lowercase :: (String|Template) -> Bool\n  Check if all characters are lowercase.\n  Example: is_lowercase \"abc\" -> true\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
-        ("is_empty", "is_empty :: (String|Template|List) -> Bool\n  Check if string, template, or list is empty.\n  Example: is_empty \"\" -> true, is_empty [] -> true\n  Note: Templates are converted to strings before checking"),
+        ("is_empty", "is_empty :: (String|Template|List|Dict) -> Bool\n  Check if string, template, list, or dict is empty.\n  Example: is_empty \"\" -> true, is_empty [] -> true, is_empty {} -> true\n  Note: Templates are converted to strings before checking"),
 
         // List Operations
         ("map", "map :: (a -> b) -> [a] -> [b]\n  Transform each item in list.\n  Example: map (\\x x * 2) [1, 2, 3] -> [2, 4, 6]"),
@@ -377,7 +377,7 @@ fn print_builtin_docs() {
     );
     println!(
         "  {:<18} :: {}",
-        "is_empty", "(String|Template|List) -> Bool"
+        "is_empty", "(String|Template|List|Dict) -> Bool"
     );
     println!();
 

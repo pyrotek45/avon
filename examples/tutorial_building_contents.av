@@ -1,0 +1,153 @@
+# Test examples from BUILDING_CONTENTS.md tutorial
+# These verify all code snippets in the tutorial work correctly
+
+# Method 1: Templates with + operator
+let header = {"# Configuration File
+version = 1.0
+"} in
+let database_section = {"
+[database]
+host = localhost
+port = 5432
+"} in
+let app_section = {"
+[app]
+name = myapp
+debug = true
+"} in
+let footer = {"
+# End of configuration
+"} in
+let full_config = header + database_section + app_section + footer in
+
+# Method 2: Single template
+let app_name = "myapp" in
+let single_template = {"# Configuration File
+version = 1.0
+
+[database]
+host = localhost
+port = 5432
+
+[app]
+name = {app_name}
+debug = true
+
+# End of configuration
+"} in
+
+# Method 3: Join for lists
+let sections = [
+  "# Configuration File",
+  "version = 1.0",
+  "",
+  "[database]",
+  "host = localhost",
+  "port = 5432",
+  "",
+  "[app]",
+  "name = myapp",
+  "debug = true",
+  "",
+  "# End of configuration"
+] in
+let joined_config = join sections "\n" in
+
+# Method 4: Building from lists with map
+let users = [
+  {name: "Alice", role: "admin", email: "alice@example.com"},
+  {name: "Bob", role: "user", email: "bob@example.com"},
+  {name: "Charlie", role: "user", email: "charlie@example.com"}
+] in
+let generate_user_line = \user {"{user.name} ({user.role}): {user.email}"} in
+let user_lines = map generate_user_line users in
+let header2 = {"# User List
+"} in
+let user_content = join user_lines "\n" in
+let content = header2 + {"{user_content}"} in
+
+# Method 5: Conditional content building
+let include_debug = "true" in
+let include_metrics = "true" in
+let base_config = {"
+[app]
+name = myapp
+"} in
+let debug_section = if include_debug == "true" then {"
+[debug]
+level = verbose
+"} else {""} in
+let metrics_section = if include_metrics == "true" then {"
+[metrics]
+enabled = true
+"} else {""} in
+let conditional_config = base_config + debug_section + metrics_section in
+
+# Real-world example 1: Building a log file
+let timestamp = "2024-01-01 12:00:00" in
+let events = [
+  "Application started",
+  "Database connected",
+  "Cache initialized",
+  "Server listening on port 8080"
+] in
+let log_lines = map (\event {"{timestamp} - {event}"}) events in
+let log_content = join log_lines "\n" in
+
+# Real-world example 2: Multi-section config
+let app_name2 = "myapp" in
+let env = "production" in
+let header3 = {"# {app_name2} Configuration
+# Environment: {env}
+"} in
+let database_config = {"
+[database]
+host = db.example.com
+port = 5432
+name = {app_name2}
+"} in
+let app_config = {"
+[app]
+name = {app_name2}
+environment = {env}
+debug = {if env == "production" then "false" else "true"}
+"} in
+let multi_section_config = header3 + database_config + app_config in
+
+# Real-world example 3: Building HTML
+let title = "My Page" in
+let items = ["Home", "About", "Contact"] in
+let nav_items = map (\item {"    <li><a href=\"/{lower item}\">{item}</a></li>"}) items in
+let nav_content = join nav_items "\n" in
+let nav = {"  <nav>
+    <ul>
+{nav_content}
+    </ul>
+  </nav>
+"} in
+let header4 = {"<!DOCTYPE html>
+<html>
+<head>
+  <title>{title}</title>
+</head>
+<body>
+  <h1>{title}</h1>
+"} in
+let footer2 = {"  <footer>© 2024</footer>
+</body>
+</html>
+"} in
+let html = header4 + nav + footer2 in
+
+# Return all results as a dict to verify they all work
+{
+  template_plus: full_config,
+  single_template: single_template,
+  joined_config: joined_config,
+  user_list: content,
+  conditional_config: conditional_config,
+  log_content: log_content,
+  multi_section_config: multi_section_config,
+  html: html
+}
+

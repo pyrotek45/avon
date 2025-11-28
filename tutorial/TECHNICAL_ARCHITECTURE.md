@@ -224,9 +224,9 @@ let z = ... in z
 
 A naive implementation would clone the symbol table at each level, causing O(n²) performance. With just 200 bindings, this would timeout.
 
-### The Solution: Rc + Stack-Based Scoping
+### The Solution: Rc + Stack-Based Scoping + Minimal Symbol Table Capture
 
-Instead of cloning, Avon uses two techniques:
+Instead of cloning, Avon uses three techniques:
 
 1. **Rc Wrapping for Closures**
    When a function captures its environment, it wraps it in Rc (reference counting). This lets multiple functions share the same environment without deep copying.
@@ -234,11 +234,15 @@ Instead of cloning, Avon uses two techniques:
 2. **Stack-Based Scope Management**
    Let bindings don't clone the table—they add/remove from one mutable table. This is like a call stack: push a variable, evaluate, pop it back off.
 
+3. **Minimal Symbol Table Capture for Templates** 
+   Templates only capture the variables they actually reference, not the entire symbol table. This eliminates exponential symbol table growth during template concatenation.
+
 ### Real-World Impact
 
 With 200+ let bindings:
 - **Without optimization**: ~10MB memory, 60+ seconds (timeout)
 - **With optimization**: ~100KB memory, <1 second
+- **With minimal symbol tables**: Even faster, templates only capture 1-10 variables instead of 200+
 
 The same technique is used in production Rust code—it's proven, efficient, and correct.
 
