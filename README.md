@@ -64,10 +64,8 @@ avon deploy hello.av --root ./output
 ```
 
 **That's the core pattern:** Define variables, use them in Templates, attach Templates to Paths to create FileTemplates, and deploy.
-
 ## How Deployment Works
-
-*Why "deploy" instead of "generate"?* Because Avon doesn't just generate text—it writes files to specific paths. The `@/path` syntax makes file destinations part of your program, so "deploying" is the natural action.
+*Why "deploy"?* Avon ensures your files are delivered exactly where they belong. The `@/path` syntax integrates file destinations directly into your program, making "deploying" a seamless and intuitive experience.
 
 When you run `avon deploy program.av`, Avon evaluates your program and then:
 
@@ -277,13 +275,17 @@ let add = \a \b a + b in      # Function that takes two parameters
 double 5                       # Returns 10
 ```
 
-### Function Application (Lisp-Style)
+### Function Application
 
-Functions are called by placing arguments after the function name, separated by spaces (no parentheses around arguments):
+Functions are called by placing arguments after the function name, separated by spaces:
 
 ```avon
 let add = \a \b a + b in
-add 3 5      # Returns 8 (not add(3, 5))
+add 3 5      # Returns 8
+
+# Parentheses can be used for grouping
+(add 3) 5    # Same result - applies 3, then 5
+add (1 + 2) (2 + 3)  # Arguments can be expressions
 ```
 
 ### Currying
