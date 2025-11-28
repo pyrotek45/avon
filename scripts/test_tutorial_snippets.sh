@@ -31,13 +31,13 @@ test_file() {
     
     if $AVON eval "$file" > /tmp/avon_test_output.txt 2>&1; then
         echo -e "${GREEN}✓ PASS:${NC} $test_name"
-        ((PASSED++))
+        ((PASSED++)) || true
         return 0
     else
         echo -e "${RED}✗ FAIL:${NC} $test_name"
         echo "  Error output:"
         cat /tmp/avon_test_output.txt | sed 's/^/    /' | head -5
-        ((FAILED++))
+        ((FAILED++)) || true
         FAILED_TESTS+=("$test_name")
         return 1
     fi

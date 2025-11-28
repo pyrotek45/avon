@@ -84,14 +84,14 @@ enabled = true
 let conditional_config = base_config + debug_section + metrics_section in
 
 # Real-world example 1: Building a log file
-let timestamp = "2024-01-01 12:00:00" in
+let log_timestamp = "2024-01-01 12:00:00" in
 let events = [
   "Application started",
   "Database connected",
   "Cache initialized",
   "Server listening on port 8080"
 ] in
-let log_lines = map (\event {"{timestamp} - {event}"}) events in
+let log_lines = map (\event {"{log_timestamp} - {event}"}) events in
 let log_content = join log_lines "\n" in
 
 # Real-world example 2: Multi-section config

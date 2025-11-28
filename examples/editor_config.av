@@ -1,5 +1,9 @@
 # Generate editor configuration file from Avon
 # Demonstrates generating TOML config files
+#
+# Note: Dict keys must be unquoted identifiers (like: {port: 8080})
+# They cannot be quoted strings (not: {"port": 8080})
+# For keys with special characters like "C-space", use a variable for interpolation
 
 let theme = "dark_plus" in
 let cursor_shape = {
@@ -7,18 +11,18 @@ let cursor_shape = {
   normal: "block",
   select: "underline"
 } in
+let c_space_key = "C-space" in
 let keys_insert = {
-  "C-space": "normal_mode"
+  c_space: "normal_mode"
 } in
-
 @editor.toml {"
 theme = "{theme}"
 
 [editor.cursor-shape]
-insert = "{get cursor_shape "insert"}"
-normal = "{get cursor_shape "normal"}"
-select = "{get cursor_shape "select"}"
+insert = "{cursor_shape.insert}"
+normal = "{cursor_shape.normal}"
+select = "{cursor_shape.select}"
 
 [keys.insert]
-C-space = "{get keys_insert "C-space"}"
+{c_space_key} = "{keys_insert.c_space}"
 "}

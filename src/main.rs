@@ -3811,6 +3811,222 @@ mod tests {
         assert_eq!(v.to_string(&prog), "default_val");
     }
 
+    // Date/Time Operations Tests
+
+    #[test]
+    fn test_now() {
+        // Test now returns a valid ISO 8601 date string
+        let prog = "now".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::String(s) => {
+                // Should contain date-like characters
+                assert!(s.contains("T"));
+                assert!(s.contains(":"));
+                // Should be parseable as RFC 3339
+                use chrono::DateTime;
+                assert!(DateTime::parse_from_rfc3339(&s).is_ok());
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_timestamp() {
+        // Test timestamp returns a valid Unix timestamp
+        let prog = "timestamp".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Number(Number::Int(n)) => {
+                // Should be a reasonable timestamp (after 2020-01-01 and before 2100-01-01)
+                assert!(n > 1577836800); // 2020-01-01
+                assert!(n < 4102444800); // 2100-01-01
+            }
+            other => panic!("expected integer, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_timezone() {
+        // Test timezone returns a valid timezone offset
+        let prog = "timezone".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::String(s) => {
+                // Should be a timezone offset like "+00:00" or "-05:00"
+                assert!(s.contains(":") || s.starts_with("UTC") || s.starts_with("Z"));
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_date_format() {
+        // Test date_format with a known date
+        let prog = "date_format \"2024-03-15T14:30:00+00:00\" \"%Y-%m-%d\"".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::String(s) => {
+                assert_eq!(s, "2024-03-15");
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_date_format_complex() {
+        // Test date_format with a more complex format
+        let prog = "date_format \"2024-03-15T14:30:00+00:00\" \"%B %d, %Y at %H:%M\"".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::String(s) => {
+                assert!(s.contains("March"));
+                assert!(s.contains("15"));
+                assert!(s.contains("2024"));
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_date_parse() {
+        // Test date_parse with a custom format
+        let prog = "date_parse \"2024-03-15 14:30\" \"%Y-%m-%d %H:%M\"".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::String(s) => {
+                // Should be a valid ISO 8601 string
+                use chrono::DateTime;
+                assert!(DateTime::parse_from_rfc3339(&s).is_ok());
+                assert!(s.contains("2024"));
+                assert!(s.contains("14:30"));
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_date_add() {
+        // Test date_add with various durations
+        let prog = "date_add \"2024-03-15T14:30:00+00:00\" \"1d\"".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::String(s) => {
+                // Should be a valid ISO 8601 string for the next day
+                use chrono::DateTime;
+                let dt = DateTime::parse_from_rfc3339(&s).expect("valid date");
+                let orig = DateTime::parse_from_rfc3339("2024-03-15T14:30:00+00:00").unwrap();
+                let diff = dt.signed_duration_since(orig);
+                assert_eq!(diff.num_days(), 1);
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_date_add_hours() {
+        // Test date_add with hours
+        let prog = "date_add \"2024-03-15T14:30:00+00:00\" \"2h\"".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::String(s) => {
+                use chrono::DateTime;
+                let dt = DateTime::parse_from_rfc3339(&s).expect("valid date");
+                let orig = DateTime::parse_from_rfc3339("2024-03-15T14:30:00+00:00").unwrap();
+                let diff = dt.signed_duration_since(orig);
+                assert_eq!(diff.num_hours(), 2);
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_date_diff() {
+        // Test date_diff calculates difference in seconds
+        let prog =
+            "date_diff \"2024-03-15T15:30:00+00:00\" \"2024-03-15T14:30:00+00:00\"".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Number(Number::Int(n)) => {
+                // 1 hour difference = 3600 seconds
+                assert_eq!(n, 3600);
+            }
+            other => panic!("expected integer, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_date_format_with_now() {
+        // Test combining now with date_format
+        let prog = "date_format now \"%Y\"".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::String(s) => {
+                // Should be a 4-digit year
+                assert_eq!(s.len(), 4);
+                let year: i32 = s.parse().expect("should be a number");
+                assert!(year >= 2024 && year <= 2100);
+            }
+            other => panic!("expected string, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_date_parse_error() {
+        // Test date_parse with invalid format
+        let prog = "date_parse \"invalid\" \"%Y-%m-%d\"".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.message.contains("date_parse"));
+    }
+
+    #[test]
+    fn test_date_add_invalid_duration() {
+        // Test date_add with invalid duration format
+        let prog = "date_add \"2024-03-15T14:30:00+00:00\" \"invalid\"".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.message.contains("duration"));
+    }
+
     // Atomic Deployment Safety Tests
     // These tests verify the claims made in the documentation about fail-safe deployment
 
@@ -5103,5 +5319,119 @@ mod tests {
             Value::String(s) => assert_eq!(s, "hello"),
             other => panic!("expected 'hello', got {:?}", other),
         }
+    }
+
+    // ============================================================================
+    // DICT KEY SYNTAX TESTS
+    // ============================================================================
+
+    #[test]
+    fn test_dict_keys_must_be_unquoted_identifiers() {
+        // Dict keys must be unquoted identifiers, not strings
+        let prog = "let d = {name: \"Alice\", age: 30} in d.name".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "Alice");
+    }
+
+    #[test]
+    fn test_dict_multiline_unquoted_keys() {
+        // Multi-line dict with unquoted identifier keys should work
+        let prog = "let d = {
+  name: \"Bob\",
+  age: 25,
+  city: \"NYC\"
+} in d.name"
+            .to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "Bob");
+    }
+
+    #[test]
+    fn test_dict_keys_with_underscores() {
+        // Dict keys can have underscores
+        let prog = "let d = {user_name: \"Alice\", user_id: 123} in d.user_name".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "Alice");
+    }
+
+    #[test]
+    fn test_dict_keys_with_numbers() {
+        // Dict keys can have numbers (but not start with them)
+        let prog = "let d = {user1: \"Alice\", user2: \"Bob\"} in d.user1".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "Alice");
+    }
+
+    #[test]
+    fn test_dict_empty_dict() {
+        // Empty dict syntax
+        let prog = "let d = {} in is_dict d".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Bool(true) => {}
+            other => panic!("Expected true, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_dict_multiline_empty() {
+        // Empty dict on multiple lines
+        let prog = "let d = {
+} in is_dict d"
+            .to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Bool(true) => {}
+            other => panic!("Expected true, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_dict_single_key_multiline() {
+        // Single key dict on multiple lines
+        let prog = "let d = {
+  name: \"Alice\"
+} in d.name"
+            .to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "Alice");
+    }
+
+    #[test]
+    fn test_dict_nested_multiline() {
+        // Nested dict with multiline formatting
+        let prog = "let d = {
+  user: {
+    name: \"Alice\",
+    age: 30
+  }
+} in d.user.name"
+            .to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "Alice");
     }
 }

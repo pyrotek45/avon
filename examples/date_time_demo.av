@@ -1,0 +1,31 @@
+let current = now in
+let formatted_date = date_format current "%Y-%m-%d" in
+let formatted_time = date_format current "%H:%M:%S" in
+let tomorrow = date_add current "1d" in
+let next_week = date_add current "1w" in
+let ts = timestamp in
+
+@/output/datetime_info.txt {"
+Date/Time Functions Demo
+========================
+
+Current date/time (ISO 8601): {current}
+
+Formatted outputs:
+- Date: {formatted_date}
+- Time: {formatted_time}
+
+Future dates:
+- Tomorrow: {date_format tomorrow "%Y-%m-%d"}
+- Next week: {date_format next_week "%Y-%m-%d"}
+
+Unix timestamp: {ts}
+Timezone: {timezone}
+
+Custom date parsing example:
+{let parsed = date_parse "2024-03-15 14:30" "%Y-%m-%d %H:%M" in
+date_format parsed "%B %d, %Y at %I:%M %p"}
+
+Time difference:
+- Between now and tomorrow: {date_diff tomorrow current} seconds
+"}

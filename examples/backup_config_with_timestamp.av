@@ -1,0 +1,34 @@
+let backup_time = now in
+let backup_date = date_format backup_time "%Y%m%d" in
+let backup_timestamp = date_format backup_time "%Y%m%d_%H%M%S" in
+
+let config = {
+  name: "my-app",
+  environment: "production",
+  backup_dir: "/backups",
+  retention_days: 7
+} in
+
+@/config/backup-{backup_date}.yml {"
+# Backup Configuration
+# Generated: {backup_time}
+# Build timestamp: {timestamp}
+
+application:
+  name: {config.name}
+  environment: {config.environment}
+
+backup:
+  timestamp: {backup_timestamp}
+  directory: {config.backup_dir}
+  retention_days: {config.retention_days}
+  next_backup: {date_format (date_add backup_time "1d") "%Y-%m-%d %H:%M:%S"}
+  
+logging:
+  file: {config.backup_dir}/backup_{backup_timestamp}.log
+  level: info
+  
+metadata:
+  created_at: {backup_time}
+  timezone: {timezone}
+"}

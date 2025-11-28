@@ -138,6 +138,12 @@ Dictionary ::= '{' '}'
 DictEntry  ::= Identifier ':' Expression
 ```
 
+**Important**: Dictionary keys must be **unquoted identifiers**, not strings.
+- Valid: `{name: "Alice", port: 8080}`
+- Invalid: `{"name": "Alice", "port": 8080}` ❌
+
+If you need a key with special characters (like `"C-space"`), use a variable for interpolation in templates instead of a dict key.
+
 ### Template
 
 ```

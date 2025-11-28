@@ -1,6 +1,7 @@
 use crate::common::{Chunk, EvalError, Expr, Number, Token, Value};
 use crate::lexer::tokenize;
 use crate::parser::parse;
+use chrono::{DateTime, Local, NaiveDateTime, TimeZone, Utc};
 use std::collections::{HashMap, HashSet};
 
 pub fn initial_builtins() -> HashMap<String, Value> {
@@ -367,6 +368,36 @@ pub fn initial_builtins() -> HashMap<String, Value> {
         Value::String(std::env::consts::OS.to_string()),
     );
 
+    // Date/Time operations
+    m.insert(
+        "now".to_string(),
+        Value::Builtin("now".to_string(), Vec::new()),
+    );
+    m.insert(
+        "date_format".to_string(),
+        Value::Builtin("date_format".to_string(), Vec::new()),
+    );
+    m.insert(
+        "date_parse".to_string(),
+        Value::Builtin("date_parse".to_string(), Vec::new()),
+    );
+    m.insert(
+        "date_add".to_string(),
+        Value::Builtin("date_add".to_string(), Vec::new()),
+    );
+    m.insert(
+        "date_diff".to_string(),
+        Value::Builtin("date_diff".to_string(), Vec::new()),
+    );
+    m.insert(
+        "timestamp".to_string(),
+        Value::Builtin("timestamp".to_string(), Vec::new()),
+    );
+    m.insert(
+        "timezone".to_string(),
+        Value::Builtin("timezone".to_string(), Vec::new()),
+    );
+
     // Type checking and introspection
     m.insert(
         "typeof".to_string(),
@@ -434,7 +465,7 @@ impl Value {
     }
 
     fn to_string_with_depth(&self, source: &str, depth: usize) -> String {
-        const MAX_DEPTH: usize = 100;
+        const MAX_DEPTH: usize = 200;
         if depth > MAX_DEPTH {
             return format!("<recursion limit exceeded (depth > {})>", MAX_DEPTH);
         }
@@ -694,7 +725,7 @@ fn render_chunks_to_string_with_depth(
     source: &str,
     depth: usize,
 ) -> Result<String, EvalError> {
-    const MAX_DEPTH: usize = 100;
+    const MAX_DEPTH: usize = 200;
     const MAX_CHUNKS: usize = 100000; // Increased - slow is OK
     const MAX_ITERATIONS: usize = 1000000; // Increased to 1 million - catches infinite loops, not slow evaluation
 
@@ -897,7 +928,7 @@ fn eval_with_depth(
     source: &str,
     depth: usize,
 ) -> Result<Value, EvalError> {
-    const MAX_EVAL_DEPTH: usize = 100;
+    const MAX_EVAL_DEPTH: usize = 200;
     const MAX_EVAL_STEPS: usize = 1000000; // Increased to 1 million - catches infinite loops, not slow evaluation
 
     // Note: We removed the timeout check - slow evaluation is OK, we only need to catch infinite loops
@@ -1242,7 +1273,22 @@ fn eval_with_depth(
                 ));
             }
             if let Some(value) = symbols.get(&ident) {
-                Ok(value.clone())
+                // Automatically execute zero-arity builtins when looked up
+                match value {
+                    Value::Builtin(name, args) if args.is_empty() => {
+                        // Check if this is a zero-arity builtin that should be executed
+                        let arity = match name.as_str() {
+                            "now" | "timestamp" | "timezone" => 0,
+                            _ => 1, // Default arity for safety
+                        };
+                        if arity == 0 {
+                            execute_builtin(name, &[], source, line)
+                        } else {
+                            Ok(value.clone())
+                        }
+                    }
+                    _ => Ok(value.clone()),
+                }
             } else {
                 Err(EvalError::unknown_symbol(ident.clone(), line))
             }
@@ -1727,6 +1773,14 @@ pub fn apply_function(
                 "os" => 0,
                 "env_var" => 1,
                 "env_var_or" => 2,
+                // Date/Time operations
+                "now" => 0,
+                "date_format" => 2,
+                "date_parse" => 2,
+                "date_add" => 2,
+                "date_diff" => 2,
+                "timestamp" => 0,
+                "timezone" => 0,
                 _ => 1,
             };
 
@@ -1770,6 +1824,46 @@ fn value_to_string_auto(val: &Value, source: &str, line: usize) -> Result<String
             val.to_string(source),
             line,
         )),
+    }
+}
+
+// Helper function to parse duration strings like "1d", "2h", "30m", etc.
+fn parse_duration(s: &str) -> Result<chrono::Duration, String> {
+    let s = s.trim();
+    if s.is_empty() {
+        return Err("empty duration string".to_string());
+    }
+
+    // Find where the number ends and unit begins
+    let mut num_end = 0;
+    for (i, c) in s.chars().enumerate() {
+        if c.is_ascii_digit() || c == '-' || c == '+' || c == '.' {
+            num_end = i + 1;
+        } else {
+            break;
+        }
+    }
+
+    if num_end == 0 {
+        return Err(format!("no number found in '{}'", s));
+    }
+
+    let num_str = &s[..num_end];
+    let unit = s[num_end..].trim();
+
+    let value: i64 = num_str
+        .parse()
+        .map_err(|_| format!("invalid number: '{}'", num_str))?;
+
+    match unit {
+        "s" | "sec" | "second" | "seconds" => Ok(chrono::Duration::seconds(value)),
+        "m" | "min" | "minute" | "minutes" => Ok(chrono::Duration::minutes(value)),
+        "h" | "hour" | "hours" => Ok(chrono::Duration::hours(value)),
+        "d" | "day" | "days" => Ok(chrono::Duration::days(value)),
+        "w" | "week" | "weeks" => Ok(chrono::Duration::weeks(value)),
+        "y" | "year" | "years" => Ok(chrono::Duration::days(value * 365)),
+        "" => Err("missing unit (use s/m/h/d/w/y)".to_string()),
+        _ => Err(format!("unknown unit: '{}' (use s/m/h/d/w/y)", unit)),
     }
 }
 
@@ -3363,6 +3457,149 @@ pub fn execute_builtin(
                 ))
             }
         }
+
+        // Date/Time operations
+        "now" => {
+            // now :: String
+            // Returns current date/time in ISO 8601 format (RFC 3339)
+            let now = Local::now();
+            Ok(Value::String(now.to_rfc3339()))
+        }
+        "date_format" => {
+            // date_format :: String -> String -> String
+            // Format a date string with a given format
+            // First arg: ISO 8601 date string
+            // Second arg: format string (strftime format)
+            let date_str = value_to_string_auto(&args[0], source, line)?;
+            let format_str = value_to_string_auto(&args[1], source, line)?;
+
+            // Parse the date string as RFC 3339 (ISO 8601)
+            match DateTime::parse_from_rfc3339(&date_str) {
+                Ok(dt) => {
+                    let formatted = dt.format(&format_str).to_string();
+                    Ok(Value::String(formatted))
+                }
+                Err(_) => {
+                    // Try parsing as RFC 2822
+                    match DateTime::parse_from_rfc2822(&date_str) {
+                        Ok(dt) => {
+                            let formatted = dt.format(&format_str).to_string();
+                            Ok(Value::String(formatted))
+                        }
+                        Err(_) => Err(EvalError::new(
+                            format!("date_format: invalid date string: {}", date_str),
+                            Some("Expected ISO 8601 (RFC 3339) or RFC 2822 format".to_string()),
+                            Some("Example: \"2024-03-15T14:30:00+00:00\"".to_string()),
+                            line,
+                        )),
+                    }
+                }
+            }
+        }
+        "date_parse" => {
+            // date_parse :: String -> String -> String
+            // Parse a date string with a given format and return ISO 8601
+            // First arg: date string
+            // Second arg: format string (strftime format)
+            let date_str = value_to_string_auto(&args[0], source, line)?;
+            let format_str = value_to_string_auto(&args[1], source, line)?;
+
+            // Try parsing with the given format
+            match NaiveDateTime::parse_from_str(&date_str, &format_str) {
+                Ok(naive_dt) => {
+                    // Convert to local timezone
+                    let local_dt = Local
+                        .from_local_datetime(&naive_dt)
+                        .earliest()
+                        .unwrap_or_else(|| {
+                            Local.from_utc_datetime(&naive_dt.and_utc().naive_utc())
+                        });
+                    Ok(Value::String(local_dt.to_rfc3339()))
+                }
+                Err(_) => Err(EvalError::new(
+                    format!(
+                        "date_parse: could not parse '{}' with format '{}'",
+                        date_str, format_str
+                    ),
+                    Some("Check that the format string matches the date string".to_string()),
+                    Some("Example: date_parse \"2024-03-15 14:30\" \"%Y-%m-%d %H:%M\"".to_string()),
+                    line,
+                )),
+            }
+        }
+        "date_add" => {
+            // date_add :: String -> String -> String
+            // Add duration to a date
+            // First arg: ISO 8601 date string
+            // Second arg: duration string (e.g., "1d", "2h", "30m", "45s", "1w", "1y")
+            let date_str = value_to_string_auto(&args[0], source, line)?;
+            let duration_str = value_to_string_auto(&args[1], source, line)?;
+
+            // Parse the date
+            let dt = DateTime::parse_from_rfc3339(&date_str).map_err(|_| {
+                EvalError::new(
+                    format!("date_add: invalid date string: {}", date_str),
+                    Some("Expected ISO 8601 (RFC 3339) format".to_string()),
+                    Some("Use 'now' or 'date_parse' to create valid dates".to_string()),
+                    line,
+                )
+            })?;
+
+            // Parse duration string
+            let duration = parse_duration(&duration_str).map_err(|e| {
+                EvalError::new(
+                    format!("date_add: invalid duration: {}", e),
+                    Some("Format: number + unit (s/m/h/d/w/y)".to_string()),
+                    Some("Examples: \"1d\", \"2h\", \"30m\", \"1w\", \"1y\"".to_string()),
+                    line,
+                )
+            })?;
+
+            let new_dt = dt + duration;
+            Ok(Value::String(new_dt.to_rfc3339()))
+        }
+        "date_diff" => {
+            // date_diff :: String -> String -> Number
+            // Calculate difference between two dates in seconds
+            // First arg: ISO 8601 date string (later date)
+            // Second arg: ISO 8601 date string (earlier date)
+            let date1_str = value_to_string_auto(&args[0], source, line)?;
+            let date2_str = value_to_string_auto(&args[1], source, line)?;
+
+            let dt1 = DateTime::parse_from_rfc3339(&date1_str).map_err(|_| {
+                EvalError::new(
+                    format!("date_diff: invalid first date string: {}", date1_str),
+                    Some("Expected ISO 8601 (RFC 3339) format".to_string()),
+                    None,
+                    line,
+                )
+            })?;
+
+            let dt2 = DateTime::parse_from_rfc3339(&date2_str).map_err(|_| {
+                EvalError::new(
+                    format!("date_diff: invalid second date string: {}", date2_str),
+                    Some("Expected ISO 8601 (RFC 3339) format".to_string()),
+                    None,
+                    line,
+                )
+            })?;
+
+            let diff = dt1.signed_duration_since(dt2);
+            Ok(Value::Number(Number::Int(diff.num_seconds())))
+        }
+        "timestamp" => {
+            // timestamp :: Number
+            // Returns current Unix timestamp (seconds since epoch)
+            let now = Utc::now();
+            Ok(Value::Number(Number::Int(now.timestamp())))
+        }
+        "timezone" => {
+            // timezone :: String
+            // Returns current timezone offset (e.g., "+00:00", "-05:00")
+            let now = Local::now();
+            Ok(Value::String(now.offset().to_string()))
+        }
+
         "typeof" => {
             // typeof :: a -> String
             // Returns the type name of a value

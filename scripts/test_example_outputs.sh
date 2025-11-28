@@ -310,6 +310,24 @@ test_no_error "examples/nested_let.av" "nested let bindings"
 
 test_no_error "examples/let_cascade.av" "cascading let bindings"
 
+# Date/Time operations
+test_no_error "examples/date_time_demo.av" "date/time demo"
+test_output_contains "examples/date_time_demo.av" "Date/Time Functions Demo" "date/time demo header"
+test_output_contains "examples/date_time_demo.av" "Current date/time (ISO 8601):" "date/time current"
+test_output_contains "examples/date_time_demo.av" "Formatted outputs:" "date/time formatting"
+test_output_contains "examples/date_time_demo.av" "Future dates:" "date/time future dates"
+test_output_contains "examples/date_time_demo.av" "Unix timestamp:" "date/time timestamp"
+test_output_contains "examples/date_time_demo.av" "Timezone:" "date/time timezone"
+test_output_contains "examples/date_time_demo.av" "Time difference:" "date/time diff"
+test_output_contains "examples/date_time_demo.av" "86400 seconds" "date/time 1 day in seconds"
+
+test_no_error "examples/backup_config_with_timestamp.av" "backup config with timestamp"
+test_output_contains "examples/backup_config_with_timestamp.av" "Backup Configuration" "backup config header"
+test_output_contains "examples/backup_config_with_timestamp.av" "application:" "backup config yaml structure"
+test_output_contains "examples/backup_config_with_timestamp.av" "backup:" "backup config backup section"
+test_output_contains "examples/backup_config_with_timestamp.av" "retention_days: 7" "backup config retention"
+test_output_contains "examples/backup_config_with_timestamp.av" "created_at:" "backup config created timestamp"
+
 echo ""
 echo "================================================"
 echo "Summary:"

@@ -1,0 +1,151 @@
+# Dictionary Syntax Guide
+# Comprehensive examples of dict key syntax rules in Avon
+
+# ============================================================================
+# RULE 1: Dict keys must be unquoted identifiers
+# ============================================================================
+
+# ✓ CORRECT: Unquoted identifiers
+let valid_dict = {
+  name: "Alice",
+  age: 30,
+  city: "NYC"
+} in
+
+# ✗ INCORRECT: Quoted strings as keys
+# let invalid_dict = {
+#   "name": "Alice",    # This will fail - lexer treats { as template opener
+#   "age": 30
+# } in
+
+# ============================================================================
+# RULE 2: Multi-line dicts with unquoted keys work perfectly
+# ============================================================================
+
+let config = {
+  host: "localhost",
+  port: 8080,
+  debug: true,
+  workers: 4
+} in
+
+# ============================================================================
+# RULE 3: Keys can contain underscores and numbers (but not start with numbers)
+# ============================================================================
+
+let valid_keys = {
+  user_name: "Bob",
+  user_id_123: 456,
+  _private: "hidden",
+  CamelCase: "works",
+  snake_case: "works"
+} in
+
+# ============================================================================
+# RULE 4: For keys with special characters, use variables for interpolation
+# ============================================================================
+
+# If you need a key like "C-space" or "my-key" (with hyphens), 
+# you can't use it as a dict key directly. Instead:
+
+# Option A: Use underscores instead of hyphens
+let keybindings = {
+  c_space: "normal_mode",
+  ctrl_c: "copy",
+  ctrl_v: "paste"
+} in
+
+# Option B: Store the special string in a variable for template interpolation
+let special_key = "C-space" in
+let special_value = "normal_mode" in
+
+# ============================================================================
+# RULE 5: Nested dicts work with multi-line formatting
+# ============================================================================
+
+let nested_config = {
+  server: {
+    host: "localhost",
+    port: 8080
+  },
+  database: {
+    host: "db.example.com",
+    port: 5432,
+    name: "myapp"
+  },
+  logging: {
+    level: "debug",
+    file: "/var/log/app.log"
+  }
+} in
+
+# ============================================================================
+# RULE 6: Empty dicts work on single or multiple lines
+# ============================================================================
+
+let empty1 = {} in
+let empty2 = {
+} in
+
+# ============================================================================
+# OUTPUT: Demonstrate all the valid patterns
+# ============================================================================
+
+@dict_syntax_guide.txt {"
+Dictionary Syntax Guide for Avon
+=================================
+
+VALID Dict Examples:
+-------------------
+1. Simple dict:
+   {valid_dict}
+
+2. Multi-line config:
+   Host: {config.host}
+   Port: {config.port}
+   Debug: {config.debug}
+   Workers: {config.workers}
+
+3. Keys with underscores and numbers:
+   User: {valid_keys.user_name}
+   ID: {valid_keys.user_id_123}
+   Private: {valid_keys._private}
+
+4. Keybindings (using underscores instead of hyphens):
+   C-Space: {keybindings.c_space}
+   Ctrl-C: {keybindings.ctrl_c}
+   Ctrl-V: {keybindings.ctrl_v}
+
+5. Special key interpolation:
+   Key name: {special_key}
+   Key value: {special_value}
+
+6. Nested dicts:
+   Server: {nested_config.server.host}:{nested_config.server.port}
+   Database: {nested_config.database.host}:{nested_config.database.port}
+   Log level: {nested_config.logging.level}
+
+7. Empty dicts:
+   Empty1: {is_dict empty1}
+   Empty2: {is_dict empty2}
+
+SYNTAX RULES:
+------------
+✓ DO: Use unquoted identifiers as keys
+   Example: let d = {{name: Alice, age: 30}} in d.name
+
+✗ DON'T: Use quoted strings as keys  
+   Opening brace followed by quoted string is treated as template!
+
+✓ DO: Use underscores for multi-word keys
+   Example: {{user_name: Bob, user_id: 123}}
+
+✗ DON'T: Use hyphens in keys
+   Hyphens are not valid in identifiers
+
+✓ DO: Use multi-line formatting for readability
+   Multi-line dicts work perfectly with unquoted identifiers
+
+✓ DO: Nest dicts freely
+   Nested dicts work at any depth
+"}

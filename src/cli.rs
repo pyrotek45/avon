@@ -168,6 +168,15 @@ fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("debug", "debug :: a -> a\n  Pretty-print value structure to stderr, return value unchanged.\n  Example: debug [1, 2, 3] -> prints structure, returns [1, 2, 3]"),
         ("error", "error :: String -> a\n  Throw custom error with message.\n  Example: error \"Invalid input\" -> throws error"),
 
+        // Date/Time Operations
+        ("now", "now :: String\n  Get current date and time in ISO 8601 format.\n  Example: now -> \"2024-03-15T14:30:45+00:00\"\n  Note: Returns RFC 3339 formatted string with timezone offset."),
+        ("date_format", "date_format :: String -> String -> String\n  Format a date string with a custom format.\n  First arg: ISO 8601 date string (from 'now' or 'date_parse')\n  Second arg: strftime format string\n  Example: date_format (now) \"%Y-%m-%d\" -> \"2024-03-15\"\n  Example: date_format (now) \"%B %d, %Y\" -> \"March 15, 2024\"\n  Common formats: %Y (year), %m (month), %d (day), %H (hour), %M (minute), %S (second)\n  See strftime documentation for all format codes."),
+        ("date_parse", "date_parse :: String -> String -> String\n  Parse a date string and return ISO 8601 format.\n  First arg: date string to parse\n  Second arg: strftime format string matching the input\n  Example: date_parse \"2024-03-15 14:30\" \"%Y-%m-%d %H:%M\" -> ISO 8601 string\n  Example: date_parse \"15/03/2024\" \"%d/%m/%Y\" -> ISO 8601 string\n  Returns: RFC 3339 formatted string for use with other date functions."),
+        ("date_add", "date_add :: String -> String -> String\n  Add duration to a date.\n  First arg: ISO 8601 date string\n  Second arg: duration string (number + unit)\n  Units: s (seconds), m (minutes), h (hours), d (days), w (weeks), y (years)\n  Example: date_add (now) \"1d\" -> date 1 day from now\n  Example: date_add (now) \"2h\" -> date 2 hours from now\n  Example: date_add (now) \"30m\" -> date 30 minutes from now\n  Example: date_add (now) \"1w\" -> date 1 week from now"),
+        ("date_diff", "date_diff :: String -> String -> Int\n  Calculate difference between two dates in seconds.\n  First arg: later date (ISO 8601)\n  Second arg: earlier date (ISO 8601)\n  Example: date_diff date1 date2 -> seconds difference\n  Returns: Positive number if first date is after second, negative if before."),
+        ("timestamp", "timestamp :: Int\n  Get current Unix timestamp (seconds since epoch).\n  Example: timestamp -> 1710509445\n  Note: Useful for unique filenames and sortable timestamps."),
+        ("timezone", "timezone :: String\n  Get current timezone offset.\n  Example: timezone -> \"+00:00\" or \"-05:00\"\n  Note: Returns offset from UTC in ±HH:MM format."),
+
         // System
         ("os", "os :: String\n  Get operating system name.\n  Returns: \"linux\", \"macos\", or \"windows\""),
         ("env_var", "env_var :: String -> String\n  Read environment variable, fail if missing.\n  Example: env_var \"HOME\" -> \"/home/user\"\n  Fails if variable not set (fail-safe behavior)."),
@@ -617,6 +626,24 @@ fn print_builtin_docs() {
     println!();
 
     // System
+    println!("Date/Time Operations:");
+    println!("---------------------");
+    println!("  {:<18} :: {}", "now", "String");
+    println!(
+        "  {:<18} :: {}",
+        "date_format", "String -> String -> String"
+    );
+    println!("  {:<18} :: {}", "date_parse", "String -> String -> String");
+    println!("  {:<18} :: {}", "date_add", "String -> String -> String");
+    println!("  {:<18} :: {}", "date_diff", "String -> String -> Int");
+    println!("  {:<18} :: {}", "timestamp", "Int");
+    println!("  {:<18} :: {}", "timezone", "String");
+    println!();
+    println!("  Note: Date strings use ISO 8601 (RFC 3339) format: \"2024-03-15T14:30:00+00:00\"");
+    println!("        Duration format: number + unit (s/m/h/d/w/y), e.g., \"1d\", \"2h\", \"30m\"");
+    println!("        Format strings use strftime codes: %Y (year), %m (month), %d (day), etc.");
+    println!();
+
     println!("System:");
     println!("-------");
     println!(
