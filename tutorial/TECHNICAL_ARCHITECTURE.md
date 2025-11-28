@@ -44,10 +44,9 @@ Evaluation process:
    - Insert `y=10` into table: `{x: 5, y: 10}`
    - Evaluate `x + y` (both available): result is `15`
    - Remove `y` from table (after `x + y` is evaluated): `{x: 5}`
+   - Return `15`
 3. Remove `x` from table (after inner let expression is evaluated): `{}`
 4. Return result `15`
-4. Remove `y=10`: back to `{x: 5}`
-5. Continue with outer scope
 
 **Important: No Variable Shadowing**
 
@@ -407,18 +406,19 @@ precedence
 
 ### How Scoping Works
 
-Avon uses lexical (static) scoping: variable visibility is determined by code structure:
+Avon uses lexical (static) scoping: variable visibility is determined by code structure. Functions capture variables from their creation environment:
 
 ```avon
 let x = 1 in
 let f = \y x + y in
-let x = 2 in
 f 10
 ```
 
-Result: **11** (not 12)
+Result: **11**
 
-Why? Function `f` was created in the environment where `x=1`, so it captures `x=1`. The later `let x = 2` doesn't affect `f`'s captured environment.
+Why? Function `f` was created in the environment where `x=1`, so it captures `x=1` in its closure. When `f 10` is called, it uses the captured `x=1`, resulting in `1 + 10 = 11`.
+
+**Note:** Avon does not allow variable shadowing, so you cannot redefine `x` in the same scope. The function captures the variable value from when it was created, not from when it's called.
 
 ### No Variable Shadowing
 
