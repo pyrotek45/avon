@@ -5,13 +5,14 @@ This document provides a comprehensive guide to Avon's template syntax, includin
 ## Table of Contents
 
 1. [Basic Template Syntax](#basic-template-syntax)
-2. [Interpolation](#interpolation)
-3. [The Multi-Brace Delimiter System](#the-multi-brace-delimiter-system)
-4. [Handling Literal Braces](#handling-literal-braces)
-5. [Common Use Cases](#common-use-cases)
-6. [Best Practices](#best-practices)
-7. [Quick Reference](#quick-reference)
-8. [Tips and Tricks](#tips-and-tricks)
+2. [Automatic Dedent](#automatic-dedent)
+3. [Interpolation](#interpolation)
+4. [The Multi-Brace Delimiter System](#the-multi-brace-delimiter-system)
+5. [Handling Literal Braces](#handling-literal-braces)
+6. [Common Use Cases](#common-use-cases)
+7. [Best Practices](#best-practices)
+8. [Quick Reference](#quick-reference)
+9. [Tips and Tricks](#tips-and-tricks)
 
 ---
 
@@ -25,6 +26,96 @@ Templates in Avon are enclosed in `{" "}`:
 ```
 
 The opening delimiter is `{"` and the closing delimiter is `"}`.
+
+**Tip:** Keep templates on the same line as `in` for clarity:
+
+```avon
+# Preferred
+let name = "Alice" in @greeting.txt {"
+  Hello, {name}!
+"}
+
+# Works, but less clear
+let name = "Alice" in
+@greeting.txt {"
+Hello, {name}!
+"}
+```
+
+---
+
+## Automatic Dedent
+
+Avon automatically removes leading whitespace from templates based on the **first line's indentation** (the baseline). This lets you indent templates in source code for readability without affecting the output.
+
+### How It Works
+
+1. Avon strips leading and trailing blank lines
+2. Finds the first line with content—that line's indentation becomes the **baseline**
+3. Removes that baseline amount of whitespace from every line
+4. Relative indentation between lines is preserved
+
+### Example
+
+```avon
+let make_config = \service @config/{service}.yml {"
+  service: {service}
+  settings:
+    enabled: true
+    timeout: 30
+"}
+```
+
+The first content line (`service: {service}`) has 2 spaces, so 2 spaces are removed from every line.
+
+**Output** (no leading spaces):
+```yaml
+service: myapp
+settings:
+  enabled: true
+  timeout: 30
+```
+
+### Indent for Readability
+
+You can indent templates as deep as you want in your source code:
+
+```avon
+let environments = ["dev", "staging", "prod"] in
+let make_deploy = \env
+  let replicas = if env == "prod" then "3" else "1" in
+  @deploy-{env}.yaml {"
+    apiVersion: apps/v1
+    kind: Deployment
+    spec:
+      replicas: {replicas}
+  "}
+in
+map make_deploy environments
+```
+
+Even though the template is 4+ levels deep, the generated files have zero leading spaces.
+
+### Blank Lines Are Stripped
+
+Leading and trailing blank lines inside templates are automatically removed:
+
+```avon
+@config.json {{"
+
+  {
+    "key": "value"
+  }
+
+"}}
+```
+
+Output (blank lines removed):
+```json
+{
+  "key": "value"
+}
+```
 
 ---
 
@@ -153,20 +244,41 @@ class MyClass {
 
 ### Generating Templates (Meta-Templates)
 
-When generating Avon templates or other template languages:
+When generating Avon templates or other template languages, use triple-brace templates so single and double braces are literal:
 
 ```avon
 let varName = "username" in
+let placeholder = "{" + varName + "}" in
 {{{"
-# This Avon template will interpolate {{varName}}:
-{"Hello, {{{varName}}}!"}
+# This Avon template uses {{{varName}}}:
+{"Hello, {{{placeholder}}}!"}
 "}}}
 ```
 
 Output:
 ```avon
-# This Avon template will interpolate username:
+# This Avon template uses username:
 {"Hello, {username}!"}
+```
+
+**How it works:**
+- `{{{varName}}}` interpolates the variable → `username`
+- `{{{placeholder}}}` interpolates the string `"{username}"` → `{username}`
+- `{"Hello, ... !"}` stays literal (single braces < triple)
+
+**Simpler case** - when you just need literal template syntax without dynamic placeholders:
+
+```avon
+{{{"
+# A static Avon template example:
+{"Hello, {name}!"}
+"}}}
+```
+
+Output:
+```avon
+# A static Avon template example:
+{"Hello, {name}!"}
 ```
 
 ---
@@ -420,11 +532,11 @@ Line 2"}
 
 ### Converting Non-String Values
 
-When using `concat` or `+` for string operations, values must be strings. Use `str` to convert numbers:
+When using `concat` or `+` for string operations, values must be strings. Use `to_string` to convert numbers:
 
 ```avon
 let count = 42 in
-"{" + str count + "}"
+"{" + (to_string count) + "}"
 # Output: {42}
 
 # This would fail:
@@ -433,26 +545,20 @@ let count = 42 in
 
 ### Mixing Template Levels
 
-When you need different brace styles in one output, combine templates with concatenation:
+When you need different brace styles in one output, use helper functions and multi-brace templates together:
 
 ```avon
+# Create a JSON template with a Mustache placeholder
 let name = "user" in
-let value = "data" in
+let mustache = \s "{{" + s + "}}" in
+let placeholder = mustache "data" in
 
-# JSON with a Mustache placeholder inside
-{{"{"}} + {{"\"name\": \"{{name}}\", \"template\": \""}} + "{{" + value + "}}" + {{"\"}"}}
+# Use level 2 for the JSON structure, interpolate the placeholder
+{{" {"name": "{{name}}", "template": "{{placeholder}}"} "}}
 # Output: {"name": "user", "template": "{{data}}"}
 ```
 
-A cleaner approach uses helper functions:
-
-```avon
-let mustache = \s "{{" + s + "}}" in
-let name = "user" in
-let value = "data" in
-
-{{"{"name": "{{name}}", "template": ""}} + mustache value + {{"\"}}"}}
-```
+The key insight: level 2 templates treat single braces `{}` as literal, so JSON is easy. The `mustache` helper builds `{{...}}` strings, which are then interpolated into the level 2 template.
 
 ### What Gets Interpolated
 
@@ -535,6 +641,8 @@ mustache_spaced "value"  # {{ value }}
 
 ## See Also
 
-- [TUTORIAL.md](./TUTORIAL.md) - Main Avon tutorial
-- [STYLE_GUIDE.md](./STYLE_GUIDE.md) - Code style recommendations
-- [BUILDING_CONTENTS.md](./BUILDING_CONTENTS.md) - Building file contents
+- [TUTORIAL.md](./TUTORIAL.md) — Learn Avon from scratch
+- [FEATURES.md](./FEATURES.md) — Complete language reference
+- [BUILDING_CONTENTS.md](./BUILDING_CONTENTS.md) — Building file contents
+- [STYLE_GUIDE.md](./STYLE_GUIDE.md) — Best practices and conventions
+- [DEBUGGING_GUIDE.md](./DEBUGGING_GUIDE.md) — When things go wrong

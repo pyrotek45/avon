@@ -366,6 +366,15 @@ Before deploying Avon templates in production:
 - **Parser Safety**: See parser validation in `src/parser.rs`
 - **Design Decisions**: See `tutorial/WHY_NO_RECURSION.md` for recursion rationale
 
+---
+
+## See Also
+
+- [TUTORIAL.md](./TUTORIAL.md) — Learn Avon from scratch
+- [FEATURES.md](./FEATURES.md) — Complete language reference
+- [TECHNICAL_ARCHITECTURE.md](./TECHNICAL_ARCHITECTURE.md) — How Avon works internally
+- [WHY_NO_RECURSION.md](./WHY_NO_RECURSION.md) — Design decisions
+
 ## Version Info
 
 This document applies to Avon v0.2+

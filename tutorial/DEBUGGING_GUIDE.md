@@ -678,3 +678,13 @@ go get some water. The bug will still be there, but at least you'll be hydrated.
 -->
 
 Now it works correctly!
+
+---
+
+## See Also
+
+- [TUTORIAL.md](./TUTORIAL.md) — Learn Avon from scratch
+- [FEATURES.md](./FEATURES.md) — Complete language reference
+- [TEMPLATE_SYNTAX.md](./TEMPLATE_SYNTAX.md) — Multi-brace delimiters and literal braces
+- [STYLE_GUIDE.md](./STYLE_GUIDE.md) — Best practices and conventions
+- [REPL_USAGE.md](./REPL_USAGE.md) — Interactive development

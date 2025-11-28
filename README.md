@@ -17,10 +17,14 @@ Jump straight to what you need:
 |-----|---------------|
 | [Tutorial](./tutorial/TUTORIAL.md) | Learn Avon from scratch (start here!) |
 | [Features Reference](./tutorial/FEATURES.md) | Complete language reference |
+| [Template Syntax](./tutorial/TEMPLATE_SYNTAX.md) | Multi-brace delimiters, literal braces, tips & tricks |
+| [Simple Configs](./tutorial/SIMPLE_CONFIGS.md) | Quick examples for common configs |
 | [Style Guide](./tutorial/STYLE_GUIDE.md) | Best practices and conventions |
 | [Debugging Guide](./tutorial/DEBUGGING_GUIDE.md) | When things go wrong |
-| [Simple Configs](./tutorial/SIMPLE_CONFIGS.md) | Quick examples for common configs |
 | [REPL Usage](./tutorial/REPL_USAGE.md) | Interactive development |
+| [Security](./tutorial/SECURITY.md) | Security model and sandboxing |
+| [Grammar](./tutorial/GRAMMAR.md) | Formal language grammar |
+| [Technical Architecture](./tutorial/TECHNICAL_ARCHITECTURE.md) | How Avon works internally |
 
 Or just run `avon doc` for built-in help on all 89+ functions.
 
@@ -224,8 +228,6 @@ Functional Programming — Variables, functions, map/filter/fold, conditionals, 
 89+ Builtins — String ops, list ops, formatting, date/time, JSON, file I/O, HTML/Markdown helpers
 
 Runtime Type Safety — Avon won't deploy if there's a type error. Sleep soundly. No "undefined is not a function" at 3am.
-
-Graceful None Handling — Functions that can fail (like `head []` or missing dict keys) return `none` instead of crashing. Check with `is_none` or `== none`.
 
 Any Text Format — YAML, JSON, TOML, HCL, shell scripts, code, configs, docs, dotfiles
 

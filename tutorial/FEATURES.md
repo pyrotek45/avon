@@ -1103,4 +1103,14 @@ For most use cases (100s of files), Avon runs in milliseconds. For pathological 
 
 ---
 
-Have fun generating! For more details, see `tutorial/TUTORIAL.md`.
+## See Also
+
+- [TUTORIAL.md](./TUTORIAL.md) — Learn Avon from scratch (start here!)
+- [TEMPLATE_SYNTAX.md](./TEMPLATE_SYNTAX.md) — Multi-brace delimiters and literal braces
+- [SIMPLE_CONFIGS.md](./SIMPLE_CONFIGS.md) — Quick examples for common configs
+- [STYLE_GUIDE.md](./STYLE_GUIDE.md) — Best practices and conventions
+- [DEBUGGING_GUIDE.md](./DEBUGGING_GUIDE.md) — When things go wrong
+- [REPL_USAGE.md](./REPL_USAGE.md) — Interactive development
+- [SECURITY.md](./SECURITY.md) — Security model and sandboxing
+
+Have fun generating!
