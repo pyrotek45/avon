@@ -233,6 +233,7 @@ let plugins = ["git", "docker", "kubectl"] in
   alias k='kubectl'
   alias d='docker'
 "}
+# The plugins=(...) line expands to: plugins=(git docker kubectl)
 ```
 
 ## Git Configuration
@@ -662,6 +663,8 @@ let config_path = if os_type == "macos" then "~/Library/Application Support" els
   os: {os_type}
   config_path: {config_path}
 "}
+# On Linux, os_type = "linux", config_path = "~/.config"
+# On macOS, os_type = "macos", config_path = "~/Library/Application Support"
 ```
 
 ### Pattern 2: Environment-Based Configuration

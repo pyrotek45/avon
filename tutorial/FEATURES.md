@@ -61,6 +61,7 @@ Introduce variables and intermediate values:
 let greeting = "Hello" in
 let name = "Alice" in
 concat greeting name
+# Result: "HelloAlice"
 ```
 
 Examples: `examples/nested_let.av`, `examples/let_cascade.av`
@@ -71,6 +72,7 @@ Define reusable logic with parameters:
 ```avon
 let double = \x x * 2 in
 map double [1, 2, 3]
+# Result: [2, 4, 6]
 ```
 
 Currying: Functions are automatically curried:
@@ -80,20 +82,29 @@ let add5 = add 5 in     # Partially applied
 add5 3                  # Result: 8
 ```
 
+**No Shadowing:** Neither `let` bindings nor lambda parameters can shadow builtin function names:
+
+```avon
+let map = 5 in map           # Error: 'map' is already defined
+let f = \filter filter in f  # Error: cannot use 'filter' as parameter name
+```
+
+This prevents accidental bugs where a builtin is accidentally overwritten.
+
 ### Default Parameters
 Provide fallback values using `?` after the parameter name:
 
 ```avon
 # Single parameter with default
 let greet = \name ? "Guest" {"Hello {name}!"} in
-greet              # "Hello Guest!"
-greet "Alice"      # "Hello Alice!"
+greet              # Result: "Hello Guest!"
+greet "Alice"      # Result: "Hello Alice!"
 
 # Multiple parameters with defaults
 let config = \host ? "localhost" \port ? 8080 {"{host}:{port}"} in
-config                     # "localhost:8080"
-config "example.com"       # "example.com:8080"
-config "example.com" 443   # "example.com:443"
+config                     # Result: "localhost:8080"
+config "example.com"       # Result: "example.com:8080"
+config "example.com" 443   # Result: "example.com:443"
 
 # In deploy files
 \name ? "Guest" @welcome.txt {"
@@ -110,11 +121,14 @@ Choose between alternatives:
 
 ```avon
 if age > 18 then "adult" else "minor"
+# Result (if age = 25): "adult"
 
 # In templates:
+let count = 5 in
 @output.txt {"
     Status: {if count > 0 then "has items" else "empty"}
 "}
+# Result: Status: has items
 ```
 
 **Examples:** `examples/conditionals_template.av`
@@ -508,24 +522,24 @@ Dictionaries use curly braces with colon notation:
 let config = {host: "localhost", port: 8080, debug: true} in
 
 # Access with dot notation
-let host = config.host in          # "localhost"
-let port = config.port in          # 8080
+let host = config.host in          # Result: "localhost"
+let port = config.port in          # Result: 8080
 
 # Query the dict
-let all_keys = keys config in      # ["host", "port", "debug"]
-let all_values = values config in  # ["localhost", 8080, true]
+let all_keys = keys config in      # Result: ["debug", "host", "port"]
+let all_values = values config in  # Result: [true, "localhost", 8080]
 ```
 
 **JSON Integration:**  
 JSON objects are automatically parsed as dicts:
 
 ```avon
-# config.json: {"app": "myapp", "version": "1.0.0-beta.42", "debug": true}
-let data = json_parse "config.json" in
-let app_name = data.app in         # "myapp" (dot notation)
-let version = get data "version" in # "1.0.0-beta.42" (get function)
-let all_keys = keys data in        # ["app", "version", "debug"]
-has_key data "version"              # true
+# config.json: {"app": "myapp", "version": "1.0.0", "debug": true}
+let data = json_parse (readfile @config.json) in
+let app_name = data.app in         # Result: "myapp"
+let version = get data "version" in # Result: "1.0.0"
+let all_keys = keys data in        # Result: ["app", "debug", "version"]
+has_key data "version"             # Result: true
 ```
 
 **Examples:** `examples/dict_operations.av`, `examples/json_map_demo.av`
@@ -545,8 +559,8 @@ has_key data "version"              # true
 **Example - fill_template:**
 ```avon
 # template.txt contains: "Hello, {name}! Email: {email}"
-let subs = [["name", "Alice"], ["email", "alice@example.com"]] in
-fill_template "template.txt" subs
+let subs = {name: "Alice", email: "alice@example.com"} in
+fill_template @template.txt subs
 # Result: "Hello, Alice! Email: alice@example.com"
 ```
 
@@ -594,8 +608,8 @@ Avon provides comprehensive type introspection and validation utilities:
 `None` represents the absence of a value. Functions that might not find what they're looking for return `none`:
 
 ```avon
-head []                     # Returns none (empty list)
-get {a: 1} "b"              # Returns none (missing key)
+head []                     # Result: none (empty list)
+get {a: 1} "b"              # Result: none (missing key)
 ```
 
 Check for None values with `is_none`:
@@ -603,9 +617,12 @@ Check for None values with `is_none`:
 ```avon
 let x = head [] in
 if is_none x then "empty" else x
+# Result: "empty"
 
-let val = get config "key" in
+let config = {port: 8080} in
+let val = get config "missing_key" in
 if is_none val then "default" else val
+# Result: "default"
 ```
 
 #### Assertions & Error Handling
@@ -798,12 +815,12 @@ Note: `json_parse` converts JSON objects to Dict types (e.g., `{"a": 1}` -> `{a:
 
 ### String Concatenation
 ```avon
-"hello" + " " + "world"    # "hello world"
+"hello" + " " + "world"    # Result: "hello world"
 ```
 
 ### List Concatenation
 ```avon
-[1, 2] + [3, 4]            # [1, 2, 3, 4]
+[1, 2] + [3, 4]            # Result: [1, 2, 3, 4]
 ```
 
 ### Template Concatenation
@@ -811,13 +828,13 @@ Templates can be combined with the `+` operator:
 ```avon
 let greeting = {"Hello "} in
 let name_part = {"World!"} in
-greeting + name_part       # "Hello World!"
+greeting + name_part       # Result: "Hello World!"
 
 # With interpolation
 let name = "Alice" in
 let t1 = {"Hello, {name}"} in
 let t2 = {"!"} in
-t1 + t2                    # "Hello, Alice!"
+t1 + t2                    # Result: "Hello, Alice!"
 ```
 
 ### Path Concatenation
@@ -825,14 +842,14 @@ Paths can be combined with the `+` operator to join path segments:
 ```avon
 let base = @home/user in
 let subdir = @projects in
-base + subdir              # "/home/user//projects" (/ separator added)
+base + subdir              # Result: "home/user/projects"
 
 # With interpolation
 let env = "prod" in
 let app = "myapp" in
 let config_path = @etc/{env} in
 let app_config = @{app}.conf in
-config_path + app_config   # "/etc/prod//myapp.conf"
+config_path + app_config   # Result: "etc/prod/myapp.conf"
 ```
 
 **Examples:** `examples/template_path_concat.av`
@@ -848,13 +865,13 @@ The pipe operator `->` allows you to chain expressions without nested parenthese
 
 ```avon
 # Simple chaining
-[1, 2, 3] -> length                    # 3
+[1, 2, 3] -> length                    # Result: 3
 
 # Chaining multiple operations
-"hello" -> upper -> length             # 5
+"hello" -> upper -> length             # Result: 5
 
 # Chaining with curried functions (filter takes 2 args, here it gets the second from the pipe)
-[1, 2, 3, 4, 5] -> filter (\x x > 2) -> length  # 3
+[1, 2, 3, 4, 5] -> filter (\x x > 2) -> length  # Result: 3
 ```
 
 **Supported Patterns:**
@@ -866,10 +883,10 @@ The pipe operator `->` allows you to chain expressions without nested parenthese
 Examples:
 ```avon
 # Lambda on RHS
-10 -> \x x * 2  # 20
+10 -> \x x * 2  # Result: 20
 
 # Path on LHS
-@config.json -> exists
+@config.json -> exists  # Result: true (if file exists)
 ```
 
 ---

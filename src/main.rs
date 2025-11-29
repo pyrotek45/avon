@@ -5736,4 +5736,38 @@ mod tests {
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         assert_eq!(v.to_string(&prog), "Alice");
     }
+
+    #[test]
+    fn test_lambda_cannot_shadow_builtin() {
+        // Lambda parameter names cannot shadow builtin functions
+        let prog = r#"let f = \map map in f "hello""#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err(), "expected error for shadowing builtin");
+        let err = result.err().unwrap();
+        assert!(
+            err.message.contains("shadows builtin function"),
+            "error should mention 'shadows builtin function': {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn test_let_cannot_shadow_builtin() {
+        // Let bindings cannot shadow builtin functions
+        let prog = "let filter = 5 in filter".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err(), "expected error for shadowing builtin");
+        let err = result.err().unwrap();
+        assert!(
+            err.message.contains("already defined"),
+            "error should mention 'already defined': {}",
+            err.message
+        );
+    }
 }

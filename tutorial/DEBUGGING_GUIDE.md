@@ -401,7 +401,8 @@ x + 1
 
 **Correct:**
 ```avon
-to_int "5" + 10
+(to_int "5") + 10
+# Result: 15
 ```
 
 ### 4. Unmatched Braces in Templates
@@ -468,6 +469,8 @@ let classify = \x
 in
 
 classify (0 - 5)  # Pass a negative number: 0 - 5 = -5
+# Stderr: [TRACE] negative: neg
+# Result: "neg"
 ```
 
 Traces show which branch is taken.
@@ -476,12 +479,13 @@ Traces show which branch is taken.
 
 ```avon
 let sum = \acc \item
-  trace "accumulator" acc
-  trace "current item" item
+  let _ = trace "accumulator" acc in
+  let _ = trace "current item" item in
   acc + item
 in
 
 fold sum 0 [1, 2, 3]
+# Result: 6
 ```
 
 Shows each step of the accumulation:

@@ -333,6 +333,10 @@ test_file_claim "JSX literal braces" 'let value = "hello" in {{"<div>{{value}} a
 test_file_claim "level 1 nesting" 'let inner = {"world"} in {"Hello {inner}!"}' "Hello world!"
 test_file_claim "level 2 nesting" 'let inner = {{"val"}} in {{"got {{inner}}"}}' "got val"
 
+# No shadowing builtins
+test_error "let cannot shadow builtin" 'let map = 5 in map' "already defined"
+test_error "lambda cannot shadow builtin" 'let f = \filter filter in f 5' "shadows builtin"
+
 echo ""
 echo "=== Summary ==="
 echo "Passed: $PASSED"

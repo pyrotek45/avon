@@ -562,7 +562,7 @@ let mustache = \s "{{" + s + "}}" in
 let placeholder = mustache "data" in
 
 # Use level 2 for the JSON structure, interpolate the placeholder
-{{" {"name": "{{name}}", "template": "{{placeholder}}"} "}}
+{{" {"name": "{{name}}", "template": "{{placeholder}}"}"}}
 # Output: {"name": "user", "template": "{{data}}"}
 ```
 

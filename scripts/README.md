@@ -114,6 +114,29 @@ SECTION 1: Path Traversal Vulnerabilities
 
 This script is particularly useful for catching regressions and ensuring examples stay up-to-date with the language.
 
+### `test_template_syntax.sh`
+**Purpose:** Validate all code examples in the Template Syntax documentation.
+
+**Usage:**
+```bash
+./scripts/test_template_syntax.sh
+```
+
+**What it does:**
+- Tests every code example in `tutorial/TEMPLATE_SYNTAX.md`
+- Validates 40 template examples covering:
+  - Basic template syntax
+  - Multi-brace delimiter system (levels 1-3)
+  - Literal brace handling (JSON, JavaScript, etc.)
+  - Meta-templates (generating Avon templates)
+  - Common use cases (Docker, Kubernetes, GitHub Actions, React/JSX)
+  - Helper functions and wrapper patterns
+  - Escape sequences
+  - Type conversions
+  - Pattern library examples
+
+This ensures that all documentation examples are accurate and actually work as described.
+
 ### `run_examples.sh`
 **Purpose:** Comprehensive integration tests with deployment testing.
 

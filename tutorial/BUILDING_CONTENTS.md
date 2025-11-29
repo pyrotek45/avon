@@ -110,6 +110,19 @@ let sections = [
 let full_config = join sections "\n" in
 
 @config.ini {"{full_config}"}
+# Output (in config.ini):
+# # Configuration File
+# version = 1.0
+#
+# [database]
+# host = localhost
+# port = 5432
+#
+# [app]
+# name = myapp
+# debug = true
+#
+# # End of configuration
 ```
 
 Why `join`:** Perfect for lists of strings. Cleaner than chaining `+` or `concat`. Use strings here since each line is simple.
@@ -255,6 +268,10 @@ let list_lines = map (\item {"- {item}"}) items in
 let content = join list_lines "\n" in
 
 @list.txt {"{content}"}
+# Output (in list.txt):
+# - item1
+# - item2
+# - item3
 ```
 
 Why prefer `map` + `join`:** More readable, easier to understand, and follows functional programming best practices.
@@ -297,7 +314,7 @@ Why templates + `+`:**
 ### Example 1: Building a Log File
 
 ```avon
-let timestamp = "2024-01-01 12:00:00" in
+let log_time = "2024-01-01 12:00:00" in
 let events = [
   "Application started",
   "Database connected",
@@ -305,10 +322,15 @@ let events = [
   "Server listening on port 8080"
 ] in
 
-let log_lines = map (\event {"{timestamp} - {event}"}) events in
+let log_lines = map (\event {"{log_time} - {event}"}) events in
 let log_content = join log_lines "\n" in
 
 @app.log {"{log_content}"}
+# Output (in app.log):
+# 2024-01-01 12:00:00 - Application started
+# 2024-01-01 12:00:00 - Database connected
+# 2024-01-01 12:00:00 - Cache initialized
+# 2024-01-01 12:00:00 - Server listening on port 8080
 ```
 
 Why this approach:** 

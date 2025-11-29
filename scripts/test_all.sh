@@ -96,6 +96,7 @@ echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━�
 run_test "Grammar Comprehensive Test" "scripts/test_grammar.sh"
 run_test "Bulletproof Comprehensive Test" "scripts/test_bulletproof.sh"
 run_test "Scoping Rules Test" "scripts/test_scoping_rules.sh"
+run_test "Template Syntax Test" "scripts/test_template_syntax.sh"
 run_test "Tutorial Snippets Test" "scripts/test_tutorial_snippets.sh"
 run_test "None Handling Test" "scripts/test_none_handling.sh"
 

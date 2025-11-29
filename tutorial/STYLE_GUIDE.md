@@ -316,6 +316,7 @@ let port = 8080 in
 let host = "localhost" in
 let url = {"http://{host}:{port}"} in
 url
+# Result: "http://localhost:8080"
 ```
 
 **Avoid:**
@@ -351,12 +352,14 @@ map (\svc @config-{svc}.yml {"service: {svc}"}) ["api", "web", "worker"]
 ```avon
 let double = \x x * 2 in
 map double [1, 2, 3]
+# Result: [2, 4, 6]
 ```
 
 **Multiple Parameters (Curried):**
 ```avon
 let make_url = \protocol \host \port {"{protocol}://{host}:{port}"} in
 make_url "https" "example.com" "443"
+# Result: "https://example.com:443"
 ```
 
 ### Default Parameters
@@ -410,6 +413,7 @@ let numbers = [1, 2, 3, 4, 5] in
 let doubled = map (\x x * 2) numbers in
 let evens = filter (\x (x % 2) == 0) doubled in
 evens
+# Result: [2, 4, 6, 8, 10]
 ```
 
 ---
@@ -520,6 +524,7 @@ let template = "Hello <!-- title -->" in
 let title = {"My Site"} in
 let html = replace template "<!-- title -->" title in  # Template auto-converts
 html
+# Result: "Hello My Site"
 ```
 
 **Avoid:**
@@ -545,6 +550,7 @@ let header = concat "<h1>" title in  # title auto-converts, no to_string needed
 let full = concat header "</h1>" in  # chain concat calls for multiple parts
 let upper_title = upper title in     # Also auto-converts
 full
+# Result: "<h1>My Site</h1>"
 ```
 
 ## Pipe Operator
@@ -559,6 +565,7 @@ let result = [1, 2, 3, 4, 5]
   -> fold (\acc \x acc + x) 0
 in
 result
+# Result: 24
 ```
 
 **Avoid:**
