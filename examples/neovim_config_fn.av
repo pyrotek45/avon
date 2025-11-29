@@ -1,13 +1,13 @@
 # Neovim Config Function Example
 # Demonstrates: function returning file template, named args with defaults, multi-brace templates for Lua braces, conditional sections.
 # Usage examples:
-#   avon deploy examples/neovim_config_fn.av -username alice
-#   avon deploy examples/neovim_config_fn.av -username bob -theme gruvbox -profile minimal -lsp false -treesitter false -telescope false -leader "," -tab 4
+#   avon deploy examples/neovim_config_fn.av -user alice
+#   avon deploy examples/neovim_config_fn.av -user bob -theme gruvbox -profile minimal -lsp false -treesitter false -telescope false -leader "," -tab 4
 # Boolean flags: pass true/false. Strings: pass raw value. Numbers: pass integer.
-# Required: username. Optional with defaults: theme, profile, lsp, treesitter, telescope, leader, tab.
+# Required: user. Optional with defaults: theme, profile, lsp, treesitter, telescope, leader, tab.
 
 # Uses double-brace template {{" "}} so Lua braces are literal
-\username ? "user"
+\user ? "user"
 \theme ? "tokyonight" 
 \profile ? "standard" 
 \lsp ? "true" 
@@ -15,7 +15,7 @@
 \telescope ? "true" 
 \leader ? "space" 
 \tab ? 2 @/nvim/init.lua {{"
--- init.lua generated for {{username}}
+-- init.lua generated for {{user}}
 -- Theme: {{theme}} | Profile: {{profile}}
 -- LSP: {{lsp}} | Treesitter: {{treesitter}} | Telescope: {{telescope}}
 
@@ -96,5 +96,5 @@ if {{lsp}} then
   vim.keymap.set('n','K',vim.lsp.buf.hover)
 end
 
-print('Neovim config ready for {{username}}!')
+print('Neovim config ready for {{user}}!')
 "}}

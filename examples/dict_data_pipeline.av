@@ -28,7 +28,7 @@ in
 # Calculate average age from user list
 let avg_age = \user_list
   let ages = map (\u get u "age") user_list in
-  let total = fold (\sum \age sum + age) 0 ages in
+  let total = fold (\acc \age acc + age) 0 ages in
   let count = length user_list in
   total / count
 in

@@ -497,7 +497,7 @@ Note: Parentheses around `(shell_var var)` are needed because `+` binds tighter 
 
 ### Generating Multiple Brace Styles
 
-For complex output requiring different brace counts:
+For complex output requiring different brace counts, use string concatenation:
 
 ```avon
 let single = \s "{" + s + "}" in
@@ -505,9 +505,10 @@ let double = \s "{{" + s + "}}" in
 
 let field1 = "name" in
 let field2 = "age" in
-{{"
-Single: "}} + (single field1) + {{"
-Double: "}} + (double field2)
+"Single: " + (single field1) + "\nDouble: " + (double field2)
+# Output:
+# Single: {name}
+# Double: {{age}}
 ```
 
 ### Escape Sequences in Templates vs Strings

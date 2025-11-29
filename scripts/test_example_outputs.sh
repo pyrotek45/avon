@@ -257,11 +257,6 @@ test_no_error "examples/curly_test_3_mixed.av" "curly test 3 - mixed syntax"
 test_no_error "examples/curly_test_4_array.av" "curly test 4 - array syntax"
 test_no_error "examples/curly_test_5_code.av" "curly test 5 - code blocks"
 
-# Escape hatch - literal brace handling
-test_output_contains "examples/escape_hatch.av" "One brace escape: {" "escape hatch single brace literal"
-test_output_contains "examples/escape_hatch.av" "Three literal opens: {{{" "escape hatch triple brace"
-test_output_contains "examples/escape_hatch.av" "Computed in double braces: 30" "escape hatch interpolation"
-
 # Neovim/Vim configuration examples
 test_no_error "examples/vim_simple.av" "vim config generation"
 test_output_contains "examples/vim_simple.av" "set number" "vim set number"

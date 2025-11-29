@@ -325,6 +325,12 @@ test_example "Shell var in echo" \
     'let shell_var = \v "$" + "{" + v + "}" in let var = "PATH" in "echo " + (shell_var var)' \
     "echo \${PATH}"
 
+# Multiple brace styles
+test_example "Multiple brace styles" \
+    'let single = \s "{" + s + "}" in let double = \s "{{" + s + "}}" in let field1 = "name" in let field2 = "age" in "Single: " + (single field1) + "\nDouble: " + (double field2)' \
+    "Single: {name}
+Double: {{age}}"
+
 echo
 
 # ========================================
