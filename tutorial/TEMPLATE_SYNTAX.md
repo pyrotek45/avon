@@ -333,17 +333,25 @@ jobs:
 
 ### React/JSX Components
 
-For JSX with JavaScript expressions:
+JSX uses single braces for expressions. Use a helper function to wrap interpolated values:
 
 ```avon
 let componentName = "Greeting" in
 let propName = "name" in
-{{{"
-function {{{componentName}}}({ {{{propName}}} }) {
-  return <div>Hello, {{propName}}!</div>;
+let jsx = \v "{" + v + "}" in
+
+{{" 
+function {{componentName}}({{jsx propName}}) {
+  return <div>Hello, {{jsx propName}}!</div>;
 }
-"}}}
+"}}
+# Output:
+# function Greeting({name}) {
+#   return <div>Hello, {name}!</div>;
+# }
 ```
+
+The `jsx` helper wraps values in single braces. Level 2 templates keep single braces literal for the parameter destructuring syntax `({ name })`.
 
 ---
 

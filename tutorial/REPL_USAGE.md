@@ -263,6 +263,92 @@ User-defined variables:
   result : String = "Hello, world!"
 ```
 
+#### Session File Format
+
+Session files are plain Avon source code. When you save a session, Avon generates code that recreates your variables:
+
+```avon
+# Avon REPL Session
+# Saved variables:
+
+let result = "Hello, world!" in
+let count = 42 in
+let items = [1, 2, 3] in
+let config = {name: "app", port: 8080} in
+{result: result, count: count, items: items, config: config}
+```
+
+This means session files are human-readable and can be edited manually.
+
+#### What Can Be Saved
+
+| Value Type | Saveable? | Notes |
+|------------|-----------|-------|
+| String | ✓ | Quotes are escaped automatically |
+| Number (Int/Float) | ✓ | Preserved exactly |
+| Boolean | ✓ | `true` or `false` |
+| List | ✓ | All elements must be saveable |
+| Dict | ✓ | All values must be saveable |
+| Function | ✗ | Cannot serialize captured environment |
+| Template | ✗ | Use strings instead |
+| FileTemplate | ✗ | Deploy files, don't save them |
+| None | ✗ | No meaningful value to save |
+
+**Example with mixed types:**
+
+```avon
+avon> :let name = "Alice"
+Stored: name : String
+
+avon> :let age = 30
+Stored: age : Number
+
+avon> :let greet = \x {"Hello, {x}!"}
+Stored: greet : Function
+
+avon> :save-session data.avon
+Warning: Cannot save function 'greet' (functions cannot be serialized)
+Session saved to: data.avon (2 variables)
+```
+
+Functions cannot be saved because they may capture runtime state that can't be represented as text.
+
+#### Use Cases
+
+**Preserving work across sessions:**
+```avon
+# End of day - save your work
+avon> :save-session project_state.avon
+Session saved to: project_state.avon (5 variables)
+avon> :exit
+
+# Next day - restore your work
+$ avon repl
+avon> :load-session project_state.avon
+Session loaded from: project_state.avon (5 variables restored)
+avon> :vars
+```
+
+**Sharing configurations:**
+```avon
+# Create reusable configuration
+avon> :let db_host = "localhost"
+avon> :let db_port = 5432
+avon> :let db_name = "myapp"
+avon> :save-session db_config.avon
+Session saved to: db_config.avon (3 variables)
+
+# Share db_config.avon with teammates
+```
+
+**Creating test fixtures:**
+```avon
+# Set up test data
+avon> :let users = [{name: "Alice", id: 1}, {name: "Bob", id: 2}]
+avon> :let settings = {debug: true, timeout: 30}
+avon> :save-session test_fixtures.avon
+```
+
 ### 10. Testing and Validation
 
 ```avon
