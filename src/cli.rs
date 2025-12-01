@@ -4076,12 +4076,22 @@ fn execute_repl() -> i32 {
                                 .status()
                             {
                                 Ok(status) => {
-                                    if !status.success() {
-                                        eprintln!("Command exited with code: {:?}", status.code());
+                                    if status.success() {
+                                        println!("\x1b[1;32m✓\x1b[0m Shell command completed successfully");
+                                    } else {
+                                        match status.code() {
+                                            Some(code) => {
+                                                eprintln!("\x1b[1;31m✗\x1b[0m Shell command failed with exit code: {}", code);
+                                            }
+                                            #[allow(unreachable_patterns)]
+                                            _ => {
+                                                eprintln!("\x1b[1;31m✗\x1b[0m Shell command terminated by signal");
+                                            }
+                                        }
                                     }
                                 }
                                 Err(e) => {
-                                    eprintln!("Error executing command: {}", e);
+                                    eprintln!("\x1b[1;31m✗\x1b[0m Error executing command: {}", e);
                                 }
                             }
                             let _ = rl.add_history_entry(trimmed);
