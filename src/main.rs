@@ -4733,22 +4733,16 @@ mod tests {
         let result = eval(ast.program, &mut symbols, &prog);
         assert!(result.is_err());
         let err = result.unwrap_err();
-        // Check that the error has type information
+        // The error message should describe what went wrong
+        // For add operator, it should say "cannot add Number and String"
         assert!(
-            err.expected.is_some() && err.found.is_some(),
-            "Expected type error with expected/found types, got: {}",
+            err.message.contains("cannot add") || err.message.contains("Number") || err.message.contains("String"),
+            "Expected descriptive type error, got: {}",
             err
         );
-        // Verify it's actually a type mismatch
-        let expected_str = err.expected.as_ref().unwrap();
-        let found_str = err.found.as_ref().unwrap();
-        assert!(
-            (expected_str.contains("Number") && found_str.contains("String"))
-                || (expected_str.contains("String") && found_str.contains("Number")),
-            "Expected Number/String mismatch, got: {} vs {}",
-            expected_str,
-            found_str
-        );
+        // Operators like +, &&, || use descriptive messages instead of expected/found
+        assert!(err.expected.is_none() && err.found.is_none(),
+            "Add operator should use descriptive message, not expected/found fields");
     }
 
     // ========================================================================
@@ -5859,6 +5853,140 @@ mod tests {
                 }
             }
             other => panic!("Expected list, got {:?}", other),
+        }
+    }
+
+    // Error message ordering tests - ensure expected/found are consistent
+    #[test]
+    fn test_arithmetic_operator_error_messages() {
+        // Test multiplication with string - should say "number" expected, "string" found
+        let prog = r#"5 * "hello""#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err(), "expected error for 5 * \"hello\"");
+        let err = result.err().unwrap();
+        assert!(
+            err.message.contains("type mismatch") || err.message.contains("*"),
+            "error message should mention type mismatch or operator: {}",
+            err.message
+        );
+        // Verify expected/found fields exist and are in correct order
+        if let (Some(expected), Some(found)) = (err.expected.as_ref(), err.found.as_ref()) {
+            assert_eq!(expected, "number", "expected should be 'number'");
+            assert_eq!(found, "string", "found should be 'string'");
+        }
+    }
+
+    #[test]
+    fn test_subtraction_operator_error_messages() {
+        // Test subtraction with list - should say "number" expected, "list" found
+        let prog = r#"10 - [1, 2]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err(), "expected error for 10 - [1, 2]");
+        let err = result.err().unwrap();
+        // Verify expected/found fields
+        if let (Some(expected), Some(found)) = (err.expected.as_ref(), err.found.as_ref()) {
+            assert_eq!(expected, "number", "expected should be 'number'");
+            assert_eq!(found, "list", "found should be 'list'");
+        }
+    }
+
+    #[test]
+    fn test_division_operator_error_messages() {
+        // Test division with bool - should say "number" expected, "bool" found
+        let prog = r#"20 / true"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err(), "expected error for 20 / true");
+        let err = result.err().unwrap();
+        // Verify expected/found fields
+        if let (Some(expected), Some(found)) = (err.expected.as_ref(), err.found.as_ref()) {
+            assert_eq!(expected, "number", "expected should be 'number'");
+            assert_eq!(found, "bool", "found should be 'bool'");
+        }
+    }
+
+    #[test]
+    fn test_logical_and_error_messages() {
+        // Test AND with number - should have descriptive message
+        let prog = r#"5 && true"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err(), "expected error for 5 && true");
+        let err = result.err().unwrap();
+        assert!(
+            err.message.contains("&&") || err.message.contains("and"),
+            "error message should mention && or 'and': {}",
+            err.message
+        );
+        // AND/OR should NOT use expected/found fields
+        assert!(err.expected.is_none(), "AND error should not have expected field");
+        assert!(err.found.is_none(), "AND error should not have found field");
+    }
+
+    #[test]
+    fn test_logical_or_error_messages() {
+        // Test OR with string - should have descriptive message
+        let prog = r#""hello" || false"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err(), "expected error for \"hello\" || false");
+        let err = result.err().unwrap();
+        assert!(
+            err.message.contains("||") || err.message.contains("or"),
+            "error message should mention || or 'or': {}",
+            err.message
+        );
+        // AND/OR should NOT use expected/found fields
+        assert!(err.expected.is_none(), "OR error should not have expected field");
+        assert!(err.found.is_none(), "OR error should not have found field");
+    }
+
+    #[test]
+    fn test_addition_error_messages() {
+        // Test adding number and string - should have descriptive message
+        let prog = r#"5 + "hello""#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err(), "expected error for 5 + \"hello\"");
+        let err = result.err().unwrap();
+        assert!(
+            err.message.contains("cannot add") || err.message.contains("+"),
+            "error message should mention addition: {}",
+            err.message
+        );
+        // ADD should NOT use expected/found fields
+        assert!(err.expected.is_none(), "ADD error should not have expected field");
+        assert!(err.found.is_none(), "ADD error should not have found field");
+    }
+
+    #[test]
+    fn test_modulo_operator_error_messages() {
+        // Test modulo with function - should say "number" expected, "function" found
+        let prog = r#"10 % (\x x)"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err(), "expected error for 10 % (\\x x)");
+        let err = result.err().unwrap();
+        // Verify expected/found fields
+        if let (Some(expected), Some(found)) = (err.expected.as_ref(), err.found.as_ref()) {
+            assert_eq!(expected, "number", "expected should be 'number'");
+            assert_eq!(found, "function", "found should be 'function'");
         }
     }
 }

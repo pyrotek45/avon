@@ -1155,26 +1155,34 @@ fn eval_with_depth(
                     (Value::Bool(lb), Value::Bool(rb)) => Ok(Value::Bool(lb && rb)),
                     (a, b) => {
                         let l_type = match a {
-                            Value::Number(_) => "Number",
-                            Value::String(_) => "String",
-                            Value::List(_) => "List",
-                            Value::Bool(_) => "Bool",
-                            Value::Function { .. } => "Function",
-                            _ => "unknown type",
+                            Value::Number(_) => "number",
+                            Value::String(_) => "string",
+                            Value::List(_) => "list",
+                            Value::Bool(_) => "bool",
+                            Value::Function { .. } => "function",
+                            Value::Template(_, _) => "template",
+                            Value::Path(_, _) => "path",
+                            Value::Dict(_) => "dict",
+                            Value::None => "none",
+                            _ => "unknown",
                         };
                         let r_type = match b {
-                            Value::Number(_) => "Number",
-                            Value::String(_) => "String",
-                            Value::List(_) => "List",
-                            Value::Bool(_) => "Bool",
-                            Value::Function { .. } => "Function",
-                            _ => "unknown type",
+                            Value::Number(_) => "number",
+                            Value::String(_) => "string",
+                            Value::List(_) => "list",
+                            Value::Bool(_) => "bool",
+                            Value::Function { .. } => "function",
+                            Value::Template(_, _) => "template",
+                            Value::Path(_, _) => "path",
+                            Value::Dict(_) => "dict",
+                            Value::None => "none",
+                            _ => "unknown",
                         };
 
                         Err(EvalError::new(
-                            "and",
-                            Some(l_type.to_string()),
-                            Some(r_type.to_string()),
+                            format!("cannot use && with {} and {}", l_type, r_type),
+                            None,
+                            None,
                             line,
                         ))
                     }
@@ -1183,26 +1191,34 @@ fn eval_with_depth(
                     (Value::Bool(lb), Value::Bool(rb)) => Ok(Value::Bool(lb || rb)),
                     (a, b) => {
                         let l_type = match a {
-                            Value::Number(_) => "Number",
-                            Value::String(_) => "String",
-                            Value::List(_) => "List",
-                            Value::Bool(_) => "Bool",
-                            Value::Function { .. } => "Function",
-                            _ => "unknown type",
+                            Value::Number(_) => "number",
+                            Value::String(_) => "string",
+                            Value::List(_) => "list",
+                            Value::Bool(_) => "bool",
+                            Value::Function { .. } => "function",
+                            Value::Template(_, _) => "template",
+                            Value::Path(_, _) => "path",
+                            Value::Dict(_) => "dict",
+                            Value::None => "none",
+                            _ => "unknown",
                         };
                         let r_type = match b {
-                            Value::Number(_) => "Number",
-                            Value::String(_) => "String",
-                            Value::List(_) => "List",
-                            Value::Bool(_) => "Bool",
-                            Value::Function { .. } => "Function",
-                            _ => "unknown type",
+                            Value::Number(_) => "number",
+                            Value::String(_) => "string",
+                            Value::List(_) => "list",
+                            Value::Bool(_) => "bool",
+                            Value::Function { .. } => "function",
+                            Value::Template(_, _) => "template",
+                            Value::Path(_, _) => "path",
+                            Value::Dict(_) => "dict",
+                            Value::None => "none",
+                            _ => "unknown",
                         };
 
                         Err(EvalError::new(
-                            "or",
-                            Some(l_type.to_string()),
-                            Some(r_type.to_string()),
+                            format!("cannot use || with {} and {}", l_type, r_type),
+                            None,
+                            None,
                             line,
                         ))
                     }
@@ -1322,9 +1338,9 @@ fn eval_with_depth(
                         };
 
                         Err(EvalError::new(
-                            "+",
-                            Some(l_type.to_string()),
-                            Some(r_type.to_string()),
+                            format!("cannot add {} and {}", l_type, r_type),
+                            None,
+                            None,
                             line,
                         ))
                     }

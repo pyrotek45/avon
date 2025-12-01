@@ -13,11 +13,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-/// Print text with syntax highlighting
-fn print_highlighted(text: &str) {
-    let highlighter = AvonHighlighter::new();
-    println!("{}", highlighter.highlight(text));
-}
 
 /// Check if a file path is an Avon file (has .av extension)
 fn is_avon_file(path: &str) -> bool {
@@ -1711,13 +1706,14 @@ fn process_source(source: String, source_name: String, opts: CliOptions, deploy_
                                 // Only print file templates if there are any
                                 for (path, content) in files {
                                     println!("--- {} ---", path);
-                                    print_highlighted(&content);
+                                    // Don't highlight output - it's the result, not Avon source code
+                                    println!("{}", content);
                                 }
                             }
                             Ok(_) | Err(_) => {
                                 // If no file templates found (empty list) or collection errors,
-                                // print the value as-is
-                                print_highlighted(&v.to_string(&source));
+                                // print the value as-is (no highlighting)
+                                println!("{}", v.to_string(&source));
                             }
                         }
                     }
@@ -2629,12 +2625,12 @@ fn execute_repl() -> i32 {
                                                         }
                                                     } else {
                                                         let val_str = val.to_string("");
-                                                        print_highlighted(&val_str);
+                                                        println!("{}", val_str);
                                                     }
                                                 }
                                                 _ => {
                                                     let val_str = val.to_string("");
-                                                    print_highlighted(&val_str);
+                                                    println!("{}", val_str);
                                                 }
                                             }
                                         }
