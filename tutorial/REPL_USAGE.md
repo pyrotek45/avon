@@ -2,7 +2,28 @@
 
 This example demonstrates how to use Avon's REPL for interactive development and debugging. Think of it as a playground where mistakes are cheap and experiments are encouraged.
 
-> Tip: Tip:** You can use the `:read` command in the REPL to load templates from GitHub using the `--git` flag format, or use `:run` to evaluate templates fetched from GitHub. This makes it easy to experiment with shared templates before deploying them.
+> **Tip:** The REPL now features **syntax highlighting** for Avon code, making it easier to read and write expressions. Keywords, builtins, strings, numbers, and comments are all color-coded!
+
+> **Tip:** You can use the `:read` command in the REPL to load templates from GitHub using the `--git` flag format, or use `:run` to evaluate templates fetched from GitHub. This makes it easy to experiment with shared templates before deploying them.
+
+## Starting the REPL
+
+```bash
+avon repl
+```
+
+## Syntax Highlighting
+
+The REPL automatically highlights your input as you type:
+- **Keywords** (`let`, `in`, `if`, `then`, `else`, `match`, `fn`) — Magenta
+- **Builtins** (`map`, `filter`, `fold`, `print`, etc.) — Blue
+- **Strings** and Templates — Green
+- **Numbers** — Cyan
+- **Comments** — Gray
+- **Operators** — Yellow
+- **Booleans** (`true`, `false`, `none`) — Cyan
+
+When using `:read` on `.av` files, the output is also syntax highlighted for easy reading.
 
 ## Starting the REPL
 
@@ -140,16 +161,25 @@ localhost : String
 
 No `npm install` required. No `node_modules` folder eating your disk. Just commands.
 
+### Basic Commands
 - `:help` or `:h` - Show all available commands
+- `:exit` or `:quit` or `:q` - Exit the REPL
+- `:clear` - Clear all user-defined variables
+
+### Variable Management
 - `:let <name> = <expr>` - Store a value in the REPL (persists across commands)
 - `:vars` - List all user-defined variables
 - `:inspect <name>` - Show detailed information about a variable
 - `:unlet <name>` - Remove a user-defined variable
-- `:read <file>` - Read and display file contents (any path allowed - REPL is a power tool)
-- `:run <file> [--debug]` - Evaluate file and display result (doesn't modify REPL state)
-- `:eval <file>` - Evaluate file and merge Dict keys into REPL (if result is a Dict)
-- `:preview <file> [--debug]` - Preview what would be deployed without writing files
-- `:deploy <file> [flags...]` - Deploy a file with full CLI flag support:
+
+### File Operations (all support `--git` flag)
+- `:read <file> [--git]` - Read and display file contents (syntax highlighted for .av files)
+- `:run <file> [--git] [--debug]` - Evaluate file and display result (doesn't modify REPL state)
+- `:eval <file> [--git]` - Evaluate file and merge Dict keys into REPL (if result is a Dict)
+- `:source <file>` - Alias for `:eval` - execute commands from a file
+- `:preview <file> [--git] [--debug]` - Preview what would be deployed without writing files
+- `:deploy <file> [--git] [flags...]` - Deploy a file with full CLI flag support:
+  - `--git` - Fetch file from GitHub (format: `user/repo/path/file.av`)
   - `--root <dir>` - Deployment root directory
   - `--force` - Overwrite existing files
   - `--backup` - Backup before overwriting
@@ -159,27 +189,41 @@ No `npm install` required. No `node_modules` folder eating your disk. Just comma
   - `-param value` - Pass named arguments to functions
 - `:deploy-expr <expr> [--root <dir>]` - Deploy the result of an expression
 - `:write <file> <expr>` - Write expression result to file
+- `:edit <file>` - Open file in default editor (`$EDITOR` or `$VISUAL`, falls back to `vi`)
+
+### Session Management
 - `:history` - Show command history (last 50 entries)
+- `:clear-history` - Clear all command history
 - `:save-session <file>` - Save REPL state (variables) to file
 - `:load-session <file>` - Load REPL state from file
+
+### Testing & Debugging
 - `:assert <expr>` - Assert that expression evaluates to true
 - `:test <expr> <expected>` - Test that expression equals expected value
 - `:benchmark <expr>` - Measure evaluation time for an expression
 - `:benchmark-file <file>` - Measure evaluation time for a file
-- `:watch <name>` - Watch a variable and show when it changes (works with :let and expressions)
+- `:time <expr>` - Time the evaluation of an expression (shows execution time in ms)
+- `:watch <name>` - Watch a variable and show when it changes
 - `:unwatch <name>` - Stop watching a variable
+
+### Navigation & Shell
 - `:pwd` - Show current working directory
-- `:list [dir]` - List directory contents (shows current directory path)
+- `:list [dir]` - List directory contents
 - `:cd <dir>` - Change working directory
 - `:sh <command>` - Execute shell command
+
+### Documentation & Types
 - `:doc` - Show all available builtin functions and REPL commands
 - `:doc <name>` - Show detailed documentation for a builtin function or REPL command
-  - Example: `:doc map` - Shows documentation for the `map` builtin function
-  - Example: `:doc pwd` - Shows documentation for the `:pwd` REPL command
-  - Example: `:doc read` - Shows documentation for the `:read` REPL command
 - `:type <expr>` - Show type of expression
-- `:clear` - Clear all user-defined variables
-- `:exit` or `:quit` or `:q` - Exit the REPL
+
+### Session Reports
+- `:report` - Show a detailed session report including:
+  - Commands executed count
+  - Variables defined
+  - Session duration
+  - Error count
+  - Most recent commands
 
 ## Keyboard Shortcuts
 
@@ -198,6 +242,123 @@ The REPL supports command history navigation and emacs-style editing shortcuts:
 - `Ctrl+B` - Move backward one character
 - `Ctrl+W` - Delete word backward
 - `Ctrl+L` - Clear screen
+
+---
+
+## New REPL Features
+
+### Syntax Highlighting
+
+The REPL now provides syntax highlighting for both input and `.av` file output:
+
+```avon
+avon> let double = \x x * 2 in map double [1, 2, 3]
+      ^^^         ^^          ^^^
+      keyword     function    builtin (highlighted in color!)
+```
+
+When reading `.av` files, syntax highlighting is automatically applied:
+```avon
+avon> :read examples/hello.av
+# Output is syntax highlighted for .av files
+let name = "World" in
+@hello.txt {"Hello, {name}!"}
+```
+
+### The `--git` Flag
+
+All file commands now support fetching from GitHub:
+
+```avon
+# Read a file from GitHub
+avon> :read --git pyrotek45/avon/examples/hello.av
+
+# Run a file from GitHub (evaluate without modifying state)
+avon> :run --git user/repo/path/config.av
+
+# Evaluate and merge into REPL state
+avon> :eval --git user/repo/path/lib.av
+
+# Preview deployment from GitHub
+avon> :preview --git user/repo/path/deploy.av
+
+# Deploy from GitHub
+avon> :deploy --git user/repo/path/deploy.av --root ./output
+```
+
+### Edit Files in Your Editor
+
+Open files directly in your default editor:
+
+```avon
+avon> :edit config.av
+# Opens config.av in $EDITOR or $VISUAL (falls back to vi)
+# After saving and closing, you're back in the REPL
+```
+
+### Timing Expressions
+
+Measure how long expressions take to evaluate:
+
+```avon
+avon> :time fold([1..1000], 0, \a \b a + b)
+Result: 500500
+Time: 1.234ms (1.234ms)
+
+avon> :time map (\x x * x) [1..10000]
+Result: [1, 4, 9, 16, 25, ...]
+Time: 5.678ms (5.678ms)
+```
+
+### Session Reports
+
+Get an overview of your REPL session:
+
+```avon
+avon> :report
+═══════════════════════════════════════════════════════════
+                     REPL SESSION REPORT
+═══════════════════════════════════════════════════════════
+
+Session Duration: 15m 32s
+Commands Executed: 47
+Errors Encountered: 2
+
+User Variables (5):
+  config : Dict{3 keys}
+  double : Function
+  items : List[10]
+  name : String
+  port : Number
+
+Watched Variables:
+  items
+
+Current Directory: /home/user/project
+
+═══════════════════════════════════════════════════════════
+```
+
+### Clear History
+
+Clear your command history when needed:
+
+```avon
+avon> :history
+Command history (5 entries):
+  1: let x = 42
+  2: x * 2
+  3: :vars
+  4: :history
+
+avon> :clear-history
+Command history cleared
+
+avon> :history
+Command history (0 entries):
+```
+
+---
 
 ### 7. File Operations
 
