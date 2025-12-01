@@ -11,7 +11,7 @@ let nav_links = map (\p concat "<a href=\"/{p}.html\">{p}</a>") nav_pages in
 let navbar = join nav_links " | " in
 
 # Function to generate an HTML page file
-let make_page = \page_name \title \content @/{page_name}.html {"
+let make_page = \page_name \title \content @{page_name}.html {"
     <!DOCTYPE html>
     <html>
     <head>

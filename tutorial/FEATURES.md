@@ -353,7 +353,7 @@ With this system, your templates stay readable even in brace-heavy contexts—yo
 See `tutorial/TEMPLATE_SYNTAX.md` for comprehensive documentation of the multi-brace delimiter system.
 
 ### Path Values
-Paths are first-class values that can be stored in variables, passed to functions, and interpolated with variables.
+Paths are first-class values that can be stored in variables, passed to functions, interpolated with variables, and combined using `+`.
 
 **Syntax:** Use `@` prefix to create a path value:
 ```avon
@@ -364,27 +364,79 @@ let config_path = @config/production.json in
 let content = readfile config_path in
 let exists = exists config_path in
 
-# Path interpolation
+# Path interpolation (single braces only)
 let env = "staging" in
 let app = "myapp" in
 let dynamic_path = @config/{env}/{app}.yml in
 
+# Path concatenation with +
+let base = @config in
+let file = @app.json in
+let full = base + file in  # Results in @config/app.json
+
 # Use paths with any file function
 let lines = readlines dynamic_path in
-let base = basename dynamic_path in
+let base_name = basename dynamic_path in
 let dir = dirname dynamic_path in
 ```
 
-**Benefits:**
-- **Reusability:** Define a path once, use it multiple times
-- **Composition:** Pass paths as function arguments
-- **Type safety:** Paths are distinct from strings
-- **Interpolation:** Dynamic path construction with variables
+**Important Rules:**
+- **Path literals must be relative:** `@config/app.json` ✅, `@/etc/passwd` ❌
+- Absolute paths are blocked at syntax level to prevent unsafe deployment
+- For reading files with absolute paths, use **strings**: `readfile "/absolute/path"`
+- For deployment to absolute locations, use `--root` flag: `avon deploy app.av --root /opt`
+- Path concatenation with `+` automatically adds `/` separator as needed
+- **VS Code highlighting:** Only relative paths (not starting with `/`) will be highlighted as paths
 
-**Supported Functions:** All file operations accept path values:
-- `readfile`, `readlines`, `import`
-- `fill_template`, `walkdir`
-- `exists`, `basename`, `dirname`
+**Paths in Lists:**
+
+Paths are first-class values and can be used directly in lists, making it easy to work with collections of files:
+
+```avon
+# Simple list of paths
+[@config/app.yml, @config/database.yml, @config/cache.yml]
+# Result: [app.yml, database.yml, cache.yml]
+
+# Paths in function results
+let environments = ["dev", "staging", "prod"] in
+map (\env @config/{env}.yml) environments
+# Result: [@config/dev.yml, @config/staging.yml, @config/prod.yml]
+
+# Nested lists with paths
+[
+  [@logs/app.log, @logs/error.log],
+  [@metrics/cpu.txt, @metrics/memory.txt]
+]
+
+# Generate multiple files from a list of paths
+let files = [@readme.md, @license.txt, @changelog.md] in
+let content = \file readfile file in
+map content files  # Read all files
+```
+
+When used in templates, paths expand naturally:
+
+```avon
+let config_files = [@app.yml, @database.yml] in
+@index.txt {"
+Config files:
+{config_files}
+"}
+```
+
+**Benefits:**
+- **Safety:** Syntax prevents accidental absolute path deployment
+- **Reusability:** Define a path once, use it multiple times
+- **Composition:** Pass paths as function arguments and combine with `+`
+- **Type safety:** Paths are distinct from strings
+- **Interpolation:** Dynamic path construction with variables (single `{}` only)
+- **Collections:** Work with multiple paths easily using lists and iteration
+
+**Supported Functions:** All file operations accept path values or strings:
+- `readfile`, `readlines`, `import` - Accept Path or String
+- `fill_template`, `walkdir` - Accept Path or String
+- `exists`, `basename`, `dirname` - Accept Path or String
+- **Note:** Strings can be absolute for reading; Path literals must be relative
 
 **Examples:** `examples/path_value_demo.av`, `examples/simple_path_test.av`, `examples/path_interpolation_test.av`, `examples/fill_with_path.av`
 
@@ -838,21 +890,48 @@ t1 + t2                    # Result: "Hello, Alice!"
 ```
 
 ### Path Concatenation
-Paths can be combined with the `+` operator to join path segments:
-```avon
-let base = @home/user in
-let subdir = @projects in
-base + subdir              # Result: "home/user/projects"
+Paths can be combined with the `+` operator to build composite paths:
 
-# With interpolation
+```avon
+# Basic path concatenation
+@config + @app.json              # → "config/app.json"
+@home/user + @projects           # → "home/user/projects"
+
+# With variables
+let base = @config in
+let file = @app.json in
+base + file                       # → "config/app.json"
+
+# Path interpolation + concatenation
 let env = "prod" in
-let app = "myapp" in
-let config_path = @etc/{env} in
-let app_config = @{app}.conf in
-config_path + app_config   # Result: "etc/prod/myapp.conf"
+let path1 = @config/{env} in
+let path2 = @app.conf in
+path1 + path2                     # → "config/prod/app.conf"
 ```
 
-**Examples:** `examples/template_path_concat.av`
+**Automatic separator handling:**
+- Adds `/` separator automatically: `@a + @b` → `"a/b"`
+- No double slashes: `@a/ + @b` → `"a/b"` (not `"a//b"`)
+
+**Important restrictions:**
+- **Path literals must be relative:** `@config/file` ✅, `@/etc/file` ❌ (syntax error)
+- Absolute paths are blocked to prevent unsafe deployment
+- For absolute paths in reading operations, use strings: `readfile "/absolute/path"`
+- Use `--root` flag for deployment to absolute locations
+
+**Alternative: Path interpolation**
+```avon
+# Instead of concatenation, you can use interpolation
+let user = "alice" in
+@home/{user}/projects             # ✓ "home/alice/projects"
+
+# Or combine string pieces
+let base = "home/alice" in
+let leaf = "projects" in
+@{base}/{leaf}                    # ✓ "home/alice/projects"
+```
+
+**Examples:** `examples/template_path_concat.av`, `examples/neovim_config.av`
 - `==` Equal
 - `!=` Not equal
 - `>` Greater than

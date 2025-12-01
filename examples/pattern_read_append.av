@@ -1,28 +1,32 @@
-# Demonstration: Simulating Path Mutation with Current Avon
-# Shows what can be done today and limitations
+# Demonstration: Building Multiple Files in Avon
+# Important: Only ONE top-level expression can be evaluated
+# Multiple FileTemplates must be in a LIST, not sequential expressions
 
-# Example 1: Read and append pattern
-let base_content = "# Configuration File\nversion = 1.0\n" in
-let append_section = "\n# Additional Settings\ndebug = true\n" in
-let final_content = concat base_content append_section in
+# CORRECT: Multiple files in a list
+let config_content = concat "# Configuration File\nversion = 1.0\n" 
+                             "\n# Additional Settings\ndebug = true\n" in
 
-@tmp/avon_config.txt {"{final_content}"}
-
-# Example 2: Building content incrementally with let bindings
 let header = "=== Report ===" in
 let body = "Status: OK" in
 let footer = "=== End ===" in
-let full_report = join [header, body, footer] "\n" in
+let report_content = join [header, body, footer] "\n" in
 
-@tmp/avon_report.txt {"{full_report}"}
+# Return a list of file templates (this is valid)
+[
+  @tmp/avon_config.txt {"{config_content}"},
+  @tmp/avon_report.txt {"{report_content}"}
+]
 
-# Example 3: Multiple files, where one reads from another
-# (requires two separate Avon runs currently)
-
-# Run 1: Create base file
-# @tmp/base.txt {"Hello, World!"}
-
-# Run 2: Read and extend it
-# let original = readfile "/tmp/base.txt" in
-# let extended = concat original "\nGoodbye!" in
-# @tmp/extended.txt {"{extended}"}
+# INCORRECT PATTERN (shown below in comments)
+# This would NOT work because the first FileTemplate would return
+# and the remaining let bindings would be ignored:
+#
+# let base_content = "# Configuration File\nversion = 1.0\n" in
+# let append_section = "\n# Additional Settings\ndebug = true\n" in
+# let final_content = concat base_content append_section in
+# @tmp/avon_config.txt {"{final_content}"}    # First FileTemplate returned here
+# 
+# # Everything below this is unreachable/ignored:
+# let header = "=== Report ===" in
+# let body = "Status: OK" in
+# @tmp/avon_report.txt {"{body}"}

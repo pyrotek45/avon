@@ -5,7 +5,7 @@ let tomorrow = date_add current "1d" in
 let next_week = date_add current "1w" in
 let ts = timestamp in
 
-@/output/datetime_info.txt {"
+@output/datetime_info.txt {"
 Date/Time Functions Demo
 ========================
 

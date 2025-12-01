@@ -20,7 +20,7 @@ let labels = "    app: {app_name}\n    version: v1\n    managed-by: avon" in
 
 [
     # Namespace
-    @/k8s/namespace.yaml {"
+    @k8s/namespace.yaml {"
         apiVersion: v1
         kind: Namespace
         metadata:
@@ -28,7 +28,7 @@ let labels = "    app: {app_name}\n    version: v1\n    managed-by: avon" in
     "},
     
     # ConfigMap
-    @/k8s/configmap.yaml {"
+    @k8s/configmap.yaml {"
         apiVersion: v1
         kind: ConfigMap
         metadata:
@@ -42,7 +42,7 @@ let labels = "    app: {app_name}\n    version: v1\n    managed-by: avon" in
     "},
     
     # Secret
-    @/k8s/secret.yaml {"
+    @k8s/secret.yaml {"
         apiVersion: v1
         kind: Secret
         metadata:
@@ -56,7 +56,7 @@ let labels = "    app: {app_name}\n    version: v1\n    managed-by: avon" in
     "},
     
     # Deployment
-    @/k8s/deployment.yaml {"
+    @k8s/deployment.yaml {"
         apiVersion: apps/v1
         kind: Deployment
         metadata:
@@ -160,7 +160,7 @@ let labels = "    app: {app_name}\n    version: v1\n    managed-by: avon" in
     "},
     
     # Service
-    @/k8s/service.yaml {"
+    @k8s/service.yaml {"
         apiVersion: v1
         kind: Service
         metadata:
@@ -181,7 +181,7 @@ let labels = "    app: {app_name}\n    version: v1\n    managed-by: avon" in
     "},
     
     # Ingress
-    @/k8s/ingress.yaml {"
+    @k8s/ingress.yaml {"
         apiVersion: networking.k8s.io/v1
         kind: Ingress
         metadata:
@@ -210,7 +210,7 @@ let labels = "    app: {app_name}\n    version: v1\n    managed-by: avon" in
     "},
     
     # ServiceAccount
-    @/k8s/serviceaccount.yaml {"
+    @k8s/serviceaccount.yaml {"
         apiVersion: v1
         kind: ServiceAccount
         metadata:
@@ -221,7 +221,7 @@ let labels = "    app: {app_name}\n    version: v1\n    managed-by: avon" in
     "},
     
     # HorizontalPodAutoscaler
-    @/k8s/hpa.yaml {"
+    @k8s/hpa.yaml {"
         apiVersion: autoscaling/v2
         kind: HorizontalPodAutoscaler
         metadata:

@@ -16,30 +16,65 @@ Avon is designed with security as a core principle. This document explains the s
 
 ## Known Security Features
 
-### 1. Path Traversal Prevention
+### 1. Path Traversal Prevention & Path Type Safety
 
-**Problem**: Untrusted input could access sensitive files
+**Problem**: Untrusted input could access sensitive files or escape deployment boundaries
 ```avon
-readfile "../../etc/passwd"  # Should be blocked
+readfile "../../etc/passwd"          # Should be blocked - path traversal
+@/etc/config.txt {"data"}             # Should be blocked - absolute deployment path
 ```
 
-**Solution**: Path validation blocks `..` and absolute paths
+**Solution**: Two-layer security model
+
+**Layer 1: Syntax-level protection (Lexer)**
+- Path literals (`@path`) cannot start with `/` (absolute paths blocked)
+- This prevents accidental absolute path deployment
+- Error: `Absolute paths are not allowed in Avon syntax`
+- Use relative paths with `--root` flag for deployment
+
+**Layer 2: Runtime validation**
 ```rust
 fn validate_path(path: &str) -> Result<()> {
     if path.contains("..") {
         return Err("Path traversal not allowed");
     }
-    if path.starts_with("/") {
-        return Err("Absolute paths not allowed");
-    }
+    // Note: Absolute paths in strings are allowed for safe read operations
     Ok(())
 }
 ```
 
+**Safe patterns:**
+```avon
+# ✅ SAFE: Reading with absolute path (string)
+readfile "/home/user/config.json"     # OK - strings allow absolute for reading
+
+# ✅ SAFE: Path literals are always relative, used with + for composition
+let p = @config + @app.json            # OK - results in "config/app.json"
+
+# ✅ SAFE: Deployment with relative paths + --root
+@config/app.json {"settings"}          # OK - relative path
+# Deploy: avon deploy app.av --root /opt/myapp
+
+# ❌ BLOCKED: Path traversal
+readfile "../../etc/passwd"            # Error - traversal blocked
+
+# ❌ BLOCKED: Absolute path literals
+@/etc/config.txt {"data"}              # Error - lexer blocks @/
+```
+
 **Affected Functions**:
-- `readfile()` - Read file content
-- `import()` - Import another Avon file
-- `fill_template()` - Read template file
+- `readfile()` - Accepts String (absolute OK) or Path (relative only); blocks `..`
+- `import()` - Same as readfile
+- `fill_template()` - Same as readfile
+- `readlines()` - Same as readfile
+- `exists()` - Same as readfile
+- `basename()`, `dirname()` - Accept Path or String values
+- **Path concatenation** (`+`) - Combines relative paths: `@a + @b` → `"a/b"`
+- **Deployment** - Path literals must be relative; use `--root` for absolute base directory
+
+**Key insight**: 
+- **Reading files** is safe with absolute paths → use strings: `readfile "/absolute/path"`
+- **Writing files** (deployment) uses path literals (`@...`) → always relative + `--root`
 
 **Test**: Run `bash scripts/test_security_comprehensive.sh`
 
@@ -172,20 +207,19 @@ The security test suite covers:
 ### ✅ Safe Path Handling
 
 ```avon
-# Use relative paths only (absolute paths blocked for security)
-readfile "config.json"                    # Safe
-readfile "templates/app.json"             # Safe
-readfile @config/app.json                 # Safe (Path type)
-
-# Don't use absolute paths or traversal
-readfile "/etc/passwd"                    # Error: absolute not allowed
+# Reading files: strings can be absolute (safe for reading)
+readfile "config.json"                    # Safe (relative string)
+readfile "/tmp/data.txt"                  # Safe (absolute string for reading)
 readfile "../../secrets.env"              # Error: traversal not allowed
-readfile @etc/passwd                      # Error: absolute path blocked
 
-# For deployment, always use --root flag
+# Path literals (@...): syntactically must be relative (for deployment)
+@config/app.json {"content"}              # Safe (relative Path)
+@/etc/passwd {"hack"}                     # Syntax error: absolute paths not allowed
+
+# For absolute deployment, use --root flag
 @config/app.json {"content"}              # Relative path
-# Deploy with: avon deploy app.av --root ./output
-# Without --root: Files are written to current working directory (not recommended)
+# Deploy: avon deploy app.av --root /var/www
+# Result: /var/www/config/app.json
 ```
 
 ### ✅ Safe User Input
@@ -227,6 +261,7 @@ let safe_dir = assert (contains allowed "config") "config" in
 
 # Always use --root flag for deployment
 # avon deploy app.av --root ./output
+# Note: Without --root, absolute paths are rejected; traversal is always rejected
 ```
 
 ### ❌ Unsafe Patterns
@@ -346,7 +381,10 @@ let port = assert (is_number (get config "port")) (get config "port") in
 
 Before deploying Avon templates in production:
 
-- [ ] All paths use relative paths only (no absolute paths)
+- [ ] All paths avoid traversal (`..`)
+- [ ] Path literals (@...) are relative only (syntactic restriction)
+- [ ] Deployment uses `--root` flag for absolute base directory
+- [ ] Reading files with absolute paths (strings) is acceptable
 - [ ] `--root` flag used for all deployments
 - [ ] All user input validated with `assert`
 - [ ] Type checking with `is_string`, `is_number`, etc. before use
@@ -372,7 +410,6 @@ Before deploying Avon templates in production:
 
 - [TUTORIAL.md](./TUTORIAL.md) — Learn Avon from scratch
 - [FEATURES.md](./FEATURES.md) — Complete language reference
-- [TECHNICAL_ARCHITECTURE.md](./TECHNICAL_ARCHITECTURE.md) — How Avon works internally
 - [WHY_NO_RECURSION.md](./WHY_NO_RECURSION.md) — Design decisions
 
 ## Version Info

@@ -20,28 +20,28 @@
  # Choose an OS-specific file path and template
  let file_template =
    if current_os == "linux" then
-     @/config/linux.conf {"
+     @config/linux.conf {"
        # Linux-specific configuration
        os = linux
        shell = /bin/bash
        config_dir = ~/.config/myapp
      "}
    else if current_os == "macos" then
-     @/config/macos.conf {"
+     @config/macos.conf {"
        # macOS-specific configuration
        os = macos
        shell = /bin/zsh
        config_dir = ~/Library/Application Support/myapp
      "}
    else if current_os == "windows" then
-     @/config/windows.conf {"
+     @config/windows.conf {"
        # Windows-specific configuration
        os = windows
        shell = powershell.exe
        config_dir = %APPDATA%\\myapp
      "}
    else
-     @/config/unknown.conf {"
+     @config/unknown.conf {"
        # Fallback configuration
        os = unknown
        note = "This OS string is not recognized by this example."

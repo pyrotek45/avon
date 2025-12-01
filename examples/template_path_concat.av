@@ -1,20 +1,18 @@
 # Template and Path Concatenation Test
 
-# Test template concatenation
+# Test template concatenation (creates bare templates without file paths)
 let t1 = {"Hello "} in
 let t2 = {"World!"} in
-let result_templates = t1 + t2 in
+let message = t1 + t2 in
 
 # Test path concatenation
 let p1 = @home/user in
 let p2 = @projects/avon in
 let combined_path = p1 + p2 in
 
-# Test with interpolation in templates
+# Test with interpolation in file templates
 let name = "Alice" in
-let greeting = {"Hello, {name}"} in
-let punctuation = {"!"} in
-let full_greeting = greeting + punctuation in
+let greeting = @greeting.txt {"Hello, {name}!"} in
 
-# Output: concatenated template, concatenated path, and greeting with interpolation
-[result_templates, combined_path, full_greeting]
+# Output only the file template (which can be deployed)
+# The message and combined_path are data, not deployable

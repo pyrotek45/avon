@@ -26,7 +26,7 @@ let all_instances = map make_instance instance_names in
 let instances_block = join all_instances "\n\n" in
 
 [
-  @/terraform/variables.tf {{"
+  @terraform/variables.tf {{"
   variable "environment" {
     type    = string
     default = "{{environment}}"
@@ -43,7 +43,7 @@ let instances_block = join all_instances "\n\n" in
   }
   "}},
 
-  @/terraform/main.tf {{"
+  @terraform/main.tf {{"
   terraform {
     required_version = ">= 1.0"
     required_providers {
@@ -120,7 +120,7 @@ let instances_block = join all_instances "\n\n" in
   {{instances_block}}
   "}},
 
-  @/terraform/terraform.tfvars {{"
+  @terraform/terraform.tfvars {{"
   environment   = "{{environment}}"
   region        = "{{region}}"
   instance_type = "{{instance_type}}"

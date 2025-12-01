@@ -57,7 +57,7 @@
 
 # nested lets and defaults
 let prefix = "Report" in
-let make_report = \name ? "anonymous" @/reports/{name}_Summary.txt {"
+let make_report = \name ? "anonymous" @reports/{name}_Summary.txt {"
     Summary: {name}
     
     Contents:
@@ -67,7 +67,7 @@ let make_report = \name ? "anonymous" @/reports/{name}_Summary.txt {"
     Generated report for {name}
 "} in
 
-let make_detailed = \name ? "bob" @/reports/{name}_Detailed.txt {"
+let make_detailed = \name ? "bob" @reports/{name}_Detailed.txt {"
     Detailed Report: {name}
     
     Contents:

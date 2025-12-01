@@ -9,7 +9,7 @@
 
 [
     # Unified tiny platform API (static #ifdef blocks)
-    @/include/platform.h {{"
+    @include/platform.h {{"
         #ifndef PLATFORM_H
         #define PLATFORM_H
 
@@ -27,7 +27,7 @@
     "}},
 
     # One include that gathers file paths via #ifdefs
-    @/include/sources_unified.h {{"
+    @include/sources_unified.h {{"
         #ifndef SOURCES_UNIFIED_H
         #define SOURCES_UNIFIED_H
 
@@ -50,21 +50,21 @@
     "}},
 
     # Simple per-platform list using path interpolation
-    @/sources.txt {{"
+    @sources.txt {{"
             # Platform: {{ platform }}
             src/main.c
             src/platform_{{ platform }}.c
     "}},
 
     # Demonstrate path interpolation in output filenames
-    @/include/platform_{platform}.h {{"
+    @include/platform_{platform}.h {{"
             #ifndef PLATFORM_{{ upper platform }}_H
             #define PLATFORM_{{ upper platform }}_H
             /* Per-platform header generated for {{ platform }} */
         #endif
     "}},
 
-    @/sources_{platform}.txt {{"
+    @sources_{platform}.txt {{"
         # Platform: {{ platform }}
         src/main.c
         src/platform_{{ platform }}.c

@@ -1,0 +1,62 @@
+# LSP Interpolation Validation Tests
+# Tests that the LSP correctly identifies errors in template and path interpolations
+
+# Test 1: Path interpolation with valid variable
+let filename = "output" in
+@{filename}.txt {"content here"}
+
+# Test 2: Path interpolation with undefined variable - SHOULD ERROR
+@{undefined_filename}.txt {"content here"}
+
+# Test 3: Simple path with string
+@myfile.txt {"Hello World"}
+
+# Test 4: Path with multiple parts
+let dir = "tmp" in
+let name = "file" in
+@{dir}/{name}.txt {"data"}
+
+# Test 5: Template with valid variable
+let title = "Page Title" in
+@out.html {"<title>" + title + "</title>"}
+
+# Test 6: Template with undefined - SHOULD ERROR
+@out.html {"<title>" + undefined_title + "</title>"}
+
+# Test 7: Path interpolation with function result
+let make_fname = \prefix prefix + "data" in
+@{make_fname "out"}.txt {"content"}
+
+# Test 8: Template with concatenation
+let first = "Hello" in
+let second = "World" in
+@greeting.txt {first + " " + second}
+
+# Test 9: Template with undefined in concatenation - SHOULD ERROR
+let first = "Hello" in
+@greeting.txt {first + " " + undefined_second}
+
+# Test 10: Double-brace template (no interpolations)
+@page.html {{"<!DOCTYPE html><html></html>"}}
+
+# Test 11: Path with variable lookup
+let env_var = "HOME" in
+@{env_var}/file.txt {"data"}
+
+# Test 12: Template using builtin
+let my_list = [1, 2, 3] in
+@stats.txt {my_list -> length}
+
+# Test 13: Template with undefined list - SHOULD ERROR
+@stats.txt {undefined_list -> length}
+
+# Test 14: Complex path expression
+let base = "config" in
+let ext = ".json" in
+@{base}/{base}{ext} {"{}"}
+
+# Test 15: Template with conditional
+let is_debug = true in
+@output.txt {
+  if is_debug then "Debug mode" else "Release mode"
+}

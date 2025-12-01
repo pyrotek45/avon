@@ -1,0 +1,97 @@
+# Type checking tests for all builtin functions
+# Each test validates correct type handling
+
+# List operations
+# map: map (\x x * 2) [1,2,3]
+# filter: filter (\x x > 1) [1,2,3]
+# fold: fold (\a \b a + b) 0 [1,2,3]
+# length: length [1,2,3]
+# head: head [1,2,3]
+# tail: tail [1,2,3]
+# reverse: reverse [1,2,3]
+# sort: sort [3,1,2]
+# unique: unique [1,1,2,3,3]
+# take: take 2 [1,2,3]
+# drop: drop 1 [1,2,3]
+# flatten: flatten [[1,2],[3,4]]
+
+# String operations
+# concat: concat "hello" "world"
+# upper: upper "hello"
+# lower: lower "HELLO"
+# split: split "," "a,b,c"
+# join: join "," ["a", "b"]
+# contains: contains "hello" "ell"
+# starts_with: starts_with "hello" "he"
+# ends_with: ends_with "hello" "lo"
+# trim: trim "  hello  "
+# replace: replace "hello" "l" "L"
+
+# Type conversions
+# to_string: to_string 42
+# to_int: to_int "42"
+# to_float: to_float "3.14"
+# to_bool: to_bool 1
+# typeof: typeof 42
+
+# Predicates
+# is_empty: is_empty []
+# is_string: is_string "hello"
+# is_number: is_number 42
+# is_list: is_list [1,2,3]
+# is_dict: is_dict {x: 1}
+
+# Dict operations
+# get: get {x: 1} "x"
+# has_key: has_key {x: 1} "x"
+# keys: keys {x: 1, y: 2}
+# values: values {x: 1, y: 2}
+
+# Actual test cases
+
+let nums = [1, 2, 3, 4, 5] in
+let doubled = map (\x x * 2) nums in
+let evens = filter (\x x % 2 == 0) nums in
+let sum = fold (\a \b a + b) 0 nums in
+let first = head nums in
+let rest = tail nums in
+let reversed = reverse nums in
+let sorted = sort [3, 1, 4, 1, 5] in
+let unique_vals = unique [1, 1, 2, 2, 3] in
+let first_two = take 2 nums in
+let drop_one = drop 1 nums in
+
+let str = "hello" in
+let greeting = concat "hello" " world" in
+let upper_str = upper str in
+let lower_str = lower "HELLO" in
+let parts = split "," "a,b,c" in
+let joined = join "," ["a", "b", "c"] in
+let has_ll = contains "hello" "ll" in
+let starts_h = starts_with "hello" "he" in
+let ends_o = ends_with "hello" "lo" in
+let trimmed = trim "  hello  " in
+let replaced = replace "hello" "l" "L" in
+
+let num = 42 in
+let str_num = to_string num in
+let int_val = to_int "42" in
+let float_val = to_float "3.14" in
+let bool_val = to_bool 1 in
+let type_name = typeof num in
+
+let empty_list = [] in
+let is_empty_result = is_empty empty_list in
+let is_str_result = is_string "hello" in
+let is_num_result = is_number 42 in
+let is_lst_result = is_list [1, 2, 3] in
+let is_dct_result = is_dict {x: 1} in
+
+let config = {host: "localhost", port: 8080} in
+let host_val = get config "host" in
+let has_host = has_key config "host" in
+let config_keys = keys config in
+let config_values = values config in
+
+# All tests passed if no LSP errors reported
+true

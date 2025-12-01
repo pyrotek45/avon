@@ -147,7 +147,7 @@ fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("markdown_to_html", "markdown_to_html :: (String|Template) -> String\n  Convert markdown text to HTML.\n  Supports headings (# through ######), bold (**text**), italic (*text*), inline code (`code`), paragraphs, and line breaks.\n  Example: markdown_to_html \"# Hello\\nWorld\" -> \"<h1>Hello</h1>\\n<p>World</p>\"\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
 
         // File Operations
-        ("readfile", "readfile :: String|Path -> String\n  Read entire file as string.\n  Example: readfile \"config.json\" -> file contents\n  Note: Use relative paths only. Absolute paths blocked for security."),
+        ("readfile", "readfile :: String|Path -> String\n  Read entire file as string.\n  Example: readfile \"config.json\" -> file contents\n  Note: Strings can be absolute (safe for reading). Path literals (@...) must be relative."),
         ("readlines", "readlines :: String|Path -> [String]\n  Read file as list of lines.\n  Example: readlines \"file.txt\" -> [\"line1\", \"line2\"]"),
         ("fill_template", "fill_template :: String|Path -> (Dict|[[String, String]]) -> String\n  Read file and fill {{placeholders}} with values.\n  Example: fill_template \"template.txt\" {name: \"Alice\"} -> filled template"),
         ("exists", "exists :: String|Path -> Bool\n  Check if file exists.\n  Example: exists \"config.json\" -> true"),
@@ -157,7 +157,7 @@ fn get_builtin_doc(func_name: &str) -> Option<String> {
 
         // Data Utilities
         ("json_parse", "json_parse :: String -> a\n  Parse JSON string (objects -> dicts, arrays -> lists).\n  Example: json_parse '{\"a\": 1}' -> {a: 1}"),
-        ("import", "import :: String|Path -> Value\n  Import and evaluate another Avon file.\n  Example: import \"lib.av\" -> value from lib.av\n  Note: Use relative paths only. Absolute paths blocked for security."),
+        ("import", "import :: String|Path -> Value\n  Import and evaluate another Avon file.\n  Example: import \"lib.av\" -> value from lib.av\n  Note: Strings can be absolute (safe for reading). Path literals (@...) must be relative."),
 
         // Type Checking
         ("typeof", "typeof :: a -> String\n  Get type name as string.\n  Example: typeof 42 -> \"Number\""),
@@ -1672,8 +1672,8 @@ fn process_source(source: String, source_name: String, opts: CliOptions, deploy_
                                 eprintln!("  Got: {}", v.to_string(&source));
                                 eprintln!("  Details: {}", e.message);
                                 eprintln!();
-                                eprintln!("  Tip: Make sure your program returns a FileTemplate (using @/path {{...}})");
-                                eprintln!("  Tip: Or return a list of FileTemplates: [@/file1.txt {{...}}, @/file2.txt {{...}}]");
+                                eprintln!("  Tip: Make sure your program returns a FileTemplate (using @path {{...}})");
+                                eprintln!("  Tip: Or return a list of FileTemplates: [@file1.txt {{...}}, @file2.txt {{...}}]");
                                 eprintln!("  Tip: Use 'avon eval {}' to see what your program evaluates to", source_name);
                                 eprintln!("  No files were written.");
                                 return 1;
@@ -1682,13 +1682,16 @@ fn process_source(source: String, source_name: String, opts: CliOptions, deploy_
                     } else {
                         // Eval mode
                         match collect_file_templates(&v, &source) {
-                            Ok(files) => {
+                            Ok(files) if !files.is_empty() => {
+                                // Only print file templates if there are any
                                 for (path, content) in files {
                                     println!("--- {} ---", path);
                                     println!("{}", content);
                                 }
                             }
-                            Err(_) => {
+                            Ok(_) | Err(_) => {
+                                // If no file templates found (empty list) or collection errors,
+                                // print the value as-is
                                 println!("{}", v.to_string(&source));
                             }
                         }

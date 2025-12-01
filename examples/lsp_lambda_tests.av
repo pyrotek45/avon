@@ -1,0 +1,30 @@
+# Lambda expression tests
+# Tests that lambda parameters are correctly tracked
+
+# Single parameter lambda
+let double = \x x * 2 in
+let result1 = double 5 in
+
+# Multi-parameter lambda
+let add = \x \y x + y in
+let result2 = add 5 3 in
+
+# Lambda with complex body
+let complex = \x (x * 2) + (x - 1) in
+let result3 = complex 10 in
+
+# Lambda shadowing outer variable
+let x = 10 in
+let shadow = \x x * 2 in
+let result4 = shadow 5 in
+
+# Nested lambdas
+let nested = \x \y \z (x + y) * z in
+let result5 = nested 1 2 3 in
+
+# Lambda in list operations
+let nums = [1, 2, 3] in
+let squared = map (\x x * x) nums in
+
+# All tests passed if no LSP errors reported
+true

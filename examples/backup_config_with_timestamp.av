@@ -9,7 +9,7 @@ let config = {
   retention_days: 7
 } in
 
-@/config/backup-{backup_date}.yml {"
+@config/backup-{backup_date}.yml {"
 # Backup Configuration
 # Generated: {backup_time}
 # Build timestamp: {timestamp}

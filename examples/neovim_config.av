@@ -70,21 +70,21 @@ let km_lua = join [
 ] "\n" in
 
 [
-    @/init.lua {{"require('my')"}},
+    @init.lua {{"require('my')"}},
 
-    @/lua/my/init.lua {{"
+    @lua/my/init.lua {{"
         require('my.set')
         require('my.remap')
         require('my.packer')
         "}},
 
-        @/lua/my/set.lua {{"
+        @lua/my/set.lua {{"
         {{ opts_lua }}
         vim.g.mapleader = ' '
         vim.o.pumheight = 15
     "}},
 
-    @/lua/my/packer.lua {{"
+    @lua/my/packer.lua {{"
         local ensure_packer = function()
         local fn = vim.fn
         local install_path = fn.stdpath('data')..'/site/pack/packer/start/packer.nvim'
@@ -124,11 +124,11 @@ let km_lua = join [
         end
     "}},
 
-    @/lua/my/remap.lua {{"
+    @lua/my/remap.lua {{"
         {{ km_lua }}
     "}},
 
-    @/after/plugin/colors.lua {{"
+    @after/plugin/colors.lua {{"
         function ApplyTheme(color)
             color = color or '{{ c.theme }}'
             pcall(vim.cmd.colorscheme, color)
@@ -144,7 +144,7 @@ let km_lua = join [
         ApplyTheme('{{ c.theme }}')
     "}},
 
-    @/after/plugin/telescope.lua {{"
+    @after/plugin/telescope.lua {{"
     local status, builtin = pcall(require, 'telescope.builtin')
         if status then
             vim.keymap.set('n', '<leader>pf', builtin.find_files, {})
@@ -154,7 +154,7 @@ let km_lua = join [
         end
     "}},
 
-    @/after/plugin/treesitter.lua {{"
+    @after/plugin/treesitter.lua {{"
         local status, configs = pcall(require, 'nvim-treesitter.configs')
         if status then
             configs.setup {
@@ -166,7 +166,7 @@ let km_lua = join [
         end
     "}},
 
-    @/after/plugin/harpoon.lua {{"
+    @after/plugin/harpoon.lua {{"
         local status_mark, mark = pcall(require, 'harpoon.mark')
         local status_ui, ui = pcall(require, 'harpoon.ui')
 
@@ -180,13 +180,13 @@ let km_lua = join [
         end
     "}},
 
-    @/after/plugin/undotree.lua {{"vim.keymap.set('n', '<leader>u', vim.cmd.UndotreeToggle)"}},
-    @/after/plugin/fugitive.lua {{"vim.keymap.set('n', '<leader>gs', vim.cmd.Git)"}},
-    @/after/plugin/todocomments.lua {{"pcall(function() require('todo-comments').setup() end)"}},
-    @/after/plugin/whichkey.lua {{"pcall(function() require('which-key').setup() end)"}},
-    @/after/plugin/centerpad.lua {{"pcall(function() require('centerpad').setup() end)"}},
+    @after/plugin/undotree.lua {{"vim.keymap.set('n', '<leader>u', vim.cmd.UndotreeToggle)"}},
+    @after/plugin/fugitive.lua {{"vim.keymap.set('n', '<leader>gs', vim.cmd.Git)"}},
+    @after/plugin/todocomments.lua {{"pcall(function() require('todo-comments').setup() end)"}},
+    @after/plugin/whichkey.lua {{"pcall(function() require('which-key').setup() end)"}},
+    @after/plugin/centerpad.lua {{"pcall(function() require('centerpad').setup() end)"}},
 
-    @/after/plugin/trouble.lua {{"
+    @after/plugin/trouble.lua {{"
         local status, trouble = pcall(require, 'trouble')
         if status then
             trouble.setup()
@@ -194,7 +194,7 @@ let km_lua = join [
         end
     "}},
 
-    @/after/plugin/lsp.lua {{"
+    @after/plugin/lsp.lua {{"
         local status, lsp_zero = pcall(require, 'lsp-zero')
         if status then
             local lsp = lsp_zero.preset({})

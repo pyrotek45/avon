@@ -1,0 +1,72 @@
+{
+  "Let Binding": {
+    "prefix": "let",
+    "body": "let ${1:name} = ${2:value} in",
+    "description": "Create a let binding"
+  },
+  "Lambda Function": {
+    "prefix": "lambda",
+    "body": "\\\\${1:x} ${2:x}",
+    "description": "Create a lambda function"
+  },
+  "If Conditional": {
+    "prefix": "if",
+    "body": "if ${1:condition} then ${2:true_value} else ${3:false_value}",
+    "description": "Create an if-then-else conditional"
+  },
+  "Map Function": {
+    "prefix": "map",
+    "body": "map (\\\\${1:x} ${2:x}) ${3:list}",
+    "description": "Map a function over a list"
+  },
+  "Filter Function": {
+    "prefix": "filter",
+    "body": "filter (\\\\${1:x} ${2:x > 0}) ${3:list}",
+    "description": "Filter a list with a predicate"
+  },
+  "List": {
+    "prefix": "[",
+    "body": "[${1:item1}, ${2:item2}]",
+    "description": "Create a list"
+  },
+  "Dictionary": {
+    "prefix": "{",
+    "body": "{${1:key}: ${2:value}}",
+    "description": "Create a dictionary"
+  },
+  "FileTemplate": {
+    "prefix": "file",
+  "body": "@${1:path/file.txt} {\"${2:content}\"}",
+    "description": "Create a file template"
+  },
+  "Template String": {
+    "prefix": "template",
+    "body": "{\"${1:content with {interpolation}}\"}",
+    "description": "Create a template string"
+  },
+  "Import": {
+    "prefix": "import",
+    "body": "let ${1:module} = import \"${2:path.av}\" in",
+    "description": "Import a module"
+  },
+  "Comments": {
+    "prefix": "#",
+    "body": "# ${1:comment}",
+    "description": "Add a comment"
+  },
+  "Pipe Operator": {
+    "prefix": "->",
+    "body": "${1:value} -> ${2:function}",
+    "description": "Use pipe operator to chain expressions"
+  },
+  "Fold Function": {
+    "prefix": "fold",
+    "body": "fold (\\\\${1:acc} \\\\${2:x} ${3:acc + x}) ${4:initial} ${5:list}",
+    "description": "Fold a list into a single value"
+  },
+  "Range": {
+    "prefix": "..",
+    "body": "[${1:1}..${2:10}]",
+    "description": "Create a range of numbers"
+  }
+}

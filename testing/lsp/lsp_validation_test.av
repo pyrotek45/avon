@@ -1,0 +1,63 @@
+# LSP Validation Test Cases
+# These test various error detection and type checking scenarios
+
+let tests =
+  # Test 1: Valid string concatenation
+  let x = "hello" in
+  let result1 = trace "Test 1 passed" (x + " world") in
+  
+  # Test 2: Dict field access (valid)
+  let config = {host: "localhost", port: 8080} in
+  let host = config.host in
+  let result2 = trace "Test 2 passed" host in
+  
+  # Test 3: Map with valid function
+  let numbers = [1, 2, 3] in
+  let doubled = map (\x x * 2) numbers in
+  let result3 = trace "Test 3 passed" doubled in
+  
+  # Test 4: Function with correct types
+  let user = {name: "alice", age: 30} in
+  let name = get user "name" in
+  let age = get user "age" in
+  let result4 = trace "Test 4 passed" [name, age] in
+  
+  # Test 5: User-defined function
+  let double = \x x * 2 in
+  let result5 = trace "Test 5 passed" (double 5) in
+  
+  # Test 6: Template with interpolation
+  let username = "alice" in
+  let greeting = {"Hello {username}!"} in
+  let result6 = trace "Test 6 passed" greeting in
+  
+  # Test 7: Template with defined variable
+  let name = "Bob" in
+  let message = {"Welcome {name}!"} in
+  let result7 = trace "Test 7 passed" message in
+  
+  # Test 8: Valid comparison
+  let x = 5 in
+  let y = 10 in
+  let result8 = trace "Test 8 passed" (if x < y then "yes" else "no") in
+  
+  # Test 9: Valid list operations
+  let nums = [1, 2, 3] in
+  let more = [4, 5] in
+  let combined = nums + more in
+  let result9 = trace "Test 9 passed" combined in
+  
+  # Test 10: Valid filter and map pipeline
+  let numbers = [1, 2, 3, 4, 5] in
+  let result10 = 
+    trace "Test 10 complete" (
+      numbers 
+      | filter (\x x > 2)
+      | map (\x x * 2)
+    )
+  in
+  
+  [result1, result2, result3, result4, result5, result6, result7, result8, result9, result10]
+in
+
+tests

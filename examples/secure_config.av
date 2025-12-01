@@ -18,7 +18,7 @@ let db_pass = env_var_or "DB_PASS" "test-password" in
 let api_key = env_var_or "API_KEY" "test-api-key" in
 let port = env_var_or "PORT" "8080" in
 
-@/config/production.yml {"
+@config/production.yml {"
 database:
   host: {db_host}
   port: 5432

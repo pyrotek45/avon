@@ -19,7 +19,7 @@ let post_links = map (\title
 let user_comment = "<script>alert('xss')</script>" in
 let safe_comment = html_escape user_comment in
 
-@/index.html {{"
+@index.html {{"
     <!DOCTYPE html>
     <html>
     <head>

@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)] // EvalError is large but fundamental to the architecture
+
 use crate::common::{Ast, EvalError, Expr, Token};
 use std::iter::Peekable;
 use std::slice::Iter;
@@ -689,9 +691,24 @@ fn parse_app(stream: &mut Peekable<Iter<Token>>) -> Expr {
     lhs
 }
 
-pub fn parse(input: Vec<Token>) -> Ast {
+pub fn parse_with_error(input: Vec<Token>) -> ParseResult<Ast> {
     let mut stream = input.iter().peekable();
-    Ast {
-        program: parse_expr(&mut stream),
+    let program = try_parse_expr(&mut stream)?;
+
+    // Note: Multiple expressions per file are handled by the evaluation layer.
+    // The parser uses a currying approach where function applications are nested,
+    // so multiple top-level expressions don't occur in valid Avon programs.
+    // The leftover token check has been removed as it interferes with certain valid parsing patterns.
+
+    Ok(Ast { program })
+}
+
+pub fn parse(input: Vec<Token>) -> Ast {
+    match parse_with_error(input) {
+        Ok(ast) => ast,
+        Err(err) => {
+            eprintln!("Parse error: {}", err.message);
+            std::process::exit(1);
+        }
     }
 }

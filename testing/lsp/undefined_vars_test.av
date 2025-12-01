@@ -1,0 +1,31 @@
+# LSP Test: Demonstrates Variable Definition and Field Access Validation
+
+let comprehensive_test =
+  # Setup: Define test data
+  let user = {
+    name: "Alice",
+    age: 30,
+    email: "alice@example.com"
+  } in
+  let config = {
+    max_retries: 3,
+    timeout_ms: 5000
+  } in
+  let features = ["auth", "logging", "caching"] in
+  
+  # Test results: Verify all variables and fields are accessible
+  [
+    trace "Test 1: Access defined dictionary fields" {name: user.name, age: user.age},
+    trace "Test 2: Access config fields" {retries: config.max_retries, timeout: config.timeout_ms},
+    trace "Test 3: List access" features,
+    trace "Test 4: Nested object construction" {
+      user_info: {
+        full_name: user.name,
+        contact: user.email
+      },
+      settings: config
+    }
+  ]
+in
+
+comprehensive_test

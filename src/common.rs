@@ -3,7 +3,7 @@ use std::collections::HashMap;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Chunk {
     String(String),
-    Expr(String),
+    Expr(String, usize),
 }
 
 #[allow(dead_code)]
@@ -109,8 +109,12 @@ impl Number {
     pub fn from_f64(v: f64) -> Number {
         Number::Float(v)
     }
+}
 
-    pub fn add(self, other: Number) -> Number {
+impl std::ops::Add for Number {
+    type Output = Number;
+
+    fn add(self, other: Number) -> Number {
         match (self, other) {
             (Number::Int(v), Number::Int(r)) => Number::Int(v + r),
             (Number::Int(v), Number::Float(r)) => Number::Float(v as f64 + r),
@@ -118,8 +122,12 @@ impl Number {
             (Number::Float(v), Number::Float(r)) => Number::Float(v + r),
         }
     }
+}
 
-    pub fn mul(self, other: Number) -> Number {
+impl std::ops::Mul for Number {
+    type Output = Number;
+
+    fn mul(self, other: Number) -> Number {
         match (self, other) {
             (Number::Int(v), Number::Int(r)) => Number::Int(v * r),
             (Number::Int(v), Number::Float(r)) => Number::Float(v as f64 * r),
@@ -127,8 +135,12 @@ impl Number {
             (Number::Float(v), Number::Float(r)) => Number::Float(v * r),
         }
     }
+}
 
-    pub fn div(self, other: Number) -> Number {
+impl std::ops::Div for Number {
+    type Output = Number;
+
+    fn div(self, other: Number) -> Number {
         match (self, other) {
             (Number::Int(v), Number::Int(r)) => Number::Int(v / r),
             (Number::Int(v), Number::Float(r)) => Number::Float(v as f64 / r),
@@ -136,8 +148,12 @@ impl Number {
             (Number::Float(v), Number::Float(r)) => Number::Float(v / r),
         }
     }
+}
 
-    pub fn sub(self, other: Number) -> Number {
+impl std::ops::Sub for Number {
+    type Output = Number;
+
+    fn sub(self, other: Number) -> Number {
         match (self, other) {
             (Number::Int(v), Number::Int(r)) => Number::Int(v - r),
             (Number::Int(v), Number::Float(r)) => Number::Float(v as f64 - r),
@@ -145,8 +161,12 @@ impl Number {
             (Number::Float(v), Number::Float(r)) => Number::Float(v - r),
         }
     }
+}
 
-    pub fn rem(self, other: Number) -> Number {
+impl std::ops::Rem for Number {
+    type Output = Number;
+
+    fn rem(self, other: Number) -> Number {
         match (self, other) {
             (Number::Int(v), Number::Int(r)) => Number::Int(v % r),
             (Number::Int(v), Number::Float(r)) => Number::Float((v as f64) % r),
@@ -278,6 +298,11 @@ pub struct Ast {
 }
 
 #[derive(Debug, Clone)]
+/// Main error type for evaluation and parsing.
+/// Contains multiple String fields for rich error reporting (message, expected, found, context, hint).
+/// While larger than ideal, boxing would require changes throughout the codebase and add
+/// unnecessary indirection since this error type is fundamental to the architecture.
+#[allow(clippy::result_large_err)]
 pub struct EvalError {
     pub message: String,
     pub expected: Option<String>,

@@ -10,16 +10,19 @@ let substitutions = {
     sender: "Support Team"
 } in
 
-let filled = fill_template "examples/email_template.txt" substitutions in
+let filled = fill_template "/workspaces/avon/examples/email_template.txt" substitutions in
 
-@tmp/filled_email.txt {"{filled}"}
+let email_file = @tmp/filled_email.txt {"{filled}"} in
 
 # Can also use it inline for testing
-let quick_test = fill_template "examples/email_template.txt" {
+let quick_test = fill_template "/workspaces/avon/examples/email_template.txt" {
     name: "Bob",
     subject: "Bug Report",
     email: "bob@example.com",
     sender: "Customer Service"
 } in
 
-quick_test
+let test_output = @tmp/quick_test_email.txt {"{quick_test}"} in
+
+# Return both files
+[email_file, test_output]

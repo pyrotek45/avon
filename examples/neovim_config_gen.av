@@ -93,7 +93,7 @@ vim.keymap.set('n', '<leader>fh', '<cmd>Telescope help_tags<cr>')
 "}} else "-- Telescope disabled" in
 
 # Generate the complete init.lua - using double-brace template
-@/nvim/init.lua {{"
+@nvim/init.lua {{"
 -- Neovim Configuration
 -- Generated for user: {{username}}
 -- Theme: {{theme}}

@@ -1,0 +1,11 @@
+.git
+.gitignore
+.vscode
+.DS_Store
+.editorconfig
+node_modules
+npm-debug.log*
+test/
+examples/
+.github/
+*.zip

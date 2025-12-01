@@ -1,0 +1,9 @@
+# Test GitHub Actions escaping
+# Uses triple-brace template {{{" "}}} so ${{ }} GitHub Actions syntax is literal
+let name = "test" in
+let x = y in
+@test_gh_actions.yml {{{"
+name: Test
+env:
+  VAR: ${{ github.repository }}
+"}}}

@@ -23,10 +23,8 @@ Jump straight to what you need:
 | [Debugging Guide](./tutorial/DEBUGGING_GUIDE.md) | When things go wrong |
 | [REPL Usage](./tutorial/REPL_USAGE.md) | Interactive development |
 | [Security](./tutorial/SECURITY.md) | Security model and sandboxing |
-| [Grammar](./tutorial/GRAMMAR.md) | Formal language grammar |
-| [Technical Architecture](./tutorial/TECHNICAL_ARCHITECTURE.md) | How Avon works internally |
 
-Or just run `avon doc` for built-in help on all 89+ functions.
+Or just run `avon doc` for built-in help on all 111 functions.
 
 ---
 
@@ -58,21 +56,21 @@ let name = "World" in
 let greeting = "Hello" in
 
 # This creates a FileTemplate - Avon's deployment unit
-# @/path is a Path, {"..."} is a Template, combined they make a FileTemplate
-@/hello.txt {"
+# @path is a Path, {"..."} is a Template, combined they make a FileTemplate
+@hello.txt {"
     {greeting}, {name}!
     Welcome to Avon.
 "}
 ```
 
 The three key types:
-- `@/hello.txt` — A Path (file destination). Paths start with `@/` and can include `{variables}`.
+- `@hello.txt` — A Path (file destination). Paths start with `@` (relative only) and can include `{variables}`.
 - `{"..."}` — A Template (multiline text content). Use `{name}` for variable interpolation.
-- `@/path {"..."}` — A FileTemplate (Path + Template). This is what Avon actually deploys.
+- `@path {"..."}` — A FileTemplate (Path + Template). This is what Avon actually deploys.
 
 What's happening here:
 - `let name = "World" in` — Defines a variable. The `in` keyword means "use this in what follows"
-- `@/hello.txt {"..."}` — Creates a FileTemplate: the path `/hello.txt` with that content
+- `@hello.txt {"..."}` — Creates a FileTemplate: the path `hello.txt` with that content
 - `{name}` inside `{"..."}` — Gets replaced with the variable's value
 
 Test it (preview without writing files):
@@ -94,25 +92,25 @@ When you run `avon deploy program.av`, Avon evaluates your program and then:
 
 1. If the result is a Function — Avon applies CLI arguments to it. So if your program returns `\env \port ...`, running `avon deploy program.av prod 8080` passes `prod` and `8080` as arguments.
 
-2. If the result is a FileTemplate — Avon writes it to disk. One `@/path {"content"}` = one file.
+2. If the result is a FileTemplate — Avon writes it to disk. One `@path {"content"}` = one file.
 
 3. If the result is a List of FileTemplates — Avon writes them all. This is how you generate 50 configs from one program.
 
 ```avon
 # Returns a function - CLI args are applied
-\env @/config-{env}.yml {"environment: {env}"}
+\env @config-{env}.yml {"environment: {env}"}
 
 # Returns a FileTemplate - deployed directly  
-@/config.yml {"port: 8080"}
+@config.yml {"port: 8080"}
 
 # Returns a list of FileTemplates - all are deployed
 [
-  @/config.yml {"port: 8080"},
-  @/settings.yml {"debug: true"}
+  @config.yml {"port: 8080"},
+  @settings.yml {"debug: true"}
 ]
 ```
 
-(Why "deploy"? Because Avon doesn't just generate text—it puts files where they belong. The `@/path` syntax makes file destinations a first-class part of your program.)
+(Why "deploy"? Because Avon doesn't just generate text—it puts files where they belong. The `@path` syntax makes file destinations a first-class part of your program.)
 
 Core commands:
 ```bash
@@ -133,7 +131,7 @@ Keep one Avon file in git, deploy customized versions on every machine:
 # configs.av (stored in your git repo)
 \env ? "dev" \user ? "developer"
 
-@/config.yml {"
+@config.yml {"
     user: {user}
     environment: {env}
     debug: {if env == "dev" then "true" else "false"}
@@ -156,12 +154,12 @@ Everyone shares the same source file in git, but each deployment is customized v
 
 ## FileTemplates: The Key Insight
 
-Avon has first-class types for file paths and templates. The `@/path {"content"}` syntax creates a FileTemplate—the unit Avon uses for deployment.
+Avon has first-class types for file paths and templates. The `@path {"content"}` syntax creates a FileTemplate—the unit Avon uses for deployment.
 
 Paths are values:
 ```avon
-let config_path = @/config.yml in   # This is a Path value
-config_path                          # Returns: /config.yml
+let config_path = @config.yml in   # This is a Path value
+config_path                          # Returns: config.yml
 ```
 
 Templates are values:
@@ -176,14 +174,14 @@ content   # Returns the template string
 Paths can include interpolation:
 ```avon
 let env = "prod" in
-@/configs/{env}.yml {"port: 8080"}   # Path becomes /configs/prod.yml
+@configs/{env}.yml {"port: 8080"}   # Path becomes configs/prod.yml
 ```
 
 Dynamic file generation with functions:
 ```avon
 # Function that returns a FileTemplate
 let make_config = \env \port 
-  @/configs/{env}.yml {"
+  @configs/{env}.yml {"
     environment: {env}
     port: {port}
   "} 
@@ -205,9 +203,9 @@ When you run `avon deploy`, Avon evaluates your program, collects all FileTempla
 
 ## Key Features
 
-`@` Deployment Syntax — Files know where they belong
+`@` Deployment Syntax — Files know where they belong (relative paths only)
 ```avon
-@/path/to/file.yml {"content goes here"}
+@path/to/file.yml {"content goes here"}
 ```
 One command deploys everything. No more manual file juggling.
 
@@ -225,7 +223,7 @@ Pipe Operator — Chain expressions without nested parentheses
 
 Functional Programming — Variables, functions, map/filter/fold, conditionals, currying
 
-89+ Builtins — String ops, list ops, formatting, date/time, JSON, file I/O, HTML/Markdown helpers
+111 Builtins — String ops, list ops, formatting, date/time, JSON, file I/O, HTML/Markdown helpers
 
 Runtime Type Safety — Avon won't deploy if there's a type error. Sleep soundly. No "undefined is not a function" at 3am.
 
@@ -250,7 +248,7 @@ Run `avon doc` for the complete function reference.
 Two integrated systems:
 
 1. Functional Language — Variables, functions, lists, conditionals, runtime type checking
-2. Deployment System — `@/path/to/file.yml {"content"}` syntax writes files directly
+2. Deployment System — `@path/to/file.yml {"content"}` syntax writes files directly
 
 Result: One command generates and deploys everything. No intermediate steps. No glue scripts. No 3am debugging sessions wondering why your sed command ate your config.
 
@@ -353,7 +351,7 @@ let env_config = {
 
 let make_deployment = \svc \env 
   let cfg = get env_config env in
-  @/k8s/{env}/{svc}-deployment.yaml {"
+  @k8s/{env}/{svc}-deployment.yaml {"
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -391,7 +389,7 @@ let config = {
 let c = get config env in
 let db_password = env_var_or "DB_PASSWORD" "dev-password" in
 
-@/.config/myapp/secrets.env {"
+@.config/myapp/secrets.env {"
     DB_HOST={c.db_host}
     DB_PASSWORD={db_password}
     DEBUG={c.debug}
@@ -407,7 +405,7 @@ let filled = fill_template template {
   order_id: "12345", 
   status: "shipped"
 } in
-@/emails/alice.txt {"{filled}"}
+@emails/alice.txt {"{filled}"}
 ```
 
 ### CI/CD Pipelines
@@ -416,7 +414,7 @@ Generate CI configs for all your repos at once (because manually copy-pasting YA
 
 ```avon
 let repos = ["frontend", "backend", "mobile"] in
-map (\repo @/.github/workflows/{repo}-ci.yml {"
+map (\repo @.github/workflows/{repo}-ci.yml {"
   name: {repo} CI
   on: [push, pull_request]
   jobs:
@@ -454,7 +452,7 @@ let includes = {
 let cfg = get platform_config platform in
 
 [
-  @/platform.h {"
+  @platform.h {"
     #ifndef PLATFORM_H
     #define PLATFORM_H
 
@@ -467,7 +465,7 @@ let cfg = get platform_config platform in
     #endif
   "},
 
-  @/build_config.env {"
+  @build_config.env {"
     # Build configuration for {platform}
     PLATFORM={platform}
     SHELL={cfg.shell}
@@ -551,7 +549,7 @@ let math = import "math_lib.av" in
 math.double 21  # Returns 42
 
 # Generate files
-@/config.yml {"
+@config.yml {"
   port: {port}
   debug: {if env == "prod" then "false" else "true"}
 "}

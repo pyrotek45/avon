@@ -83,7 +83,7 @@
 
 # Now the actual program: produce three files under /tmp/files with different content
 let names = ["A","B","C"] in
-map (\n @/files/{n}_report.txt {"
+map (\n @files/{n}_report.txt {"
     Report for {n}
     
     Summary:

@@ -8,7 +8,7 @@
 
 \platform ? "linux"
 
-@/include/sources_unified.h {{"
+@include/sources_unified.h {{"
     #ifndef SOURCES_UNIFIED_H
     #define SOURCES_UNIFIED_H
 

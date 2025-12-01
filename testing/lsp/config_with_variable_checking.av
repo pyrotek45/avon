@@ -1,0 +1,30 @@
+# Real-world example: Configuration File Generator with Variable & Field Checking
+
+let demo =
+  # ✅ CORRECT: All variables defined, all fields valid
+  let config = {
+    app_name: "MyApp",
+    version: "1.0.0",
+    port: 8080,
+    debug: true
+  } in
+  let metadata = {
+    author: "Alice",
+    created: "2025-01-01"
+  } in
+  let services = ["auth", "api", "db"] in
+
+  # Use all defined variables correctly
+  {
+    name: config.app_name,
+    version: config.version,
+    meta: {
+      author: metadata.author,
+      created: metadata.created
+    },
+    services: map upper services,
+    debug_enabled: config.debug
+  }
+in
+
+demo

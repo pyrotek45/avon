@@ -19,6 +19,7 @@ let status_codes = [
   ["500", "Internal Server Error"]
 ] in
 
+
 # Configuration lookup by environment using modern dict syntax
 let db_configs = {
   dev: "localhost:5432",

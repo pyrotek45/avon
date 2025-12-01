@@ -3,7 +3,7 @@
 let name = "test" in
 let value = "123" in
 
-@/test1_json.txt {{"
+@test1_json.txt {{"
 {
   "name": "{{name}}",
   "value": "{{value}}"

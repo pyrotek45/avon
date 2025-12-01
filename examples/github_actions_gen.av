@@ -26,7 +26,7 @@ let lint_command = if language == "rust" then "cargo clippy -- -D warnings" else
                   "make lint" in
 
 [
-@/.github/workflows/ci.yml {{{"
+@.github/workflows/ci.yml {{{"
     name: CI
 
     on:
@@ -181,7 +181,7 @@ let lint_command = if language == "rust" then "cargo clippy -- -D warnings" else
             with:
               sarif_file: 'trivy-results.sarif'
 "}}},
-@/.github/workflows/release.yml {{{"
+@.github/workflows/release.yml {{{"
         name: Release
 
         on:

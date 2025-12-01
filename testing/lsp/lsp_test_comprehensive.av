@@ -1,0 +1,48 @@
+# LSP Comprehensive Testing
+# Tests for undefined variables, templates, lambdas, dicts, pipes
+# All in a single expression per Avon constraint
+
+let tests = 
+  # TEST 1: let cascading
+  let a = 10 in
+  let b = 20 in
+  let test1 = a + b in
+  
+  # TEST 2: multi-line lambda with is_string
+  let process = \item \default
+    if is_string item then
+      item
+    else
+      default
+  in
+  let test2 = process "test" "unknown" in
+  
+  # TEST 3: dict keys
+  let config = {
+    host: "localhost",
+    port: 8080
+  } in
+  let test3 = config.host in
+  
+  # TEST 4: single-brace template
+  let greeting = "World" in
+  let file1 = @single.txt {"Hello {greeting}!"} in
+  
+  # TEST 5: triple-brace template literal
+  let content = "test" in
+  let file2 = @output.txt {{{" {content} "}}} in
+  
+  # TEST 6: pipe operator chaining
+  let data = [1, 2, 3, 4, 5] in
+  let test6 = data -> filter (\x x > 2) -> map (\x x * 2) in
+  
+  # Return all test results and files
+  [
+    trace "test1 (let cascading)" test1,
+    trace "test2 (lambda)" test2,
+    trace "test3 (dict access)" test3,
+    trace "test6 (pipe)" test6
+  ] + [file1, file2]
+in
+
+tests

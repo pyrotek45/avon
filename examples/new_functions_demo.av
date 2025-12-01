@@ -28,7 +28,7 @@ let page_title = "My Website" in
 let nav_items = ["Home", "About", "Contact"] in
 let nav_html = map (\item html_tag "li" (html_tag "a" item)) nav_items in
 
-@/demo_output.txt {"
+@demo_output.txt {"
 {repeated}
 STRING & LIST OPERATIONS
 {repeated}

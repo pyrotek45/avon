@@ -1,0 +1,25 @@
+# Assert Function Demo - Demonstrating the general assert function
+
+# Example 1: Type checking
+let x = assert (is_number 42) 42 in
+
+# Example 2: Conditional assertion
+let positive = assert (x > 0) x in
+
+# Example 3: String validation
+let name = assert (is_string "Alice") "Alice" in
+
+# Example 4: List validation
+let items = assert (is_list [1, 2, 3]) [1, 2, 3] in
+
+# Example 5: Assertion in function
+let validate_positive = \n
+  let num = assert (is_number n) n in
+  assert (num > 0) num
+in
+
+let result = validate_positive 10 in
+let b = map (\i assert (i < 5) i) [1, 2, 3, 4] in
+@output.txt {{{
+All assertions passed! Result: {result}
+}}}

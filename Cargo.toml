@@ -10,6 +10,14 @@ readme = "README.md"
 keywords = ["template", "code-generation", "templating", "infrastructure"]
 categories = ["development-tools"]
 
+[lib]
+name = "avon"
+path = "src/lib.rs"
+
+[[bin]]
+name = "avon"
+path = "src/main.rs"
+
 [dependencies]
 serde_json = "1.0"
 ureq = "3.1"

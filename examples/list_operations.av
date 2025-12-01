@@ -13,7 +13,7 @@ let reversed = reverse numbers in
 let first = head numbers in
 let rest = tail numbers in
 
-@/list_ops_output.txt {"
+@list_ops_output.txt {"
 List Operations Demo
 ====================
 

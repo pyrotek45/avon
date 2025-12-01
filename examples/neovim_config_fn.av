@@ -14,7 +14,7 @@
 \treesitter ? "true"
 \telescope ? "true" 
 \leader ? "space" 
-\tab ? 2 @/nvim/init.lua {{"
+\tab ? 2 @nvim/init.lua {{"
 -- init.lua generated for {{user}}
 -- Theme: {{theme}} | Profile: {{profile}}
 -- LSP: {{lsp}} | Treesitter: {{treesitter}} | Telescope: {{telescope}}

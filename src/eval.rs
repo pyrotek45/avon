@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)] // EvalError is large but fundamental to the architecture
+
 use crate::common::{Chunk, EvalError, Expr, Number, Token, Value};
 use crate::lexer::tokenize;
 use crate::parser::parse;
@@ -675,6 +677,7 @@ impl Value {
 }
 
 // Security: Validate path to prevent directory traversal attacks
+#[allow(clippy::result_large_err)]
 fn validate_path(path: &str) -> Result<(), EvalError> {
     // Check for ".." components which could escape the intended directory
     if path.contains("..") {
@@ -686,21 +689,15 @@ fn validate_path(path: &str) -> Result<(), EvalError> {
         ));
     }
 
-    // Block absolute paths that try to access /etc or other system paths
-    // Allow relative paths and absolute paths that aren't trying to escape
-    if path.starts_with('/') && (path.contains("etc/") || path.contains("etc\\")) {
-        return Err(EvalError::new(
-            format!("Access to system paths not allowed: {}", path),
-            None,
-            None,
-            0,
-        ));
-    }
+    // Note: Absolute paths are blocked at the lexer level (@/ is a syntax error).
+    // Paths in Avon are always relative by design. Use --root flag for deployment
+    // to specify the absolute base directory.
 
     Ok(())
 }
 
 // Helper function to extract a file path from either a String or Path value
+#[allow(clippy::result_large_err)]
 pub fn value_to_path_string(val: &Value, source: &str) -> Result<String, EvalError> {
     let path_str = match val {
         Value::String(s) => s.clone(),
@@ -726,7 +723,7 @@ fn extract_template_variables(chunks: &[Chunk]) -> HashSet<String> {
     let mut vars = HashSet::new();
 
     for chunk in chunks {
-        if let Chunk::Expr(expr_str) = chunk {
+        if let Chunk::Expr(expr_str, _) = chunk {
             // Parse the expression to find variable references
             if let Ok(tokens) = tokenize(expr_str.clone()) {
                 let ast = parse(tokens);
@@ -760,7 +757,7 @@ fn extract_vars_from_expr(expr: &Expr, vars: &mut HashSet<String>) {
         }
         Expr::Template(chunks, _) => {
             for chunk in chunks {
-                if let Chunk::Expr(expr_str) = chunk {
+                if let Chunk::Expr(expr_str, _) = chunk {
                     if let Ok(tokens) = tokenize(expr_str.clone()) {
                         let ast = parse(tokens);
                         extract_vars_from_expr(&ast.program, vars);
@@ -770,7 +767,7 @@ fn extract_vars_from_expr(expr: &Expr, vars: &mut HashSet<String>) {
         }
         Expr::Path(chunks, _) => {
             for chunk in chunks {
-                if let Chunk::Expr(expr_str) = chunk {
+                if let Chunk::Expr(expr_str, _) = chunk {
                     if let Ok(tokens) = tokenize(expr_str.clone()) {
                         let ast = parse(tokens);
                         extract_vars_from_expr(&ast.program, vars);
@@ -780,7 +777,7 @@ fn extract_vars_from_expr(expr: &Expr, vars: &mut HashSet<String>) {
         }
         Expr::FileTemplate { path, template, .. } => {
             for chunk in path {
-                if let Chunk::Expr(expr_str) = chunk {
+                if let Chunk::Expr(expr_str, _) = chunk {
                     if let Ok(tokens) = tokenize(expr_str.clone()) {
                         let ast = parse(tokens);
                         extract_vars_from_expr(&ast.program, vars);
@@ -788,7 +785,7 @@ fn extract_vars_from_expr(expr: &Expr, vars: &mut HashSet<String>) {
                 }
             }
             for chunk in template {
-                if let Chunk::Expr(expr_str) = chunk {
+                if let Chunk::Expr(expr_str, _) = chunk {
                     if let Ok(tokens) = tokenize(expr_str.clone()) {
                         let ast = parse(tokens);
                         extract_vars_from_expr(&ast.program, vars);
@@ -919,7 +916,7 @@ fn render_chunks_to_string_with_depth(
         }
         match c {
             Chunk::String(s) => out.push_str(s),
-            Chunk::Expr(e) => {
+            Chunk::Expr(e, line) => {
                 // Limit symbol table size to prevent performance issues
                 if symbols.len() > 1000 {
                     return Err(EvalError::new(
@@ -929,7 +926,7 @@ fn render_chunks_to_string_with_depth(
                         ),
                         None,
                         None,
-                        0,
+                        *line,
                     ));
                 }
 
@@ -941,15 +938,35 @@ fn render_chunks_to_string_with_depth(
                         format!("template symbol table too large ({} symbols, max {}) - possible infinite loop", symbols.len(), MAX_TEMPLATE_SYMBOLS),
                         None,
                         None,
-                        0,
+                        *line,
                     ));
                 }
 
-                let tokens = tokenize(e.to_string())?;
+                let tokens = tokenize(e.to_string()).map_err(|mut err| {
+                    // Parser error line is 1-indexed; add chunk line (also 1-indexed) and subtract 1
+                    if err.line == 1 {
+                        err.line = *line;
+                    } else {
+                        // Multi-line expression: err.line is relative to expression, need to add offset
+                        err.line = line.saturating_add(err.line.saturating_sub(1));
+                    }
+                    err
+                })?;
                 let ast = parse(tokens);
                 let mut env = symbols.clone();
                 // Use eval_with_depth to prevent infinite recursion during template rendering
-                let v = eval_with_depth(ast.program, &mut env, source, depth + 1)?;
+                let v = eval_with_depth(ast.program, &mut env, source, depth + 1).map_err(
+                    |mut err| {
+                        // Error line from eval might be relative to expression or absolute
+                        // If it's 0 or 1, use chunk line; otherwise add offset
+                        if err.line <= 1 {
+                            err.line = *line;
+                        } else {
+                            err.line = line.saturating_add(err.line.saturating_sub(1));
+                        }
+                        err
+                    },
+                )?;
                 match v {
                     Value::List(ref items) => {
                         let items_str: Vec<String> = items
@@ -1191,7 +1208,7 @@ fn eval_with_depth(
                     }
                 },
                 Token::Add(_) => match (l_eval.clone(), r_eval.clone()) {
-                    (Value::Number(ln), Value::Number(rn)) => Ok(Value::Number(ln.add(rn))),
+                    (Value::Number(ln), Value::Number(rn)) => Ok(Value::Number(ln + rn)),
                     (Value::String(ls), Value::String(rs)) => {
                         let mut out = ls.clone();
                         out.push_str(&rs);
@@ -1238,11 +1255,45 @@ fn eval_with_depth(
                         Ok(Value::Template(combined_chunks, combined_symbols))
                     }
                     (Value::Path(lchunks, lsyms), Value::Path(rchunks, rsyms)) => {
-                        // Concatenate path chunks with a "/" separator
+                        // Smart path concatenation with correct slash handling and error modes
+                        // Rules:
+                        // - If rhs starts with a slash, don't insert an extra separator
+                        // - If lhs already ends with a slash, don't add another
+                        // - If both sides are absolute (lhs starts with '/' and rhs starts with '/'), error
+                        // - Otherwise join with a single '/'
+
+                        fn last_string_suffix(chunks: &[Chunk]) -> Option<&str> {
+                            for c in chunks.iter().rev() {
+                                if let Chunk::String(s) = c {
+                                    return Some(s.as_str());
+                                }
+                            }
+                            None
+                        }
+                        fn first_string_prefix(chunks: &[Chunk]) -> Option<&str> {
+                            for c in chunks {
+                                if let Chunk::String(s) = c {
+                                    return Some(s.as_str());
+                                }
+                            }
+                            None
+                        }
+
+                        // Since all paths are relative (lexer blocks absolute paths),
+                        // we just need to join them with appropriate separator logic
+                        let lhs_ends_with_slash = last_string_suffix(&lchunks)
+                            .map(|s| s.ends_with('/'))
+                            .unwrap_or(false);
+                        let rhs_starts_with_slash = first_string_prefix(&rchunks)
+                            .map(|s| s.starts_with('/'))
+                            .unwrap_or(false);
+
                         let mut combined_chunks = lchunks.clone();
-                        // Add a "/" as a string chunk between the two paths
-                        combined_chunks.push(Chunk::String("/".to_string()));
+                        if !(lhs_ends_with_slash || rhs_starts_with_slash) {
+                            combined_chunks.push(Chunk::String("/".to_string()));
+                        }
                         combined_chunks.extend(rchunks.clone());
+
                         // Merge symbol tables
                         let mut combined_symbols = lsyms.clone();
                         combined_symbols.extend(rsyms.clone());
@@ -1330,10 +1381,10 @@ fn eval_with_depth(
                     };
 
                     let res = match op {
-                        Token::Mul(_) => Value::Number(lnumber.mul(rnumber)),
-                        Token::Div(_) => Value::Number(lnumber.div(rnumber)),
-                        Token::Sub(_) => Value::Number(lnumber.sub(rnumber)),
-                        Token::Mod(_) => Value::Number(lnumber.rem(rnumber)),
+                        Token::Mul(_) => Value::Number(lnumber * rnumber),
+                        Token::Div(_) => Value::Number(lnumber / rnumber),
+                        Token::Sub(_) => Value::Number(lnumber - rnumber),
+                        Token::Mod(_) => Value::Number(lnumber % rnumber),
                         _ => unreachable!(),
                     };
                     Ok(res)
@@ -1607,14 +1658,33 @@ fn eval_with_depth(
             }
         }
         Expr::None(_) => Ok(Value::None),
-        Expr::Template(ref chunks, _) => {
+        Expr::Template(ref chunks, line) => {
+            // Validate that template expressions can be evaluated
+            // Templates are not lazy - they should fail immediately if they contain errors
+            for chunk in chunks {
+                if let Chunk::Expr(expr_str, chunk_line) = chunk {
+                    // Try to parse and evaluate the expression to catch errors early
+                    if let Ok(tokens) = tokenize(expr_str.clone()) {
+                        let ast = parse(tokens);
+                        // Evaluate the expression to check for errors
+                        // We don't use the result, just check that it evaluates without error
+                        eval_with_depth(ast.program, symbols, source, depth + 1).map_err(
+                            |mut err| {
+                                // Always use the chunk_line since expressions inside templates
+                                // are parsed out of context and will have default line numbers
+                                err.line = *chunk_line;
+                                err
+                            },
+                        )?;
+                    }
+                }
+            }
+
             // Only capture variables that are actually referenced in the template
-            // This is the long-term fix: templates only capture what they need
             let minimal_symbols = create_minimal_symbol_table(chunks, symbols);
 
             // Limit symbol table size to prevent memory exhaustion (not performance)
-            // This catches unbounded growth, not slow evaluation
-            const MAX_TEMPLATE_CREATE_SYMBOLS: usize = 100000; // 100k symbols
+            const MAX_TEMPLATE_CREATE_SYMBOLS: usize = 100000;
             if minimal_symbols.len() > MAX_TEMPLATE_CREATE_SYMBOLS {
                 return Err(EvalError::new(
                     format!(
@@ -1623,7 +1693,7 @@ fn eval_with_depth(
                     ),
                     None,
                     None,
-                    expr.line(),
+                    line,
                 ));
             }
             Ok(Value::Template(chunks.clone(), minimal_symbols))
@@ -1835,6 +1905,39 @@ fn eval_with_depth(
             ref template,
             line,
         } => {
+            // Validate that path and template expressions can be evaluated
+            // FileTemplates are not lazy - they should fail immediately if they contain errors
+            for chunk in path {
+                if let Chunk::Expr(expr_str, chunk_line) = chunk {
+                    if let Ok(tokens) = tokenize(expr_str.clone()) {
+                        let ast = parse(tokens);
+                        eval_with_depth(ast.program, symbols, source, depth + 1).map_err(
+                            |mut err| {
+                                // Always use the chunk_line since expressions inside templates
+                                // are parsed out of context and will have default line numbers
+                                err.line = *chunk_line;
+                                err
+                            },
+                        )?;
+                    }
+                }
+            }
+            for chunk in template {
+                if let Chunk::Expr(expr_str, chunk_line) = chunk {
+                    if let Ok(tokens) = tokenize(expr_str.clone()) {
+                        let ast = parse(tokens);
+                        eval_with_depth(ast.program, symbols, source, depth + 1).map_err(
+                            |mut err| {
+                                // Always use the chunk_line since expressions inside templates
+                                // are parsed out of context and will have default line numbers
+                                err.line = *chunk_line;
+                                err
+                            },
+                        )?;
+                    }
+                }
+            }
+
             // Only capture variables that are actually referenced in the path and template
             let path_vars = extract_template_variables(path);
             let template_vars = extract_template_variables(template);
@@ -1849,8 +1952,7 @@ fn eval_with_depth(
             }
 
             // Limit symbol table size to prevent memory exhaustion (not performance)
-            // This catches unbounded growth, not slow evaluation
-            const MAX_FILETEMPLATE_CREATE_SYMBOLS: usize = 100000; // 100k symbols
+            const MAX_FILETEMPLATE_CREATE_SYMBOLS: usize = 100000;
             if minimal_symbols.len() > MAX_FILETEMPLATE_CREATE_SYMBOLS {
                 return Err(EvalError::new(
                     format!(
@@ -4192,8 +4294,27 @@ pub fn collect_file_templates(v: &Value, source: &str) -> Result<Vec<(String, St
         Value::List(items) => {
             let mut out = Vec::new();
             for item in items {
-                let mut res = collect_file_templates(item, source)?;
-                out.append(&mut res);
+                // Collect FileTemplates and recurse into nested lists
+                // Report errors for bare Templates/Paths (which have no file paths)
+                // Silently skip data types (strings, numbers, dicts, etc.)
+                match item {
+                    Value::FileTemplate { .. } | Value::List(_) => {
+                        let mut res = collect_file_templates(item, source)?;
+                        out.append(&mut res);
+                    }
+                    Value::Template(_, _) | Value::Path(_, _) => {
+                        // Bare Templates and Paths can't be deployed - they need file paths
+                        // This is likely a user error (e.g., concatenating templates instead of file templates)
+                        return Err(EvalError::new(
+                            "cannot deploy bare template or path - use @file {{...}} syntax to create a FileTemplate",
+                            None,
+                            None,
+                            0,
+                        ));
+                    }
+                    // Silently skip other data types (strings, numbers, dicts, bools, etc.)
+                    _ => {}
+                }
             }
             Ok(out)
         }

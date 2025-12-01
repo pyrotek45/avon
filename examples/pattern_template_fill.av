@@ -14,17 +14,11 @@ let email_template = "Dear {name},\n\nThis is a message from {sender}.\n\nDate: 
 # Fill in the placeholders
 let filled = fill_placeholders email_template "Alice" "Bob" "2025-11-24" in
 
-@tmp/email.txt {"{filled}"}
+let email_file = @tmp/email.txt {"{filled}"} in
 
 # Pattern 2: Using map for multiple instances
-let make_email = \recipient
-    fill_placeholders email_template recipient "System" "2025-11-24"
-in
-
 let recipients = ["Alice", "Bob", "Charlie"] in
-let emails = map (\name @tmp/email_{name}.txt {"{fill_placeholders email_template name "System" "2025-11-24"}"}) recipients in
-
-emails
+let email_files = map (\name @tmp/email_{name}.txt {"{fill_placeholders email_template name "System" "2025-11-24"}"}) recipients in
 
 # Pattern 3: Complex template with nested replacements
 let html_template = "<!DOCTYPE html>\n<html>\n<head><title>{title}</title></head>\n<body>\n<h1>{heading}</h1>\n<p>{content}</p>\n</body>\n</html>" in
@@ -35,4 +29,7 @@ let fill_html = \title \heading \content
     replace t2 "{content}" content
 in
 
-fill_html "My Page" "Welcome" "Hello, World!"
+let html_output = @tmp/page.html {"{fill_html "My Page" "Welcome" "Hello, World!"}"} in
+
+# Return all generated files
+[email_file] + email_files + [html_output]

@@ -1,0 +1,25 @@
+# Currying and partial application tests
+# Tests that builtin functions support currying
+
+# Partial application of map
+let map_double = map (\x x * 2) in
+let result1 = map_double [1, 2, 3] in
+
+# Partial application of filter
+let filter_positive = filter (\x x > 0) in
+let result2 = filter_positive [-1, 2, -3, 4] in
+
+# Partial application of fold
+let sum_fold = fold (\a \b a + b) 0 in
+let result3 = sum_fold [1, 2, 3] in
+
+# Chained partial application
+let replace_a = replace "hello" "l" in
+let result4 = replace_a "L" in
+
+# Partial application with pipes
+let nums = [1, 2, 3, 4, 5] in
+let result5 = nums -> filter (\x x > 2) -> map (\x x * 2) in
+
+# All tests passed if no LSP errors reported
+true

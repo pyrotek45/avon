@@ -416,7 +416,7 @@ let user = "appuser" in
 let working_dir = "/opt/myapp" in
 let exec_path = "/opt/myapp/bin/myapp" in
 
-@/etc/systemd/system/{service_name}.service {"
+@etc/systemd/system/{service_name}.service {"
   [Unit]
   Description=My Application
   After=network.target

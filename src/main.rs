@@ -1,4 +1,4 @@
-#![expect(clippy::result_large_err)]
+#![allow(clippy::result_large_err)]
 mod cli;
 mod common;
 mod eval;
@@ -50,6 +50,39 @@ mod tests {
         assert!(err.message.contains("unterminated string"));
     }
 
+    #[test]
+    fn test_lexer_blocks_absolute_path_literal() {
+        // Path literals starting with '/' must be rejected at syntax level
+        let prog = r#"@/absolute/file.txt {"content"}"#.to_string();
+        let tokens = crate::lexer::tokenize(prog.clone());
+        assert!(
+            tokens.is_err(),
+            "expected lexer error for absolute path literal @/"
+        );
+        let err = tokens.err().unwrap();
+        assert!(err
+            .message
+            .to_lowercase()
+            .contains("absolute paths are not allowed"));
+    }
+
+    #[test]
+    fn test_absolute_string_paths_are_allowed_for_reading() {
+        use std::io::Write;
+        // Create a temp file and read it using an absolute string path
+        let dir = std::env::temp_dir();
+        let file_path = dir.join("avon_abs_string_read.txt");
+        let mut f = fs::File::create(&file_path).expect("create temp file");
+        write!(f, "abc").expect("write");
+        let prog = format!("readfile \"{}\"", file_path.to_string_lossy());
+        let tokens = crate::lexer::tokenize(prog.clone()).expect("tokenize");
+        let ast = crate::parser::parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "abc");
+        let _ = fs::remove_file(file_path);
+    }
+
     // Removed flaky test for unknown escape sequence behavior; lexer already
     // preserves unknown escapes as literal backslash + char. Other lexer tests
     // cover error handling paths robustly.
@@ -67,7 +100,7 @@ mod tests {
     #[test]
     fn test_lexer_path_eof_in_interpolation() {
         // Path with an unclosed interpolation @{...
-        let prog = r#"@/{foo"#.to_string();
+        let prog = r#"@{foo"#.to_string();
         let tokens = crate::lexer::tokenize(prog.clone());
         assert!(
             tokens.is_err(),
@@ -225,7 +258,9 @@ mod tests {
         drop(f);
 
         // Test: store path in variable and use with readfile
-        let prog = format!("let p = @{} in readfile p", file_path.to_string_lossy());
+        // Reading with absolute paths (as strings) is safe
+        let path_str = file_path.to_string_lossy();
+        let prog = format!("let p = \"{}\" in readfile p", path_str);
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -238,10 +273,10 @@ mod tests {
             other => panic!("expected string, got {:?}", other),
         }
 
-        // Test: path with interpolation
+        // Test: path with interpolation using template (absolute OK for reading)
         let dir_str = dir.to_string_lossy().to_string().replace("\\", "/");
         let prog2 = format!(
-            "let name = \"avon_test_path\" in let p = @{}/{{name}}.txt in readfile p",
+            r#"let name = "avon_test_path" in let p = to_string {{"{}/{{name}}.txt"}} in readfile p"#,
             dir_str
         );
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
@@ -256,16 +291,16 @@ mod tests {
             other => panic!("expected string, got {:?}", other),
         }
 
-        // Test: path with exists, basename, dirname
-        let prog3 = format!("let p = @{} in exists p", file_path.to_string_lossy());
-        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        // Test: Path type (relative only) with basename/dirname operations
+        let prog3 = "let p = @home/user/config.json in basename p";
+        let tokens3 = tokenize(prog3.to_string()).expect("tokenize");
         let ast3 = parse(tokens3);
         let mut symbols3 = initial_builtins();
-        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        let v3 = eval(ast3.program, &mut symbols3, prog3).expect("eval");
 
         match v3 {
-            Value::Bool(b) => assert!(b),
-            other => panic!("expected bool, got {:?}", other),
+            Value::String(s) => assert_eq!(s, "config.json"),
+            other => panic!("expected string, got {:?}", other),
         }
 
         let _ = fs::remove_file(file_path);
@@ -282,8 +317,9 @@ mod tests {
         write!(f, "line1\nline2\nline3").expect("write");
         drop(f);
 
-        // Test: path with readlines
-        let prog = format!("let p = @{} in readlines p", file_path.to_string_lossy());
+        // Test: readlines with string path (absolute path for file access)
+        let path_str = file_path.to_string_lossy();
+        let prog = format!("let p = \"{}\" in readlines p", path_str);
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -305,7 +341,7 @@ mod tests {
     #[test]
     fn test_path_with_basename_dirname() {
         // Test: basename with path value
-        let prog = "let p = @/home/user/config.json in basename p";
+        let prog = "let p = @home/user/config.json in basename p";
         let tokens = tokenize(prog.to_string()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -319,7 +355,7 @@ mod tests {
         }
 
         // Test: dirname with path value
-        let prog2 = "let p = @/home/user/config.json in dirname p";
+        let prog2 = "let p = @home/user/config.json in dirname p";
         let tokens2 = tokenize(prog2.to_string()).expect("tokenize");
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
@@ -348,8 +384,9 @@ mod tests {
         // Ensure the other doesn't exist
         let _ = fs::remove_file(&missing_file);
 
-        // Test: exists returns true for existing file
-        let prog = format!("let p = @{} in exists p", existing_file.to_string_lossy());
+        // Test: exists returns true for existing file (use string for absolute path)
+        let existing_str = existing_file.to_string_lossy();
+        let prog = format!("let p = \"{}\" in exists p", existing_str);
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -361,7 +398,8 @@ mod tests {
         }
 
         // Test: exists returns false for missing file
-        let prog2 = format!("let p = @{} in exists p", missing_file.to_string_lossy());
+        let missing_str = missing_file.to_string_lossy();
+        let prog2 = format!("let p = \"{}\" in exists p", missing_str);
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
@@ -386,10 +424,11 @@ mod tests {
         write!(f, "Hello {{name}}, you are {{age}} years old.").expect("write");
         drop(f);
 
-        // Test: fill_template with path value
+        // Test: fill_template with string path (absolute for file access)
+        let path_str = template_path.to_string_lossy();
         let prog = format!(
-            "let p = @{} in fill_template p [[\"name\", \"Bob\"], [\"age\", \"25\"]]",
-            template_path.to_string_lossy()
+            "let p = \"{}\" in fill_template p [[\"name\", \"Bob\"], [\"age\", \"25\"]]",
+            path_str
         );
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
@@ -417,8 +456,9 @@ mod tests {
         write!(f, "[\"imported\", \"data\"]").expect("write");
         drop(f);
 
-        // Test: import with path value
-        let prog = format!("let p = @{} in import p", module_path.to_string_lossy());
+        // Test: import with string path (absolute OK for reading)
+        let path_str = module_path.to_string_lossy();
+        let prog = format!("let p = \"{}\" in import p", path_str);
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -448,9 +488,9 @@ mod tests {
         write!(f, "{{\"env\":\"production\"}}").expect("write");
         drop(f);
 
-        // Test: path with multiple variable interpolations
+        // Test: template with multiple variable interpolations (absolute OK for reading)
         let prog = format!(
-            "let env = \"prod\" in let name = \"app\" in let p = @{}/config_{{env}}_{{name}}.json in readfile p",
+            r#"let env = "prod" in let name = "app" in let p = to_string {{"{}/config_{{env}}_{{name}}.json"}} in readfile p"#,
             dir_str
         );
         let tokens = tokenize(prog.clone()).expect("tokenize");
@@ -678,7 +718,7 @@ mod tests {
     fn test_default_params_apply_on_deploy_emulation() {
         // Function with defaults for name and age; emulated deploy should apply defaults
         let prog =
-            r#"\name ? "alice" \age ? "30" @/tmp/{name}_{age}.txt {"Name: {name}\nAge: {age}\n"}"#
+            r#"\name ? "alice" \age ? "30" @tmp/{name}_{age}.txt {"Name: {name}\nAge: {age}\n"}"#
                 .to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
@@ -705,7 +745,7 @@ mod tests {
     #[test]
     fn test_named_deploy_arg_binds_by_parameter_name() {
         // Function expecting named params; simulate supplying a named arg during deploy
-        let prog = r#"\name \age ? "99" @/tmp/{name}_{age}.txt {"N:{name} A:{age}"}"#.to_string();
+        let prog = r#"\name \age ? "99" @tmp/{name}_{age}.txt {"N:{name} A:{age}"}"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -740,7 +780,7 @@ mod tests {
     fn test_dedent_removes_common_indentation_for_templates() {
         // create a template with leading indentation in the source; dedent should remove it
         let prog =
-            "@/tmp/dedent_test.txt {\"\n        line1\n            line2\n        \"}".to_string();
+            "@tmp/dedent_test.txt {\"\n        line1\n            line2\n        \"}".to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -789,7 +829,7 @@ mod tests {
     fn test_dedent_preserves_relative_indentation() {
         // nested indentation: level1 (4 spaces), level2 (8 spaces)
         let prog =
-            "@/tmp/dedent_rel.txt {\"\n    level1\n        level2\n    level1b\n\"}".to_string();
+            "@tmp/dedent_rel.txt {\"\n    level1\n        level2\n    level1b\n\"}".to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -817,7 +857,7 @@ mod tests {
     #[test]
     fn test_dedent_handles_mixed_tabs_and_spaces() {
         // use tabs for indentation baseline; inner line adds spaces after tabs
-        let prog = "@/tmp/dedent_tabs.txt {\"\n\t\tfoo\n\t\t\tbar\n\t\tbaz\n\"}".to_string();
+        let prog = "@tmp/dedent_tabs.txt {\"\n\t\tfoo\n\t\t\tbar\n\t\tbaz\n\"}".to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -838,7 +878,7 @@ mod tests {
 
     #[test]
     fn test_dedent_trims_leading_and_trailing_blank_lines() {
-        let prog = "@/tmp/dedent_trim.txt {\"\n\n        hello world\n\n\"}".to_string();
+        let prog = "@tmp/dedent_trim.txt {\"\n\n        hello world\n\n\"}".to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -1019,19 +1059,19 @@ mod tests {
 
     #[test]
     fn test_path_concatenation() {
-        // Test: path + path produces combined path
-        let prog = r#"let p1 = @/home/user in let p2 = @/projects in p1 + p2"#.to_string();
+        // Test: path + path produces combined path (all paths are relative now)
+        let prog = r#"let p1 = @home/user in let p2 = @projects in p1 + p2"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         // Should concatenate with / separator
         assert!(
-            v.to_string(&prog).contains("/home/user") && v.to_string(&prog).contains("/projects")
+            v.to_string(&prog).contains("home/user") && v.to_string(&prog).contains("projects")
         );
 
         // Test: path with interpolation + path
-        let prog2 = r#"let dir = "home" in let base = @/{dir} in let sub = @/config in base + sub"#
+        let prog2 = r#"let dir = "home" in let base = @{dir} in let sub = @config in base + sub"#
             .to_string();
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
         let ast2 = parse(tokens2);
@@ -1042,15 +1082,15 @@ mod tests {
         assert!(result.contains("config"));
 
         // Test: multiple path concatenations
-        let prog3 = r#"let p1 = @/a in let p2 = @/b in let p3 = @/c in p1 + p2 + p3"#.to_string();
+        let prog3 = r#"let p1 = @a in let p2 = @b in let p3 = @c in p1 + p2 + p3"#.to_string();
         let tokens3 = tokenize(prog3.clone()).expect("tokenize");
         let ast3 = parse(tokens3);
         let mut symbols3 = initial_builtins();
         let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
         let result = v3.to_string(&prog3);
-        assert!(result.contains("/a"));
-        assert!(result.contains("/b"));
-        assert!(result.contains("/c"));
+        assert!(result.contains("a"));
+        assert!(result.contains("b"));
+        assert!(result.contains("c"));
     }
 
     // NEW COMPREHENSIVE TESTS FOR BRACES AND TEMPLATES
@@ -4297,7 +4337,7 @@ mod tests {
                 // Should be a 4-digit year
                 assert_eq!(s.len(), 4);
                 let year: i32 = s.parse().expect("should be a number");
-                assert!(year >= 2024 && year <= 2100);
+                assert!((2024..=2100).contains(&year));
             }
             other => panic!("expected string, got {:?}", other),
         }
@@ -4370,7 +4410,7 @@ mod tests {
     fn test_atomic_deployment_valid_filetemplates_collect() {
         // Claim: Valid FileTemplates should be collectible
         // Test: A program that evaluates to a FileTemplate should be collectible
-        let prog = "@/test.txt {\"content\"}".to_string();
+        let prog = "@test.txt {\"content\"}".to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -4380,7 +4420,7 @@ mod tests {
         assert!(result.is_ok());
         let files = result.unwrap();
         assert_eq!(files.len(), 1);
-        assert_eq!(files[0].0, "/test.txt");
+        assert_eq!(files[0].0, "test.txt");
         assert_eq!(files[0].1, "content");
     }
 
@@ -4388,7 +4428,7 @@ mod tests {
     fn test_atomic_deployment_list_of_filetemplates_collect() {
         // Claim: Lists of FileTemplates should be collectible
         // Test: A program that evaluates to a list of FileTemplates should be collectible
-        let prog = "[@/a.txt {\"a\"}, @/b.txt {\"b\"}]".to_string();
+        let prog = "[@a.txt {\"a\"}, @b.txt {\"b\"}]".to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -4398,31 +4438,37 @@ mod tests {
         assert!(result.is_ok());
         let files = result.unwrap();
         assert_eq!(files.len(), 2);
-        assert_eq!(files[0].0, "/a.txt");
+        assert_eq!(files[0].0, "a.txt");
         assert_eq!(files[0].1, "a");
-        assert_eq!(files[1].0, "/b.txt");
+        assert_eq!(files[1].0, "b.txt");
         assert_eq!(files[1].1, "b");
     }
 
     #[test]
-    fn test_atomic_deployment_mixed_list_fails() {
-        // Claim: Lists containing non-FileTemplate values should fail collection
-        // Test: A list with a string and FileTemplate should fail
-        let prog = "[\"not a filetemplate\", @/test.txt {\"content\"}]".to_string();
+    fn test_atomic_deployment_mixed_list_succeeds() {
+        // Claim: Lists containing non-FileTemplate values should skip those values
+        // and successfully collect only the FileTemplates
+        // Test: A list with a string and FileTemplate should succeed and collect only the FileTemplate
+        let prog = "[\"not a filetemplate\", @test.txt {\"content\"}]".to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
 
         let result = collect_file_templates(&v, &prog);
-        assert!(result.is_err());
+        assert!(result.is_ok());
+        let files = result.unwrap();
+        // Should only collect the one FileTemplate, skipping the string
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].0, "test.txt");
+        assert_eq!(files[0].1, "content");
     }
 
     #[test]
     fn test_atomic_deployment_nested_list_collect() {
         // Claim: Nested lists of FileTemplates should be flattened and collectible
         // Test: A nested list structure should work
-        let prog = "[[@/a.txt {\"a\"}], [@/b.txt {\"b\"}]]".to_string();
+        let prog = "[[@a.txt {\"a\"}], [@b.txt {\"b\"}]]".to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -4438,7 +4484,7 @@ mod tests {
     fn test_atomic_deployment_env_var_failure_prevents_deployment() {
         // Claim: If env_var fails (missing secret), evaluation fails, preventing deployment
         // Test: A program using env_var with missing variable should fail evaluation
-        let prog = "let secret = env_var \"MISSING_SECRET\" in @/config.yml {\"key: {secret}\"}"
+        let prog = "let secret = env_var \"MISSING_SECRET\" in @config.yml {\"key: {secret}\"}"
             .to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
@@ -5769,5 +5815,50 @@ mod tests {
             "error should mention 'already defined': {}",
             err.message
         );
+    }
+
+    #[test]
+    fn test_paths_in_list() {
+        // Paths should be allowed directly in lists
+        let prog = r#"[@path1, @path2, @some_file_path]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(paths) => {
+                assert_eq!(paths.len(), 3, "Expected list of 3 paths");
+                // Verify each is a path value
+                for path in paths {
+                    match path {
+                        Value::Path(_, _) => {} // Success
+                        other => panic!("Expected Path, got {:?}", other),
+                    }
+                }
+            }
+            other => panic!("Expected list, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_paths_in_nested_list() {
+        // Paths should work in nested lists too
+        let prog = r#"[[@path1, @path2], [@path3]]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(outer) => {
+                assert_eq!(outer.len(), 2, "Expected outer list of 2 items");
+                match &outer[0] {
+                    Value::List(inner) => {
+                        assert_eq!(inner.len(), 2, "Expected inner list of 2 paths");
+                    }
+                    other => panic!("Expected list, got {:?}", other),
+                }
+            }
+            other => panic!("Expected list, got {:?}", other),
+        }
     }
 }

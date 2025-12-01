@@ -1,0 +1,214 @@
+# Bulletproof Comprehensive Test Suite for Avon
+# This file tests every grammar construct, edge case, and combination
+# Target: 1000+ lines of Avon code covering all possible scenarios
+# If this file fails, the issue should be fixed in Avon, not the test simplified
+
+# ============================================================================
+# SECTION 1: LITERALS - ALL VARIATIONS
+# ============================================================================
+
+let test_int_zero = 0 in
+let test_int_one = 1 in
+let test_int_negative = -1 in
+let test_int_large = 999999999 in
+let test_int_negative_large = -999999999 in
+let test_int_max_small = 2147483647 in
+let test_int_min_small = -2147483648 in
+
+let test_float_zero = 0.0 in
+let test_float_one = 1.0 in
+let test_float_negative = -1.0 in
+let test_float_small = 0.001 in
+let test_float_large = 999999.999 in
+let test_float_precision = 3.141592653589793 in
+let test_float_negative_precision = -2.718281828459045 in
+
+let test_string_empty = "" in
+let test_string_single_char = "a" in
+let test_string_simple = "hello" in
+let test_string_with_spaces = "hello world" in
+let test_string_with_newline = "line1
+line2" in
+let test_string_with_tab = "tabs	here" in
+let test_string_with_escapes = "newline\nand\ttab" in
+let test_string_with_quotes = "string with \"quotes\"" in
+let test_string_with_backslash = "path\\to\\file" in
+let test_string_unicode = "café naïve résumé" in
+let test_string_special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?" in
+
+let test_bool_true = true in
+let test_bool_false = false in
+
+# ============================================================================
+# SECTION 2: ARITHMETIC OPERATIONS - ALL COMBINATIONS
+# ============================================================================
+
+let test_add_simple = 1 + 2 in
+let test_add_negative = -5 + 3 in
+let test_add_zero = 0 + 42 in
+let test_add_float = 3.5 + 2.5 in
+let test_add_mixed = 10 + 3.5 in
+let test_add_chain = 1 + 2 + 3 + 4 + 5 in
+let test_add_large = 1000000 + 2000000 in
+
+let test_sub_simple = 10 - 5 in
+let test_sub_negative = -5 - 3 in
+let test_sub_zero = 42 - 0 in
+let test_sub_float = 5.5 - 2.3 in
+let test_sub_mixed = 10 - 3.5 in
+let test_sub_chain = 100 - 10 - 5 - 2 in
+let test_sub_result_negative = 5 - 10 in
+
+let test_mul_simple = 3 * 4 in
+let test_mul_negative = -5 * 3 in
+let test_mul_zero = 42 * 0 in
+let test_mul_one = 42 * 1 in
+let test_mul_float = 2.5 * 4.0 in
+let test_mul_chain = 2 * 3 * 4 * 5 in
+let test_mul_large = 1000 * 1000 in
+
+let test_div_simple = 8 / 2 in
+let test_div_negative = -10 / 2 in
+let test_div_float = 7.5 / 2.5 in
+let test_div_chain = 100 / 2 / 5 in
+let test_div_small = 1 / 2 in
+
+let test_unary_minus_int = -5 in
+let test_unary_minus_float = -3.14 in
+let test_unary_minus_expr = -(10 + 5) in
+let test_unary_minus_nested = -(-5) in
+
+let test_precedence_add_mul = 1 + 2 * 3 in
+let test_precedence_mul_add = 2 * 3 + 1 in
+let test_precedence_parens = (1 + 2) * 3 in
+let test_precedence_nested = ((1 + 2) * (3 + 4)) in
+let test_precedence_complex = 1 + 2 * 3 + 4 * 5 in
+let test_precedence_deep = (((1 + 2) * 3) + (4 * 5)) in
+
+# ============================================================================
+# SECTION 3: COMPARISON OPERATIONS - ALL TYPES
+# ============================================================================
+
+let test_eq_int_true = 5 == 5 in
+let test_eq_int_false = 5 == 3 in
+let test_eq_float_true = 3.14 == 3.14 in
+let test_eq_float_false = 3.14 == 2.71 in
+let test_eq_string_true = "hello" == "hello" in
+let test_eq_string_false = "hello" == "world" in
+let test_eq_bool_true = true == true in
+let test_eq_bool_false = true == false in
+
+let test_ne_int_true = 5 != 3 in
+let test_ne_int_false = 5 != 5 in
+let test_ne_string_true = "hello" != "world" in
+let test_ne_string_false = "hello" != "hello" in
+
+let test_gt_true = 10 > 5 in
+let test_gt_false = 5 > 10 in
+let test_gt_equal = 5 > 5 in
+let test_gt_negative = -5 > -10 in
+
+let test_lt_true = 5 < 10 in
+let test_lt_false = 10 < 5 in
+let test_lt_equal = 5 < 5 in
+let test_lt_negative = -10 < -5 in
+
+let test_gte_true = 10 >= 5 in
+let test_gte_equal = 5 >= 5 in
+let test_gte_false = 5 >= 10 in
+
+let test_lte_true = 5 <= 10 in
+let test_lte_equal = 5 <= 5 in
+let test_lte_false = 10 <= 5 in
+
+let test_comparison_chain = (1 < 2) && (2 < 3) && (3 < 4) in
+let test_comparison_mixed = (5 > 3) && (10 < 20) in
+
+# ============================================================================
+# SECTION 4: LOGICAL OPERATIONS - ALL COMBINATIONS
+# ============================================================================
+
+let test_and_true_true = true && true in
+let test_and_true_false = true && false in
+let test_and_false_true = false && true in
+let test_and_false_false = false && false in
+
+let test_or_true_true = true || true in
+let test_or_true_false = true || false in
+let test_or_false_true = false || true in
+let test_or_false_false = false || false in
+
+let test_and_chain = true && true && true in
+let test_and_chain_false = true && false && true in
+let test_or_chain = false || false || true in
+let test_or_chain_false = false || false || false in
+
+let test_mixed_and_or_1 = (true && false) || (true && true) in
+let test_mixed_and_or_2 = (false || true) && (true && true) in
+let test_mixed_and_or_3 = true && (false || true) && true in
+let test_mixed_and_or_4 = (true || false) && (false || true) in
+
+let test_complex_logical_1 = ((true && false) || (true && true)) && (false || true) in
+let test_complex_logical_2 = (true && (false || true)) || (false && true) in
+let test_complex_logical_3 = ((true || false) && (true || false)) || ((false && true) && false) in
+
+# ============================================================================
+# SECTION 5: LET BINDINGS - ALL PATTERNS
+# ============================================================================
+
+let test_simple_let = let x = 10 in x in
+let test_let_with_expr = let x = 5 + 5 in x in
+let test_let_with_let = let x = 10 in let y = 20 in x + y in
+let test_let_triple = let a = 1 in let b = 2 in let c = 3 in a + b + c in
+let test_let_quad = let a = 1 in let b = 2 in let c = 3 in let d = 4 in a + b + c + d in
+
+let test_let_nested_1 = let outer = 100 in let inner = let temp = 50 in temp * 2 in outer + inner in
+let test_let_nested_2 = let a = 1 in let b = let c = 2 in let d = 3 in c + d in a + b in
+
+let test_let_with_ops = let x = 2 + 3 in let y = x * 4 in y - 1 in
+let test_let_with_comparison = let x = 10 in let y = 5 in x > y in
+let test_let_with_logical = let a = true in let b = false in a && b in
+
+let test_let_underscore = let _ = 42 in let x = 10 in x in
+let test_let_underscore_multiple = let _ = 1 in let _ = 2 in let x = 3 in x in
+
+let test_let_shadowing_prevented = let x = 10 in let y = 20 in x + y in
+let test_let_scope = let x = 10 in let y = let x2 = 5 in x2 in x + y in
+
+# ============================================================================
+# SECTION 6: FUNCTIONS - ALL PATTERNS
+# ============================================================================
+
+let test_simple_func = \x x + 1 in
+let test_func_identity = \x x in
+let test_func_constant = \x 42 in
+
+let test_curried_func = \x \y x + y in
+let test_curried_triple = \a \b \c a + b + c in
+let test_curried_quad = \a \b \c \d a + b + c + d in
+
+let test_func_with_arithmetic = \x x * 2 + 3 in
+let test_func_with_comparison = \x if (x > 0) then x else (-x) in
+let test_func_with_let = \x let doubled = x * 2 in doubled + 1 in
+let test_func_with_func = \x \y x + y in
+
+let test_anonymous_func = (\x x * 2) 5 in
+let test_anonymous_curried = (\x \y x + y) 3 4 in
+let test_anonymous_nested = (\x (\y x + y)) 5 10 in
+
+let test_func_application = let add = \x \y x + y in add 5 3 in
+let test_partial_application = let add = \x \y x + y in let add5 = add 5 in add5 10 in
+let test_partial_triple = let add3 = \a \b \c a + b + c in let add3_5 = add3 5 in let add3_5_10 = add3_5 10 in add3_5_10 15 in
+
+let test_func_composition = let double = \x x * 2 in let add_one = \x x + 1 in (add_one (double 5)) in
+let test_func_pipeline = let f = \x x * 2 in let g = \x x + 10 in (g (f 5)) in
+
+# ============================================================================
+# SECTION 7: FUNCTIONS WITH BUILTIN ITERATION  
+# ============================================================================
+# NOTE: Recursive functions are not supported in Avon. Use built-in functions instead.
+
+let test_map_increment = let inc = \x x + 1 in map inc [1, 2, 3, 4, 5] in
+let test_map_double = let double = \x x * 2 in map double [1, 2, 3] in
+let test_filter_even = let is_positive = \x x > 2 in filter is_positive [1, 2, 3, 4, 5, 6] in
+let test_fold_sum = let add = \a \b a + b in fold add 0 [1, 2, 3, 4, 5] in

@@ -3,9 +3,7 @@ let user = "devuser" in
 let theme = "desert" in
 
 let plugins = ["junegunn/vim-plug", "tpope/vim-sensible"] in
-let plugin_lines = map (\p "Plug '" + p + "'") plugins in
-
-@home/{user}/.config/nvim/init.vim {"
+let plugin_lines = map (\p "Plug '" + p + "'") plugins in @home/{user}/.config/nvim/init.vim {"
     set nocompatible
     set number
     colorscheme {theme}

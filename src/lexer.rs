@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)] // EvalError is large but fundamental to the architecture
+
 use crate::common::{Chunk, EvalError, Token};
 use std::iter::Peekable;
 use std::str::Chars;
@@ -147,6 +149,8 @@ pub fn chunk(stream: &mut Peekable<Chars<'_>>, line: &mut usize) -> Result<Token
                     cur = String::new();
                 }
 
+                // Capture the line where the expression content actually starts
+                let expr_line = *line;
                 let mut expr = String::new();
                 loop {
                     match stream.next() {
@@ -186,7 +190,7 @@ pub fn chunk(stream: &mut Peekable<Chars<'_>>, line: &mut usize) -> Result<Token
                         }
                     }
                 }
-                chunks.push(Chunk::Expr(expr));
+                chunks.push(Chunk::Expr(expr, expr_line));
                 continue;
             } else {
                 // brace_count != open_count: treat all collected braces as literal
@@ -226,9 +230,11 @@ pub fn path(stream: &mut Peekable<Chars<'_>>, line: &mut usize) -> Result<Token,
     let start_line = *line;
     let mut cur = String::new();
     let mut chunks = Vec::<Chunk>::new();
+    let mut is_first_char = true;
 
     loop {
-        let c_opt = stream.next();
+        // Peek first to check if we should continue
+        let c_opt = stream.peek().cloned();
         match c_opt {
             None => {
                 if !cur.is_empty() {
@@ -237,23 +243,30 @@ pub fn path(stream: &mut Peekable<Chars<'_>>, line: &mut usize) -> Result<Token,
                 return Ok(Token::Path(chunks, start_line));
             }
             Some(c) => {
-                if c == '\n' {
-                    *line += 1;
-                }
-
-                if c.is_whitespace() {
+                // Check if this character would end the path (whitespace or delimiter)
+                if c.is_whitespace() || matches!(c, ',' | ']' | ')' | '}') {
                     if !cur.is_empty() {
                         chunks.push(Chunk::String(cur));
                     }
+                    // Don't consume the delimiter - let main tokenize handle it
                     return Ok(Token::Path(chunks, start_line));
                 }
 
+                // Check for interpolation before consuming
                 if c == '{' {
+                    // Consume the '{'
+                    stream.next();
+
                     if !cur.is_empty() {
                         chunks.push(Chunk::String(cur));
                         cur = String::new();
                     }
 
+                    // After an interpolation, we're no longer at the first char
+                    is_first_char = false;
+
+                    // Capture the line where the expression content actually starts
+                    let expr_line = *line;
                     let mut expr = String::new();
                     loop {
                         match stream.next() {
@@ -278,10 +291,28 @@ pub fn path(stream: &mut Peekable<Chars<'_>>, line: &mut usize) -> Result<Token,
                         }
                     }
 
-                    chunks.push(Chunk::Expr(expr));
+                    chunks.push(Chunk::Expr(expr, expr_line));
                     continue;
                 }
 
+                // OK to consume this character
+                let c = stream.next().unwrap(); // Safe: we just peeked
+
+                if c == '\n' {
+                    *line += 1;
+                }
+
+                // Reject absolute paths (starting with /)
+                if is_first_char && c == '/' {
+                    return Err(EvalError::new(
+                        "Absolute paths are not allowed in Avon syntax. Use relative paths and deploy with --root for absolute locations.",
+                        Some("relative path (e.g., @config/file.txt)".to_string()),
+                        Some("absolute path starting with /".to_string()),
+                        start_line,
+                    ));
+                }
+
+                is_first_char = false;
                 cur.push(c);
             }
         }

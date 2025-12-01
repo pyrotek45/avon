@@ -28,7 +28,7 @@ let cache_block = if enable_cache then "
 	proxy_cache_valid 200 10m;
 	proxy_cache_key \"$scheme$request_method$host$request_uri\";" else "" in
 
-@/nginx.conf {{"
+@nginx.conf {{"
 user www-data;
 worker_processes {{workers}};
 pid /run/nginx.pid;

@@ -30,7 +30,7 @@ let format_dep = \d concat "    \"" (concat d "\": \"^1.0.0\"") in
 let dep_lines = map format_dep all_deps in
 
 # Uses double-brace template {{" "}} so JSON braces are literal
-@/package.json {{"
+@package.json {{"
 {
   "name": "{{app_name}}",
   "version": "{{version}}",

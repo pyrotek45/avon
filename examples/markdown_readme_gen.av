@@ -23,7 +23,7 @@ let format_cmd = \i
   let example = if i == 0 then "npm install my-project" else if i == 1 then "npm run build" else "npm test" in
   concat (md_heading 3 (upper name)) (concat "\n\n" (md_code example)) in
 
-@/README.md {"
+@README.md {"
 {md_heading 1 project_name}
 
 {md_link "View Documentation" "/docs"}

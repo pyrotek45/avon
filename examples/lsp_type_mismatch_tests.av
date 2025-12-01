@@ -1,0 +1,23 @@
+# Type mismatch tests - these should all produce errors
+# Uncomment each test to verify error detection
+
+# String + Number should error (if strings aren't implicitly converted)
+# let error1 = "hello" + 5 in
+
+# Number > String should error
+# let error2 = 5 > "3" in
+
+# List operation on non-list should error
+# let error3 = head 5 in
+
+# Dict.field on non-dict should error
+# let error4 = "string".field in
+
+# Boolean operator on number should error
+# let error5 = 5 and 3 in
+
+# Filter with non-function should error
+# let error6 = filter 5 [1,2,3] in
+
+# All tests passed if no LSP errors reported
+true

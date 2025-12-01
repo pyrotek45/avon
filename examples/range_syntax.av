@@ -7,12 +7,12 @@ let negative_step = [10, -1 .. 0] in
 
 # Use ranges to generate configs
 let ports = [8080 .. 8085] in
-let services = map (\p @/service-{p}.yml {"
+let services = map (\p @service-{p}.yml {"
   port: {p}
-  name: service-{p}
+  name: service-{p}-config
 "}) ports in
 
-@/range_demo.txt {"
+let demo_output = @range_demo.txt {"
 Range Syntax Demo
 =================
 
@@ -21,7 +21,8 @@ Step range [0, 5..20]: {step_range}
 Negative step [10, -1..0]: {negative_step}
 
 Generated {length ports} service configs from range.
-"}
+"} in
 
-services
+# Combine the demo file with generated service files
+[demo_output] + services
 

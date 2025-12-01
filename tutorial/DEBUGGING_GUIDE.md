@@ -524,13 +524,13 @@ If your files aren't appearing where you expect:
 
 3. **Absolute vs Relative**: 
    - **Without `--root`**: 
-     - Absolute paths (starting with `/`, e.g. `@/etc/config`) are **blocked** for security
+    - Absolute paths in path literals (e.g. `@/etc/config`) are **blocked** at syntax level
      - Paths containing `..` are **blocked** for security
      - Only relative paths are allowed, written to the current working directory
    - **With `--root`**: 
-     - Paths starting with `/` have the leading `/` stripped and are appended to the root directory
-     - Example: `@/etc/config` with `--root ./out` writes to `./out/etc/config`
-     - Example: `@config.yml` with `--root ./out` writes to `./out/config.yml`
+    - All path literals must be relative (no leading `/`)
+    - Example: `@etc/config` with `--root ./out` writes to `./out/etc/config`
+    - Example: `@config.yml` with `--root ./out` writes to `./out/config.yml`
    - **Always use `--root`** when deploying to ensure files are written to a controlled directory
 
 ### Permission Errors

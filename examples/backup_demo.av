@@ -15,7 +15,7 @@
 #      ./out/demo.txt      -> contains "Version 2"
 #      ./out/demo.txt.bak  -> contains "Version 1"
 
-@/demo.txt {"
+@demo.txt {"
 This is a demo file.
 Current content: Version 1
 Timestamp: {os}

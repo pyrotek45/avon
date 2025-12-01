@@ -1,1 +1,23 @@
 **/target
+
+# VSCode Extension
+vscode/node_modules/
+vscode/out/
+vscode/*.vsix
+
+# IDE & Editor
+.DS_Store
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+dist/
+build/
+.cache/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*

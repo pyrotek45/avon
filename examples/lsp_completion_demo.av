@@ -1,0 +1,12 @@
+# Example: Using LSP Completions
+
+# The LSP will suggest completions as you type:
+# - Type 'sp' to get completions for: split, starts_with, sprintf (if available)
+# - Type 'fil' to get completions for: filter, fill_template
+# - Type 'for' to get completions for: format_json, format_hex, format_int, etc.
+# - Type 'is_' to get completions for: is_string, is_number, is_list, is_dict, etc.
+
+let sentence = "hello world from avon" in
+let words = split sentence " " in
+let upper_words = map upper words in
+join upper_words "-"

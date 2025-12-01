@@ -1,0 +1,97 @@
+# Avon Syntax Highlighting Test File
+# This file demonstrates all the syntax elements that are highlighted
+# All contained in a single expression per Avon constraint
+
+let demo = 
+  # Section 1: Basic Literals and Variables
+  let name = "Alice" in
+  let age = 30 in
+  let score = 95.5 in
+  let is_active = true in
+  
+  # Section 2: Numbers and Arithmetic
+  let x = 42 in
+  let y = -10 in
+  let arithmetic_results = [x + y, x - y, x * y, x / y, x % y] in
+  
+  # Section 3: Comparisons and Logical Operators
+  let comparisons = [
+    x == 42,
+    x != 42,
+    x > 40,
+    x < 50,
+    true && false,
+    true || false
+  ] in
+  
+  # Section 4: Strings
+  let greeting = "Hello, World!" in
+  let strings = [
+    upper greeting,
+    lower greeting,
+    substring greeting 0 5,
+    contains greeting "World",
+    split greeting " "
+  ] in
+  
+  # Section 5: Lists
+  let numbers = [1, 2, 3, 4, 5] in
+  let list_ops = [
+    length numbers,
+    reverse numbers,
+    map (\x x * 2) numbers,
+    filter (\x x > 2) numbers,
+    fold (\acc \x acc + x) 0 numbers
+  ] in
+  
+  # Section 6: Ranges
+  let ranges = [[1..10], [1, 2..20]] in
+  
+  # Section 7: Dictionaries
+  let config = {host: "localhost", port: 8080, debug: true} in
+  let dict_ops = [config.host, keys config, values config] in
+  
+  # Section 8: Lambda and Functions
+  let double = \x x * 2 in
+  let add = \a \b a + b in
+  let lambda_results = [double 5, add 10 20] in
+  
+  # Section 9: Conditionals
+  let status = 
+    if score >= 90 then "excellent"
+    else if score >= 80 then "good"
+    else "fair"
+  in
+  
+  # Section 10: Templates
+  let template_result = {"Name: {name}, Age: {age}"} in
+  
+  # Section 11: Pipe Operator
+  let pipe_result = [1, 2, 3] -> map (\x x * 2) -> filter (\x x > 2) in
+  
+  # Section 12: Type Checks
+  let type_checks = [
+    is_number 42,
+    is_string "hello",
+    is_bool true,
+    is_list [1, 2, 3],
+    is_dict {a: 1}
+  ] in
+  
+  # Return summary
+  {
+    demo: "syntax_test_complete",
+    arithmetic: arithmetic_results,
+    comparisons: comparisons,
+    strings: strings,
+    lists: list_ops,
+    ranges: ranges,
+    dicts: dict_ops,
+    lambdas: lambda_results,
+    status: status,
+    pipe: pipe_result,
+    types: type_checks
+  }
+in
+
+demo

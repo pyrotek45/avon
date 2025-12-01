@@ -123,7 +123,7 @@ target_include_directories(myapp PRIVATE include)
 
 [
   # Generate platform-specific header
-  @/include/platform.h {"
+  @include/platform.h {"
 #ifndef PLATFORM_H
 #define PLATFORM_H
 
@@ -142,10 +142,10 @@ target_include_directories(myapp PRIVATE include)
 "},
 
   # Generate unified header with #ifdef guards for all platforms
-  @/include/platform_unified.h {"{unified_header}"},
+  @include/platform_unified.h {"{unified_header}"},
 
   # Generate build configuration header
-  @/include/build_config.h {"
+  @include/build_config.h {"
 #ifndef BUILD_CONFIG_H
 #define BUILD_CONFIG_H
 
@@ -184,7 +184,7 @@ target_include_directories(myapp PRIVATE include)
 "},
 
   # Generate source file list for build system
-  @/sources.txt {"
+  @sources.txt {"
 # Platform: {c.platform}
 # Core sources (all platforms)
 src/main.c
@@ -198,5 +198,5 @@ src/socket_{c.platform}.c
 "},
 
   # Generate CMakeLists.txt with platform detection
-  @/CMakeLists.txt {"{cmake_content}"}
+  @CMakeLists.txt {"{cmake_content}"}
 ]

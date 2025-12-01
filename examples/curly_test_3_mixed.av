@@ -2,7 +2,7 @@
 # Uses double-brace template {{" "}} so single braces are literal
 let name = "test" in
 
-@/test3_mixed.txt {{"
+@test3_mixed.txt {{"
 Config {
   item: {{name}}
   data: { nested }

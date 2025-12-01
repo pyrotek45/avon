@@ -3157,7 +3157,7 @@ Before writing any files, Avon validates that **all** files can be written:
 
 If **any** file fails validation, Avon aborts immediately. **Zero files are written.**
 
-This ensures that when deploying a list like `[@/a.txt {...}, @/b.txt {...}, @/c.txt {...}]`, if `b.txt` cannot be written (e.g., read-only file), then `a.txt` and `c.txt` are also not written. The deployment is truly atomic.
+This ensures that when deploying a list like `[@a.txt {...}, @b.txt {...}, @c.txt {...}]`, if `b.txt` cannot be written (e.g., read-only file), then `a.txt` and `c.txt` are also not written. The deployment is truly atomic.
 
 **Phase 3: Writing**
 Only after all files pass validation does Avon proceed to write them. Files are written sequentially, but since all have been validated, write failures are extremely rare (e.g., disk full during write).

@@ -1,0 +1,279 @@
+{
+  "name": "Avon",
+  "scopeName": "source.av",
+  "fileTypes": ["av"],
+  "version": "1.0.0",
+  "uuid": "4a61c5d4-10db-41a5-9e9e-5cf6a6d1c3f2",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#keyword" },
+    { "include": "#builtin" },
+    { "include": "#string" },
+    { "include": "#path" },
+    { "include": "#template" },
+    { "include": "#number" },
+    { "include": "#boolean" },
+    { "include": "#none" },
+    { "include": "#operator" },
+    { "include": "#punctuation" },
+    { "include": "#identifier" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.number-sign.av",
+      "match": "#.*$"
+    },
+    "keyword": {
+      "patterns": [
+        {
+          "name": "keyword.control.av",
+          "match": "\\b(let|in|if|then|else)\\b"
+        }
+      ]
+    },
+    "builtin": {
+      "patterns": [
+        {
+          "name": "support.function.builtin.av",
+          "match": "(?<!\\.)\\b(assert|basename|center|concat|contains|date_add|date_diff|date_format|date_parse|debug|dict_merge|dirname|drop|ends_with|enumerate|env_var|env_var_or|error|exists|fill_template|filter|flatmap|flatten|fold|format_binary|format_bool|format_bytes|format_currency|format_float|format_hex|format_int|format_json|format_list|format_octal|format_percent|format_scientific|format_table|get|has_key|head|html_attr|html_escape|html_tag|import|indent|is_alpha|is_alphanumeric|is_bool|is_digit|is_empty|is_float|is_function|is_int|is_list|is_lowercase|is_none|is_number|is_string|is_uppercase|is_whitespace|join|json_parse|keys|length|lower|map|markdown_to_html|md_code|md_heading|md_link|md_list|neg|not|now|os|pad_left|pad_right|partition|range|readfile|readlines|repeat|replace|reverse|set|sort|sort_by|split|split_at|starts_with|tail|take|timestamp|timezone|to_bool|to_char|to_float|to_int|to_list|to_string|trace|trim|truncate|typeof|unique|unzip|upper|values|walkdir|zip)\\b(?=\\s|\\(|\\[|\\||->|\\{)"
+        }
+      ]
+    },
+    "string": {
+      "name": "string.quoted.double.av",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.av",
+          "match": "\\\\[\\\\\"ntr]"
+        }
+      ]
+    },
+    "template": {
+      "patterns": [
+        {
+          "comment": "Standalone template quad brace",
+          "name": "meta.template.av",
+          "begin": "\\{\\{\\{\\{\\\"",
+          "end": "\\\"\\}\\}\\}\\}",
+          "beginCaptures": { "0": { "name": "punctuation.definition.template.begin.av" } },
+          "endCaptures": { "0": { "name": "punctuation.definition.template.end.av" } },
+          "contentName": "string.template.av",
+          "patterns": [
+            {
+              "name": "meta.interpolation.av",
+              "begin": "\\{\\{\\{\\{(?!\\{)",
+              "end": "\\}\\}\\}\\}",
+              "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.av" } },
+              "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.av" } },
+              "contentName": "meta.embedded.expression.av",
+              "patterns": [{ "include": "#expression-content" }]
+            }
+          ]
+        },
+        {
+          "comment": "Standalone template triple brace",
+          "name": "meta.template.av",
+          "begin": "\\{\\{\\{\\\"",
+          "end": "\\\"\\}\\}\\}",
+          "beginCaptures": { "0": { "name": "punctuation.definition.template.begin.av" } },
+          "endCaptures": { "0": { "name": "punctuation.definition.template.end.av" } },
+          "contentName": "string.template.av",
+          "patterns": [
+            {
+              "name": "meta.interpolation.av",
+              "begin": "\\{\\{\\{(?!\\{)",
+              "end": "\\}\\}\\}",
+              "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.av" } },
+              "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.av" } },
+              "contentName": "meta.embedded.expression.av",
+              "patterns": [{ "include": "#expression-content" }]
+            }
+          ]
+        },
+        {
+          "comment": "Standalone template double brace",
+          "name": "meta.template.av",
+          "begin": "\\{\\{\\\"",
+          "end": "\\\"\\}\\}",
+          "beginCaptures": { "0": { "name": "punctuation.definition.template.begin.av" } },
+          "endCaptures": { "0": { "name": "punctuation.definition.template.end.av" } },
+          "contentName": "string.template.av",
+          "patterns": [
+            {
+              "name": "meta.interpolation.av",
+              "begin": "\\{\\{(?!\\{)",
+              "end": "\\}\\}",
+              "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.av" } },
+              "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.av" } },
+              "contentName": "meta.embedded.expression.av",
+              "patterns": [{ "include": "#expression-content" }]
+            }
+          ]
+        },
+        {
+          "comment": "Standalone template single brace",
+          "name": "meta.template.av",
+          "begin": "\\{\\\"",
+          "end": "\\\"\\}",
+          "beginCaptures": { "0": { "name": "punctuation.definition.template.begin.av" } },
+          "endCaptures": { "0": { "name": "punctuation.definition.template.end.av" } },
+          "contentName": "string.template.av",
+          "patterns": [
+            {
+              "name": "meta.interpolation.av",
+              "begin": "\\{(?!\\{)",
+              "end": "\\}",
+              "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.av" } },
+              "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.av" } },
+              "contentName": "meta.embedded.expression.av",
+              "patterns": [{ "include": "#expression-content" }]
+            }
+          ]
+        }
+      ]
+    },
+    "path": {
+      "patterns": [
+        {
+          "comment": "Explicitly flag invalid absolute path literal '@/' to avoid partial coloring",
+          "name": "invalid.illegal.path.absolute.av",
+          "match": "@/[^\\s]*"
+        },
+        {
+          "name": "meta.path.av",
+            "match": "(@)(?!/)([^\\s{}\"]((?:[^\\s{}\"]|\\{[^}{]*\\})*))",
+          "captures": {
+            "1": { "name": "keyword.operator.path.av" },
+            "2": { 
+              "patterns": [
+                {
+                  "name": "meta.path.interpolation.av",
+                  "match": "(\\{)([^}]*)(\\})",
+                  "captures": {
+                    "1": { "name": "punctuation.section.interpolation.begin.av" },
+                    "2": { "name": "variable.other.av" },
+                    "3": { "name": "punctuation.section.interpolation.end.av" }
+                  }
+                },
+                {
+                  "name": "entity.name.tag.path.av",
+                  "match": "[^\\{\\}]+"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "expression-content": {
+      "patterns": [
+        { "include": "#string" },
+        { "include": "#number" },
+        { "include": "#boolean" },
+        { "include": "#keyword" },
+        { "include": "#builtin" },
+        { "include": "#operator" },
+        { "include": "#punctuation" },
+        { "include": "#identifier" }
+      ]
+    },
+    "number": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.av",
+          "match": "\\b-?\\d+\\.\\d+\\b"
+        },
+        {
+          "name": "constant.numeric.integer.av",
+          "match": "\\b-?\\d+\\b"
+        }
+      ]
+    },
+    "boolean": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.av",
+          "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+    "none": {
+      "patterns": [
+        {
+          "name": "constant.language.none.av",
+          "match": "\\bnone\\b"
+        }
+      ]
+    },
+    "operator": {
+      "patterns": [
+        {
+          "name": "keyword.operator.comparison.av",
+          "match": "(==|!=|<=|>=|<|>)"
+        },
+        {
+          "name": "keyword.operator.arithmetic.av",
+          "match": "(\\+|-|\\*|/|%)"
+        },
+        {
+          "name": "keyword.operator.logical.av",
+          "match": "(&&|\\|\\||!)"
+        },
+        {
+          "name": "keyword.operator.pipe.av",
+          "match": "(->)"
+        },
+        {
+          "name": "keyword.operator.range.av",
+          "match": "(\\.\\.)"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.bracket.square.av",
+          "match": "[\\[\\]]"
+        },
+        {
+          "name": "punctuation.bracket.curly.av",
+          "match": "[{}]"
+        },
+        {
+          "name": "punctuation.bracket.round.av",
+          "match": "[()]"
+        },
+        {
+          "name": "punctuation.separator.comma.av",
+          "match": ","
+        },
+        {
+          "name": "punctuation.separator.colon.av",
+          "match": ":"
+        },
+        {
+          "name": "punctuation.operator.question.av",
+          "match": "\\?"
+        },
+        {
+          "name": "punctuation.operator.backslash.av",
+          "match": "\\\\"
+        },
+        {
+          "name": "punctuation.separator.dot.av",
+          "match": "(?<!\\.)\\."
+        }
+      ]
+    },
+    "identifier": {
+      "patterns": [
+        {
+          "name": "variable.other.av",
+          "match": "[a-zA-Z_][a-zA-Z0-9_]*"
+        }
+      ]
+    }
+  }
+}

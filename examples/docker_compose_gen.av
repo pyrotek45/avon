@@ -27,7 +27,7 @@ let make_service = \service_info
 	let port = name in
 	concat (concat "  " (concat name ":\n")) "    image: " in
 
-@/docker-compose.yml {"
+@docker-compose.yml {"
     version: '3.9'
     
     services:
