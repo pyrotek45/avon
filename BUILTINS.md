@@ -1,6 +1,6 @@
 # Avon Builtin Functions Reference
 
-Complete reference of all 111+ builtin functions in Avon, organized by category.
+Complete reference of all 114+ builtin functions in Avon, organized by category.
 
 ## Table of Contents
 - [String Functions](#string-functions)
@@ -37,6 +37,9 @@ Complete reference of all 111+ builtin functions in Avon, organized by category.
 | `split` | `(s: str, sep: str) -> [str]` | Split string by separator | `split "a,b,c" ","` → `["a", "b", "c"]` |
 | `join` | `([str], sep: str) -> str` | Join list with separator | `join ["a", "b"] ","` → `"a,b"` |
 | `replace` | `(s: str, old: str, new: str) -> str` | Replace substring | `replace "hello" "l" "L"` → `"heLLo"` |
+| `slice` | `(s: str, start: int, end: int) -> str` | Extract substring [start..end) | `slice "hello" 1 4` → `"ell"` |
+| `char_at` | `(s: str, index: int) -> str\|None` | Get character at index | `char_at "hello" 2` → `"l"` |
+| `chars` | `(s: str) -> [str]` | Convert string to list of chars | `chars "hi"` → `["h", "i"]` |
 | `contains` | `(s: str, sub: str) -> bool` | Check if substring exists | `contains "hello" "ell"` → `true` |
 | `starts_with` | `(s: str, prefix: str) -> bool` | Check if string starts with prefix | `starts_with "hello" "hel"` → `true` |
 | `ends_with` | `(s: str, suffix: str) -> bool` | Check if string ends with suffix | `ends_with "hello" "lo"` → `true` |
@@ -92,12 +95,13 @@ Complete reference of all 111+ builtin functions in Avon, organized by category.
 |----------|-----------|-------------|---------|
 | `take` | `([a], n: int) -> [a]` | Take first n elements | `take [1, 2, 3, 4] 2` → `[1, 2]` |
 | `drop` | `([a], n: int) -> [a]` | Drop first n elements | `drop [1, 2, 3, 4] 2` → `[3, 4]` |
+| `slice` | `([a], start: int, end: int) -> [a]` | Extract sublist [start..end) | `slice [1,2,3,4,5] 1 4` → `[2, 3, 4]` |
 | `split_at` | `([a], n: int) -> [[a], [a]]` | Split list at position | `split_at [1,2,3,4] 2` → `[[1,2], [3,4]]` |
 | `zip` | `([a], [b]) -> [[a, b]]` | Zip two lists | `zip [1,2] ["a","b"]` → `[[1,"a"], [2,"b"]]` |
 | `unzip` | `([[a, b]]) -> [[a], [b]]` | Unzip list of pairs | `unzip [[1,"a"], [2,"b"]]` → `[[1,2], ["a","b"]]` |
 | `enumerate` | `([a]) -> [[int, a]]` | Add indices | `enumerate ["a","b"]` → `[[0,"a"], [1,"b"]]` |
-| `range` | `(start: int, end: int) -> [int]` | Generate range | `range 1 4` → `[1, 2, 3]` |
-| `range` | `(start: int, end: int, step: int) -> [int]` | Generate range with step | `range 0 10 2` → `[0, 2, 4, 6, 8]` |
+| `range` | `(start: int, end: int) -> [int]` | Generate range (inclusive both ends) | `range 1 4` → `[1, 2, 3, 4]` |
+| `range` | `(start: int, end: int, step: int) -> [int]` | Generate range with step | `range 0 10 2` → `[0, 2, 4, 6, 8, 10]` |
 | `partition` | `((a -> bool), [a]) -> [[a], [a]]` | Split list by predicate | `partition (\x x > 2) [1,2,3]` → `[[3], [1, 2]]` |
 
 ---
