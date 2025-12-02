@@ -1,0 +1,50 @@
+# ============================================================================
+# Demonstration of new Avon builtins: slice(), char_at(), chars()
+# ============================================================================
+
+# Define a demo that shows all the new features
+let demo = 
+  let text = "hello world" in
+  let _ = trace "slice text 0 5" (slice text 0 5) in
+  let _ = trace "slice text 6 11" (slice text 6 11) in
+  let _ = trace "slice text 1 5" (slice text 1 5) in
+  
+  let nums = [10, 20, 30, 40, 50, 60] in
+  let _ = trace "slice nums 1 4" (slice nums 1 4) in
+  let _ = trace "slice nums 0 3" (slice nums 0 3) in
+  
+  let word = "example" in
+  let _ = trace "char_at word 0" (char_at word 0) in
+  let _ = trace "char_at word 3" (char_at word 3) in
+  let _ = trace "char_at word 6" (char_at word 6) in
+  
+  let str = "hello" in
+  let char_list = chars str in
+  let _ = trace "chars 'hello'" char_list in
+  let _ = trace "length of chars" (length char_list) in
+  
+  let input_str = "abc" in
+  let uppercase_chars = map (\c upper c) (chars input_str) in
+  let _ = trace "uppercase each char" uppercase_chars in
+  let _ = trace "join back together" (join uppercase_chars "") in
+  
+  let is_repeating_pattern = \text
+    let len = length text in
+    if len % 2 != 0 then
+      false
+    else
+      let half = len / 2 in
+      let first = slice text 0 half in
+      let second = slice text half len in
+      first == second
+  in
+  
+  let _ = trace "is '55' repeating" (is_repeating_pattern "55") in
+  let _ = trace "is '6464' repeating" (is_repeating_pattern "6464") in
+  let _ = trace "is '123' repeating" (is_repeating_pattern "123") in
+  let _ = trace "is '123123' repeating" (is_repeating_pattern "123123") in
+  
+  trace "DEMO COMPLETE" "✓ All new builtins working!"
+in
+
+demo
