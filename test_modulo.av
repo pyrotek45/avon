@@ -1,4 +1,0 @@
-let test1 = trace "-50 % 100" (-50 % 100) in
-let test2 = trace "-150 % 100" (-150 % 100) in
-let test3 = trace "-250 % 100" (-250 % 100) in
-test3
