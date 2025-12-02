@@ -4,350 +4,125 @@
 //! - `is_builtin_name()` - Check if a name is a builtin function
 //! - `initial_builtins()` - Get initial symbol table with all builtins
 //! - `get_builtin_arity()` - Get the number of arguments for a builtin
+//!
+//! All data is derived from category modules (aggregate, debug, datetime, etc.)
 
 use crate::common::Value;
 use std::collections::HashMap;
 
+use super::{
+    aggregate, datetime, debug, dict, env, file_io, formatting, html, list, markdown, math,
+    string, types,
+};
+
+/// All category modules for iteration
+const CATEGORY_MODULES: &[(&[&str], fn(&str) -> Option<usize>)] = &[
+    (aggregate::NAMES, aggregate::get_arity),
+    (debug::NAMES, debug::get_arity),
+    (datetime::NAMES, datetime::get_arity),
+    (dict::NAMES, dict::get_arity),
+    (env::NAMES, env::get_arity),
+    (file_io::NAMES, file_io::get_arity),
+    (formatting::NAMES, formatting::get_arity),
+    (html::NAMES, html::get_arity),
+    (list::NAMES, list::get_arity),
+    (markdown::NAMES, markdown::get_arity),
+    (math::NAMES, math::get_arity),
+    (string::NAMES, string::get_arity),
+    (types::NAMES, types::get_arity),
+];
+
 /// Check if a name is a builtin function name
-/// This list must be kept in sync with execute_builtin() in the dispatcher
+/// This uses the NAMES arrays from each category module
 pub fn is_builtin_name(name: &str) -> bool {
-    matches!(
-        name,
-        // Aggregate functions
-        "all"
-            | "any"
-            | "count"
-            | "max"
-            | "min"
-            | "sum"
-            // Assertion/Debug
-            | "assert"
-            | "debug"
-            | "error"
-            | "not"
-            | "trace"
-            // Date/Time
-            | "date_add"
-            | "date_diff"
-            | "date_format"
-            | "date_parse"
-            | "now"
-            | "timestamp"
-            | "timezone"
-            // Dictionary
-            | "dict_merge"
-            | "get"
-            | "has_key"
-            | "keys"
-            | "set"
-            | "values"
-            // Environment
-            | "env_var"
-            | "env_var_or"
-            | "os"
-            // File I/O
-            | "basename"
-            | "dirname"
-            | "exists"
-            | "fill_template"
-            | "import"
-            | "json_parse"
-            | "readfile"
-            | "readlines"
-            | "walkdir"
-            // Formatting
-            | "center"
-            | "format_binary"
-            | "format_bool"
-            | "format_bytes"
-            | "format_currency"
-            | "format_float"
-            | "format_hex"
-            | "format_int"
-            | "format_json"
-            | "format_list"
-            | "format_octal"
-            | "format_percent"
-            | "format_scientific"
-            | "format_table"
-            | "truncate"
-            // HTML
-            | "html_attr"
-            | "html_escape"
-            | "html_tag"
-            // List operations
-            | "drop"
-            | "enumerate"
-            | "filter"
-            | "flatmap"
-            | "flatten"
-            | "fold"
-            | "head"
-            | "map"
-            | "partition"
-            | "range"
-            | "reverse"
-            | "sort"
-            | "sort_by"
-            | "split_at"
-            | "tail"
-            | "take"
-            | "unique"
-            | "unzip"
-            | "zip"
-            // Markdown
-            | "markdown_to_html"
-            | "md_code"
-            | "md_heading"
-            | "md_link"
-            | "md_list"
-            // Math
-            | "neg"
-            // String operations
-            | "char_at"
-            | "chars"
-            | "concat"
-            | "contains"
-            | "ends_with"
-            | "indent"
-            | "is_alpha"
-            | "is_alphanumeric"
-            | "is_digit"
-            | "is_empty"
-            | "is_lowercase"
-            | "is_uppercase"
-            | "is_whitespace"
-            | "join"
-            | "length"
-            | "lower"
-            | "pad_left"
-            | "pad_right"
-            | "repeat"
-            | "replace"
-            | "slice"
-            | "split"
-            | "starts_with"
-            | "trim"
-            | "upper"
-            // Type checking
-            | "is_bool"
-            | "is_dict"
-            | "is_float"
-            | "is_function"
-            | "is_int"
-            | "is_list"
-            | "is_none"
-            | "is_number"
-            | "is_string"
-            | "typeof"
-            // Type conversion
-            | "to_bool"
-            | "to_char"
-            | "to_float"
-            | "to_int"
-            | "to_list"
-            | "to_string"
-    )
+    aggregate::is_builtin(name)
+        || debug::is_builtin(name)
+        || datetime::is_builtin(name)
+        || dict::is_builtin(name)
+        || env::is_builtin(name)
+        || file_io::is_builtin(name)
+        || formatting::is_builtin(name)
+        || html::is_builtin(name)
+        || list::is_builtin(name)
+        || markdown::is_builtin(name)
+        || math::is_builtin(name)
+        || string::is_builtin(name)
+        || types::is_builtin(name)
 }
 
 /// Get the arity (number of arguments) for a builtin function
+/// Delegates to category-specific get_arity functions
 pub fn get_builtin_arity(name: &str) -> Option<usize> {
-    Some(match name {
-        // Arity 1
-        "basename" | "chars" | "debug" | "dirname" | "enumerate" | "error" | "exists"
-        | "flatten" | "format_binary" | "format_bytes" | "format_hex" | "format_json"
-        | "format_octal" | "head" | "html_escape" | "import" | "is_alpha" | "is_alphanumeric"
-        | "is_bool" | "is_dict" | "is_digit" | "is_empty" | "is_float" | "is_function"
-        | "is_int" | "is_list" | "is_lowercase" | "is_none" | "is_number" | "is_string"
-        | "is_uppercase" | "is_whitespace" | "json_parse" | "keys" | "length" | "lower"
-        | "markdown_to_html" | "max" | "md_code" | "md_list" | "min" | "neg" | "not" | "now"
-        | "readfile" | "readlines" | "reverse" | "sort" | "sum" | "tail" | "timestamp"
-        | "timezone" | "to_bool" | "to_char" | "to_float" | "to_int" | "to_list"
-        | "to_string" | "trim" | "typeof" | "unique" | "unzip" | "upper" | "values"
-        | "walkdir" => 1,
-
-        // Arity 2
-        "all" | "any" | "center" | "char_at" | "concat" | "contains" | "count"
-        | "date_add" | "date_diff" | "date_format" | "date_parse" | "dict_merge" | "drop" | "ends_with" | "env_var_or"
-        | "fill_template" | "filter" | "flatmap" | "format_currency" | "format_float"
-        | "format_int" | "format_list" | "format_percent" | "format_scientific"
-        | "format_table" | "format_bool" | "get" | "has_key" | "html_attr" | "html_tag"
-        | "indent" | "join" | "map" | "md_heading" | "md_link" | "partition" | "range"
-        | "repeat" | "sort_by" | "split" | "split_at" | "starts_with" | "take" | "trace"
-        | "truncate" | "zip" | "assert" => 2,
-
-        // Arity 3
-        "fold" | "pad_left" | "pad_right" | "replace" | "set"
-        | "slice" => 3,
-
-        // Special case: 0 arity but handled specially in apply_function
-        "env_var" => 1,
-
-        _ => return None,
-    })
+    aggregate::get_arity(name)
+        .or_else(|| debug::get_arity(name))
+        .or_else(|| datetime::get_arity(name))
+        .or_else(|| dict::get_arity(name))
+        .or_else(|| env::get_arity(name))
+        .or_else(|| file_io::get_arity(name))
+        .or_else(|| formatting::get_arity(name))
+        .or_else(|| html::get_arity(name))
+        .or_else(|| list::get_arity(name))
+        .or_else(|| markdown::get_arity(name))
+        .or_else(|| math::get_arity(name))
+        .or_else(|| string::get_arity(name))
+        .or_else(|| types::get_arity(name))
 }
 
 /// Create initial symbol table with all builtin functions
+/// Collects builtins from all category modules
 pub fn initial_builtins() -> HashMap<String, Value> {
     let mut m = HashMap::new();
 
-    // Helper macro to reduce boilerplate
-    macro_rules! add_builtin {
-        ($name:expr) => {
-            m.insert($name.to_string(), Value::Builtin($name.to_string(), Vec::new()));
-        };
+    // Add all builtins from each category using CATEGORY_MODULES
+    for (names, _) in CATEGORY_MODULES {
+        for name in *names {
+            // Skip "os" - it's a constant, not a function
+            if *name == "os" {
+                continue;
+            }
+            m.insert(
+                name.to_string(),
+                Value::Builtin(name.to_string(), Vec::new()),
+            );
+        }
     }
 
-    // Aggregate functions
-    add_builtin!("all");
-    add_builtin!("any");
-    add_builtin!("count");
-    add_builtin!("max");
-    add_builtin!("min");
-    add_builtin!("sum");
-
-    // Assertion/Debug
-    add_builtin!("assert");
-    add_builtin!("debug");
-    add_builtin!("error");
-    add_builtin!("not");
-    add_builtin!("trace");
-
-    // Date/Time
-    add_builtin!("date_add");
-    add_builtin!("date_diff");
-    add_builtin!("date_format");
-    add_builtin!("date_parse");
-    add_builtin!("now");
-    add_builtin!("timestamp");
-    add_builtin!("timezone");
-
-    // Dictionary
-    add_builtin!("dict_merge");
-    add_builtin!("get");
-    add_builtin!("has_key");
-    add_builtin!("keys");
-    add_builtin!("set");
-    add_builtin!("values");
-
-    // Environment
-    add_builtin!("env_var");
-    add_builtin!("env_var_or");
-    // os is special - it's a constant, not a function
-    m.insert("os".to_string(), Value::String(std::env::consts::OS.to_string()));
-
-    // File I/O
-    add_builtin!("basename");
-    add_builtin!("dirname");
-    add_builtin!("exists");
-    add_builtin!("fill_template");
-    add_builtin!("import");
-    add_builtin!("json_parse");
-    add_builtin!("readfile");
-    add_builtin!("readlines");
-    add_builtin!("walkdir");
-
-    // Formatting
-    add_builtin!("center");
-    add_builtin!("format_binary");
-    add_builtin!("format_bool");
-    add_builtin!("format_bytes");
-    add_builtin!("format_currency");
-    add_builtin!("format_float");
-    add_builtin!("format_hex");
-    add_builtin!("format_int");
-    add_builtin!("format_json");
-    add_builtin!("format_list");
-    add_builtin!("format_octal");
-    add_builtin!("format_percent");
-    add_builtin!("format_scientific");
-    add_builtin!("format_table");
-    add_builtin!("truncate");
-
-    // HTML
-    add_builtin!("html_attr");
-    add_builtin!("html_escape");
-    add_builtin!("html_tag");
-
-    // List operations
-    add_builtin!("drop");
-    add_builtin!("enumerate");
-    add_builtin!("filter");
-    add_builtin!("flatmap");
-    add_builtin!("flatten");
-    add_builtin!("fold");
-    add_builtin!("head");
-    add_builtin!("map");
-    add_builtin!("partition");
-    add_builtin!("range");
-    add_builtin!("reverse");
-    add_builtin!("sort");
-    add_builtin!("sort_by");
-    add_builtin!("split_at");
-    add_builtin!("tail");
-    add_builtin!("take");
-    add_builtin!("unique");
-    add_builtin!("unzip");
-    add_builtin!("zip");
-
-    // Markdown
-    add_builtin!("markdown_to_html");
-    add_builtin!("md_code");
-    add_builtin!("md_heading");
-    add_builtin!("md_link");
-    add_builtin!("md_list");
-
-    // Math
-    add_builtin!("neg");
-
-    // String operations
-    add_builtin!("char_at");
-    add_builtin!("chars");
-    add_builtin!("concat");
-    add_builtin!("contains");
-    add_builtin!("ends_with");
-    add_builtin!("indent");
-    add_builtin!("is_alpha");
-    add_builtin!("is_alphanumeric");
-    add_builtin!("is_digit");
-    add_builtin!("is_empty");
-    add_builtin!("is_lowercase");
-    add_builtin!("is_uppercase");
-    add_builtin!("is_whitespace");
-    add_builtin!("join");
-    add_builtin!("length");
-    add_builtin!("lower");
-    add_builtin!("pad_left");
-    add_builtin!("pad_right");
-    add_builtin!("repeat");
-    add_builtin!("replace");
-    add_builtin!("slice");
-    add_builtin!("split");
-    add_builtin!("starts_with");
-    add_builtin!("trim");
-    add_builtin!("upper");
-
-    // Type checking
-    add_builtin!("is_bool");
-    add_builtin!("is_dict");
-    add_builtin!("is_float");
-    add_builtin!("is_function");
-    add_builtin!("is_int");
-    add_builtin!("is_list");
-    add_builtin!("is_none");
-    add_builtin!("is_number");
-    add_builtin!("is_string");
-    add_builtin!("typeof");
-
-    // Type conversion
-    add_builtin!("to_bool");
-    add_builtin!("to_char");
-    add_builtin!("to_float");
-    add_builtin!("to_int");
-    add_builtin!("to_list");
-    add_builtin!("to_string");
+    // Add special constants
+    m.insert(
+        "os".to_string(),
+        Value::String(std::env::consts::OS.to_string()),
+    );
 
     m
+}
+
+/// Get total count of all builtins (for documentation/debugging)
+#[allow(dead_code)]
+pub fn builtin_count() -> usize {
+    CATEGORY_MODULES
+        .iter()
+        .map(|(names, _)| names.len())
+        .sum()
+}
+
+/// Get all builtin names grouped by category
+#[allow(dead_code)]
+pub fn all_builtin_names() -> Vec<(&'static str, &'static [&'static str])> {
+    vec![
+        ("aggregate", aggregate::NAMES),
+        ("debug", debug::NAMES),
+        ("datetime", datetime::NAMES),
+        ("dict", dict::NAMES),
+        ("env", env::NAMES),
+        ("file_io", file_io::NAMES),
+        ("formatting", formatting::NAMES),
+        ("html", html::NAMES),
+        ("list", list::NAMES),
+        ("markdown", markdown::NAMES),
+        ("math", math::NAMES),
+        ("string", string::NAMES),
+        ("types", types::NAMES),
+    ]
 }
 
 #[cfg(test)]
@@ -380,6 +155,26 @@ mod tests {
                 is_builtin_name(name),
                 "Builtin '{}' not in is_builtin_name()",
                 name
+            );
+        }
+    }
+
+    #[test]
+    fn test_builtin_count() {
+        // Should have around 120 builtins
+        let count = builtin_count();
+        assert!(count >= 100, "Expected at least 100 builtins, got {}", count);
+    }
+
+    #[test]
+    fn test_category_coverage() {
+        // Test that each category has at least one builtin
+        let categories = all_builtin_names();
+        for (category, names) in categories {
+            assert!(
+                !names.is_empty(),
+                "Category '{}' has no builtins",
+                category
             );
         }
     }
