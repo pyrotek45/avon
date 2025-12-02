@@ -537,9 +537,7 @@ impl AvonHighlighter {
                     let next = chars[i + 1];
                     let is_two_char_op = matches!(
                         (chars[i], next),
-                        ('=', '=') | ('!', '=') | ('<', '=') | ('>', '=')
-                            | ('&', '&')
-                            | ('|', '|')
+                        ('=', '=') | ('!', '=') | ('<', '=') | ('>', '=') | ('&', '&') | ('|', '|')
                     );
                     if is_two_char_op {
                         i += 1;

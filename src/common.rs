@@ -116,7 +116,7 @@ impl std::ops::Add for Number {
 
     fn add(self, other: Number) -> Number {
         match (self, other) {
-            (Number::Int(v), Number::Int(r)) => Number::Int(v + r),
+            (Number::Int(v), Number::Int(r)) => Number::Int(v.wrapping_add(r)),
             (Number::Int(v), Number::Float(r)) => Number::Float(v as f64 + r),
             (Number::Float(v), Number::Int(r)) => Number::Float(v + r as f64),
             (Number::Float(v), Number::Float(r)) => Number::Float(v + r),
@@ -129,7 +129,7 @@ impl std::ops::Mul for Number {
 
     fn mul(self, other: Number) -> Number {
         match (self, other) {
-            (Number::Int(v), Number::Int(r)) => Number::Int(v * r),
+            (Number::Int(v), Number::Int(r)) => Number::Int(v.wrapping_mul(r)),
             (Number::Int(v), Number::Float(r)) => Number::Float(v as f64 * r),
             (Number::Float(v), Number::Int(r)) => Number::Float(v * r as f64),
             (Number::Float(v), Number::Float(r)) => Number::Float(v * r),
@@ -142,7 +142,28 @@ impl std::ops::Div for Number {
 
     fn div(self, other: Number) -> Number {
         match (self, other) {
-            (Number::Int(v), Number::Int(r)) => Number::Int(v / r),
+            // Use floor division for integers
+            (Number::Int(v), Number::Int(r)) => {
+                if r == 0 {
+                    panic!("division by zero");
+                }
+
+                // Handle overflow: MIN / -1
+                if v == i64::MIN && r == -1 {
+                    return Number::Int(v); // wrapping behavior: MIN / -1 = MIN
+                }
+
+                // Floor division: v / r rounded toward negative infinity
+                let quotient = v / r;
+                let remainder = v % r;
+                // If signs differ and there's a remainder, adjust down
+                let result = if remainder != 0 && (v < 0) != (r < 0) {
+                    quotient - 1
+                } else {
+                    quotient
+                };
+                Number::Int(result)
+            }
             (Number::Int(v), Number::Float(r)) => Number::Float(v as f64 / r),
             (Number::Float(v), Number::Int(r)) => Number::Float(v / r as f64),
             (Number::Float(v), Number::Float(r)) => Number::Float(v / r),
@@ -155,7 +176,7 @@ impl std::ops::Sub for Number {
 
     fn sub(self, other: Number) -> Number {
         match (self, other) {
-            (Number::Int(v), Number::Int(r)) => Number::Int(v - r),
+            (Number::Int(v), Number::Int(r)) => Number::Int(v.wrapping_sub(r)),
             (Number::Int(v), Number::Float(r)) => Number::Float(v as f64 - r),
             (Number::Float(v), Number::Int(r)) => Number::Float(v - r as f64),
             (Number::Float(v), Number::Float(r)) => Number::Float(v - r),

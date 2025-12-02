@@ -22,6 +22,68 @@ mod tests {
     use std::io::Write;
 
     #[test]
+    fn test_parser_unary_minus_precedence() {
+        // Test that 5 * -2 parses correctly as 5 * (-2)
+        let prog = "5 * -2".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Number(Number::Int(n)) => assert_eq!(n, -10),
+            other => panic!("expected int -10, got {:?}", other),
+        }
+
+        // Test that -5 * 2 parses correctly
+        let prog2 = "-5 * 2".to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        match v2 {
+            Value::Number(Number::Int(n)) => assert_eq!(n, -10),
+            other => panic!("expected int -10, got {:?}", other),
+        }
+
+        // Test division with negative
+        let prog3 = "10 / -2".to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        match v3 {
+            Value::Number(Number::Int(n)) => assert_eq!(n, -5),
+            other => panic!("expected int -5, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_arithmetic_overflow_wrapping() {
+        // Test wrapping addition
+        let prog = format!("{} + 1", i64::MAX);
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Number(Number::Int(n)) => assert_eq!(n, i64::MIN),
+            other => panic!("expected int MIN, got {:?}", other),
+        }
+
+        // Test wrapping subtraction
+        // Construct MIN indirectly to avoid lexer overflow on literal parsing of absolute value of MIN
+        let prog2 = format!("({} - 1) - 1", -9223372036854775807i64);
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        match v2 {
+            Value::Number(Number::Int(n)) => assert_eq!(n, i64::MAX),
+            other => panic!("expected int MAX, got {:?}", other),
+        }
+    }
+
+    #[test]
     fn test_readfile_builtin() {
         let dir = std::env::temp_dir();
         let file_path = dir.join("avon_test_read.txt");
@@ -4736,13 +4798,17 @@ mod tests {
         // The error message should describe what went wrong
         // For add operator, it should say "cannot add Number and String"
         assert!(
-            err.message.contains("cannot add") || err.message.contains("Number") || err.message.contains("String"),
+            err.message.contains("cannot add")
+                || err.message.contains("Number")
+                || err.message.contains("String"),
             "Expected descriptive type error, got: {}",
             err
         );
         // Operators like +, &&, || use descriptive messages instead of expected/found
-        assert!(err.expected.is_none() && err.found.is_none(),
-            "Add operator should use descriptive message, not expected/found fields");
+        assert!(
+            err.expected.is_none() && err.found.is_none(),
+            "Add operator should use descriptive message, not expected/found fields"
+        );
     }
 
     // ========================================================================
@@ -5929,7 +5995,10 @@ mod tests {
             err.message
         );
         // AND/OR should NOT use expected/found fields
-        assert!(err.expected.is_none(), "AND error should not have expected field");
+        assert!(
+            err.expected.is_none(),
+            "AND error should not have expected field"
+        );
         assert!(err.found.is_none(), "AND error should not have found field");
     }
 
@@ -5949,7 +6018,10 @@ mod tests {
             err.message
         );
         // AND/OR should NOT use expected/found fields
-        assert!(err.expected.is_none(), "OR error should not have expected field");
+        assert!(
+            err.expected.is_none(),
+            "OR error should not have expected field"
+        );
         assert!(err.found.is_none(), "OR error should not have found field");
     }
 
@@ -5969,7 +6041,10 @@ mod tests {
             err.message
         );
         // ADD should NOT use expected/found fields
-        assert!(err.expected.is_none(), "ADD error should not have expected field");
+        assert!(
+            err.expected.is_none(),
+            "ADD error should not have expected field"
+        );
         assert!(err.found.is_none(), "ADD error should not have found field");
     }
 

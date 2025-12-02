@@ -6,30 +6,6 @@ use std::slice::Iter;
 
 type ParseResult<T> = Result<T, EvalError>;
 
-pub fn parse_postfix(stream: &mut Peekable<Iter<Token>>) -> Expr {
-    let mut expr = parse_atom(stream);
-
-    // Handle member access (dot notation)
-    while let Some(Token::Dot(line)) = stream.peek() {
-        let line = *line;
-        stream.next(); // consume the dot
-        if let Some(Token::Identifier(field, _)) = stream.peek() {
-            let field_name = field.clone();
-            stream.next(); // consume the identifier
-            expr = Expr::Member {
-                object: Box::new(expr),
-                field: field_name,
-                line,
-            };
-        } else {
-            eprintln!("Parse error: expected identifier after '.'");
-            return Expr::None(line);
-        }
-    }
-
-    expr
-}
-
 pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
     match stream.next() {
         Some(atom) => {
@@ -279,40 +255,48 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
     }
 }
 
-pub fn parse_factor(stream: &mut Peekable<Iter<Token>>) -> Expr {
-    // Handle unary minus for negative numbers
+pub fn parse_postfix(stream: &mut Peekable<Iter<Token>>) -> Expr {
+    let mut expr = parse_atom(stream);
+
+    // Handle member access (dot notation)
+    while let Some(Token::Dot(line)) = stream.peek() {
+        let line = *line;
+        stream.next(); // consume the dot
+        if let Some(Token::Identifier(field, _)) = stream.peek() {
+            let field_name = field.clone();
+            stream.next(); // consume the identifier
+            expr = Expr::Member {
+                object: Box::new(expr),
+                field: field_name,
+                line,
+            };
+        } else {
+            eprintln!("Parse error: expected identifier after '.'");
+            return Expr::None(line);
+        }
+    }
+
+    expr
+}
+
+pub fn parse_unary(stream: &mut Peekable<Iter<Token>>) -> Expr {
     if let Some(Token::Sub(line)) = stream.peek() {
         let line = *line;
         stream.next(); // consume the minus
         let expr = parse_postfix(stream);
-        let mut lhs = Expr::Binary {
+        Expr::Binary {
             lhs: Box::new(Expr::Number(crate::common::Number::from(0), line)),
             op: Token::Sub(line),
             rhs: Box::new(expr),
             line,
-        };
-
-        // Continue with factor operations
-        while let Some(peek) = stream.peek() {
-            if !peek.is_factor_op() {
-                break;
-            }
-            // Safe: we just peeked and confirmed there's a token
-            let op = stream.next().expect("token exists after peek").clone();
-            let line = op.line();
-            let rhs = parse_postfix(stream);
-            lhs = Expr::Binary {
-                lhs: Box::new(lhs),
-                op,
-                rhs: Box::new(rhs),
-                line,
-            };
         }
-
-        return lhs;
+    } else {
+        parse_postfix(stream)
     }
+}
 
-    let mut lhs = parse_postfix(stream);
+pub fn parse_factor(stream: &mut Peekable<Iter<Token>>) -> Expr {
+    let mut lhs = parse_unary(stream);
 
     while let Some(peek) = stream.peek() {
         if !peek.is_factor_op() {
@@ -321,7 +305,7 @@ pub fn parse_factor(stream: &mut Peekable<Iter<Token>>) -> Expr {
         // Safe: we just peeked and confirmed there's a token
         let op = stream.next().expect("token exists after peek").clone();
         let line = op.line();
-        let rhs = parse_postfix(stream);
+        let rhs = parse_unary(stream);
         lhs = Expr::Binary {
             lhs: Box::new(lhs),
             op,

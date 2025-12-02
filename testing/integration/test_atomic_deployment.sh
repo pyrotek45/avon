@@ -19,7 +19,7 @@ let x = "hello" in
 x + 42  # Type error: string + number
 EOF
 
-$AVON deploy "$TEST_DIR/bad_program.av" --root "$TEST_DIR/output" 2>&1 | grep -q "expected.*found\|type mismatch" || {
+$AVON deploy "$TEST_DIR/bad_program.av" --root "$TEST_DIR/output" 2>&1 | grep -q "cannot add\|type mismatch" || {
     echo "FAIL: Should have reported type error"
     exit 1
 }

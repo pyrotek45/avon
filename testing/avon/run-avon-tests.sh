@@ -73,6 +73,7 @@ run_test "Example Files" "$AVON_TEST_DIR/test_all_examples.sh"
 # 4. Language feature tests
 print_section "Language Features"
 run_test "Template Syntax" "$AVON_TEST_DIR/test_template_syntax.sh"
+run_test "Arithmetic & Overflow" "$AVON_TEST_DIR/test_arithmetic.sh"
 run_test "Path Handling" "$AVON_TEST_DIR/test_path_literal_block.sh"
 run_test "Grammar" "$AVON_TEST_DIR/test_grammar.sh"
 run_test "Tutorial Snippets" "$AVON_TEST_DIR/test_tutorial_snippets.sh"

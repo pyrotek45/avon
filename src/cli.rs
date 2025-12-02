@@ -13,7 +13,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-
 /// Check if a file path is an Avon file (has .av extension)
 fn is_avon_file(path: &str) -> bool {
     path.ends_with(".av")
@@ -1873,17 +1872,19 @@ fn execute_repl() -> i32 {
                             println!("  :vars           List all stored variables");
                             println!("  :inspect <name> Show detailed variable info");
                             println!("  :unlet <name>   Remove a variable");
-                            println!("  :read <file>    Read and display file contents (supports --git)");
+                            println!(
+                                "  :read <file>    Read and display file contents (supports --git)"
+                            );
                             println!("  :run <file>     Evaluate file and display result (supports --git, --debug)");
                             println!(
                                 "  :eval <file>    Evaluate file and merge Dict keys into REPL (supports --git)"
                             );
                             println!("  :preview <file> [flags...]  Preview deployment (supports --git, --debug, -param)");
                             println!("  :deploy <file> [flags...]   Deploy a file (supports --git, --root, --force, etc.)");
+                            println!("  :deploy-expr <expr> [flags...]  Deploy expression result");
                             println!(
-                                "  :deploy-expr <expr> [flags...]  Deploy expression result"
+                                "  :edit [file]    Open file in $EDITOR (or last edited file)"
                             );
-                            println!("  :edit [file]    Open file in $EDITOR (or last edited file)");
                             println!("  :write <file> <expr>  Write expression result to file");
                             println!("  :source <file>  Execute commands from a file");
                             println!("  :history [N]    Show command history (last N entries)");
@@ -1894,14 +1895,14 @@ fn execute_repl() -> i32 {
                             println!(
                                 "  :test <expr> <expected>  Test that expression equals expected"
                             );
-                            println!(
-                                "  :time <expr>    Measure expression evaluation time"
-                            );
+                            println!("  :time <expr>    Measure expression evaluation time");
                             println!("  :benchmark <expr>        Alias for :time");
                             println!("  :benchmark-file <file>   Measure file evaluation time");
                             println!("  :watch <name>   Watch a variable for changes");
                             println!("  :unwatch <name> Stop watching a variable");
-                            println!("  :report         Show session report (commands, variables, etc.)");
+                            println!(
+                                "  :report         Show session report (commands, variables, etc.)"
+                            );
                             println!("  :pwd            Show current working directory");
                             println!("  :list [dir]     List directory contents");
                             println!("  :cd <dir>       Change working directory");
@@ -1909,7 +1910,9 @@ fn execute_repl() -> i32 {
                             println!(
                                 "  :doc            Show all builtin functions and REPL commands"
                             );
-                            println!("  :doc <name>     Show documentation for a builtin or command");
+                            println!(
+                                "  :doc <name>     Show documentation for a builtin or command"
+                            );
                             println!("  :type <expr>    Show the type of an expression");
                             println!("  :clear          Clear all user-defined variables");
                             println!("  :exit, :quit    Exit the REPL");
@@ -1933,7 +1936,9 @@ fn execute_repl() -> i32 {
                             println!("  Ctrl+L          Clear screen");
                             println!();
                             println!("Features:");
-                            println!("  • Syntax highlighting (colors for keywords, builtins, strings)");
+                            println!(
+                                "  • Syntax highlighting (colors for keywords, builtins, strings)"
+                            );
                             println!("  • Multi-line input (incomplete expressions continue on next line)");
                             println!("  • Tab completion for builtins, variables, and files");
                             println!();
@@ -2453,7 +2458,10 @@ fn execute_repl() -> i32 {
                                 match fetch_git_raw(file_path) {
                                     Ok(c) => c,
                                     Err(e) => {
-                                        eprintln!("Error fetching from git '{}': {}", file_path, e.message);
+                                        eprintln!(
+                                            "Error fetching from git '{}': {}",
+                                            file_path, e.message
+                                        );
                                         eprintln!("  Tip: URL format should be: user/repo/path/to/file.av");
                                         let _ = rl.add_history_entry(trimmed);
                                         continue;
@@ -2530,7 +2538,10 @@ fn execute_repl() -> i32 {
                                 match fetch_git_raw(&file_path) {
                                     Ok(s) => (s, file_path.clone()),
                                     Err(e) => {
-                                        eprintln!("Error fetching from git '{}': {}", file_path, e.message);
+                                        eprintln!(
+                                            "Error fetching from git '{}': {}",
+                                            file_path, e.message
+                                        );
                                         eprintln!("  Tip: URL format should be: user/repo/path/to/file.av");
                                         let _ = rl.add_history_entry(trimmed);
                                         continue;
@@ -2562,27 +2573,16 @@ fn execute_repl() -> i32 {
                                             // Display result nicely (same as regular evaluation)
                                             match &val {
                                                 Value::FileTemplate { .. } => {
-                                                    match collect_file_templates(
-                                                        &val, &source,
-                                                    ) {
+                                                    match collect_file_templates(&val, &source) {
                                                         Ok(files) => {
                                                             println!("FileTemplate:");
                                                             for (path, content) in files {
-                                                                println!(
-                                                                    "  Path: {}",
-                                                                    path
-                                                                );
-                                                                println!(
-                                                                    "  Content:\n{}",
-                                                                    content
-                                                                );
+                                                                println!("  Path: {}", path);
+                                                                println!("  Content:\n{}", content);
                                                             }
                                                         }
                                                         Err(e) => {
-                                                            eprintln!(
-                                                                "Error: {}",
-                                                                e.message
-                                                            );
+                                                            eprintln!("Error: {}", e.message);
                                                         }
                                                     }
                                                 }
@@ -2599,17 +2599,15 @@ fn execute_repl() -> i32 {
                                                         }
                                                     }
                                                     if all_are_file_templates {
-                                                        match collect_file_templates(
-                                                            &val, &source,
-                                                        ) {
+                                                        match collect_file_templates(&val, &source)
+                                                        {
                                                             Ok(files) => {
-                                                                println!("FileTemplates ({} files):", files.len());
-                                                                for (path, content) in files
-                                                                {
-                                                                    println!(
-                                                                        "  Path: {}",
-                                                                        path
-                                                                    );
+                                                                println!(
+                                                                    "FileTemplates ({} files):",
+                                                                    files.len()
+                                                                );
+                                                                for (path, content) in files {
+                                                                    println!("  Path: {}", path);
                                                                     println!(
                                                                         "  Content:\n{}",
                                                                         content
@@ -2617,10 +2615,7 @@ fn execute_repl() -> i32 {
                                                                 }
                                                             }
                                                             Err(e) => {
-                                                                eprintln!(
-                                                                    "Error: {}",
-                                                                    e.message
-                                                                );
+                                                                eprintln!("Error: {}", e.message);
                                                             }
                                                         }
                                                     } else {
@@ -2637,10 +2632,7 @@ fn execute_repl() -> i32 {
                                         Err(e) => {
                                             eprintln!(
                                                 "Error: {}",
-                                                e.pretty_with_file(
-                                                    &source,
-                                                    Some(&source_name)
-                                                )
+                                                e.pretty_with_file(&source, Some(&source_name))
                                             );
                                         }
                                     }
@@ -2657,7 +2649,9 @@ fn execute_repl() -> i32 {
                         }
                         "eval" => {
                             eprintln!("Error: Missing file path");
-                            eprintln!("Usage: :eval <file_path> [--git] [-arg value] [positional...]");
+                            eprintln!(
+                                "Usage: :eval <file_path> [--git] [-arg value] [positional...]"
+                            );
                             eprintln!("  Example: :eval config.av");
                             eprintln!("  Example: :eval config.av -env prod -port 8080");
                             eprintln!("  Example: :eval --git user/repo/path/file.av -env dev");
@@ -2670,7 +2664,9 @@ fn execute_repl() -> i32 {
                             let rest = cmd.trim_start_matches("eval ").trim();
                             if rest.is_empty() {
                                 eprintln!("Error: Missing file path");
-                                eprintln!("Usage: :eval <file_path> [--git] [-arg value] [positional...]");
+                                eprintln!(
+                                    "Usage: :eval <file_path> [--git] [-arg value] [positional...]"
+                                );
                                 eprintln!("  Example: :eval config.av");
                                 eprintln!("  Example: :eval config.av -env prod -port 8080");
                                 eprintln!("  Example: :eval --git user/repo/path/file.av -env dev");
@@ -2701,7 +2697,10 @@ fn execute_repl() -> i32 {
                                             named_args.insert(key, parts[i + 1].to_string());
                                             i += 2;
                                         } else {
-                                            eprintln!("Error: Named argument '{}' requires a value", s);
+                                            eprintln!(
+                                                "Error: Named argument '{}' requires a value",
+                                                s
+                                            );
                                             let _ = rl.add_history_entry(trimmed);
                                             break;
                                         }
@@ -2730,7 +2729,10 @@ fn execute_repl() -> i32 {
                                 match fetch_git_raw(&file_path) {
                                     Ok(s) => (s, file_path.clone()),
                                     Err(e) => {
-                                        eprintln!("Error fetching from git '{}': {}", file_path, e.message);
+                                        eprintln!(
+                                            "Error fetching from git '{}': {}",
+                                            file_path, e.message
+                                        );
                                         eprintln!("  Tip: URL format should be: user/repo/path/to/file.av");
                                         let _ = rl.add_history_entry(trimmed);
                                         continue;
@@ -2764,7 +2766,9 @@ fn execute_repl() -> i32 {
                                             loop {
                                                 match &val {
                                                     Value::Function { ident, default, .. } => {
-                                                        if let Some(named_val) = named_args.get(ident) {
+                                                        if let Some(named_val) =
+                                                            named_args.get(ident)
+                                                        {
                                                             match apply_function(
                                                                 &val,
                                                                 Value::String(named_val.clone()),
@@ -2778,7 +2782,10 @@ fn execute_repl() -> i32 {
                                                                 Err(e) => {
                                                                     eprintln!(
                                                                         "Error: {}",
-                                                                        e.pretty_with_file(&source, Some(&source_name))
+                                                                        e.pretty_with_file(
+                                                                            &source,
+                                                                            Some(&source_name)
+                                                                        )
                                                                     );
                                                                     break;
                                                                 }
@@ -2786,7 +2793,9 @@ fn execute_repl() -> i32 {
                                                         } else if pos_idx < pos_args.len() {
                                                             match apply_function(
                                                                 &val,
-                                                                Value::String(pos_args[pos_idx].clone()),
+                                                                Value::String(
+                                                                    pos_args[pos_idx].clone(),
+                                                                ),
                                                                 &source,
                                                                 0,
                                                             ) {
@@ -2798,13 +2807,21 @@ fn execute_repl() -> i32 {
                                                                 Err(e) => {
                                                                     eprintln!(
                                                                         "Error: {}",
-                                                                        e.pretty_with_file(&source, Some(&source_name))
+                                                                        e.pretty_with_file(
+                                                                            &source,
+                                                                            Some(&source_name)
+                                                                        )
                                                                     );
                                                                     break;
                                                                 }
                                                             }
                                                         } else if let Some(def_box) = default {
-                                                            match apply_function(&val, (**def_box).clone(), &source, 0) {
+                                                            match apply_function(
+                                                                &val,
+                                                                (**def_box).clone(),
+                                                                &source,
+                                                                0,
+                                                            ) {
                                                                 Ok(nv) => {
                                                                     val = nv;
                                                                     continue;
@@ -2812,14 +2829,20 @@ fn execute_repl() -> i32 {
                                                                 Err(e) => {
                                                                     eprintln!(
                                                                         "Error: {}",
-                                                                        e.pretty_with_file(&source, Some(&source_name))
+                                                                        e.pretty_with_file(
+                                                                            &source,
+                                                                            Some(&source_name)
+                                                                        )
                                                                     );
                                                                     break;
                                                                 }
                                                             }
                                                         } else {
                                                             eprintln!("Error: Missing required argument: {}", ident);
-                                                            eprintln!("  Usage: :eval {} -{} <value>", source_name, ident);
+                                                            eprintln!(
+                                                                "  Usage: :eval {} -{} <value>",
+                                                                source_name, ident
+                                                            );
                                                             break;
                                                         }
                                                     }
@@ -2827,7 +2850,9 @@ fn execute_repl() -> i32 {
                                                         if pos_idx < pos_args.len() {
                                                             match apply_function(
                                                                 &val,
-                                                                Value::String(pos_args[pos_idx].clone()),
+                                                                Value::String(
+                                                                    pos_args[pos_idx].clone(),
+                                                                ),
                                                                 &source,
                                                                 0,
                                                             ) {
@@ -2839,7 +2864,10 @@ fn execute_repl() -> i32 {
                                                                 Err(e) => {
                                                                     eprintln!(
                                                                         "Error: {}",
-                                                                        e.pretty_with_file(&source, Some(&source_name))
+                                                                        e.pretty_with_file(
+                                                                            &source,
+                                                                            Some(&source_name)
+                                                                        )
                                                                     );
                                                                     break;
                                                                 }
@@ -2949,7 +2977,10 @@ fn execute_repl() -> i32 {
                                 match fetch_git_raw(&file_path) {
                                     Ok(s) => (s, file_path.clone()),
                                     Err(e) => {
-                                        eprintln!("Error fetching from git '{}': {}", file_path, e.message);
+                                        eprintln!(
+                                            "Error fetching from git '{}': {}",
+                                            file_path, e.message
+                                        );
                                         eprintln!("  Tip: URL format should be: user/repo/path/to/file.av");
                                         let _ = rl.add_history_entry(trimmed);
                                         continue;
@@ -2971,24 +3002,19 @@ fn execute_repl() -> i32 {
                                     let ast = parse(tokens);
                                     let mut temp_symbols = initial_builtins();
                                     match eval(ast.program, &mut temp_symbols, &source) {
-                                        Ok(val) => {
-                                            match collect_file_templates(&val, &source) {
-                                                Ok(files) => {
-                                                    println!(
-                                                        "Would deploy {} file(s):",
-                                                        files.len()
-                                                    );
-                                                    for (path, content) in files {
-                                                        println!("--- {} ---", path);
-                                                        println!("{}", content);
-                                                    }
-                                                }
-                                                Err(e) => {
-                                                    eprintln!("Error: {}", e.message);
-                                                    eprintln!("  Result is not a FileTemplate or list of FileTemplates");
+                                        Ok(val) => match collect_file_templates(&val, &source) {
+                                            Ok(files) => {
+                                                println!("Would deploy {} file(s):", files.len());
+                                                for (path, content) in files {
+                                                    println!("--- {} ---", path);
+                                                    println!("{}", content);
                                                 }
                                             }
-                                        }
+                                            Err(e) => {
+                                                eprintln!("Error: {}", e.message);
+                                                eprintln!("  Result is not a FileTemplate or list of FileTemplates");
+                                            }
+                                        },
                                         Err(e) => {
                                             eprintln!(
                                                 "Error: {}",
@@ -3012,9 +3038,7 @@ fn execute_repl() -> i32 {
                             eprintln!("Usage: :deploy <file_path> [flags...]");
                             eprintln!("  Flags: --git, --root <dir>, --force, --backup, --append, --if-not-exists, --debug");
                             eprintln!("  Example: :deploy config.av --root ./output --backup");
-                            eprintln!(
-                                "  Example: :deploy --git user/repo/config.av --root ./out"
-                            );
+                            eprintln!("  Example: :deploy --git user/repo/config.av --root ./out");
                             eprintln!("  Note: This deploys FileTemplates from the file to disk");
                             let _ = rl.add_history_entry(trimmed);
                             continue;
@@ -3125,7 +3149,10 @@ fn execute_repl() -> i32 {
                                 match fetch_git_raw(&file_path) {
                                     Ok(s) => (s, file_path.clone()),
                                     Err(e) => {
-                                        eprintln!("Error fetching from git '{}': {}", file_path, e.message);
+                                        eprintln!(
+                                            "Error fetching from git '{}': {}",
+                                            file_path, e.message
+                                        );
                                         let _ = rl.add_history_entry(trimmed);
                                         continue;
                                     }
@@ -4193,10 +4220,7 @@ fn execute_repl() -> i32 {
                                 .or_else(|_| std::env::var("VISUAL"))
                                 .unwrap_or_else(|_| "vi".to_string());
 
-                            match std::process::Command::new(&editor)
-                                .arg(file_path)
-                                .status()
-                            {
+                            match std::process::Command::new(&editor).arg(file_path).status() {
                                 Ok(status) => {
                                     if !status.success() {
                                         eprintln!("Editor exited with code: {:?}", status.code());
@@ -4242,19 +4266,28 @@ fn execute_repl() -> i32 {
                                                 match eval(ast.program, &mut symbols, line) {
                                                     Ok(_) => executed += 1,
                                                     Err(e) => {
-                                                        eprintln!("Error in line '{}': {}", line, e.message);
+                                                        eprintln!(
+                                                            "Error in line '{}': {}",
+                                                            line, e.message
+                                                        );
                                                         errors += 1;
                                                     }
                                                 }
                                             }
                                             Err(e) => {
-                                                eprintln!("Parse error in '{}': {}", line, e.message);
+                                                eprintln!(
+                                                    "Parse error in '{}': {}",
+                                                    line, e.message
+                                                );
                                                 errors += 1;
                                             }
                                         }
                                     }
                                     *symbols_rc.borrow_mut() = symbols.clone();
-                                    println!("Sourced {}: {} executed, {} errors", file_path, executed, errors);
+                                    println!(
+                                        "Sourced {}: {} executed, {} errors",
+                                        file_path, executed, errors
+                                    );
                                 }
                                 Err(e) => {
                                     eprintln!("Error reading '{}': {}", file_path, e);
@@ -4377,7 +4410,8 @@ fn execute_repl() -> i32 {
                                 println!();
                             }
 
-                            println!("Current Directory: {}", 
+                            println!(
+                                "Current Directory: {}",
                                 std::env::current_dir()
                                     .map(|p| p.display().to_string())
                                     .unwrap_or_else(|_| "unknown".to_string())
