@@ -79,13 +79,13 @@ Functions for file system operations.
 | `fill_template` | `String\|Path -> Dict\|List -> String` | Reads a file and replaces placeholders `{key}` with values. |
 | `glob` | `String -> [String]` | Returns a list of files matching the glob pattern. |
 | `import` | `String\|Path -> a` | Imports and evaluates another Avon file. |
-| `json_parse` | `String -> a` | Parses a JSON string (from a file) into an Avon value. |
+| `json_parse` | `String -> Dict\|List\|a` | Parses a JSON string (from a file) into an Avon value (Dict for objects, List for arrays). |
 | `readfile` | `String\|Path -> String` | Reads the entire content of a file. |
 | `readlines` | `String\|Path -> [String]` | Reads a file line by line into a list. |
 | `relpath` | `String\|Path -> String\|Path -> String` | Returns the relative path from base to target. |
-| `toml_parse` | `String -> a` | Parses a TOML string (from a file) into an Avon value. |
+| `toml_parse` | `String -> Dict\|List\|a` | Parses a TOML string (from a file) into an Avon value (Dict for tables, List for arrays). |
 | `walkdir` | `String\|Path -> [String]` | Recursively lists all files in a directory. |
-| `yaml_parse` | `String -> a` | Parses a YAML string (from a file) into an Avon value. |
+| `yaml_parse` | `String -> Dict\|List\|a` | Parses a YAML string (from a file) into an Avon value (Dict for mappings, List for sequences). |
 
 ## Formatting Functions
 
