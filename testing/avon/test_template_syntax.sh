@@ -355,7 +355,7 @@ echo
 echo -e "${YELLOW}Type Conversions${NC}"
 
 test_example "to_string for numbers" \
-    'let count = 42 in "{" + (to_string count) + "}"' \
+    'let num = 42 in "{" + (to_string num) + "}"' \
     "{42}"
 
 echo
