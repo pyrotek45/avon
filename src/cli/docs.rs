@@ -99,6 +99,7 @@ pub fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("any", "any :: (a -> Bool) -> [a] -> Bool\n  Check if any element satisfies predicate.\n  Returns true if any pass, false if all fail.\n  Example: any (\\x x < 0) [1, 2, -3] -> true\n  Example: any (\\x x < 0) [1, 2, 3] -> false\n  Example: any (\\x x < 0) [] -> false"),
         ("count", "count :: (a -> Bool) -> [a] -> Int\n  Count elements matching predicate.\n  Example: count (\\x x > 5) [1, 6, 3, 8, 5] -> 2\n  Example: count (\\x x == \"a\") [\"a\", \"b\", \"a\"] -> 2"),
         ("head", "head :: [a] -> a | None\n  Get first item or None.\n  Example: head [1, 2, 3] -> 1"),
+        ("nth", "nth :: Int -> [a] -> a | None\n  Get item at index (0-based) or None if out of bounds.\n  Example: nth 0 [1, 2, 3] -> 1\n  Example: nth 2 [1, 2, 3] -> 3\n  Example: nth 5 [1, 2, 3] -> None"),
         ("tail", "tail :: [a] -> [a]\n  Get all items except first.\n  Example: tail [1, 2, 3] -> [2, 3]"),
 
         // Regex Functions
@@ -342,6 +343,7 @@ pub fn print_builtin_docs() {
     println!("  {:<18} :: {}", "any", "(a -> Bool) -> [a] -> Bool");
     println!("  {:<18} :: {}", "count", "(a -> Bool) -> [a] -> Int");
     println!("  {:<18} :: {}", "head", "[a] -> a | None");
+    println!("  {:<18} :: {}", "nth", "Int -> [a] -> a | None");
     println!("  {:<18} :: {}", "tail", "[a] -> [a]");
     println!();
 

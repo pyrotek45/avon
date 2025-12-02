@@ -136,6 +136,7 @@ Functions for working with lists.
 | `fold` | `(b -> a -> b) -> b -> [a] -> b` | Reduces a list to a single value using an accumulator. |
 | `head` | `[a] -> a\|None` | Returns the first item, or None if empty. |
 | `map` | `(a -> b) -> [a] -> [b]` | Applies a function to each item in the list. |
+| `nth` | `Number -> [a] -> a\|None` | Returns the item at index (0-based), or None if out of bounds. |
 | `partition` | `(a -> Bool) -> [a] -> [[a], [a]]` | Splits a list into two lists: [matches, non-matches]. |
 | `permutations` | `Number -> [a] -> [[a]]` | Returns all permutations of length k. |
 | `range` | `Number -> Number -> [Number]` | Generates a list of numbers from start to end (inclusive). |

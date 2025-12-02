@@ -1,4 +1,4 @@
-//! List operations: drop, enumerate, filter, flatmap, flatten, fold, head, map, partition, range, reverse, sort, sort_by, split_at, tail, take, unique, unzip, zip, windows, chunks, transpose, permutations, combinations
+//! List operations: chunks, combinations, drop, enumerate, filter, flatmap, flatten, fold, head, map, nth, partition, permutations, range, reverse, sort, sort_by, split_at, tail, take, transpose, unique, unzip, windows, zip
 
 use crate::common::{EvalError, Number, Value};
 use crate::eval::apply_function;
@@ -17,6 +17,7 @@ pub const NAMES: &[&str] = &[
     "fold",
     "head",
     "map",
+    "nth",
     "partition",
     "permutations",
     "range",
@@ -38,7 +39,7 @@ pub fn get_arity(name: &str) -> Option<usize> {
     match name {
         "enumerate" | "flatten" | "head" | "reverse" | "sort" | "tail" | "transpose" | "unique"
         | "unzip" => Some(1),
-        "chunks" | "combinations" | "drop" | "filter" | "flatmap" | "map" | "partition"
+        "chunks" | "combinations" | "drop" | "filter" | "flatmap" | "map" | "nth" | "partition"
         | "permutations" | "range" | "sort_by" | "split_at" | "take" | "windows" | "zip" => Some(2),
         "fold" => Some(3),
         _ => None,
@@ -190,6 +191,35 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let list = &args[0];
             if let Value::List(items) = list {
                 Ok(items.first().cloned().unwrap_or(Value::None))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "nth" => {
+            let n_val = &args[0];
+            let list = &args[1];
+            let n = match n_val {
+                Value::Number(Number::Int(i)) => *i,
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "integer",
+                        n_val.to_string(source),
+                        line,
+                    ))
+                }
+            };
+            if let Value::List(items) = list {
+                if n < 0 {
+                    Ok(Value::None)
+                } else if (n as usize) < items.len() {
+                    Ok(items[n as usize].clone())
+                } else {
+                    Ok(Value::None)
+                }
             } else {
                 Err(EvalError::type_mismatch(
                     "list",

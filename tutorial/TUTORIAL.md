@@ -1987,6 +1987,7 @@ Lists are the heart of Avon, and Avon provides comprehensive list operations:
 | `partition pred list` | Split by predicate | `partition (\x x > 2) [1,2,3,4,5]` → `[[3,4,5], [1,2]]` |
 | `reverse list` | Reverse the list | `reverse [1,2,3]` → `[3,2,1]` |
 | `head list` | Get first element (or `None` if empty) | `head [1,2,3]` → `1` |
+| `nth n list` | Get element at index (or `None` if out of bounds) | `nth 1 [1,2,3]` → `2` |
 | `tail list` | Get all but first element | `tail [1,2,3,4]` → `[2,3,4]` |
 
 Examples:
