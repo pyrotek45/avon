@@ -104,6 +104,12 @@ fn is_builtin_name(name: &str) -> bool {
             | "split"
             | "split_at"
             | "starts_with"
+            | "sum"
+            | "min"
+            | "max"
+            | "all"
+            | "any"
+            | "count"
             | "tail"
             | "take"
             | "timestamp"
@@ -450,6 +456,30 @@ pub fn initial_builtins() -> HashMap<String, Value> {
     m.insert(
         "enumerate".to_string(),
         Value::Builtin("enumerate".to_string(), Vec::new()),
+    );
+    m.insert(
+        "sum".to_string(),
+        Value::Builtin("sum".to_string(), Vec::new()),
+    );
+    m.insert(
+        "min".to_string(),
+        Value::Builtin("min".to_string(), Vec::new()),
+    );
+    m.insert(
+        "max".to_string(),
+        Value::Builtin("max".to_string(), Vec::new()),
+    );
+    m.insert(
+        "all".to_string(),
+        Value::Builtin("all".to_string(), Vec::new()),
+    );
+    m.insert(
+        "any".to_string(),
+        Value::Builtin("any".to_string(), Vec::new()),
+    );
+    m.insert(
+        "count".to_string(),
+        Value::Builtin("count".to_string(), Vec::new()),
     );
 
     // Map/Dictionary operations (using list of pairs)
@@ -2141,6 +2171,12 @@ pub fn apply_function(
                 "unique" => 1,
                 "range" => 2,
                 "enumerate" => 1,
+                "sum" => 1,
+                "min" => 1,
+                "max" => 1,
+                "all" => 2,
+                "any" => 2,
+                "count" => 2,
                 "get" => 2,
                 "set" => 3,
                 "keys" => 1,
@@ -3608,6 +3644,217 @@ pub fn execute_builtin(
                     str_val.to_string(source),
                     0,
                 ))
+            }
+        }
+        "sum" => {
+            let list = &args[0];
+            if let Value::List(items) = list {
+                let mut total = 0i64;
+                let mut has_float = false;
+                let mut float_total = 0.0;
+                for item in items {
+                    match item {
+                        Value::Number(Number::Int(i)) => {
+                            if has_float {
+                                float_total += *i as f64;
+                            } else {
+                                total += i;
+                            }
+                        }
+                        Value::Number(Number::Float(f)) => {
+                            if !has_float {
+                                has_float = true;
+                                float_total = total as f64;
+                            }
+                            float_total += f;
+                        }
+                        _ => return Err(EvalError::type_mismatch("number", item.to_string(source), 0)),
+                    }
+                }
+                if has_float {
+                    Ok(Value::Number(Number::Float(float_total)))
+                } else {
+                    Ok(Value::Number(Number::Int(total)))
+                }
+            } else {
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
+            }
+        }
+        "min" => {
+            let list = &args[0];
+            if let Value::List(items) = list {
+                if items.is_empty() {
+                    return Ok(Value::None);
+                }
+                let mut min_val = items[0].clone();
+                for item in &items[1..] {
+                    match (&min_val, item) {
+                        (Value::Number(Number::Int(a)), Value::Number(Number::Int(b))) => {
+                            if b < a {
+                                min_val = item.clone();
+                            }
+                        }
+                        (Value::Number(Number::Float(a)), Value::Number(Number::Float(b))) => {
+                            if b < a {
+                                min_val = item.clone();
+                            }
+                        }
+                        (Value::Number(Number::Int(a)), Value::Number(Number::Float(b))) => {
+                            if *b < (*a as f64) {
+                                min_val = item.clone();
+                            }
+                        }
+                        (Value::Number(Number::Float(a)), Value::Number(Number::Int(b))) => {
+                            if (*b as f64) < *a {
+                                min_val = item.clone();
+                            }
+                        }
+                        (Value::String(a), Value::String(b)) => {
+                            if b < a {
+                                min_val = item.clone();
+                            }
+                        }
+                        _ => return Err(EvalError::type_mismatch(
+                            "comparable values",
+                            item.to_string(source),
+                            0,
+                        )),
+                    }
+                }
+                Ok(min_val)
+            } else {
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
+            }
+        }
+        "max" => {
+            let list = &args[0];
+            if let Value::List(items) = list {
+                if items.is_empty() {
+                    return Ok(Value::None);
+                }
+                let mut max_val = items[0].clone();
+                for item in &items[1..] {
+                    match (&max_val, item) {
+                        (Value::Number(Number::Int(a)), Value::Number(Number::Int(b))) => {
+                            if b > a {
+                                max_val = item.clone();
+                            }
+                        }
+                        (Value::Number(Number::Float(a)), Value::Number(Number::Float(b))) => {
+                            if b > a {
+                                max_val = item.clone();
+                            }
+                        }
+                        (Value::Number(Number::Int(a)), Value::Number(Number::Float(b))) => {
+                            if *b > (*a as f64) {
+                                max_val = item.clone();
+                            }
+                        }
+                        (Value::Number(Number::Float(a)), Value::Number(Number::Int(b))) => {
+                            if (*b as f64) > *a {
+                                max_val = item.clone();
+                            }
+                        }
+                        (Value::String(a), Value::String(b)) => {
+                            if b > a {
+                                max_val = item.clone();
+                            }
+                        }
+                        _ => return Err(EvalError::type_mismatch(
+                            "comparable values",
+                            item.to_string(source),
+                            0,
+                        )),
+                    }
+                }
+                Ok(max_val)
+            } else {
+                Err(EvalError::type_mismatch("list", list.to_string(source), 0))
+            }
+        }
+        "all" => {
+            let func = &args[0];
+            let list = &args[1];
+            if let Value::List(items) = list {
+                for item in items {
+                    let res = apply_function(func, item.clone(), source, line).map_err(|mut err| {
+                        if !err.message.starts_with("all:") {
+                            err.message = format!("all: {}", err.message);
+                        }
+                        err
+                    })?;
+                    match res {
+                        Value::Bool(false) => return Ok(Value::Bool(false)),
+                        Value::Bool(true) => {}
+                        other => {
+                            return Err(EvalError::type_mismatch(
+                                "bool",
+                                other.to_string(source),
+                                0,
+                            ))
+                        }
+                    }
+                }
+                Ok(Value::Bool(true))
+            } else {
+                Err(EvalError::type_mismatch("list", list.to_string(source), 1))
+            }
+        }
+        "any" => {
+            let func = &args[0];
+            let list = &args[1];
+            if let Value::List(items) = list {
+                for item in items {
+                    let res = apply_function(func, item.clone(), source, line).map_err(|mut err| {
+                        if !err.message.starts_with("any:") {
+                            err.message = format!("any: {}", err.message);
+                        }
+                        err
+                    })?;
+                    match res {
+                        Value::Bool(true) => return Ok(Value::Bool(true)),
+                        Value::Bool(false) => {}
+                        other => {
+                            return Err(EvalError::type_mismatch(
+                                "bool",
+                                other.to_string(source),
+                                0,
+                            ))
+                        }
+                    }
+                }
+                Ok(Value::Bool(false))
+            } else {
+                Err(EvalError::type_mismatch("list", list.to_string(source), 1))
+            }
+        }
+        "count" => {
+            let func = &args[0];
+            let list = &args[1];
+            if let Value::List(items) = list {
+                let mut count = 0i64;
+                for item in items {
+                    let res = apply_function(func, item.clone(), source, line).map_err(|mut err| {
+                        if !err.message.starts_with("count:") {
+                            err.message = format!("count: {}", err.message);
+                        }
+                        err
+                    })?;
+                    match res {
+                        Value::Bool(true) => count += 1,
+                        Value::Bool(false) => {}
+                        other => {
+                            return Err(EvalError::type_mismatch(
+                                "bool",
+                                other.to_string(source),
+                                0,
+                            ))
+                        }
+                    }
+                }
+                Ok(Value::Number(Number::Int(count)))
+            } else {
+                Err(EvalError::type_mismatch("list", list.to_string(source), 1))
             }
         }
         "zip" => {

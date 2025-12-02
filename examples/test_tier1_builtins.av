@@ -1,0 +1,31 @@
+# Test Tier 1 AoC Builtins: sum, min, max, all, any, count
+
+let demo = 
+  let s1 = sum [1, 2, 3, 4, 5] in
+  let _ = trace "sum [1..5]" s1 in
+  let s2 = sum [] in
+  let _ = trace "sum []" s2 in
+  let m1 = min [3, 1, 4, 1, 5] in
+  let _ = trace "min [3,1,4,1,5]" m1 in
+  let m2 = min ["zebra", "apple", "banana"] in
+  let _ = trace "min [zebra,apple,banana]" m2 in
+  let m3 = max [3, 1, 4, 1, 5] in
+  let _ = trace "max [3,1,4,1,5]" m3 in
+  let m4 = max ["zebra", "apple", "banana"] in
+  let _ = trace "max [zebra,apple,banana]" m4 in
+  let a1 = all (\x x > 0) [1, 2, 3] in
+  let _ = trace "all >0 [1,2,3]" a1 in
+  let a2 = all (\x x > 0) [1, -2, 3] in
+  let _ = trace "all >0 [1,-2,3]" a2 in
+  let a3 = any (\x x < 0) [1, 2, -3] in
+  let _ = trace "any <0 [1,2,-3]" a3 in
+  let a4 = any (\x x < 0) [1, 2, 3] in
+  let _ = trace "any <0 [1,2,3]" a4 in
+  let c1 = count (\x x > 5) [1, 6, 3, 8, 5] in
+  let _ = trace "count >5 [1,6,3,8,5]" c1 in
+  let c2 = count (\x x == "a") ["a", "b", "a"] in
+  let _ = trace "count ==a [a,b,a]" c2 in
+  trace "TIER1_COMPLETE" "✓ All tier 1 builtins working!"
+in
+
+demo

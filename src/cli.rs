@@ -119,6 +119,12 @@ fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("unique", "unique :: [a] -> [a]\n  Remove duplicate elements (keeps first occurrence).\n  Example: unique [1, 2, 1, 3, 2] -> [1, 2, 3]\n  Example: unique [\"a\", \"b\", \"a\"] -> [\"a\", \"b\"]"),
         ("range", "range :: Int -> Int -> [Int]\n  Generate range of integers from start to end (inclusive).\n  Example: range 1 5 -> [1, 2, 3, 4, 5]\n  Note: Returns empty list if start > end"),
         ("enumerate", "enumerate :: [a] -> [[Int, a]]\n  Add index to each element (returns list of [index, value] pairs).\n  Example: enumerate [\"a\", \"b\", \"c\"] -> [[0, \"a\"], [1, \"b\"], [2, \"c\"]]"),
+        ("sum", "sum :: [Number] -> Number\n  Sum all numbers in list.\n  Example: sum [1, 2, 3, 4, 5] -> 15\n  Example: sum [] -> 0\n  Note: Returns Int if all ints, Float if any floats"),
+        ("min", "min :: [a] -> a | None\n  Find minimum value in list.\n  Works with numbers (mixed int/float) and strings.\n  Example: min [3, 1, 4, 1, 5] -> 1\n  Example: min [\"zebra\", \"apple\", \"banana\"] -> \"apple\"\n  Returns None for empty lists."),
+        ("max", "max :: [a] -> a | None\n  Find maximum value in list.\n  Works with numbers (mixed int/float) and strings.\n  Example: max [3, 1, 4, 1, 5] -> 5\n  Example: max [\"zebra\", \"apple\", \"banana\"] -> \"zebra\"\n  Returns None for empty lists."),
+        ("all", "all :: (a -> Bool) -> [a] -> Bool\n  Check if all elements satisfy predicate.\n  Returns true if all pass, false if any fail.\n  Example: all (\\x x > 0) [1, 2, 3] -> true\n  Example: all (\\x x > 0) [1, -2, 3] -> false\n  Example: all (\\x x > 0) [] -> true (vacuous truth)"),
+        ("any", "any :: (a -> Bool) -> [a] -> Bool\n  Check if any element satisfies predicate.\n  Returns true if any pass, false if all fail.\n  Example: any (\\x x < 0) [1, 2, -3] -> true\n  Example: any (\\x x < 0) [1, 2, 3] -> false\n  Example: any (\\x x < 0) [] -> false"),
+        ("count", "count :: (a -> Bool) -> [a] -> Int\n  Count elements matching predicate.\n  Example: count (\\x x > 5) [1, 6, 3, 8, 5] -> 2\n  Example: count (\\x x == \"a\") [\"a\", \"b\", \"a\"] -> 2"),
         ("head", "head :: [a] -> a | None\n  Get first item or None.\n  Example: head [1, 2, 3] -> 1"),
         ("tail", "tail :: [a] -> [a]\n  Get all items except first.\n  Example: tail [1, 2, 3] -> [2, 3]"),
 
