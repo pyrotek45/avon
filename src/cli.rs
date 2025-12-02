@@ -108,6 +108,9 @@ fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("unzip", "unzip :: [(a, b)] -> ([a], [b])\n  Split list of pairs into two lists.\n  Example: unzip [(1, \"a\"), (2, \"b\")] -> ([1, 2], [\"a\", \"b\"])"),
         ("take", "take :: Int -> [a] -> [a]\n  Take first n items.\n  Example: take 2 [1, 2, 3, 4] -> [1, 2]"),
         ("drop", "drop :: Int -> [a] -> [a]\n  Drop first n items.\n  Example: drop 2 [1, 2, 3, 4] -> [3, 4]"),
+        ("slice", "slice :: (String|[a]) -> Int -> Int -> (String|[a])\n  Extract substring or sublist from start (inclusive) to end (exclusive).\n  Example: slice \"hello\" 1 4 -> \"ell\"\n  Example: slice [1, 2, 3, 4, 5] 1 4 -> [2, 3, 4]"),
+        ("char_at", "char_at :: String -> Int -> String | None\n  Get character at index (0-based).\n  Example: char_at \"hello\" 2 -> \"l\"\n  Example: char_at \"hello\" 10 -> None"),
+        ("chars", "chars :: String -> [String]\n  Convert string to list of single-character strings.\n  Example: chars \"hello\" -> [\"h\", \"e\", \"l\", \"l\", \"o\"]"),
         ("split_at", "split_at :: Int -> [a] -> ([a], [a])\n  Split list at index.\n  Example: split_at 2 [1, 2, 3, 4] -> ([1, 2], [3, 4])"),
         ("partition", "partition :: (a -> Bool) -> [a] -> ([a], [a])\n  Split list into matching and non-matching.\n  Example: partition (\\x x > 2) [1, 2, 3, 4] -> ([3, 4], [1, 2])"),
         ("reverse", "reverse :: [a] -> [a]\n  Reverse list order.\n  Example: reverse [1, 2, 3] -> [3, 2, 1]"),
@@ -448,6 +451,9 @@ fn print_builtin_docs() {
     println!("  {:<18} :: {}", "unzip", "[(a, b)] -> ([a], [b])");
     println!("  {:<18} :: {}", "take", "Int -> [a] -> [a]");
     println!("  {:<18} :: {}", "drop", "Int -> [a] -> [a]");
+    println!("  {:<18} :: {}", "slice", "(String|[a]) -> Int -> Int -> (String|[a])");
+    println!("  {:<18} :: {}", "char_at", "String -> Int -> String | None");
+    println!("  {:<18} :: {}", "chars", "String -> [String]");
     println!("  {:<18} :: {}", "split_at", "Int -> [a] -> ([a], [a])");
     println!(
         "  {:<18} :: {}",
@@ -457,7 +463,7 @@ fn print_builtin_docs() {
     println!("  {:<18} :: {}", "sort", "[a] -> [a]");
     println!("  {:<18} :: {}", "sort_by", "(a -> b) -> [a] -> [a]");
     println!("  {:<18} :: {}", "unique", "[a] -> [a]");
-    println!("  {:<18} :: {}", "range", "Int -> Int -> [Int]");
+    println!("  {:<18} :: {}", "range", "Int -> Int -> [Int]  (inclusive on both ends!)");
     println!("  {:<18} :: {}", "enumerate", "[a] -> [[Int, a]]");
     println!("  {:<18} :: {}", "head", "[a] -> a | None");
     println!("  {:<18} :: {}", "tail", "[a] -> [a]");

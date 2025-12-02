@@ -1,0 +1,78 @@
+# Neovim init.vim configuration generator
+
+let plugins = [
+  "mg979/vim-visual-multi",
+  "tpope/vim-fugitive",
+  "junegunn/vim-plug",
+  "yamatsum/nvim-cursorline",
+  "machakann/vim-highlightedyank",
+  "wjsetzer/freepascal-vim",
+  "morhetz/gruvbox",
+  "sheerun/vim-polyglot",
+  "junegunn/fzf"
+] in
+
+let make_plug_line = \p "Plug '" + p + "'" in
+let plug_lines = join (map make_plug_line plugins) "\n" in
+
+let keymaps = [
+  ["<leader>w", ":w"],
+  ["<leader>q", ":q"],
+  ["<leader>Q", ":call FQuit()"],
+  ["<leader>ec", ":tabedit $MYVIMRC"],
+  ["<leader>sc", ":source $MYVIMRC"],
+  ["<leader>l", "<C-w>l"],
+  ["<leader>k", "<C-w>k"],
+  ["<leader>j", "<C-w>j"],
+  ["<leader>h", "<C-w>h"],
+  ["<leader>o", "<C-w>o"],
+  ["<leader>sv", ":vsplit"],
+  ["<leader>sh", ":split"],
+  ["<leader>(", "gT"],
+  ["<leader>)", "gt"],
+  ["<leader>c", ":tabo"],
+  ["<leader>f", ":FZF"],
+  ["<leader>F", ":FZF ~"],
+  ["<leader>gs", ":G"],
+  ["<leader>gd", ":Git diff"],
+  ["<leader>gb", ":Git blame"],
+  ["<leader>gc", ":Git commit"]
+] in
+
+let make_map_line = \m "noremap " + (head m) + " " + (head (tail m)) in
+let map_lines = join (map make_map_line keymaps) "\n" in
+
+@init.vim {"
+    if empty(glob('~/.config/nvim/autoload/plug.vim'))
+    silent !curl -fLo ~/.local/share/nvim/site/autoload/plug.vim --create-dirs \
+        https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+    endif
+
+    autocmd VimEnter * if len(filter(values(g:plugs), '!isdirectory(v:val.dir)'))
+    \| PlugInstall --sync | q | endif
+
+    call plug#begin('~/.config/nvim/plugged')
+    {plug_lines}
+    call plug#end()
+
+    set nocompatible syntax on filetype on colorscheme gruvbox
+    let g:highlightedyank_highlight_duration = 200
+    set shiftwidth=2 tabstop=2 softtabstop=2 smarttab expandtab
+    set confirm inccommand=nosplit showcmd nohls wildmenu number noerrorbells nowrap smartcase noswapfile incsearch ignorecase colorcolumn=80
+    let g:netrw_banner = 0
+    let g:netrw_liststyle = 3
+    let mapleader = " "
+    tnoremap <esc> <C-\><C-n>
+
+    function FQuit()
+    let c = confirm("Quit? Unsaved data lost.", "&Yes\n&No", 2)
+    if c == 1 | q! | endif
+    endfunction
+
+    function GitPullSafe()
+    let c = confirm("Pull? Unsaved data lost.", "&Yes\n&No", 2)
+    if c == 1 | Git pull | endif
+    endfunction
+
+    {map_lines}
+"}

@@ -96,6 +96,9 @@ fn is_builtin_name(name: &str) -> bool {
             | "replace"
             | "reverse"
             | "set"
+            | "slice"
+            | "char_at"
+            | "chars"
             | "sort"
             | "sort_by"
             | "split"
@@ -395,6 +398,18 @@ pub fn initial_builtins() -> HashMap<String, Value> {
     m.insert(
         "drop".to_string(),
         Value::Builtin("drop".to_string(), Vec::new()),
+    );
+    m.insert(
+        "slice".to_string(),
+        Value::Builtin("slice".to_string(), Vec::new()),
+    );
+    m.insert(
+        "char_at".to_string(),
+        Value::Builtin("char_at".to_string(), Vec::new()),
+    );
+    m.insert(
+        "chars".to_string(),
+        Value::Builtin("chars".to_string(), Vec::new()),
     );
     m.insert(
         "zip".to_string(),
@@ -2113,6 +2128,9 @@ pub fn apply_function(
                 "tail" => 1,
                 "take" => 2,
                 "drop" => 2,
+                "slice" => 3,
+                "char_at" => 2,
+                "chars" => 1,
                 "zip" => 2,
                 "unzip" => 1,
                 "split_at" => 2,
@@ -3485,6 +3503,111 @@ pub fn execute_builtin(
                 Ok(Value::List(items.iter().skip(n).cloned().collect()))
             } else {
                 Err(EvalError::type_mismatch("list", list.to_string(source), 0))
+            }
+        }
+        "slice" => {
+            let collection = &args[0];
+            let start_val = &args[1];
+            let end_val = &args[2];
+            
+            let start = match start_val {
+                Value::Number(Number::Int(i)) => *i as usize,
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "number",
+                        start_val.to_string(source),
+                        1,
+                    ))
+                }
+            };
+            
+            let end = match end_val {
+                Value::Number(Number::Int(i)) => *i as usize,
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "number",
+                        end_val.to_string(source),
+                        2,
+                    ))
+                }
+            };
+            
+            match collection {
+                Value::String(s) => {
+                    let chars: Vec<char> = s.chars().collect();
+                    let len = chars.len();
+                    let start = start.min(len);
+                    let end = end.min(len);
+                    if start > end {
+                        Ok(Value::String(String::new()))
+                    } else {
+                        let sliced: String = chars[start..end].iter().collect();
+                        Ok(Value::String(sliced))
+                    }
+                }
+                Value::List(items) => {
+                    let len = items.len();
+                    let start = start.min(len);
+                    let end = end.min(len);
+                    if start > end {
+                        Ok(Value::List(Vec::new()))
+                    } else {
+                        Ok(Value::List(items[start..end].to_vec()))
+                    }
+                }
+                _ => Err(EvalError::type_mismatch(
+                    "string or list",
+                    collection.to_string(source),
+                    0,
+                ))
+            }
+        }
+        "char_at" => {
+            let str_val = &args[0];
+            let idx_val = &args[1];
+            
+            let idx = match idx_val {
+                Value::Number(Number::Int(i)) => *i as usize,
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "number",
+                        idx_val.to_string(source),
+                        1,
+                    ))
+                }
+            };
+            
+            match str_val {
+                Value::String(s) => {
+                    let chars: Vec<char> = s.chars().collect();
+                    if idx < chars.len() {
+                        Ok(Value::String(chars[idx].to_string()))
+                    } else {
+                        Ok(Value::None)
+                    }
+                }
+                _ => Err(EvalError::type_mismatch(
+                    "string",
+                    str_val.to_string(source),
+                    0,
+                ))
+            }
+        }
+        "chars" => {
+            let str_val = &args[0];
+            match str_val {
+                Value::String(s) => {
+                    let char_list: Vec<Value> = s
+                        .chars()
+                        .map(|c| Value::String(c.to_string()))
+                        .collect();
+                    Ok(Value::List(char_list))
+                }
+                _ => Err(EvalError::type_mismatch(
+                    "string",
+                    str_val.to_string(source),
+                    0,
+                ))
             }
         }
         "zip" => {

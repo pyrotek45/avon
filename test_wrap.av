@@ -1,0 +1,13 @@
+# Test wrapping calculation
+let pos = trace "start pos" 50 in
+let amount = trace "move left" 60 in
+let new_pos = trace "new_pos = 50 - 60" (pos - amount) in
+let mod_val = trace "new_pos % 100" (new_pos % 100) in
+let wrapped = trace "wrapped = 100 + (-10)" (100 + mod_val) in
+
+# Test division for counting boundaries
+let div_result = trace "pos / 100 = 50/100" (pos / 100) in
+let new_div = trace "new_pos / 100 = -10/100" (new_pos / 100) in
+let boundary_count = trace "count = 0 - (-10/100)" (div_result - new_div) in
+
+boundary_count

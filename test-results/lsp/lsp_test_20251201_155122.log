@@ -1,0 +1,169 @@
+═══════════════════════════════════════════════════════════
+LSP Test Suite - 20251201_155122
+═══════════════════════════════════════════════════════════
+Project Root: /home/pyrotek45/projects/v7/avon
+LSP Project: /home/pyrotek45/projects/v7/avon/avon-lsp
+Results Directory: /home/pyrotek45/projects/v7/avon/test-results/lsp
+
+
+Building avon-lsp...
+error: rustc 1.86.0 is not supported by the following package:
+  home@0.5.12 requires rustc 1.88
+Either upgrade rustc or select compatible dependency versions with
+`cargo update <name>@<current-ver> --precise <compatible-ver>`
+where `<compatible-ver>` is the latest version supporting rustc 1.86.0
+
+✓ LSP build successful
+
+Starting integration test suite...
+
+[0;34m═══════════════════════════════════════════════════════════[0m
+[0;34mLSP Integration Test Suite[0m
+[0;34m═══════════════════════════════════════════════════════════[0m
+
+
+[0;34m═══════════════════════════════════════════════════════════[0m
+[0;34mBuilding LSP Project[0m
+[0;34m═══════════════════════════════════════════════════════════[0m
+
+error: rustc 1.86.0 is not supported by the following package:
+  home@0.5.12 requires rustc 1.88
+Either upgrade rustc or select compatible dependency versions with
+`cargo update <name>@<current-ver> --precise <compatible-ver>`
+where `<compatible-ver>` is the latest version supporting rustc 1.86.0
+
+[0;32m✓[0m LSP build successful
+[1;33mℹ[0m Using LSP binary: /home/pyrotek45/projects/v7/avon/avon-lsp/target/debug/avon-lsp (debug)
+
+[0;34m═══════════════════════════════════════════════════════════[0m
+[0;34mTest 1: LSP Binary Validation[0m
+[0;34m═══════════════════════════════════════════════════════════[0m
+
+[0;32m✓[0m LSP binary exists
+[1;33mℹ[0m Binary size: 69M
+/home/pyrotek45/projects/v7/avon/testing/lsp/test-lsp-integration.sh: line 111: file: command not found
+[1;33mℹ[0m Binary type: 
+
+[0;34m═══════════════════════════════════════════════════════════[0m
+[0;34mTest 2: Diagnostics - Valid Code (Should Pass)[0m
+[0;34m═══════════════════════════════════════════════════════════[0m
+
+[1;33mℹ[0m Testing: /home/pyrotek45/projects/v7/avon/examples/lsp_comprehensive_tests.av
+[0;31m✗[0m Example failed to compile
+
+[0;34m═══════════════════════════════════════════════════════════[0m
+[0;34mTest 3: Type Mismatch Detection[0m
+[0;34m═══════════════════════════════════════════════════════════[0m
+
+[1;33mℹ[0m Testing: /home/pyrotek45/projects/v7/avon/examples/lsp_type_mismatch_tests.av
+[0;32m✓[0m Type mismatch test file ready
+
+[0;34m═══════════════════════════════════════════════════════════[0m
+[0;34mTest 4: Lambda Expression Support[0m
+[0;34m═══════════════════════════════════════════════════════════[0m
+
+[1;33mℹ[0m Testing: /home/pyrotek45/projects/v7/avon/examples/lsp_lambda_tests.av
+[0;31m✗[0m Lambda expression test failed
+
+[0;34m═══════════════════════════════════════════════════════════[0m
+[0;34mTest 5: Function Currying Support[0m
+[0;34m═══════════════════════════════════════════════════════════[0m
+
+[1;33mℹ[0m Testing: /home/pyrotek45/projects/v7/avon/examples/lsp_currying_tests.av
+[0;31m✗[0m Currying test failed
+
+[0;34m═══════════════════════════════════════════════════════════[0m
+[0;34mTest 6: Code Completion Features[0m
+[0;34m═══════════════════════════════════════════════════════════[0m
+
+[1;33mℹ[0m Testing builtin function detection
+[0;31m✗[0m Builtin 'split' not found
+[0;31m✗[0m Builtin 'join' not found
+[0;31m✗[0m Builtin 'map' not found
+[0;31m✗[0m Builtin 'filter' not found
+[0;31m✗[0m Builtin 'fold' not found
+[0;31m✗[0m Builtin 'length' not found
+[0;31m✗[0m Builtin 'upper' not found
+[0;31m✗[0m Builtin 'lower' not found
+[0;31m✗[0m Builtin 'trim' not found
+[0;31m✗[0m 9 builtins missing
+
+[0;34m═══════════════════════════════════════════════════════════[0m
+[0;34mTest 7: LSP Example Files Validation[0m
+[0;34m═══════════════════════════════════════════════════════════[0m
+
+[0;31m✗[0m lsp_completion_demo.av: Invalid or has errors
+[0;31m✗[0m lsp_comprehensive_tests.av: Invalid or has errors
+[0;31m✗[0m lsp_currying_tests.av: Invalid or has errors
+[0;31m✗[0m lsp_lambda_tests.av: Invalid or has errors
+[0;31m✗[0m lsp_type_mismatch_tests.av: Invalid or has errors
+[1;33mℹ[0m Valid examples: 0
+[0;31m✗[0m Invalid examples: 5
+
+[0;34m═══════════════════════════════════════════════════════════[0m
+[0;34mTest 8: Performance Benchmark[0m
+[0;34m═══════════════════════════════════════════════════════════[0m
+
+[1;33mℹ[0m Measuring LSP binary startup time
+[1;33mℹ[0m LSP startup time: 7ms
+[0;32m✓[0m Fast startup time
+
+[0;34m═══════════════════════════════════════════════════════════[0m
+[0;34mTest Summary[0m
+[0;34m═══════════════════════════════════════════════════════════[0m
+
+[0;32m✓[0m LSP Integration Tests Complete
+[1;33mℹ[0m Test results location: /home/pyrotek45/projects/v7/avon/test-results
+[1;33mℹ[0m Total tests run: 8
+
+[0;34m═══════════════════════════════════════════════════════════[0m
+[0;34mDetailed Information[0m
+[0;34m═══════════════════════════════════════════════════════════[0m
+
+[1;33mℹ[0m LSP Project: /home/pyrotek45/projects/v7/avon/avon-lsp
+[1;33mℹ[0m LSP Binary: /home/pyrotek45/projects/v7/avon/avon-lsp/target/debug/avon-lsp
+[1;33mℹ[0m Examples Dir: /home/pyrotek45/projects/v7/avon/examples
+[1;33mℹ[0m Results Dir: /home/pyrotek45/projects/v7/avon/test-results
+
+[0;34m═══════════════════════════════════════════════════════════[0m
+[0;34mNext Steps[0m
+[0;34m═══════════════════════════════════════════════════════════[0m
+
+[1;33mℹ[0m 1. Run 'cargo run -- lsp' in avon-lsp to start LSP server
+[1;33mℹ[0m 2. Configure VS Code extension to use local LSP binary
+[1;33mℹ[0m 3. Test in editor with Avon files
+[1;33mℹ[0m 4. Run full test suite with '--all' flag for comprehensive testing
+
+[0;32m✓ All LSP integration tests completed successfully[0m
+
+✓ Integration tests completed successfully
+
+Starting protocol test suite...
+✓ Protocol tests completed successfully
+
+✗ Invalid: lsp_completion_demo.av
+✗ Invalid: lsp_comprehensive_tests.av
+✗ Invalid: lsp_currying_tests.av
+✗ Invalid: lsp_lambda_tests.av
+✗ Invalid: lsp_type_mismatch_tests.av
+
+Example validation: 0 valid, 5 invalid
+
+✓ LSP startup time: 7ms
+
+ℹ Builtin functions available: 0
+✗ Expected 111+ builtins, found 0
+
+═══════════════════════════════════════════════════════════
+Test Summary - 20251201_155122
+═══════════════════════════════════════════════════════════
+Build Status:          ✓ Successful
+Integration Tests:     ✓ Completed
+Protocol Tests:        ✓ Completed
+Example Validation:    0/5 passed
+LSP Startup:           ✓ Confirmed
+Builtins Available:    0 functions
+
+Overall Status:        ✓ TESTS PASSED
+Log File:              /home/pyrotek45/projects/v7/avon/test-results/lsp/lsp_test_20251201_155122.log
+═══════════════════════════════════════════════════════════

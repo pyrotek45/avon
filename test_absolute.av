@@ -1,0 +1,46 @@
+# Count every time we reach a position that maps to 0 (mod 100)
+# Track absolute position, count boundary crossings + landing on 0
+
+let initial_state = {abs_position: 50, times_at_zero: 0} in
+
+let process_line = \state \line
+  if is_empty (trim line) then
+    state
+  else
+    let dir = head (to_list line) in
+    let amount_str = join (tail (to_list line)) "" in
+    let amount = to_int amount_str in
+    let current_abs = to_int (get state "abs_position") in
+    let current_times = to_int (get state "times_at_zero") in
+    
+    let new_abs_position = if dir == "R" then 
+      current_abs + amount 
+    else 
+      current_abs - amount 
+    in
+    
+    # Calculate final wrapped position
+    let wrapped_pos = if new_abs_position < 0 then 
+      100 + (new_abs_position % 100)
+    else
+      new_abs_position % 100
+    in
+    
+    # Count when we cross 100-boundaries
+    let times_at_zero = if dir == "R" then
+      let start_chunk = current_abs / 100 in
+      let end_chunk = new_abs_position / 100 in
+      end_chunk - start_chunk
+    else
+      let start_chunk = (current_abs - 1) / 100 in
+      let end_chunk = (new_abs_position - 1) / 100 in
+      start_chunk - end_chunk
+    in
+    
+    {abs_position: new_abs_position, times_at_zero: current_times + times_at_zero}
+in
+
+let input_lines = readlines @data.txt in
+let final_state = fold process_line initial_state input_lines in
+
+trace "Password" (get final_state "times_at_zero")

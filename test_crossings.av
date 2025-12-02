@@ -1,0 +1,59 @@
+# Count every position visited, including intermediates
+# When we cross 0, we increment the counter
+let initial_state = {position: 50, times_at_zero: 0} in
+
+let process_line = \state \line
+  if is_empty (trim line) then
+    state
+  else
+    let dir = head (to_list line) in
+    let amount_str = join (tail (to_list line)) "" in
+    let amount = to_int amount_str in
+    let current_position = to_int (get state "position") in
+    let current_times = to_int (get state "times_at_zero") in
+    
+    # For right rotation: we need to count how many times we cross boundaries
+    # For left rotation: similarly count crossings
+    
+    let new_position_raw = if dir == "R" then 
+      current_position + amount 
+    else 
+      current_position - amount 
+    in
+    
+    let k = new_position_raw in
+    let final_position = if k < 0 then 
+      100 + (k % 100)
+    else if k > 99 then
+      k % 100
+    else
+      k
+    in
+    
+    # Count times we cross 0 during the rotation
+    # Right rotation: 50 + 68 = 118. We go: 50->51->...->99(wraps)->0->1->...->18
+    # So we cross 0 once. Formula: (start + amount - 1) / 100 gives crossings
+    # Left rotation: 50 - 68 = -18. We go: 50->49->...->0->99->98->...->82
+    # So we cross 0 once. Formula: need to count wraps
+    
+    let times_we_crossed_zero = if dir == "R" then
+      # Right: count how many times we go past 99 and wrap to 0
+      # Formula: (start + amount) / 100 minus start / 100
+      ((current_position + amount) / 100) - (current_position / 100)
+    else
+      # Left: count how many times we go below 0 and wrap to 99
+      # If end < 0, we wrap: count = ceiling of (0 - end) / 100
+      if new_position_raw < 0 then
+        (0 - new_position_raw - 1) / 100 + 1
+      else
+        0
+    in
+    let incremented_times = current_times + times_we_crossed_zero in
+    
+    {position: final_position, times_at_zero: incremented_times}
+in
+
+let input_lines = readlines @data.txt in
+let final_state = fold process_line initial_state input_lines in
+
+trace "Times crossing/landing on 0" (get final_state "times_at_zero")

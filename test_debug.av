@@ -1,0 +1,15 @@
+# Test the normalization logic with the example
+# Start at 50
+# L68: 50 - 68 = -18 → should be 82
+
+let test_norm = \k
+  if k < 0 then 
+    100 + (k % 100)
+  else if k > 99 then
+    k % 100
+  else
+    k
+in
+
+# Test: 50 - 68 = -18
+trace "Testing -18" (test_norm (50 - 68))
