@@ -12,6 +12,30 @@ Successfully solved AoC 2024 Day 15 (Gift Shop Product ID Verification) using a 
 
 This validates Avon's functional programming strengths, but also highlights where convenience builtins would significantly improve developer experience.
 
+## ⚠️ IMPORTANT: Remember to Update VSCode Extension When Adding New Builtins!
+
+When adding new builtin functions to Avon, **always update the syntax highlighting** in the VSCode extension:
+
+**File to update:** `vscode/syntaxes/avon.tmLanguage.json`
+
+**Location:** Line ~38 in the "builtin" patterns section
+
+**Action:** Add the new builtin names to the regex match pattern (keep alphabetical order):
+```json
+"match": "(?<!\\.)\\b(existing_builtins|NEW_BUILTIN_HERE|more_builtins)\\b(?=\\s|\\(|\\[|\\||->|\\{)"
+```
+
+**Example:** When slice, char_at, and chars were added:
+- Location: Between "center" and "concat" (slice), after "basename" (char_at), after "chars"
+- Result: Syntax highlighting now recognizes all three new functions
+
+**Why:** Without this update:
+- VSCode won't highlight the new builtins with special syntax coloring
+- Users won't get autocomplete for new functions
+- New functions look like regular identifiers instead of builtins
+
+This is a quick fix (2 minutes) but makes a big UX difference!
+
 ## Issues Encountered While Solving AoC Challenge
 
 While solving the challenge, several limitations were discovered that would be easily solved with additional builtin functions or documentation improvements.
