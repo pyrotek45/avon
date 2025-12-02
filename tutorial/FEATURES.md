@@ -487,6 +487,9 @@ content
 | `pad_left` | 3 | `pad_left "7" 3 "0"` | `"007"` |
 | `pad_right` | 3 | `pad_right "hi" 5 " "` | `"hi   "` |
 | `indent` | 2 | `indent "code" 4` | `"    code"` |
+| `slice` | 3 | `slice "hello" 1 4` | `"ell"` |
+| `char_at` | 2 | `char_at "hello" 2` | `"l"` |
+| `chars` | 1 | `chars "hi"` | `["h", "i"]` |
 
 **Examples:** `examples/string_functions.av`, `examples/split_join.av`, `examples/new_functions_demo.av`
 
@@ -516,6 +519,7 @@ content
 | `sort_by` | 2 | Sort by key function | `sort_by (\x neg x) [1,2,3]` -> `[3,2,1]` |
 | `unique` | 1 | Remove duplicates (preserve order) | `unique [1,2,2,3,1]` -> `[1,2,3]` |
 | `range` | 2 | Generate integer range (inclusive) | `range 1 5` -> `[1,2,3,4,5]` |
+| `slice` | 3 | Extract sublist | `slice [1,2,3,4,5] 1 3` -> `[2,3]` |
 | `enumerate` | 1 | Add indices | `enumerate ["a","b","c"]` -> `[[0,"a"],[1,"b"],[2,"c"]]` |
 
 **Sorting Examples:**
@@ -539,6 +543,10 @@ unique [1, 2, 2, 3, 1, 4, 3, 5]  # [1, 2, 3, 4, 5]
 range 1 10  # [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 range 5 8   # [5, 6, 7, 8]
 
+# Slice sublists
+slice [1,2,3,4,5] 1 3       # [2, 3]
+slice [10,20,30,40] 0 2     # [10, 20]
+
 # Enumerate for index tracking
 enumerate ["apple", "banana", "cherry"]
 # [[0, "apple"], [1, "banana"], [2, "cherry"]]
@@ -548,6 +556,26 @@ let items = ["zebra", "apple", "banana"] in
 let sorted = sort items in
 enumerate sorted
 # [[0, "apple"], [1, "banana"], [2, "zebra"]]
+```
+
+**String Operations Examples:**
+```avon
+# Slicing strings
+slice "hello" 1 4            # "ell"
+slice "avon" 0 2             # "av"
+
+# Access individual characters
+char_at "hello" 0            # "h"
+char_at "hello" 4            # "o"
+
+# Convert string to character list
+chars "hi"                   # ["h", "i"]
+chars "abc"                  # ["a", "b", "c"]
+
+# Practical: Process each character
+let text = "hello" in
+let chars_list = chars text in
+map (\c upper c) chars_list  # ["H", "E", "L", "L", "O"]
 ```
 
 **Examples:** `examples/map_example.av`, `examples/filter_example.av`, `examples/fold_example.av`, `examples/map_filter_fold.av`, `examples/list_operations.av`
