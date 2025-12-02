@@ -614,7 +614,7 @@ readfile config_path
 
 ## Additional Resources
 
-- **[FEATURES.md](./FEATURES.md)** — Complete language reference
+- **[BUILTIN_FUNCTIONS.md](./BUILTIN_FUNCTIONS.md)** — Complete reference of built-in functions
 - **[TUTORIAL.md](./TUTORIAL.md)** — Learn Avon step-by-step
 - **[DEBUGGING_GUIDE.md](./DEBUGGING_GUIDE.md)** — Debugging tools and techniques
 - **[examples/](../examples/)** — 92+ real-world examples

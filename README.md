@@ -16,7 +16,7 @@ Jump straight to what you need:
 | Doc | What's inside |
 |-----|---------------|
 | [Tutorial](./tutorial/TUTORIAL.md) | Learn Avon from scratch (start here!) |
-| [Features Reference](./tutorial/FEATURES.md) | Complete language reference |
+| [Built-in Functions](./tutorial/BUILTIN_FUNCTIONS.md) | Complete reference of built-in functions |
 | [Template Syntax](./tutorial/TEMPLATE_SYNTAX.md) | Multi-brace delimiters, literal braces, tips & tricks |
 | [Simple Configs](./tutorial/SIMPLE_CONFIGS.md) | Quick examples for common configs |
 | [Style Guide](./tutorial/STYLE_GUIDE.md) | Best practices and conventions |

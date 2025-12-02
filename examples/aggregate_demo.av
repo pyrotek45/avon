@@ -1,0 +1,56 @@
+# Aggregate Functions Demo
+# Demonstrates: sum, product, min, max, all, any, count
+
+let numbers = [1, 2, 3, 4, 5] in
+let floats = [1.5, 2.5, 3.5] in
+let mixed = [1, 2.5, 3] in
+let strings = ["apple", "banana", "cherry"] in
+
+# Sum and Product
+let sum_int = sum numbers in
+let sum_float = sum floats in
+let prod_int = product numbers in
+let prod_float = product floats in
+
+# Min and Max
+let min_num = min numbers in
+let max_num = max numbers in
+let min_str = min strings in
+let max_str = max strings in
+
+# Predicate functions
+let is_even = \x (x % 2) == 0 in
+let is_positive = \x x > 0 in
+let is_long = \s (length s) > 5 in
+
+# All, Any, Count
+let all_pos = all is_positive numbers in
+let any_even = any is_even numbers in
+let count_even = count is_even numbers in
+let count_long = count is_long strings in
+
+{"
+Aggregate Functions Demo:
+
+Numbers: {numbers}
+Floats: {floats}
+Strings: {strings}
+
+Sum/Product:
+  Sum (int): {sum_int}
+  Sum (float): {sum_float}
+  Product (int): {prod_int}
+  Product (float): {prod_float}
+
+Min/Max:
+  Min (num): {min_num}
+  Max (num): {max_num}
+  Min (str): {min_str}
+  Max (str): {max_str}
+
+Predicates:
+  All positive: {all_pos}
+  Any even: {any_even}
+  Count even: {count_even}
+  Count long strings: {count_long}
+"}

@@ -651,7 +651,7 @@ mustache_spaced "value"  # {{ value }}
 ## See Also
 
 - [TUTORIAL.md](./TUTORIAL.md) — Learn Avon from scratch
-- [FEATURES.md](./FEATURES.md) — Complete language reference
+- [BUILTIN_FUNCTIONS.md](./BUILTIN_FUNCTIONS.md) — Complete reference of built-in functions
 - [BUILDING_CONTENTS.md](./BUILDING_CONTENTS.md) — Building file contents
 - [STYLE_GUIDE.md](./STYLE_GUIDE.md) — Best practices and conventions
 - [DEBUGGING_GUIDE.md](./DEBUGGING_GUIDE.md) — When things go wrong

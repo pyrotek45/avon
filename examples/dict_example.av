@@ -16,8 +16,8 @@ let math = {
   multiply: \x \y x * y
 } in
 
-let sum = math.add 10 20 in
-let product = math.multiply 6 7 in
+let result_sum = math.add 10 20 in
+let result_product = math.multiply 6 7 in
 
 # Dicts are perfect for configuration
 let config = {
@@ -34,8 +34,8 @@ let config = {
 {greeting}
 
 Math operations:
-  10 + 20 = {sum}
-  6 * 7 = {product}
+  10 + 20 = {result_sum}
+  6 * 7 = {result_product}
 
 Configuration:
   Debug: {config.debug}

@@ -11,7 +11,7 @@ use crate::common::Value;
 use std::collections::HashMap;
 
 use super::{
-    aggregate, datetime, debug, dict, env, file_io, formatting, html, list, markdown, math,
+    aggregate, datetime, debug, dict, env, file_io, formatting, html, list, markdown, math, regex,
     string, types,
 };
 
@@ -28,6 +28,7 @@ const CATEGORY_MODULES: &[(&[&str], fn(&str) -> Option<usize>)] = &[
     (list::NAMES, list::get_arity),
     (markdown::NAMES, markdown::get_arity),
     (math::NAMES, math::get_arity),
+    (regex::NAMES, regex::get_arity),
     (string::NAMES, string::get_arity),
     (types::NAMES, types::get_arity),
 ];
@@ -46,6 +47,7 @@ pub fn is_builtin_name(name: &str) -> bool {
         || list::is_builtin(name)
         || markdown::is_builtin(name)
         || math::is_builtin(name)
+        || regex::is_builtin(name)
         || string::is_builtin(name)
         || types::is_builtin(name)
 }
@@ -64,6 +66,7 @@ pub fn get_builtin_arity(name: &str) -> Option<usize> {
         .or_else(|| list::get_arity(name))
         .or_else(|| markdown::get_arity(name))
         .or_else(|| math::get_arity(name))
+        .or_else(|| regex::get_arity(name))
         .or_else(|| string::get_arity(name))
         .or_else(|| types::get_arity(name))
 }
@@ -99,10 +102,7 @@ pub fn initial_builtins() -> HashMap<String, Value> {
 /// Get total count of all builtins (for documentation/debugging)
 #[allow(dead_code)]
 pub fn builtin_count() -> usize {
-    CATEGORY_MODULES
-        .iter()
-        .map(|(names, _)| names.len())
-        .sum()
+    CATEGORY_MODULES.iter().map(|(names, _)| names.len()).sum()
 }
 
 /// Get all builtin names grouped by category
@@ -120,6 +120,7 @@ pub fn all_builtin_names() -> Vec<(&'static str, &'static [&'static str])> {
         ("list", list::NAMES),
         ("markdown", markdown::NAMES),
         ("math", math::NAMES),
+        ("regex", regex::NAMES),
         ("string", string::NAMES),
         ("types", types::NAMES),
     ]
@@ -163,7 +164,11 @@ mod tests {
     fn test_builtin_count() {
         // Should have around 120 builtins
         let count = builtin_count();
-        assert!(count >= 100, "Expected at least 100 builtins, got {}", count);
+        assert!(
+            count >= 100,
+            "Expected at least 100 builtins, got {}",
+            count
+        );
     }
 
     #[test]
@@ -171,11 +176,7 @@ mod tests {
         // Test that each category has at least one builtin
         let categories = all_builtin_names();
         for (category, names) in categories {
-            assert!(
-                !names.is_empty(),
-                "Category '{}' has no builtins",
-                category
-            );
+            assert!(!names.is_empty(), "Category '{}' has no builtins", category);
         }
     }
 }

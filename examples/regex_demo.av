@@ -1,0 +1,47 @@
+# Regex Functions Demo
+# Demonstrates: regex_match, regex_replace, regex_split, scan
+
+let email_pattern = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$" in
+let date_pattern = "(\\d{4})-(\\d{2})-(\\d{2})" in
+
+let email1 = "user@example.com" in
+let email2 = "invalid-email" in
+
+# Matching
+let is_valid1 = regex_match email_pattern email1 in
+let is_valid2 = regex_match email_pattern email2 in
+
+# Replacing
+let text = "The color is red, and the other color is red." in
+let new_text = regex_replace "red" "blue" text in
+
+# Splitting
+let csv_line = "apple, banana,  cherry,date" in
+let split_items = regex_split "\\s*,\\s*" csv_line in
+
+# Scanning (Extracting)
+let log_entry = "Error at 2023-10-27: Connection failed" in
+let dates = scan date_pattern log_entry in
+
+# Scanning with groups
+let date_parts = scan date_pattern "2023-10-27 and 2024-01-01" in
+
+{"
+Regex Functions Demo:
+
+Matching:
+  '{email1}' is valid: {is_valid1}
+  '{email2}' is valid: {is_valid2}
+
+Replacing:
+  Original: '{text}'
+  Replaced: '{new_text}'
+
+Splitting:
+  Original: '{csv_line}'
+  Split: {split_items}
+
+Scanning:
+  Dates found: {dates}
+  Date parts: {date_parts}
+"}

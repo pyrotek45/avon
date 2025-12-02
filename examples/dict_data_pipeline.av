@@ -29,8 +29,8 @@ in
 let avg_age = \user_list
   let ages = map (\u get u "age") user_list in
   let total = fold (\acc \age acc + age) 0 ages in
-  let count = length user_list in
-  total / count
+  let num_users = length user_list in
+  total / num_users
 in
 
 # Pipeline: transform all users with status

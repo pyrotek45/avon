@@ -21,12 +21,7 @@ pub fn is_builtin(name: &str) -> bool {
 }
 
 /// Execute an HTML builtin function
-pub fn execute(
-    name: &str,
-    args: &[Value],
-    source: &str,
-    line: usize,
-) -> Result<Value, EvalError> {
+pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<Value, EvalError> {
     match name {
         "html_escape" => {
             let st = value_to_string_auto(&args[0], source, line)?;

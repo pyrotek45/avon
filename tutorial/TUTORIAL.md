@@ -94,6 +94,8 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
 8. **[Builtin Functions](#builtin-functions)**
    - String Operations (`concat`, `upper`, `lower`, `split`, `replace`, etc.)
    - List Operations (`map`, `filter`, `fold`, `join`, `length`, `zip`, `unzip`, `take`, `drop`, `split_at`, `partition`, `reverse`, `head`, `tail`, `sort`, `sort_by`, `unique`, `range`, `enumerate`)
+   - Aggregate Functions (`sum`, `product`, `min`, `max`, `all`, `any`, `count`)
+   - Regex Functions (`regex_match`, `regex_replace`, `regex_split`, `scan`)
    - File & Filesystem (`readfile`, `readlines`, `exists`, `basename`, `dirname`)
    - HTML Generation Helpers (`html_escape`, `html_tag`, `html_attr`)
    - Markdown Generation Helpers (`md_heading`, `md_link`, `md_code`, `md_list`)
@@ -1917,6 +1919,8 @@ This generates `config-dev.yml` and `config-prod.yml`.
 
 Avon comes with a toolkit of **100+ built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
 
+> **Full Reference:** For a complete list of all built-in functions, see [BUILTIN_FUNCTIONS.md](./BUILTIN_FUNCTIONS.md).
+
 These utilities work with any file format—whether you're generating hundreds of config files or just managing a single dotfile. Functions like `upper`, `lower`, `format_table`, `json_parse`, and `html_escape` help you manipulate text however you need.
 
 ### String Operations
@@ -1937,6 +1941,27 @@ These utilities work with any file format—whether you're generating hundreds o
 | `pad_left s width char` | `pad_left "7" 3 "0"` | `"007"` |
 | `pad_right s width char` | `pad_right "hi" 5 " "` | `"hi   "` |
 | `indent s spaces` | `indent "code" 4` | `"    code"` |
+
+### Aggregate Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `sum list` | Sum of numbers | `sum [1, 2, 3]` → `6` |
+| `product list` | Product of numbers | `product [2, 3, 4]` → `24` |
+| `min list` | Minimum value | `min [3, 1, 4]` → `1` |
+| `max list` | Maximum value | `max [3, 1, 4]` → `4` |
+| `all pred list` | True if all items match | `all (\x x > 0) [1, 2]` → `true` |
+| `any pred list` | True if any item matches | `any (\x x > 5) [1, 6]` → `true` |
+| `count pred list` | Count matching items | `count (\x x % 2 == 0) [1, 2, 3, 4]` → `2` |
+
+### Regex Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `regex_match pattern text` | Check if text matches pattern | `regex_match "^\\d+$" "123"` → `true` |
+| `regex_replace pattern repl text` | Replace matches | `regex_replace "\\d" "#" "a1b2"` → `"a#b#"` |
+| `regex_split pattern text` | Split by pattern | `regex_split "\\s+" "a b  c"` → `["a", "b", "c"]` |
+| `scan pattern text` | Find all matches | `scan "\\d+" "a12b34"` → `["12", "34"]` |
 
 ### List Operations
 

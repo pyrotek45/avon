@@ -461,5 +461,5 @@ Why this approach:**
 
 - **[TUTORIAL.md](./TUTORIAL.md)** - Complete Avon tutorial
 - **[STYLE_GUIDE.md](./STYLE_GUIDE.md)** - Code style and formatting
-- **[FEATURES.md](./FEATURES.md)** - Complete language reference
+- **[BUILTIN_FUNCTIONS.md](./BUILTIN_FUNCTIONS.md)** - Complete reference of built-in functions
 - **[examples/pattern_read_append.av](../examples/pattern_read_append.av)** - Example showing these patterns

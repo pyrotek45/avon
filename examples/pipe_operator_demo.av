@@ -4,7 +4,7 @@
 
 # Example 1: Simple pipe with builtin function
 let numbers = [1, 2, 3, 4, 5] in
-let count = numbers -> length in
+let num_count = numbers -> length in
 
 # Example 2: Chained pipes - filter then get length
 let even_count = [1, 2, 3, 4, 5] -> filter (\x x > 2) -> length in
@@ -28,4 +28,4 @@ let config_exists = @config.json -> exists in
 let custom_pipe = 10 -> \x x * 5 in
 
 # Return all results
-[count, even_count, upper_length, num_str_length, doubled, config_exists, custom_pipe]
+[num_count, even_count, upper_length, num_str_length, doubled, config_exists, custom_pipe]

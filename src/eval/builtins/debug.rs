@@ -20,19 +20,18 @@ pub fn is_builtin(name: &str) -> bool {
 }
 
 /// Execute a debug/assertion builtin function
-pub fn execute(
-    name: &str,
-    args: &[Value],
-    source: &str,
-    line: usize,
-) -> Result<Value, EvalError> {
+pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<Value, EvalError> {
     match name {
         "not" => {
             // not :: Bool -> Bool
             // Logical negation - returns true if false, false if true
             match &args[0] {
                 Value::Bool(b) => Ok(Value::Bool(!b)),
-                other => Err(EvalError::type_mismatch("bool", other.to_string(source), line)),
+                other => Err(EvalError::type_mismatch(
+                    "bool",
+                    other.to_string(source),
+                    line,
+                )),
             }
         }
         "assert" => {
@@ -46,7 +45,11 @@ pub fn execute(
                     None,
                     line,
                 )),
-                other => Err(EvalError::type_mismatch("bool", other.to_string(source), line)),
+                other => Err(EvalError::type_mismatch(
+                    "bool",
+                    other.to_string(source),
+                    line,
+                )),
             }
         }
         "error" => {

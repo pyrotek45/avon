@@ -8,6 +8,7 @@ pub const NAMES: &[&str] = &[
     "format_binary",
     "format_bool",
     "format_bytes",
+    "format_csv",
     "format_currency",
     "format_float",
     "format_hex",
@@ -24,9 +25,8 @@ pub const NAMES: &[&str] = &[
 /// Get arity for formatting functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
-        "format_binary" | "format_bytes" | "format_hex" | "format_json" | "format_octal" => {
-            Some(1)
-        }
+        "format_binary" | "format_bytes" | "format_csv" | "format_hex" | "format_json"
+        | "format_octal" => Some(1),
         "center" | "format_bool" | "format_currency" | "format_float" | "format_int"
         | "format_list" | "format_percent" | "format_scientific" | "format_table" | "truncate" => {
             Some(2)
@@ -41,12 +41,7 @@ pub fn is_builtin(name: &str) -> bool {
 }
 
 /// Execute a formatting builtin function
-pub fn execute(
-    name: &str,
-    args: &[Value],
-    source: &str,
-    line: usize,
-) -> Result<Value, EvalError> {
+pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<Value, EvalError> {
     match name {
         "format_int" => {
             let val = &args[0];
@@ -101,7 +96,11 @@ pub fn execute(
                 };
                 Ok(Value::String(format!("{:x}", int_val)))
             } else {
-                Err(EvalError::type_mismatch("number", val.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "number",
+                    val.to_string(source),
+                    line,
+                ))
             }
         }
         "format_octal" => {
@@ -113,7 +112,11 @@ pub fn execute(
                 };
                 Ok(Value::String(format!("{:o}", int_val)))
             } else {
-                Err(EvalError::type_mismatch("number", val.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "number",
+                    val.to_string(source),
+                    line,
+                ))
             }
         }
         "format_binary" => {
@@ -125,7 +128,11 @@ pub fn execute(
                 };
                 Ok(Value::String(format!("{:b}", int_val)))
             } else {
-                Err(EvalError::type_mismatch("number", val.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "number",
+                    val.to_string(source),
+                    line,
+                ))
             }
         }
         "format_scientific" => {
@@ -170,7 +177,11 @@ pub fn execute(
                 };
                 Ok(Value::String(formatted))
             } else {
-                Err(EvalError::type_mismatch("number", val.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "number",
+                    val.to_string(source),
+                    line,
+                ))
             }
         }
         "format_list" => {
@@ -182,7 +193,11 @@ pub fn execute(
             } else {
                 Err(EvalError::type_mismatch(
                     "list, string",
-                    format!("{}, {}", list.to_string(source), separator.to_string(source)),
+                    format!(
+                        "{}, {}",
+                        list.to_string(source),
+                        separator.to_string(source)
+                    ),
                     line,
                 ))
             }
@@ -235,6 +250,82 @@ pub fn execute(
             let val = &args[0];
             let json_str = format_json_value(val, source, line)?;
             Ok(Value::String(json_str))
+        }
+        "format_csv" => {
+            let val = &args[0];
+            let mut wtr = csv::Writer::from_writer(vec![]);
+
+            match val {
+                Value::List(items) => {
+                    if items.is_empty() {
+                        return Ok(Value::String(String::new()));
+                    }
+
+                    // Check if it's a list of dicts or list of lists
+                    if let Value::Dict(first) = &items[0] {
+                        // List of Dicts: Use keys as headers
+                        let headers: Vec<String> = first.keys().cloned().collect();
+                        wtr.write_record(&headers).map_err(|e| {
+                            EvalError::new(format!("csv write error: {}", e), None, None, line)
+                        })?;
+
+                        for item in items {
+                            if let Value::Dict(d) = item {
+                                let row: Vec<String> = headers
+                                    .iter()
+                                    .map(|h| {
+                                        d.get(h).map(|v| v.to_string(source)).unwrap_or_default()
+                                    })
+                                    .collect();
+                                wtr.write_record(&row).map_err(|e| {
+                                    EvalError::new(
+                                        format!("csv write error: {}", e),
+                                        None,
+                                        None,
+                                        line,
+                                    )
+                                })?;
+                            }
+                        }
+                    } else if let Value::List(_) = &items[0] {
+                        // List of Lists: No headers, just data
+                        for item in items {
+                            if let Value::List(row) = item {
+                                let row_strs: Vec<String> =
+                                    row.iter().map(|v| v.to_string(source)).collect();
+                                wtr.write_record(&row_strs).map_err(|e| {
+                                    EvalError::new(
+                                        format!("csv write error: {}", e),
+                                        None,
+                                        None,
+                                        line,
+                                    )
+                                })?;
+                            }
+                        }
+                    } else {
+                        return Err(EvalError::type_mismatch(
+                            "list of dicts or list of lists",
+                            val.to_string(source),
+                            line,
+                        ));
+                    }
+                }
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "list",
+                        val.to_string(source),
+                        line,
+                    ));
+                }
+            }
+
+            let data = String::from_utf8(wtr.into_inner().map_err(|e| {
+                EvalError::new(format!("csv flush error: {}", e), None, None, line)
+            })?)
+            .map_err(|e| EvalError::new(format!("csv utf8 error: {}", e), None, None, line))?;
+
+            Ok(Value::String(data))
         }
         "format_currency" => {
             let val = &args[0];
@@ -343,7 +434,11 @@ pub fn execute(
             } else {
                 Err(EvalError::type_mismatch(
                     "bool, string",
-                    format!("{}, {}", val.to_string(source), format_style.to_string(source)),
+                    format!(
+                        "{}, {}",
+                        val.to_string(source),
+                        format_style.to_string(source)
+                    ),
                     line,
                 ))
             }
@@ -422,7 +517,8 @@ fn format_json_value(val: &Value, source: &str, _line: usize) -> Result<String, 
             let json_pairs: Vec<String> = dict
                 .iter()
                 .map(|(k, v)| {
-                    let json_val = format_json_value(v, source, 0).unwrap_or_else(|_| v.to_string(source));
+                    let json_val =
+                        format_json_value(v, source, 0).unwrap_or_else(|_| v.to_string(source));
                     format!("\"{}\": {}", k, json_val)
                 })
                 .collect();

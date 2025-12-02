@@ -622,7 +622,7 @@ No variables being watched.
 ## See Also
 
 - [TUTORIAL.md](./TUTORIAL.md) — Learn Avon from scratch
-- [FEATURES.md](./FEATURES.md) — Complete language reference
+- [BUILTIN_FUNCTIONS.md](./BUILTIN_FUNCTIONS.md) — Complete reference of built-in functions
 - [DEBUGGING_GUIDE.md](./DEBUGGING_GUIDE.md) — Debugging tools and techniques
 - [STYLE_GUIDE.md](./STYLE_GUIDE.md) — Best practices and conventions
 

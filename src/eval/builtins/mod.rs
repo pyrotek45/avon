@@ -31,9 +31,13 @@ pub mod html;
 pub mod list;
 pub mod markdown;
 pub mod math;
+pub mod regex;
 pub mod registry;
 pub mod string;
 pub mod types;
+
+#[cfg(test)]
+mod tests;
 
 // Re-export registry functions
 pub use registry::{get_builtin_arity, initial_builtins, is_builtin_name};

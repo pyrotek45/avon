@@ -21,12 +21,7 @@ pub fn is_builtin(name: &str) -> bool {
 }
 
 /// Execute an environment builtin function
-pub fn execute(
-    name: &str,
-    args: &[Value],
-    source: &str,
-    line: usize,
-) -> Result<Value, EvalError> {
+pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<Value, EvalError> {
     match name {
         "env_var" => {
             // env_var :: String -> String

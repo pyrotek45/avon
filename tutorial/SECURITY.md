@@ -409,7 +409,7 @@ Before deploying Avon templates in production:
 ## See Also
 
 - [TUTORIAL.md](./TUTORIAL.md) — Learn Avon from scratch
-- [FEATURES.md](./FEATURES.md) — Complete language reference
+- [BUILTIN_FUNCTIONS.md](./BUILTIN_FUNCTIONS.md) — Complete reference of built-in functions
 - [WHY_NO_RECURSION.md](./WHY_NO_RECURSION.md) — Design decisions
 
 ## Version Info

@@ -1502,7 +1502,6 @@ pub fn value_to_string_auto(val: &Value, source: &str, line: usize) -> Result<St
     }
 }
 
-
 pub fn execute_builtin(
     name: &str,
     args: &[Value],
@@ -1543,13 +1542,16 @@ pub fn execute_builtin(
     if builtins::math::is_builtin(name) {
         return builtins::math::execute(name, args, source, line);
     }
+    if builtins::regex::is_builtin(name) {
+        return builtins::regex::execute(name, args, source, line);
+    }
     if builtins::string::is_builtin(name) {
         return builtins::string::execute(name, args, source, line);
     }
     if builtins::types::is_builtin(name) {
         return builtins::types::execute(name, args, source, line);
     }
-    
+
     // Fallback for unrecognized builtins
     Err(EvalError::new(
         format!("unimplemented builtin {}", name),
@@ -1558,7 +1560,6 @@ pub fn execute_builtin(
         line,
     ))
 }
-
 
 pub fn collect_file_templates(v: &Value, source: &str) -> Result<Vec<(String, String)>, EvalError> {
     match v {

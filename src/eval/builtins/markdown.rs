@@ -27,12 +27,7 @@ pub fn is_builtin(name: &str) -> bool {
 }
 
 /// Execute a markdown builtin function
-pub fn execute(
-    name: &str,
-    args: &[Value],
-    source: &str,
-    line: usize,
-) -> Result<Value, EvalError> {
+pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<Value, EvalError> {
     match name {
         "md_heading" => {
             if let Value::Number(Number::Int(lvl)) = &args[0] {

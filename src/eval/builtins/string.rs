@@ -50,12 +50,7 @@ pub fn is_builtin(name: &str) -> bool {
 }
 
 /// Execute a string builtin function
-pub fn execute(
-    name: &str,
-    args: &[Value],
-    source: &str,
-    line: usize,
-) -> Result<Value, EvalError> {
+pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<Value, EvalError> {
     match name {
         "concat" => {
             let sa = value_to_string_auto(&args[0], source, line)?;
@@ -246,7 +241,7 @@ pub fn execute(
             let collection = &args[0];
             let start_val = &args[1];
             let end_val = &args[2];
-            
+
             let start = match start_val {
                 Value::Number(Number::Int(i)) => *i as usize,
                 _ => {
@@ -257,7 +252,7 @@ pub fn execute(
                     ))
                 }
             };
-            
+
             let end = match end_val {
                 Value::Number(Number::Int(i)) => *i as usize,
                 _ => {
@@ -268,7 +263,7 @@ pub fn execute(
                     ))
                 }
             };
-            
+
             match collection {
                 Value::String(s) => {
                     let chars: Vec<char> = s.chars().collect();
@@ -296,13 +291,13 @@ pub fn execute(
                     "string or list",
                     collection.to_string(source),
                     line,
-                ))
+                )),
             }
         }
         "char_at" => {
             let str_val = &args[0];
             let idx_val = &args[1];
-            
+
             let idx = match idx_val {
                 Value::Number(Number::Int(i)) => *i as usize,
                 _ => {
@@ -313,7 +308,7 @@ pub fn execute(
                     ))
                 }
             };
-            
+
             match str_val {
                 Value::String(s) => {
                     let chars: Vec<char> = s.chars().collect();
@@ -327,24 +322,22 @@ pub fn execute(
                     "string",
                     str_val.to_string(source),
                     line,
-                ))
+                )),
             }
         }
         "chars" => {
             let str_val = &args[0];
             match str_val {
                 Value::String(s) => {
-                    let char_list: Vec<Value> = s
-                        .chars()
-                        .map(|c| Value::String(c.to_string()))
-                        .collect();
+                    let char_list: Vec<Value> =
+                        s.chars().map(|c| Value::String(c.to_string())).collect();
                     Ok(Value::List(char_list))
                 }
                 _ => Err(EvalError::type_mismatch(
                     "string",
                     str_val.to_string(source),
                     line,
-                ))
+                )),
             }
         }
         _ => Err(EvalError::new(

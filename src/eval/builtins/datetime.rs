@@ -70,12 +70,7 @@ fn parse_duration(s: &str) -> Result<chrono::Duration, String> {
 }
 
 /// Execute a datetime builtin function
-pub fn execute(
-    name: &str,
-    args: &[Value],
-    source: &str,
-    line: usize,
-) -> Result<Value, EvalError> {
+pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<Value, EvalError> {
     match name {
         "now" => {
             // now :: String
@@ -126,8 +121,9 @@ pub fn execute(
                     // Try parsing just date
                     match chrono::NaiveDate::parse_from_str(&date_str, &format_str) {
                         Ok(date) => {
-                            let naive =
-                                date.and_hms_opt(0, 0, 0).unwrap_or(NaiveDateTime::default());
+                            let naive = date
+                                .and_hms_opt(0, 0, 0)
+                                .unwrap_or(NaiveDateTime::default());
                             let local = Local.from_local_datetime(&naive).unwrap();
                             Ok(Value::String(local.to_rfc3339()))
                         }
@@ -163,7 +159,12 @@ pub fn execute(
             })?;
 
             let duration = parse_duration(&duration_str).map_err(|e| {
-                EvalError::new(format!("invalid duration '{}': {}", duration_str, e), None, None, line)
+                EvalError::new(
+                    format!("invalid duration '{}': {}", duration_str, e),
+                    None,
+                    None,
+                    line,
+                )
             })?;
 
             let new_dt = dt + duration;

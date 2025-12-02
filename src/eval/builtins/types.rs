@@ -66,12 +66,7 @@ pub fn is_builtin(name: &str) -> bool {
 }
 
 /// Execute a type builtin function
-pub fn execute(
-    name: &str,
-    args: &[Value],
-    source: &str,
-    line: usize,
-) -> Result<Value, EvalError> {
+pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<Value, EvalError> {
     match name {
         // Type checking
         "typeof" => {
@@ -93,8 +88,14 @@ pub fn execute(
         }
         "is_string" => Ok(Value::Bool(matches!(args[0], Value::String(_)))),
         "is_number" => Ok(Value::Bool(matches!(args[0], Value::Number(_)))),
-        "is_int" => Ok(Value::Bool(matches!(args[0], Value::Number(Number::Int(_))))),
-        "is_float" => Ok(Value::Bool(matches!(args[0], Value::Number(Number::Float(_))))),
+        "is_int" => Ok(Value::Bool(matches!(
+            args[0],
+            Value::Number(Number::Int(_))
+        ))),
+        "is_float" => Ok(Value::Bool(matches!(
+            args[0],
+            Value::Number(Number::Float(_))
+        ))),
         "is_list" => Ok(Value::Bool(matches!(args[0], Value::List(_)))),
         "is_bool" => Ok(Value::Bool(matches!(args[0], Value::Bool(_)))),
         "is_function" => Ok(Value::Bool(matches!(
@@ -195,10 +196,7 @@ pub fn execute(
                 Value::Number(Number::Int(i)) => {
                     if *i < 0 || *i > 0x10FFFF {
                         return Err(EvalError::new(
-                            format!(
-                                "codepoint {} is out of range (0-0x10FFFF)",
-                                i
-                            ),
+                            format!("codepoint {} is out of range (0-0x10FFFF)", i),
                             None,
                             None,
                             line,
@@ -218,10 +216,7 @@ pub fn execute(
                     let i = *f as i64;
                     if i < 0 || i > 0x10FFFF {
                         return Err(EvalError::new(
-                            format!(
-                                "codepoint {} is out of range (0-0x10FFFF)",
-                                i
-                            ),
+                            format!("codepoint {} is out of range (0-0x10FFFF)", i),
                             None,
                             None,
                             line,

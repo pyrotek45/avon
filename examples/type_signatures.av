@@ -15,7 +15,7 @@ let evens = filter (\x x > 2) [1, 2, 3, 4, 5] in
 # fold :: (acc -> a -> acc) -> acc -> [a] -> acc
 # Takes a binary function, initial accumulator, and list
 # Returns final accumulated value
-let sum = fold (\acc \x acc + x) 0 [1, 2, 3, 4] in
+let total = fold (\acc \x acc + x) 0 [1, 2, 3, 4] in
 
 # is_digit :: String -> Bool
 # Takes a string, returns boolean
@@ -27,4 +27,4 @@ let valid = is_digit "12345" in
 let fix_typo = \s replace s "teh" "the" in
 let fixed = fix_typo "teh cat" in
 
-[greeting, doubled, evens, sum, valid, fixed]
+[greeting, doubled, evens, total, valid, fixed]

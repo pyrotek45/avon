@@ -1,0 +1,241 @@
+# Built-in Functions
+
+Avon comes with a comprehensive standard library of over 100 built-in functions. All functions are curried, meaning they can be partially applied.
+
+## Aggregate Functions
+
+Functions for aggregating values from lists.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `all` | `(a -> Bool) -> [a] -> Bool` | Returns true if the predicate returns true for all items in the list. |
+| `any` | `(a -> Bool) -> [a] -> Bool` | Returns true if the predicate returns true for any item in the list. |
+| `count` | `(a -> Bool) -> [a] -> Number` | Returns the number of items where the predicate returns true. |
+| `max` | `[Number\|String] -> Number\|String` | Returns the maximum value in a list. |
+| `min` | `[Number\|String] -> Number\|String` | Returns the minimum value in a list. |
+| `product` | `[Number] -> Number` | Returns the product of all numbers in a list. |
+| `sum` | `[Number] -> Number` | Returns the sum of all numbers in a list. |
+
+## Date/Time Functions
+
+Functions for working with dates and times.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `date_add` | `String -> String -> String` | Adds a duration (e.g., "1d", "2h") to an ISO 8601 date string. |
+| `date_diff` | `String -> String -> Number` | Calculates the difference between two ISO 8601 dates in seconds. |
+| `date_format` | `String -> String -> String` | Formats an ISO 8601 date string using a format string (e.g., "%Y-%m-%d"). |
+| `date_parse` | `String -> String -> String` | Parses a date string with a given format and returns an ISO 8601 string. |
+| `now` | `() -> String` | Returns the current date and time in ISO 8601 format. |
+| `timestamp` | `() -> Number` | Returns the current Unix timestamp (seconds since epoch). |
+| `timezone` | `() -> String` | Returns the current timezone offset (e.g., "+00:00"). |
+
+## Debug Functions
+
+Functions for debugging and assertions.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `assert` | `Bool -> a -> a` | Returns the second argument if the first is true, otherwise raises an error. |
+| `debug` | `a -> a` | Prints the value to stderr for debugging and returns it. |
+| `error` | `String -> a` | Raises a runtime error with the given message. |
+| `not` | `Bool -> Bool` | Logical negation. |
+| `trace` | `String -> a -> a` | Prints a label and value to stderr, then returns the value. |
+
+## Dictionary Functions
+
+Functions for working with dictionaries.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `dict_merge` | `Dict -> Dict -> Dict` | Merges two dictionaries. Keys in the second dict override the first. |
+| `get` | `Dict -> String -> a` | Returns the value for a key, or `None` if not found. |
+| `has_key` | `Dict -> String -> Bool` | Returns true if the dictionary contains the key. |
+| `keys` | `Dict -> [String]` | Returns a list of keys in the dictionary. |
+| `set` | `Dict -> String -> a -> Dict` | Returns a new dictionary with the key set to the value. |
+| `values` | `Dict -> [a]` | Returns a list of values in the dictionary. |
+
+## Environment Functions
+
+Functions for accessing the system environment.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `env_var` | `String -> String` | Returns the value of an environment variable. Errors if not set. |
+| `env_var_or` | `String -> String -> String` | Returns the value of an environment variable, or a default if not set. |
+| `os` | `String` | Constant string representing the operating system (e.g., "linux", "macos"). |
+
+## File I/O Functions
+
+Functions for file system operations.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `abspath` | `String\|Path -> String` | Returns the absolute path. |
+| `basename` | `String\|Path -> String` | Returns the filename portion of a path. |
+| `csv_parse` | `String -> [Dict]\|[[String]]` | Parses a CSV file into a list of dicts (if headers) or list of lists. |
+| `dirname` | `String\|Path -> String` | Returns the directory portion of a path. |
+| `exists` | `String\|Path -> Bool` | Returns true if the file or directory exists. |
+| `fill_template` | `String\|Path -> Dict\|List -> String` | Reads a file and replaces placeholders `{key}` with values. |
+| `glob` | `String -> [String]` | Returns a list of files matching the glob pattern. |
+| `import` | `String\|Path -> a` | Imports and evaluates another Avon file. |
+| `json_parse` | `String -> a` | Parses a JSON string (from a file) into an Avon value. |
+| `readfile` | `String\|Path -> String` | Reads the entire content of a file. |
+| `readlines` | `String\|Path -> [String]` | Reads a file line by line into a list. |
+| `relpath` | `String\|Path -> String\|Path -> String` | Returns the relative path from base to target. |
+| `toml_parse` | `String -> a` | Parses a TOML string (from a file) into an Avon value. |
+| `walkdir` | `String\|Path -> [String]` | Recursively lists all files in a directory. |
+| `yaml_parse` | `String -> a` | Parses a YAML string (from a file) into an Avon value. |
+
+## Formatting Functions
+
+Functions for formatting values.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `center` | `String -> Number -> String` | Centers a string within a given width. |
+| `format_binary` | `Number -> String` | Formats a number as binary. |
+| `format_bool` | `Bool -> String -> String` | Formats a boolean (e.g., "yes/no", "on/off"). |
+| `format_bytes` | `Number -> String` | Formats a number as bytes (e.g., "1.5 MB"). |
+| `format_csv` | `[Dict]\|[[String]] -> String` | Formats a list of dicts or list of lists as a CSV string. |
+| `format_currency` | `Number -> String -> String` | Formats a number as currency with a symbol. |
+| `format_float` | `Number -> Number -> String` | Formats a float with specific precision. |
+| `format_hex` | `Number -> String` | Formats a number as hexadecimal. |
+| `format_int` | `Number -> Number -> String` | Formats an integer with minimum width (padding with zeros). |
+| `format_json` | `a -> String` | Serializes a value to a JSON string. |
+| `format_list` | `[a] -> String -> String` | Joins list items with a separator. |
+| `format_octal` | `Number -> String` | Formats a number as octal. |
+| `format_percent` | `Number -> Number -> String` | Formats a number as a percentage. |
+| `format_scientific` | `Number -> Number -> String` | Formats a number in scientific notation. |
+| `format_table` | `[[String]]\|Dict -> String -> String` | Formats data as a table with a separator. |
+| `truncate` | `String -> Number -> String` | Truncates a string to a maximum length, adding "...". |
+
+## HTML Functions
+
+Functions for generating HTML.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `html_attr` | `String -> String -> String` | Generates an HTML attribute string (e.g., `key="value"`). |
+| `html_escape` | `String -> String` | Escapes special HTML characters. |
+| `html_tag` | `String -> String -> String` | Generates an HTML tag with content. |
+
+## List Functions
+
+Functions for working with lists.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `chunks` | `Number -> [a] -> [[a]]` | Splits the list into chunks of size n. |
+| `combinations` | `Number -> [a] -> [[a]]` | Returns all combinations of length k. |
+| `drop` | `Number -> [a] -> [a]` | Returns the list without the first n items. |
+| `enumerate` | `[a] -> [[Number, a]]` | Returns a list of [index, item] pairs. |
+| `filter` | `(a -> Bool) -> [a] -> [a]` | Returns a list of items where the predicate is true. |
+| `flatmap` | `(a -> [b]\|b) -> [a] -> [b]` | Maps a function and flattens the result. |
+| `flatten` | `[[a]] -> [a]` | Flattens a list of lists. |
+| `fold` | `(b -> a -> b) -> b -> [a] -> b` | Reduces a list to a single value using an accumulator. |
+| `head` | `[a] -> a\|None` | Returns the first item, or None if empty. |
+| `map` | `(a -> b) -> [a] -> [b]` | Applies a function to each item in the list. |
+| `partition` | `(a -> Bool) -> [a] -> [[a], [a]]` | Splits a list into two lists: [matches, non-matches]. |
+| `permutations` | `Number -> [a] -> [[a]]` | Returns all permutations of length k. |
+| `range` | `Number -> Number -> [Number]` | Generates a list of numbers from start to end (inclusive). |
+| `reverse` | `[a] -> [a]` | Returns the list in reverse order. |
+| `sort` | `[a] -> [a]` | Sorts the list. |
+| `sort_by` | `(a -> b) -> [a] -> [a]` | Sorts the list based on the result of the key function. |
+| `split_at` | `Number -> [a] -> [[a], [a]]` | Splits the list at the given index. |
+| `tail` | `[a] -> [a]` | Returns the list without the first item. |
+| `take` | `Number -> [a] -> [a]` | Returns the first n items. |
+| `transpose` | `[[a]] -> [[a]]` | Transposes a list of lists (matrix). |
+| `unique` | `[a] -> [a]` | Returns the list with duplicates removed. |
+| `unzip` | `[[a, b]] -> [[a], [b]]` | Splits a list of pairs into two lists. |
+| `windows` | `Number -> [a] -> [[a]]` | Returns sliding windows of size n. |
+| `zip` | `[a] -> [b] -> [[a, b]]` | Combines two lists into a list of pairs. |
+
+## Markdown Functions
+
+Functions for generating Markdown.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `markdown_to_html` | `String -> String` | Converts simple Markdown to HTML. |
+| `md_code` | `String -> String` | Formats text as inline code. |
+| `md_heading` | `Number -> String -> String` | Creates a Markdown heading of the given level. |
+| `md_link` | `String -> String -> String` | Creates a Markdown link `[text](url)`. |
+| `md_list` | `[String] -> String` | Formats a list as a Markdown bullet list. |
+
+## Math Functions
+
+Mathematical functions.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `abs` | `Number -> Number` | Returns the absolute value of a number. |
+| `gcd` | `Number -> Number -> Number` | Returns the greatest common divisor of two numbers. |
+| `lcm` | `Number -> Number -> Number` | Returns the least common multiple of two numbers. |
+| `neg` | `Number -> Number` | Negates a number. |
+
+## Regex Functions
+
+Functions for regular expressions.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `regex_match` | `String -> String -> Bool` | Returns true if the text matches the regex pattern. |
+| `regex_replace` | `String -> String -> String -> String` | Replaces all matches of the regex pattern with the replacement string. |
+| `regex_split` | `String -> String -> [String]` | Splits the text by the regex pattern. |
+| `scan` | `String -> String -> [String\|[String]]` | Returns a list of all matches (or capture groups) in the text. |
+
+## String Functions
+
+Functions for string manipulation.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `char_at` | `String -> Number -> String` | Returns the character at the given index. |
+| `chars` | `String -> [String]` | Returns a list of characters in the string. |
+| `concat` | `String -> String -> String` | Concatenates two strings. |
+| `contains` | `String -> String -> Bool` | Returns true if the string contains the substring. |
+| `ends_with` | `String -> String -> Bool` | Returns true if the string ends with the suffix. |
+| `indent` | `String -> Number -> String` | Indents each line of the string by n spaces. |
+| `is_alpha` | `String -> Bool` | Returns true if the string contains only alphabetic characters. |
+| `is_alphanumeric` | `String -> Bool` | Returns true if the string contains only alphanumeric characters. |
+| `is_digit` | `String -> Bool` | Returns true if the string contains only digits. |
+| `is_empty` | `String\|List\|Dict -> Bool` | Returns true if the value is empty. |
+| `is_lowercase` | `String -> Bool` | Returns true if the string contains only lowercase characters. |
+| `is_uppercase` | `String -> Bool` | Returns true if the string contains only uppercase characters. |
+| `is_whitespace` | `String -> Bool` | Returns true if the string contains only whitespace. |
+| `join` | `[String] -> String -> String` | Joins a list of strings with a separator. |
+| `length` | `String\|List -> Number` | Returns the length of a string or list. |
+| `lower` | `String -> String` | Converts the string to lowercase. |
+| `pad_left` | `String -> Number -> String -> String` | Pads the string on the left to the given width. |
+| `pad_right` | `String -> Number -> String -> String` | Pads the string on the right to the given width. |
+| `repeat` | `String -> Number -> String` | Repeats the string n times. |
+| `replace` | `String -> String -> String -> String` | Replaces occurrences of a substring with another string. |
+| `slice` | `String\|List -> Number -> Number -> String\|List` | Returns a slice of the string or list. |
+| `split` | `String -> String -> [String]` | Splits the string by a separator. |
+| `starts_with` | `String -> String -> Bool` | Returns true if the string starts with the prefix. |
+| `trim` | `String -> String` | Removes leading and trailing whitespace. |
+| `upper` | `String -> String` | Converts the string to uppercase. |
+
+## Type Functions
+
+Functions for type checking and conversion.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `is_bool` | `a -> Bool` | Returns true if the value is a boolean. |
+| `is_dict` | `a -> Bool` | Returns true if the value is a dictionary. |
+| `is_float` | `a -> Bool` | Returns true if the value is a float. |
+| `is_function` | `a -> Bool` | Returns true if the value is a function. |
+| `is_int` | `a -> Bool` | Returns true if the value is an integer. |
+| `is_list` | `a -> Bool` | Returns true if the value is a list. |
+| `is_none` | `a -> Bool` | Returns true if the value is None. |
+| `is_number` | `a -> Bool` | Returns true if the value is a number. |
+| `is_string` | `a -> Bool` | Returns true if the value is a string. |
+| `to_bool` | `a -> Bool` | Converts the value to a boolean. |
+| `to_char` | `Number -> String` | Converts a Unicode codepoint to a character. |
+| `to_float` | `a -> Number` | Converts the value to a float. |
+| `to_int` | `a -> Number` | Converts the value to an integer. |
+| `to_list` | `String -> [String]` | Converts a string to a list of characters. |
+| `to_string` | `a -> String` | Converts the value to a string. |
+| `typeof` | `a -> String` | Returns the type name of the value. |

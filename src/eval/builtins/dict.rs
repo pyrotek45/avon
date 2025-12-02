@@ -22,12 +22,7 @@ pub fn is_builtin(name: &str) -> bool {
 }
 
 /// Execute a dictionary builtin function
-pub fn execute(
-    name: &str,
-    args: &[Value],
-    source: &str,
-    line: usize,
-) -> Result<Value, EvalError> {
+pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<Value, EvalError> {
     match name {
         "get" => {
             // get :: (Dict|[[String, a]]) -> String -> a
@@ -57,7 +52,11 @@ pub fn execute(
                     )),
                 }
             } else {
-                Err(EvalError::type_mismatch("string", key.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    key.to_string(source),
+                    line,
+                ))
             }
         }
         "set" => {
@@ -93,10 +92,8 @@ pub fn execute(
                             new_pairs.push(item.clone());
                         }
                         if !found {
-                            new_pairs.push(Value::List(vec![
-                                Value::String(k.clone()),
-                                value.clone(),
-                            ]));
+                            new_pairs
+                                .push(Value::List(vec![Value::String(k.clone()), value.clone()]));
                         }
                         Ok(Value::List(new_pairs))
                     }
@@ -107,7 +104,11 @@ pub fn execute(
                     )),
                 }
             } else {
-                Err(EvalError::type_mismatch("string", key.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    key.to_string(source),
+                    line,
+                ))
             }
         }
         "keys" => {
@@ -190,7 +191,11 @@ pub fn execute(
                     )),
                 }
             } else {
-                Err(EvalError::type_mismatch("string", key.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "string",
+                    key.to_string(source),
+                    line,
+                ))
             }
         }
         "dict_merge" => {

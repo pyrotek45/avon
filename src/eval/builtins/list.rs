@@ -1,11 +1,14 @@
-//! List operations: drop, enumerate, filter, flatmap, flatten, fold, head, map, partition, range, reverse, sort, sort_by, split_at, tail, take, unique, unzip, zip
+//! List operations: drop, enumerate, filter, flatmap, flatten, fold, head, map, partition, range, reverse, sort, sort_by, split_at, tail, take, unique, unzip, zip, windows, chunks, transpose, permutations, combinations
 
 use crate::common::{EvalError, Number, Value};
 use crate::eval::apply_function;
+use itertools::Itertools;
 use std::collections::HashSet;
 
 /// Names of list builtins
 pub const NAMES: &[&str] = &[
+    "chunks",
+    "combinations",
     "drop",
     "enumerate",
     "filter",
@@ -15,6 +18,7 @@ pub const NAMES: &[&str] = &[
     "head",
     "map",
     "partition",
+    "permutations",
     "range",
     "reverse",
     "sort",
@@ -22,19 +26,20 @@ pub const NAMES: &[&str] = &[
     "split_at",
     "tail",
     "take",
+    "transpose",
     "unique",
     "unzip",
+    "windows",
     "zip",
 ];
 
 /// Get arity for list functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
-        "enumerate" | "flatten" | "head" | "reverse" | "sort" | "tail" | "unique" | "unzip" => {
-            Some(1)
-        }
-        "drop" | "filter" | "flatmap" | "map" | "partition" | "range" | "sort_by" | "split_at"
-        | "take" | "zip" => Some(2),
+        "enumerate" | "flatten" | "head" | "reverse" | "sort" | "tail" | "transpose" | "unique"
+        | "unzip" => Some(1),
+        "chunks" | "combinations" | "drop" | "filter" | "flatmap" | "map" | "partition"
+        | "permutations" | "range" | "sort_by" | "split_at" | "take" | "windows" | "zip" => Some(2),
         "fold" => Some(3),
         _ => None,
     }
@@ -46,12 +51,7 @@ pub fn is_builtin(name: &str) -> bool {
 }
 
 /// Execute a list builtin function
-pub fn execute(
-    name: &str,
-    args: &[Value],
-    source: &str,
-    line: usize,
-) -> Result<Value, EvalError> {
+pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<Value, EvalError> {
     match name {
         "map" => {
             let func = &args[0];
@@ -70,7 +70,11 @@ pub fn execute(
                 }
                 Ok(Value::List(out))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "filter" => {
@@ -100,7 +104,11 @@ pub fn execute(
                 }
                 Ok(Value::List(out))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "fold" => {
@@ -125,7 +133,11 @@ pub fn execute(
                 }
                 Ok(acc)
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "flatmap" => {
@@ -148,7 +160,11 @@ pub fn execute(
                 }
                 Ok(Value::List(out))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "flatten" => {
@@ -163,7 +179,11 @@ pub fn execute(
                 }
                 Ok(Value::List(out))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "head" => {
@@ -171,7 +191,11 @@ pub fn execute(
             if let Value::List(items) = list {
                 Ok(items.first().cloned().unwrap_or(Value::None))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "tail" => {
@@ -183,7 +207,11 @@ pub fn execute(
                     Ok(Value::List(items[1..].to_vec()))
                 }
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "take" => {
@@ -202,7 +230,11 @@ pub fn execute(
             if let Value::List(items) = list {
                 Ok(Value::List(items.iter().take(n).cloned().collect()))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "drop" => {
@@ -221,7 +253,11 @@ pub fn execute(
             if let Value::List(items) = list {
                 Ok(Value::List(items.iter().skip(n).cloned().collect()))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "zip" => {
@@ -257,7 +293,11 @@ pub fn execute(
                 }
                 Ok(Value::List(vec![Value::List(list1), Value::List(list2)]))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "split_at" => {
@@ -278,7 +318,11 @@ pub fn execute(
                 let second = Value::List(items.iter().skip(n).cloned().collect());
                 Ok(Value::List(vec![first, second]))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "partition" => {
@@ -312,7 +356,11 @@ pub fn execute(
                     Value::List(false_list),
                 ]))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "reverse" => {
@@ -322,7 +370,11 @@ pub fn execute(
                 reversed.reverse();
                 Ok(Value::List(reversed))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "sort" => {
@@ -359,7 +411,11 @@ pub fn execute(
                 });
                 Ok(Value::List(sorted))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "sort_by" => {
@@ -410,7 +466,11 @@ pub fn execute(
                 let sorted: Vec<Value> = pairs.into_iter().map(|(item, _)| item).collect();
                 Ok(Value::List(sorted))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "unique" => {
@@ -426,7 +486,11 @@ pub fn execute(
                 }
                 Ok(Value::List(result))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         "range" => {
@@ -462,7 +526,189 @@ pub fn execute(
                     .collect();
                 Ok(Value::List(result))
             } else {
-                Err(EvalError::type_mismatch("list", list.to_string(source), line))
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "windows" => {
+            let size_val = &args[0];
+            let list = &args[1];
+            let size = match size_val {
+                Value::Number(Number::Int(i)) => *i as usize,
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "integer",
+                        size_val.to_string(source),
+                        line,
+                    ))
+                }
+            };
+            if size == 0 {
+                return Err(EvalError::new(
+                    "windows size must be non-zero".to_string(),
+                    None,
+                    None,
+                    line,
+                ));
+            }
+            if let Value::List(items) = list {
+                let result: Vec<Value> = items
+                    .windows(size)
+                    .map(|w| Value::List(w.to_vec()))
+                    .collect();
+                Ok(Value::List(result))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "chunks" => {
+            let size_val = &args[0];
+            let list = &args[1];
+            let size = match size_val {
+                Value::Number(Number::Int(i)) => *i as usize,
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "integer",
+                        size_val.to_string(source),
+                        line,
+                    ))
+                }
+            };
+            if size == 0 {
+                return Err(EvalError::new(
+                    "chunk size must be non-zero".to_string(),
+                    None,
+                    None,
+                    line,
+                ));
+            }
+            if let Value::List(items) = list {
+                let result: Vec<Value> = items
+                    .chunks(size)
+                    .map(|c| Value::List(c.to_vec()))
+                    .collect();
+                Ok(Value::List(result))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "transpose" => {
+            let list = &args[0];
+            if let Value::List(items) = list {
+                if items.is_empty() {
+                    return Ok(Value::List(Vec::new()));
+                }
+                let mut rows = Vec::new();
+                for item in items {
+                    if let Value::List(row) = item {
+                        rows.push(row);
+                    } else {
+                        return Err(EvalError::type_mismatch(
+                            "list of lists",
+                            item.to_string(source),
+                            line,
+                        ));
+                    }
+                }
+
+                if rows.is_empty() {
+                    return Ok(Value::List(Vec::new()));
+                }
+
+                let width = rows[0].len();
+                for row in &rows {
+                    if row.len() != width {
+                        return Err(EvalError::new(
+                            "transpose requires rectangular matrix".to_string(),
+                            None,
+                            None,
+                            line,
+                        ));
+                    }
+                }
+
+                let mut out = Vec::new();
+                for i in 0..width {
+                    let mut new_row = Vec::new();
+                    for row in &rows {
+                        new_row.push(row[i].clone());
+                    }
+                    out.push(Value::List(new_row));
+                }
+                Ok(Value::List(out))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "permutations" => {
+            let k_val = &args[0];
+            let list = &args[1];
+            let k = match k_val {
+                Value::Number(Number::Int(i)) => *i as usize,
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "integer",
+                        k_val.to_string(source),
+                        line,
+                    ))
+                }
+            };
+            if let Value::List(items) = list {
+                let result: Vec<Value> = items
+                    .iter()
+                    .permutations(k)
+                    .map(|p| Value::List(p.into_iter().cloned().collect()))
+                    .collect();
+                Ok(Value::List(result))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "combinations" => {
+            let k_val = &args[0];
+            let list = &args[1];
+            let k = match k_val {
+                Value::Number(Number::Int(i)) => *i as usize,
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "integer",
+                        k_val.to_string(source),
+                        line,
+                    ))
+                }
+            };
+            if let Value::List(items) = list {
+                let result: Vec<Value> = items
+                    .iter()
+                    .combinations(k)
+                    .map(|c| Value::List(c.into_iter().cloned().collect()))
+                    .collect();
+                Ok(Value::List(result))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         _ => Err(EvalError::new(

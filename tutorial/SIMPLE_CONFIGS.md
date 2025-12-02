@@ -725,7 +725,7 @@ let feature_config = if enable_feature == "true" then {"
 
 - **[TUTORIAL.md](./TUTORIAL.md)** - Complete Avon tutorial
 - **[STYLE_GUIDE.md](./STYLE_GUIDE.md)** - Code style and formatting
-- **[FEATURES.md](./FEATURES.md)** - Complete language reference
+- **[BUILTIN_FUNCTIONS.md](./BUILTIN_FUNCTIONS.md)** - Complete reference of built-in functions
 - **[examples/](../examples/)** - 92+ real-world examples
 
 ## Next Steps

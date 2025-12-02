@@ -20,13 +20,11 @@ let process_line = \state \line
   if is_empty (trim line) then
     state
   else
-    # Parse the input line
-    # Direction is the first character (R or L)
-    let dir = head (to_list line) in
-    
-    # Amount is all remaining characters converted to integer
-    let amount_str = join (tail (to_list line)) "" in
-    let amount = to_int amount_str in
+    # Parse the input line using regex scan
+    # Matches "R" or "L" followed by digits
+    let parts = scan "[RL]|\\d+" line in
+    let dir = head parts in
+    let amount = to_int (head (tail parts)) in
     
     # Extract current state values
     let current_position = to_int (get state "position") in
@@ -55,7 +53,7 @@ let process_line = \state \line
         # We went negative, so we definitely wrapped to the high end (99, 98, ...)
         # and crossed through 0 at least once
         # Formula: 1 (for the wrap) + extra wraps for large left movements
-        1 + (0 - end_raw - 1) / 100
+        1 + (abs (end_raw + 1)) / 100
       else
         # No wrapping, but we might have crossed a 100-boundary going left
         let start_div = current_position / 100 in

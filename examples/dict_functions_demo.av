@@ -1,0 +1,59 @@
+# Dictionary Functions Demo
+# Demonstrates: dict_merge, get, has_key, keys, set, values
+
+let user = {
+  name: "Alice",
+  role: "admin"
+} in
+
+let defaults = {
+  theme: "light",
+  notifications: "true",
+  role: "user"
+} in
+
+# Merging (user overrides defaults)
+let config = dict_merge defaults user in
+
+# Accessing
+let name = get config "name" in
+let theme = get config "theme" in
+let unknown = get config "unknown" in
+
+# Checking keys
+let has_role = has_key config "role" in
+let has_id = has_key config "id" in
+
+# Setting values
+let updated_config = set config "theme" "dark" in
+let new_config = set updated_config "login_count" 1 in
+
+# Keys and Values
+let all_keys = keys new_config in
+let all_values = values new_config in
+
+{"
+Dictionary Functions Demo:
+
+Merging:
+  Defaults: {defaults}
+  User: {user}
+  Merged: {config}
+
+Accessing:
+  Name: {name}
+  Theme: {theme}
+  Unknown: {unknown}
+
+Checking Keys:
+  Has 'role': {has_role}
+  Has 'id': {has_id}
+
+Setting Values:
+  Updated Theme: {get updated_config "theme"}
+  New Field: {get new_config "login_count"}
+
+Introspection:
+  Keys: {all_keys}
+  Values: {all_values}
+"}

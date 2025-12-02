@@ -688,7 +688,7 @@ Now it works correctly!
 ## See Also
 
 - [TUTORIAL.md](./TUTORIAL.md) — Learn Avon from scratch
-- [FEATURES.md](./FEATURES.md) — Complete language reference
+- [BUILTIN_FUNCTIONS.md](./BUILTIN_FUNCTIONS.md) — Complete reference of built-in functions
 - [TEMPLATE_SYNTAX.md](./TEMPLATE_SYNTAX.md) — Multi-brace delimiters and literal braces
 - [STYLE_GUIDE.md](./STYLE_GUIDE.md) — Best practices and conventions
 - [REPL_USAGE.md](./REPL_USAGE.md) — Interactive development
