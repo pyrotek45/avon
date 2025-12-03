@@ -18,6 +18,7 @@ pub struct ReplState {
     pub input_buffer: String,
     pub watched_vars: HashMap<String, Value>,
     pub pending_let: Option<PendingLet>,
+    pub consecutive_empty_lines: u32,
 }
 
 impl ReplState {
@@ -31,6 +32,7 @@ impl ReplState {
             input_buffer: String::new(),
             watched_vars: HashMap::new(),
             pending_let: None,
+            consecutive_empty_lines: 0,
         }
     }
 

@@ -1,6 +1,6 @@
 use crate::cli::commands::process_source;
 use crate::cli::docs::{get_builtin_doc, get_category_doc, get_repl_command_doc};
-use crate::cli::helpers::{is_expression_complete_impl, print_file_content};
+use crate::cli::helpers::{is_let_expr_complete, print_file_content};
 use crate::cli::options::CliOptions;
 use crate::cli::repl::state::{PendingLet, ReplState};
 use crate::common::{Number, Value};
@@ -22,10 +22,12 @@ pub fn handle_command(
         "help" | "h" => {
             println!("REPL Commands:");
             println!("  :help, :h       Show this help");
-            println!("  :let <name> = <expr>  Store a value");
+            println!("  :let <name> = <expr>  Store a value (supports multi-line)");
             println!("  :vars           List all stored variables");
             println!("  :inspect <name> Show detailed variable info");
             println!("  :unlet <name>   Remove a variable");
+            println!("  :cancel, :c     Cancel multi-line input");
+            println!("  :reset          Reset multi-line input (alias for :cancel)");
             println!("  :read <file>    Read and display file contents (supports --git)");
             println!(
                 "  :run <file>     Evaluate file and display result (supports --git, --debug)"
@@ -87,6 +89,11 @@ pub fn handle_command(
             println!("  • Syntax highlighting (colors for keywords, builtins, strings)");
             println!("  • Multi-line input (incomplete expressions continue on next line)");
             println!("  • Tab completion for builtins, variables, and files");
+            println!();
+            println!("Multi-line Mode:");
+            println!("  • :let with incomplete expression continues on next line");
+            println!("  • Use :cancel, :c, or :reset to cancel multi-line input");
+            println!("  • Press Enter 3 times on empty lines to cancel");
             println!();
             println!("Examples:");
             println!("  map (\\x x * 2) [1, 2, 3]");
@@ -202,7 +209,7 @@ pub fn handle_command(
                 }
 
                 // Check if expression is complete
-                if !is_expression_complete_impl(expr_str) {
+                if !is_let_expr_complete(expr_str) {
                     // Buffer incomplete expression for multi-line input
                     state.pending_let = Some(PendingLet {
                         var_name: var_name.to_string(),

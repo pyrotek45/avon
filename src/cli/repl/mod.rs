@@ -9,7 +9,7 @@ use crate::lexer::tokenize;
 use crate::parser::parse_with_error;
 
 use super::completer::AvonCompleter;
-use super::helpers::is_expression_complete_impl;
+use super::helpers::{is_expression_complete_impl, is_let_expr_complete};
 use commands::handle_command;
 use state::ReplState;
 
@@ -115,31 +115,53 @@ pub fn execute_repl() -> i32 {
             Ok(line) => {
                 let trimmed = line.trim();
 
-                // Handle empty input
-                if trimmed.is_empty() {
-                    if state.pending_let.is_some() || !state.input_buffer.is_empty() {
-                        if let Some(ref mut pending) = state.pending_let {
-                            pending.expr_buffer.push('\n');
-                        } else {
-                            state.input_buffer.push('\n');
-                        }
+                // Handle continuation of pending :let command FIRST (before empty check)
+                if let Some(ref mut pending) = state.pending_let.take() {
+                    // Allow escape from continuation mode with special commands
+                    if trimmed == ":exit" || trimmed == ":quit" || trimmed == ":q" {
+                        println!("Cancelled pending input.");
+                        break;
+                    }
+                    // :cancel, :c, or :reset to cancel and return to REPL
+                    if trimmed == ":cancel" || trimmed == ":c" || trimmed == ":reset" {
+                        println!("Cancelled pending input.");
+                        state.consecutive_empty_lines = 0;
                         continue;
                     }
-                    continue;
-                }
-
-                // Handle continuation of pending :let command
-                if let Some(ref mut pending) = state.pending_let.take() {
+                    
+                    // Track consecutive empty lines to allow cancel (3 empty lines)
+                    if trimmed.is_empty() {
+                        state.consecutive_empty_lines += 1;
+                        if state.consecutive_empty_lines >= 3 {
+                            println!("Cancelled pending input (3 empty lines).");
+                            state.consecutive_empty_lines = 0;
+                            continue;
+                        }
+                        pending.expr_buffer.push('\n');
+                        state.pending_let = Some(pending.clone());
+                        continue;
+                    } else {
+                        state.consecutive_empty_lines = 0;
+                    }
+                    
                     pending.expr_buffer.push('\n');
                     pending.expr_buffer.push_str(trimmed);
                     
                     // Check if the expression is now complete
-                    if is_expression_complete_impl(&pending.expr_buffer) {
+                    if is_let_expr_complete(&pending.expr_buffer) {
                         // Try to evaluate
                         execute_pending_let(&pending.var_name, &pending.expr_buffer, &mut state);
                     } else {
                         // Still incomplete, keep buffering
                         state.pending_let = Some(pending.clone());
+                    }
+                    continue;
+                }
+
+                // Handle empty input (when not in continuation mode)
+                if trimmed.is_empty() {
+                    if !state.input_buffer.is_empty() {
+                        state.input_buffer.push('\n');
                     }
                     continue;
                 }
