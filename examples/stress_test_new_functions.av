@@ -1,0 +1,195 @@
+# Stress Test for New Functions
+# This file tests the new functions with larger datasets and edge cases
+
+# ============================================================================
+# STRESS TEST: lines/unlines with large multi-line text
+# ============================================================================
+
+let stress_lines =
+  let make_lines = \n
+    map (\i concat "Line number " (to_string i)) (range 1 n)
+  in
+  let large_text = unlines (make_lines 100) in
+  let lines_back = lines large_text in
+  {
+    original_line_count: 100,
+    parsed_line_count: length lines_back,
+    first_line: head lines_back,
+    last_line: last lines_back,
+    roundtrip_matches: (length lines_back) == 100
+  }
+in
+
+# ============================================================================
+# STRESS TEST: words/unwords with complex whitespace
+# ============================================================================
+
+let stress_words =
+  let text_with_tabs = "word1\tword2\tword3" in
+  let text_with_mixed = "a   b  \t  c    d\t\te" in
+  let text_with_newlines = "x\ny\nz" in
+  
+  {
+    tabs: words text_with_tabs,
+    mixed: words text_with_mixed,
+    newlines: words text_with_newlines,
+    normalized_tabs: unwords (words text_with_tabs),
+    normalized_mixed: unwords (words text_with_mixed)
+  }
+in
+
+# ============================================================================
+# STRESS TEST: Math functions with extreme values
+# ============================================================================
+
+let stress_math =
+  let large_numbers = [1000000, 10000000, 100000000] in
+  let small_numbers = [0.001, 0.0001, 0.00001] in
+  
+  let sqrt_large = map sqrt large_numbers in
+  let log10_large = map log10 large_numbers in
+  let powers_of_2 = map (\n pow 2 n) (range 1 20) in
+  let floor_near_int = map floor [1.999999, 2.000001, 2.999999] in
+  let ceil_near_int = map ceil [1.000001, 1.999999, 2.000001] in
+  let round_halves = map round [0.5, 1.5, 2.5, 3.5, 4.5] in
+  let chain = sqrt (pow (log10 1000000) 2) in
+  
+  {
+    sqrt_large: sqrt_large,
+    log10_large: log10_large,
+    powers_of_2: powers_of_2,
+    floor_near_int: floor_near_int,
+    ceil_near_int: ceil_near_int,
+    round_halves: round_halves,
+    chain: chain
+  }
+in
+
+# ============================================================================
+# STRESS TEST: last with various list types
+# ============================================================================
+
+let stress_last =
+  let nested_lists = [[1, 2], [3, 4], [5, 6]] in
+  let string_list = ["apple", "banana", "cherry", "date"] in
+  let mixed_list = [1, "two", 3.0, [4]] in
+  let large_list = range 1 1000 in
+  
+  {
+    last_nested: last nested_lists,
+    last_strings: last string_list,
+    last_mixed: last mixed_list,
+    last_of_1000: last large_list,
+    last_matches_nth: (last large_list) == (nth 999 large_list)
+  }
+in
+
+# ============================================================================
+# STRESS TEST: spy in complex pipelines
+# ============================================================================
+
+let stress_spy =
+  range 1 10
+    -> spy
+    -> map (\x x * x)
+    -> spy
+    -> filter (\x x > 20)
+    -> spy
+    -> map sqrt
+    -> spy
+    -> map round
+    -> spy
+    -> sum
+    -> spy
+in
+
+# ============================================================================
+# STRESS TEST: tap with various side-effect functions
+# ============================================================================
+
+let stress_tap =
+  let count_items = \xs trace "count" (length xs) in
+  let show_head = \xs trace "head" (head xs) in
+  let show_last = \xs trace "last" (last xs) in
+  
+  range 1 100
+    -> tap count_items
+    -> map (\x x * 2)
+    -> tap count_items
+    -> filter (\x x > 100)
+    -> tap count_items
+    -> tap show_head
+    -> tap show_last
+in
+
+# ============================================================================
+# STRESS TEST: Combined string functions
+# ============================================================================
+
+let stress_string_ops =
+  let text = "The quick brown fox jumps over the lazy dog\nPack my box with five dozen liquor jugs\nHow vexingly quick daft zebras jump" in
+  
+  let all_lines = lines text in
+  let all_words = words text in
+  
+  let word_lengths = map length all_words in
+  let longest_word = fold (\a \b if (length b) > (length a) then b else a) "" all_words in
+  let shortest_word = fold (\a \b if (length b) < (length a) then b else a) (head all_words) (tail all_words) in
+  
+  let reconstructed_lines = unlines all_lines in
+  let reconstructed_words = unwords all_words in
+  let uppercased = unlines (map upper all_lines) in
+  let reversed_words = unlines (map (\line unwords (reverse (words line))) all_lines) in
+  
+  {
+    line_count: length all_lines,
+    word_count: length all_words,
+    unique_word_count: length (unique (map lower all_words)),
+    avg_word_length: round ((sum word_lengths) / (length word_lengths)),
+    longest_word: longest_word,
+    shortest_word: shortest_word,
+    reconstructed_lines: reconstructed_lines,
+    reconstructed_words: reconstructed_words,
+    uppercased: uppercased,
+    reversed_words: reversed_words
+  }
+in
+
+# ============================================================================
+# STRESS TEST: Math precision
+# ============================================================================
+
+let stress_precision =
+  let test_roundtrip = \x (pow (sqrt x) 2) in
+  let test_log = \x pow 10 (log10 x) in
+  
+  let sqrt_pow_100 = round (test_roundtrip 100) in
+  let sqrt_pow_256 = round (test_roundtrip 256) in
+  let log_pow_10 = round (test_log 1000) in
+  let log_pow_100 = round (test_log 10000) in
+  let sqrt_then_square = map (\x round (pow (sqrt x) 2)) [4, 9, 16, 25, 36, 49, 64, 81, 100] in
+  let log_then_pow = map (\x round (pow 10 (log10 x))) [10, 100, 1000, 10000] in
+  
+  {
+    sqrt_pow_100: sqrt_pow_100,
+    sqrt_pow_256: sqrt_pow_256,
+    log_pow_10: log_pow_10,
+    log_pow_100: log_pow_100,
+    sqrt_then_square: sqrt_then_square,
+    log_then_pow: log_then_pow
+  }
+in
+
+# ============================================================================
+# FINAL OUTPUT
+# ============================================================================
+
+{
+  stress_lines: stress_lines,
+  stress_words: stress_words,
+  stress_math: stress_math,
+  stress_last: stress_last,
+  stress_spy: stress_spy,
+  stress_string_ops: stress_string_ops,
+  stress_precision: stress_precision
+}

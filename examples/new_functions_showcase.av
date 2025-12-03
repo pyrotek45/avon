@@ -1,0 +1,223 @@
+# Showcase of New Builtin Functions
+# This file demonstrates all the new functions added in this update
+
+# ============================================================================
+# DEBUGGING FUNCTIONS: spy, tap, debug
+# ============================================================================
+
+# spy - Auto-numbered debug tracing (prints to stderr, returns value unchanged)
+let demo_spy = 
+  let result = [1, 2, 3] 
+    -> spy                    # [SPY 1] [1, 2, 3]
+    -> map (\x x * 2) 
+    -> spy                    # [SPY 2] [2, 4, 6]
+    -> filter (\x x > 3)
+    -> spy                    # [SPY 3] [4, 6]
+  in
+  result
+in
+
+# tap - Run a function for side effects, return original value
+let demo_tap =
+  let log_length = \xs trace "length" (length xs) in
+  [1, 2, 3, 4, 5]
+    -> tap log_length         # Logs: [TRACE] length: 5
+    -> map (\x x * 2)         # Returns: [2, 4, 6, 8, 10]
+in
+
+# debug - Prints internal structure with custom label
+let demo_debug =
+  debug "config" {host: "localhost", port: 8080}
+in
+
+# ============================================================================
+# LIST FUNCTION: last
+# ============================================================================
+
+# last - Get the last element of a list
+let demo_last =
+  let numbers = [10, 20, 30, 40, 50] in
+  {
+    last_element: last numbers,           # 50
+    last_of_empty: last [],               # None
+    last_of_single: last [42],            # 42
+    first_and_last: [head numbers, last numbers]  # [10, 50]
+  }
+in
+
+# ============================================================================
+# STRING FUNCTIONS: lines, unlines, words, unwords
+# ============================================================================
+
+# lines - Split string by newlines
+let demo_lines =
+  let poem = "Roses are red\nViolets are blue\nAvon is great\nAnd so are you" in
+  {
+    all_lines: lines poem,                # ["Roses are red", "Violets are blue", ...]
+    line_count: length (lines poem),      # 4
+    first_line: head (lines poem)         # "Roses are red"
+  }
+in
+
+# unlines - Join list of strings with newlines
+let demo_unlines =
+  let items = ["line 1", "line 2", "line 3"] in
+  unlines items                           # "line 1\nline 2\nline 3"
+in
+
+# words - Split string by whitespace
+let demo_words =
+  let sentence = "The   quick\tbrown\n  fox" in
+  {
+    all_words: words sentence,            # ["The", "quick", "brown", "fox"]
+    word_count: length (words sentence),  # 4
+    normalized: unwords (words sentence)  # "The quick brown fox"
+  }
+in
+
+# unwords - Join list of strings with single space
+let demo_unwords =
+  let word_list = ["hello", "world", "from", "avon"] in
+  unwords word_list                       # "hello world from avon"
+in
+
+# ============================================================================
+# MATH FUNCTIONS: round, floor, ceil, sqrt, pow, log, log10
+# ============================================================================
+
+# round - Round to nearest integer
+let demo_round =
+  {
+    round_up: round 3.7,                  # 4
+    round_down: round 3.2,                # 3
+    round_half: round 2.5,                # 3 (rounds to even or up)
+    round_negative: round (0 - 3.7)       # -4
+  }
+in
+
+# floor - Round down to nearest integer
+let demo_floor =
+  {
+    floor_positive: floor 3.9,            # 3
+    floor_negative: floor (0 - 3.1)       # -4
+  }
+in
+
+# ceil - Round up to nearest integer
+let demo_ceil =
+  {
+    ceil_positive: ceil 3.1,              # 4
+    ceil_negative: ceil (0 - 3.9)         # -3
+  }
+in
+
+# sqrt - Square root
+let demo_sqrt =
+  {
+    sqrt_4: sqrt 4,                       # 2
+    sqrt_16: sqrt 16,                     # 4
+    sqrt_2: sqrt 2,                       # ~1.414...
+    perfect_squares: map sqrt [1, 4, 9, 16, 25, 36]  # [1, 2, 3, 4, 5, 6]
+  }
+in
+
+# pow - Raise to power (x^n)
+let demo_pow =
+  {
+    square: pow 5 2,                      # 25
+    cube: pow 3 3,                        # 27
+    power_of_zero: pow 5 0,               # 1
+    negative_exp: pow 2 (0 - 1),          # 0.5
+    powers_of_two: map (pow 2) [0, 1, 2, 3, 4, 5]  # [1, 2, 4, 8, 16, 32]
+  }
+in
+
+# log - Natural logarithm (base e)
+let demo_log =
+  {
+    log_e: log 2.718281828,               # ~1
+    log_1: log 1,                         # 0
+    log_exp_product: log 10               # ~2.302...
+  }
+in
+
+# log10 - Base-10 logarithm
+let demo_log10 =
+  {
+    log10_10: log10 10,                   # 1
+    log10_100: log10 100,                 # 2
+    log10_1000: log10 1000,               # 3
+    powers_of_10: map log10 [1, 10, 100, 1000, 10000]  # [0, 1, 2, 3, 4]
+  }
+in
+
+# ============================================================================
+# PRACTICAL EXAMPLES
+# ============================================================================
+
+# Example 1: Process a CSV-like text
+let process_csv_text =
+  let csv = "name,age,city\nAlice,30,NYC\nBob,25,LA\nCharlie,35,Chicago" in
+  let rows = lines csv in
+  let header = head rows in
+  let data_rows = tail rows in
+  {
+    headers: words (replace "," " " header),
+    row_count: length data_rows,
+    first_data_row: head data_rows
+  }
+in
+
+# Example 2: Text statistics
+let text_stats =
+  let text = "Hello world! This is a sample text.\nIt has multiple lines.\nAnd many words." in
+  {
+    char_count: length text,
+    word_count: length (words text),
+    line_count: length (lines text),
+    avg_word_length: round ((length text) / (length (words text)))
+  }
+in
+
+# Example 3: Mathematical operations pipeline
+let math_pipeline =
+  let numbers = range 1 10 in
+  {
+    original: numbers,
+    squared: map (\x pow x 2) numbers,
+    sqrt_of_squared: map (\x sqrt (pow x 2)) numbers,
+    sum_of_squares: sum (map (\x pow x 2) numbers),
+    geometric_mean: pow (product numbers) (1 / (length numbers))
+  }
+in
+
+# Example 4: Debugging a data transformation pipeline
+let debug_pipeline =
+  let data = [1, 2, 3, 4, 5] in
+  data
+    -> spy
+    -> map (\x x * 2)
+    -> spy
+    -> filter (\x x > 5)
+    -> spy
+    -> map (\x pow x 2)
+    -> spy
+in
+
+# ============================================================================
+# FINAL OUTPUT
+# ============================================================================
+
+{
+  demo_last: demo_last,
+  demo_lines: demo_lines,
+  demo_words: demo_words,
+  demo_round: demo_round,
+  demo_floor: demo_floor,
+  demo_ceil: demo_ceil,
+  demo_sqrt: demo_sqrt,
+  demo_pow: demo_pow,
+  demo_log10: demo_log10,
+  text_stats: text_stats,
+  math_pipeline: math_pipeline
+}

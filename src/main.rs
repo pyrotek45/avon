@@ -3569,8 +3569,8 @@ mod tests {
 
     #[test]
     fn test_debug_function() {
-        // debug should return the value unchanged
-        let prog = r#"debug 42"#.to_string();
+        // debug should return the value unchanged (now takes label and value)
+        let prog = r#"debug "test" 42"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -3578,7 +3578,7 @@ mod tests {
         assert_eq!(v.to_string(&prog), "42");
 
         // Test with list
-        let prog2 = r#"debug [1, 2, 3]"#.to_string();
+        let prog2 = r#"debug "list" [1, 2, 3]"#.to_string();
         let tokens2 = tokenize(prog2.clone()).expect("tokenize");
         let ast2 = parse(tokens2);
         let mut symbols2 = initial_builtins();
@@ -6063,5 +6063,600 @@ mod tests {
             assert_eq!(expected, "number", "expected should be 'number'");
             assert_eq!(found, "function", "found should be 'function'");
         }
+    }
+
+    // ========== New Function Tests (December 2025) ==========
+
+    #[test]
+    fn test_spy_function() {
+        // spy should return the value unchanged (auto-numbered debug)
+        let prog = r#"spy 42"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "42");
+
+        // Test with list
+        let prog2 = r#"spy [1, 2, 3]"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        match v2 {
+            Value::List(items) => assert_eq!(items.len(), 3),
+            _ => panic!("expected list"),
+        }
+    }
+
+    #[test]
+    fn test_tap_function() {
+        // tap should run a function for side effects and return original value
+        let prog = r#"tap (\x x * 2) 42"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        // tap returns the original value, not the function result
+        assert_eq!(v.to_string(&prog), "42");
+
+        // Test in a pipeline context
+        let prog2 = r#"[1, 2, 3] -> tap (\x length x) -> head"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "1");
+    }
+
+    #[test]
+    fn test_last_function() {
+        // last should return the last element of a list
+        let prog = r#"last [1, 2, 3]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "3");
+
+        // Test with strings
+        let prog2 = r#"last ["a", "b", "c"]"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "c");
+
+        // Test with empty list (should return None)
+        let prog3 = r#"last []"#.to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        assert!(matches!(v3, Value::None));
+    }
+
+    #[test]
+    fn test_lines_function() {
+        // lines should split a string by newlines
+        let prog = r#"lines "a\nb\nc""#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => {
+                assert_eq!(items.len(), 3);
+                assert_eq!(items[0].to_string(&prog), "a");
+                assert_eq!(items[1].to_string(&prog), "b");
+                assert_eq!(items[2].to_string(&prog), "c");
+            }
+            _ => panic!("expected list"),
+        }
+    }
+
+    #[test]
+    fn test_unlines_function() {
+        // unlines should join a list with newlines
+        let prog = r#"unlines ["a", "b", "c"]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "a\nb\nc");
+    }
+
+    #[test]
+    fn test_words_function() {
+        // words should split a string by whitespace
+        let prog = r#"words "hello world foo""#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => {
+                assert_eq!(items.len(), 3);
+                assert_eq!(items[0].to_string(&prog), "hello");
+                assert_eq!(items[1].to_string(&prog), "world");
+                assert_eq!(items[2].to_string(&prog), "foo");
+            }
+            _ => panic!("expected list"),
+        }
+
+        // Test with multiple spaces
+        let prog2 = r#"words "a   b  c""#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        match v2 {
+            Value::List(items) => assert_eq!(items.len(), 3),
+            _ => panic!("expected list"),
+        }
+    }
+
+    #[test]
+    fn test_unwords_function() {
+        // unwords should join a list with single space
+        let prog = r#"unwords ["hello", "world"]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "hello world");
+    }
+
+    #[test]
+    fn test_round_function() {
+        // round should round to nearest integer
+        let prog = r#"round 3.7"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "4");
+
+        // Test rounding down
+        let prog2 = r#"round 3.2"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "3");
+
+        // Test with integer (should return same)
+        let prog3 = r#"round 5"#.to_string();
+        let tokens3 = tokenize(prog3.clone()).expect("tokenize");
+        let ast3 = parse(tokens3);
+        let mut symbols3 = initial_builtins();
+        let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
+        assert_eq!(v3.to_string(&prog3), "5");
+    }
+
+    #[test]
+    fn test_floor_function() {
+        // floor should round down
+        let prog = r#"floor 3.9"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "3");
+
+        // Test negative
+        let prog2 = r#"floor (0 - 2.3)"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "-3");
+    }
+
+    #[test]
+    fn test_ceil_function() {
+        // ceil should round up
+        let prog = r#"ceil 3.1"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "4");
+
+        // Test negative
+        let prog2 = r#"ceil (0 - 2.9)"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "-2");
+    }
+
+    #[test]
+    fn test_sqrt_function() {
+        // sqrt should return square root
+        let prog = r#"sqrt 16"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "4");
+
+        // Test with float result - sqrt(2) ≈ 1.414
+        let prog2 = r#"round ((sqrt 2) * 1000)"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        // 1.414 * 1000 rounded = 1414
+        assert_eq!(v2.to_string(&prog2), "1414");
+    }
+
+    #[test]
+    fn test_pow_function() {
+        // pow should raise to power
+        let prog = r#"pow 2 3"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "8");
+
+        // Test with float - 2^0.5 = sqrt(2) ≈ 1.414
+        let prog2 = r#"round ((pow 2 0.5) * 1000)"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        // 1.414 * 1000 rounded = 1414
+        assert_eq!(v2.to_string(&prog2), "1414");
+    }
+
+    #[test]
+    fn test_log_function() {
+        // log should return natural logarithm
+        let prog = r#"round (log 2.718281828)"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        // ln(e) ≈ 1
+        assert_eq!(v.to_string(&prog), "1");
+    }
+
+    #[test]
+    fn test_log10_function() {
+        // log10 should return base-10 logarithm
+        let prog = r#"log10 100"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "2");
+
+        let prog2 = r#"log10 1000"#.to_string();
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast2 = parse(tokens2);
+        let mut symbols2 = initial_builtins();
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_eq!(v2.to_string(&prog2), "3");
+    }
+
+    #[test]
+    fn test_lines_unlines_roundtrip() {
+        // unlines (lines s) should equal s for strings without trailing newlines
+        let prog = r#"unlines (lines "a\nb\nc")"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "a\nb\nc");
+    }
+
+    #[test]
+    fn test_words_unwords_roundtrip() {
+        // unwords (words s) normalizes whitespace
+        let prog = r#"unwords (words "hello   world")"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "hello world");
+    }
+
+    #[test]
+    fn test_spy_in_pipeline() {
+        // spy should work in a pipeline without affecting the result
+        let prog = r#"[1, 2, 3] -> spy -> map (\x x * 2) -> spy -> head"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "2");
+    }
+
+    #[test]
+    fn test_last_with_head() {
+        // Test last and head are complementary
+        let prog = r#"let xs = [1, 2, 3, 4, 5] in [head xs, last xs]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => {
+                assert_eq!(items[0].to_string(&prog), "1");
+                assert_eq!(items[1].to_string(&prog), "5");
+            }
+            _ => panic!("expected list"),
+        }
+    }
+
+    #[test]
+    fn test_math_functions_in_pipeline() {
+        // Test math functions work in pipelines
+        let prog = r#"3.7 -> round -> pow 2 -> sqrt"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        // 3.7 -> 4 -> 16 -> 4
+        assert_eq!(v.to_string(&prog), "4");
+    }
+
+    #[test]
+    fn test_lines_empty_string() {
+        let prog = r#"lines """#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => assert!(items.is_empty()),
+            _ => panic!("expected list"),
+        }
+    }
+
+    #[test]
+    fn test_lines_single_line() {
+        let prog = r#"lines "hello""#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => {
+                assert_eq!(items.len(), 1);
+                assert_eq!(items[0].to_string(&prog), "hello");
+            }
+            _ => panic!("expected list"),
+        }
+    }
+
+    #[test]
+    fn test_words_empty_string() {
+        let prog = r#"words """#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => assert!(items.is_empty()),
+            _ => panic!("expected list"),
+        }
+    }
+
+    #[test]
+    fn test_words_only_whitespace() {
+        let prog = r#"words "   \t\n  ""#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => assert!(items.is_empty()),
+            _ => panic!("expected list"),
+        }
+    }
+
+    #[test]
+    fn test_unlines_empty_list() {
+        let prog = r#"unlines []"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "");
+    }
+
+    #[test]
+    fn test_unwords_empty_list() {
+        let prog = r#"unwords []"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "");
+    }
+
+    #[test]
+    fn test_round_negative() {
+        let prog = r#"round (0 - 3.7)"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "-4");
+    }
+
+    #[test]
+    fn test_floor_negative() {
+        let prog = r#"floor (0 - 3.2)"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "-4");
+    }
+
+    #[test]
+    fn test_ceil_negative() {
+        let prog = r#"ceil (0 - 3.7)"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "-3");
+    }
+
+    #[test]
+    fn test_pow_zero_exponent() {
+        let prog = r#"pow 5 0"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "1");
+    }
+
+    #[test]
+    fn test_pow_negative_exponent() {
+        let prog = r#"pow 2 (0 - 1)"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "0.5");
+    }
+
+    #[test]
+    fn test_sqrt_zero() {
+        let prog = r#"sqrt 0"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "0");
+    }
+
+    #[test]
+    fn test_log_e() {
+        // log e = 1
+        let prog = r#"round (log 2.718281828)"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "1");
+    }
+
+    #[test]
+    fn test_log10_powers() {
+        // log10 of powers of 10
+        let prog = r#"map log10 [1, 10, 100, 1000, 10000]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::List(items) => {
+                assert_eq!(items[0].to_string(&prog), "0");
+                assert_eq!(items[1].to_string(&prog), "1");
+                assert_eq!(items[2].to_string(&prog), "2");
+                assert_eq!(items[3].to_string(&prog), "3");
+                assert_eq!(items[4].to_string(&prog), "4");
+            }
+            _ => panic!("expected list"),
+        }
+    }
+
+    #[test]
+    fn test_last_single_element() {
+        let prog = r#"last [42]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "42");
+    }
+
+    #[test]
+    fn test_last_empty_list() {
+        let prog = r#"last []"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::None => {}
+            _ => panic!("expected None"),
+        }
+    }
+
+    #[test]
+    fn test_debug_returns_value() {
+        // debug should return the value unchanged
+        let prog = r#"debug "test" 42"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "42");
+    }
+
+    #[test]
+    fn test_tap_returns_original() {
+        // tap should return the original value after running the function
+        let prog = r#"tap (\x x * 2) 5"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "5");
+    }
+
+    #[test]
+    fn test_lines_with_carriage_return() {
+        // Test Windows-style line endings
+        let prog = r#"length (lines "a\r\nb\r\nc")"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "3");
+    }
+
+    #[test]
+    fn test_math_chain() {
+        // Test chaining multiple math functions
+        let prog = r#"let x = 16 in sqrt x -> log10 -> floor"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        // sqrt(16) = 4, log10(4) ≈ 0.602, floor(0.602) = 0
+        assert_eq!(v.to_string(&prog), "0");
+    }
+
+    #[test]
+    fn test_string_split_join_words() {
+        // Test using words and unwords as split/join on whitespace
+        let prog = r#"let sentence = "the quick brown fox" in unwords (reverse (words sentence))"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "fox brown quick the");
+    }
+
+    #[test]
+    fn test_lines_map_unlines() {
+        // Test processing each line of a multi-line string
+        let prog = r#"let text = "line1\nline2\nline3" in unlines (map upper (lines text))"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "LINE1\nLINE2\nLINE3");
     }
 }

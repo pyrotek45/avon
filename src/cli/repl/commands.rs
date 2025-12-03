@@ -1,8 +1,8 @@
 use crate::cli::commands::process_source;
 use crate::cli::docs::{get_builtin_doc, get_category_doc, get_repl_command_doc};
-use crate::cli::helpers::print_file_content;
+use crate::cli::helpers::{is_expression_complete_impl, print_file_content};
 use crate::cli::options::CliOptions;
-use crate::cli::repl::state::ReplState;
+use crate::cli::repl::state::{PendingLet, ReplState};
 use crate::common::{Number, Value};
 use crate::eval::{apply_function, collect_file_templates, eval, fetch_git_raw, initial_builtins};
 use crate::lexer::tokenize;
@@ -57,9 +57,13 @@ pub fn handle_command(
             println!("  :sh <command>   Execute shell command");
             println!("  :doc            Show all builtin functions and REPL commands");
             println!("  :doc <name>     Show documentation for a builtin or command");
+            println!("  :doc <category> Browse functions by category");
             println!("  :type <expr>    Show the type of an expression");
             println!("  :clear          Clear all user-defined variables");
             println!("  :exit, :quit    Exit the REPL");
+            println!();
+            println!("Doc Categories (use :doc <category>):");
+            println!("  string  list  math  dict  file  type  format  date  regex  debug");
             println!();
             println!("Common Flags (for :read, :run, :eval, :preview, :deploy):");
             println!("  --git <url>     Fetch from GitHub (format: user/repo/path/file.av)");
@@ -172,6 +176,7 @@ pub fn handle_command(
                 eprintln!("Usage: :let <name> = <expression>");
                 eprintln!("  Example: :let x = 42");
                 eprintln!("  Example: :let config = {{host: \"localhost\", port: 8080}}");
+                eprintln!("  Example: :let f = \\x x * 2  (multi-line expressions continue on next line)");
                 eprintln!(
                     "  Note: You must include an '=' sign between the variable name and expression"
                 );
@@ -193,6 +198,16 @@ pub fn handle_command(
                     eprintln!("Usage: :let <name> = <expression>");
                     eprintln!("  Example: :let x = 42");
                     eprintln!("  Example: :let config = {{host: \"localhost\", port: 8080}}");
+                    return Some(false);
+                }
+
+                // Check if expression is complete
+                if !is_expression_complete_impl(expr_str) {
+                    // Buffer incomplete expression for multi-line input
+                    state.pending_let = Some(PendingLet {
+                        var_name: var_name.to_string(),
+                        expr_buffer: expr_str.to_string(),
+                    });
                     return Some(false);
                 }
 

@@ -5,7 +5,7 @@ use crate::eval::{apply_function, collect_file_templates, eval, fetch_git_raw, i
 use crate::lexer::tokenize;
 use crate::parser::parse;
 
-use super::docs::{print_builtin_docs, print_help};
+use super::docs::{get_builtin_doc, get_category_doc, print_builtin_docs, print_help};
 use super::options::{parse_args, CliOptions};
 use super::repl::execute_repl;
 
@@ -62,7 +62,44 @@ pub fn run_cli(args: Vec<String>) -> i32 {
         }
         "repl" => execute_repl(),
         "doc" | "docs" => {
-            print_builtin_docs();
+            if rest.is_empty() {
+                // No arguments - show all docs
+                print_builtin_docs();
+            } else {
+                // Got a function name or category
+                let name = rest[0].as_str();
+                
+                // Check for category documentation first
+                if let Some(doc) = get_category_doc(name) {
+                    println!("{}", doc);
+                    return 0;
+                }
+                
+                // Check for builtin function documentation
+                let builtins = initial_builtins();
+                if builtins.contains_key(name) {
+                    if let Some(doc) = get_builtin_doc(name) {
+                        println!("{}", doc);
+                    } else {
+                        println!("Function: {}", name);
+                        println!("  This is a builtin function.");
+                        println!("  Use 'avon doc' to see all builtin documentation.");
+                    }
+                    return 0;
+                }
+                
+                // Unknown name
+                eprintln!("Unknown function or category: {}", name);
+                eprintln!();
+                eprintln!("Available categories:");
+                eprintln!("  string, list, dict, math, type, logic, io, template");
+                eprintln!();
+                eprintln!("Example usage:");
+                eprintln!("  avon doc map        # Show documentation for 'map'");
+                eprintln!("  avon doc string     # Show all string functions");
+                eprintln!("  avon doc            # Show all documentation");
+                return 1;
+            }
             0
         }
         "version" | "--version" | "-v" => {

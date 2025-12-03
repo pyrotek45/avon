@@ -125,13 +125,13 @@ You can see the value at each transformation step.
 
 ### The `debug` Function
 
-`debug` shows the **internal structure** of values using Rust's Debug format.
+`debug` shows the **internal structure** of values using Rust's Debug format with a custom label.
 
-**Signature:** `debug :: a -> a`
+**Signature:** `debug :: String -> a -> a`
 
 How it works:**
-- Takes any value
-- Prints its internal structure to stderr
+- Takes a **label** (String) and any **value**
+- Prints `[DEBUG] label: internal_structure` to stderr
 - Returns the value unchanged
 
 When to use:** When you need to see the exact shape of complex data. When `trace` isn't cutting it and you need to go deeper.
@@ -141,12 +141,12 @@ Example:
 ```avon
 let config = {host: "localhost", port: "8080", debug: "true"} in
 
-debug config
+debug "config" config
 ```
 
 Stderr:
 ```
-[DEBUG] Dict({"host": String("localhost"), "port": String("8080"), "debug": String("true")})
+[DEBUG] config: Dict({"host": String("localhost"), "port": String("8080"), "debug": String("true")})
 ```
 
 This shows the exact structure and types in the dict.
@@ -156,15 +156,66 @@ This shows the exact structure and types in the dict.
 ```avon
 let numbers = [1, 2, 3] in
 let doubled = map (\x x * 2) numbers in
-debug doubled
+debug "doubled" doubled
 ```
 
 Stderr:
 ```
-[DEBUG] List([Number(2), Number(4), Number(6)])
+[DEBUG] doubled: List([Number(2), Number(4), Number(6)])
 ```
 
 Shows you exactly what `map` produced.
+
+### The `spy` Function
+
+`spy` provides auto-numbered debugging traces for quick inspection.
+
+**Signature:** `spy :: a -> a`
+
+How it works:**
+- Takes any value
+- Prints `[SPY n] value` to stderr (where n is an auto-incrementing counter)
+- Returns the value unchanged
+
+When to use:** When you want quick debugging without writing labels. Great for debugging pipelines where you want to see values at multiple points.
+
+**Example:**
+
+```avon
+[1, 2, 3] -> spy -> map (\x x * 2) -> spy -> filter (\x x > 3) -> spy
+```
+
+Stderr:
+```
+[SPY 1] [1, 2, 3]
+[SPY 2] [2, 4, 6]
+[SPY 3] [4, 6]
+```
+
+The auto-numbering helps you track which `spy` produced which output.
+
+### The `tap` Function
+
+`tap` runs a function for side effects without changing the value.
+
+**Signature:** `tap :: (a -> b) -> a -> a`
+
+How it works:**
+- Takes a function and a value
+- Runs the function on the value (for side effects like printing)
+- Returns the original value unchanged
+
+When to use:** When you want to perform side effects (like logging) in the middle of a pipeline without disrupting the data flow.
+
+**Example:**
+
+```avon
+let log_length = \x trace "length" (length x) in
+
+[1, 2, 3] -> tap log_length -> map (\x x * 2)
+# Stderr: [TRACE] length: 3
+# Result: [2, 4, 6]
+```
 
 ---
 

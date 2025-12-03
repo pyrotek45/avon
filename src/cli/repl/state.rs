@@ -5,11 +5,19 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+/// Stores pending :let command data for multi-line input
+#[derive(Debug, Clone)]
+pub struct PendingLet {
+    pub var_name: String,
+    pub expr_buffer: String,
+}
+
 pub struct ReplState {
     pub symbols: HashMap<String, Value>,
     pub symbols_rc: Rc<RefCell<HashMap<String, Value>>>,
     pub input_buffer: String,
     pub watched_vars: HashMap<String, Value>,
+    pub pending_let: Option<PendingLet>,
 }
 
 impl ReplState {
@@ -22,6 +30,7 @@ impl ReplState {
             symbols_rc,
             input_buffer: String::new(),
             watched_vars: HashMap::new(),
+            pending_let: None,
         }
     }
 

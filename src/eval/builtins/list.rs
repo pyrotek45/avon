@@ -1,4 +1,4 @@
-//! List operations: chunks, combinations, drop, enumerate, filter, flatmap, flatten, fold, head, map, nth, partition, permutations, range, reverse, sort, sort_by, split_at, tail, take, transpose, unique, unzip, windows, zip
+//! List operations: chunks, combinations, drop, enumerate, filter, flatmap, flatten, fold, head, last, map, nth, partition, permutations, range, reverse, sort, sort_by, split_at, tail, take, transpose, unique, unzip, windows, zip
 
 use crate::common::{EvalError, Number, Value};
 use crate::eval::apply_function;
@@ -16,6 +16,7 @@ pub const NAMES: &[&str] = &[
     "flatten",
     "fold",
     "head",
+    "last",
     "map",
     "nth",
     "partition",
@@ -37,7 +38,7 @@ pub const NAMES: &[&str] = &[
 /// Get arity for list functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
-        "enumerate" | "flatten" | "head" | "reverse" | "sort" | "tail" | "transpose" | "unique"
+        "enumerate" | "flatten" | "head" | "last" | "reverse" | "sort" | "tail" | "transpose" | "unique"
         | "unzip" => Some(1),
         "chunks" | "combinations" | "drop" | "filter" | "flatmap" | "map" | "nth" | "partition"
         | "permutations" | "range" | "sort_by" | "split_at" | "take" | "windows" | "zip" => Some(2),
@@ -191,6 +192,20 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let list = &args[0];
             if let Value::List(items) = list {
                 Ok(items.first().cloned().unwrap_or(Value::None))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "last" => {
+            // last :: [a] -> a | None
+            // Get the last element of a list, or None if empty
+            let list = &args[0];
+            if let Value::List(items) = list {
+                Ok(items.last().cloned().unwrap_or(Value::None))
             } else {
                 Err(EvalError::type_mismatch(
                     "list",

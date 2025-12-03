@@ -37,9 +37,11 @@ Functions for debugging and assertions.
 | Function | Signature | Description |
 |----------|-----------|-------------|
 | `assert` | `Bool -> a -> a` | Returns the second argument if the first is true, otherwise raises an error. |
-| `debug` | `a -> a` | Prints the value to stderr for debugging and returns it. |
+| `debug` | `String -> a -> a` | Prints a label and the value's internal structure to stderr, then returns it. |
 | `error` | `String -> a` | Raises a runtime error with the given message. |
 | `not` | `Bool -> Bool` | Logical negation. |
+| `spy` | `a -> a` | Auto-numbered debug trace. Prints "[SPY 1] value" to stderr and returns the value. |
+| `tap` | `(a -> b) -> a -> a` | Run a function for side effects, then return original value. |
 | `trace` | `String -> a -> a` | Prints a label and value to stderr, then returns the value. |
 
 ## Dictionary Functions
@@ -135,6 +137,7 @@ Functions for working with lists.
 | `flatten` | `[[a]] -> [a]` | Flattens a list of lists. |
 | `fold` | `(b -> a -> b) -> b -> [a] -> b` | Reduces a list to a single value using an accumulator. |
 | `head` | `[a] -> a\|None` | Returns the first item, or None if empty. |
+| `last` | `[a] -> a\|None` | Returns the last item, or None if empty. |
 | `map` | `(a -> b) -> [a] -> [b]` | Applies a function to each item in the list. |
 | `nth` | `Number -> [a] -> a\|None` | Returns the item at index (0-based), or None if out of bounds. |
 | `partition` | `(a -> Bool) -> [a] -> [[a], [a]]` | Splits a list into two lists: [matches, non-matches]. |
@@ -171,9 +174,16 @@ Mathematical functions.
 | Function | Signature | Description |
 |----------|-----------|-------------|
 | `abs` | `Number -> Number` | Returns the absolute value of a number. |
+| `ceil` | `Number -> Number` | Rounds up to the nearest integer. |
+| `floor` | `Number -> Number` | Rounds down to the nearest integer. |
 | `gcd` | `Number -> Number -> Number` | Returns the greatest common divisor of two numbers. |
 | `lcm` | `Number -> Number -> Number` | Returns the least common multiple of two numbers. |
+| `log` | `Number -> Number` | Returns the natural logarithm (base e). |
+| `log10` | `Number -> Number` | Returns the base-10 logarithm. |
 | `neg` | `Number -> Number` | Negates a number. |
+| `pow` | `Number -> Number -> Number` | Raises a number to a power (x^n). |
+| `round` | `Number -> Number` | Rounds to the nearest integer. |
+| `sqrt` | `Number -> Number` | Returns the square root. |
 
 ## Regex Functions
 
@@ -207,6 +217,7 @@ Functions for string manipulation.
 | `is_whitespace` | `String -> Bool` | Returns true if the string contains only whitespace. |
 | `join` | `[String] -> String -> String` | Joins a list of strings with a separator. |
 | `length` | `String\|List -> Number` | Returns the length of a string or list. |
+| `lines` | `String -> [String]` | Splits a string into lines (by newlines). |
 | `lower` | `String -> String` | Converts the string to lowercase. |
 | `pad_left` | `String -> Number -> String -> String` | Pads the string on the left to the given width. |
 | `pad_right` | `String -> Number -> String -> String` | Pads the string on the right to the given width. |
@@ -216,7 +227,10 @@ Functions for string manipulation.
 | `split` | `String -> String -> [String]` | Splits the string by a separator. |
 | `starts_with` | `String -> String -> Bool` | Returns true if the string starts with the prefix. |
 | `trim` | `String -> String` | Removes leading and trailing whitespace. |
+| `unlines` | `[String] -> String` | Joins lines with newlines. |
+| `unwords` | `[String] -> String` | Joins words with a single space. |
 | `upper` | `String -> String` | Converts the string to uppercase. |
+| `words` | `String -> [String]` | Splits a string into words (by whitespace). |
 
 ## Type Functions
 

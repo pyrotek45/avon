@@ -7,6 +7,6 @@
 # - Type 'is_' to get completions for: is_string, is_number, is_list, is_dict, etc.
 
 let sentence = "hello world from avon" in
-let words = split sentence " " in
-let upper_words = map upper words in
+let word_list = split sentence " " in
+let upper_words = map upper word_list in
 join upper_words "-"

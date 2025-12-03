@@ -36,7 +36,7 @@ let complex_data = [
   ["replicas", "3"]
 ] in
 
-let inspected = debug complex_data in
+let inspected = debug "complex_data" complex_data in
 
 let make_service_config = \name \port_num \env
   let validated_name = trace "validating name" (assert (is_string name) name) in
@@ -47,7 +47,7 @@ let make_service_config = \name \port_num \env
     ["port", to_string validated_port],
     ["environment", validated_env]
   ] in
-  debug config
+  debug "config" config
 in
 
 let service = make_service_config "api" 8080 "production" in {"

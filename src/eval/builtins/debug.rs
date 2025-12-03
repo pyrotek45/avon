@@ -1,15 +1,19 @@
-//! Debug/Assertion functions: assert, debug, error, not, trace
+//! Debug/Assertion functions: assert, debug, error, not, trace, spy, tap
 
 use crate::common::{EvalError, Value};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+/// Counter for spy auto-labels
+static SPY_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
 /// Names of debug builtins
-pub const NAMES: &[&str] = &["assert", "debug", "error", "not", "trace"];
+pub const NAMES: &[&str] = &["assert", "debug", "error", "not", "trace", "spy", "tap"];
 
 /// Get arity for debug functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
-        "debug" | "error" | "not" => Some(1),
-        "assert" | "trace" => Some(2),
+        "error" | "not" | "spy" => Some(1),
+        "assert" | "trace" | "debug" | "tap" => Some(2),
         _ => None,
     }
 }
@@ -87,11 +91,50 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             }
         }
         "debug" => {
-            // debug :: a -> a
-            // Pretty-prints the value structure to stderr, returns the value
+            // debug :: String -> a -> a
+            // Pretty-prints the value structure with a label to stderr, returns the value
+            let label = &args[0];
+            let val = &args[1];
+            match label {
+                Value::String(lbl) => {
+                    eprintln!("[DEBUG] {}: {:?}", lbl, val);
+                    Ok(val.clone())
+                }
+                other => Err(EvalError::type_mismatch(
+                    "string",
+                    other.to_string(source),
+                    line,
+                )),
+            }
+        }
+        "spy" => {
+            // spy :: a -> a
+            // Quick debugging - auto-numbered, prints value and returns it
+            // Perfect for pipelines: data -> spy -> map f -> spy
             let val = &args[0];
-            eprintln!("[DEBUG] {:?}", val);
+            let n = SPY_COUNTER.fetch_add(1, Ordering::SeqCst);
+            eprintln!("[SPY:{}] {}", n, val.to_string(source));
             Ok(val.clone())
+        }
+        "tap" => {
+            // tap :: (a -> b) -> a -> a
+            // Run a function on a value for side effects, return the original value
+            // Useful for debugging in pipelines: data -> tap (trace "here") -> map f
+            let func = &args[0];
+            let val = &args[1];
+            
+            // Apply the function (for side effects), ignore result
+            match func {
+                Value::Function { .. } | Value::Builtin(_, _) => {
+                    let _ = crate::eval::apply_function(func, val.clone(), source, line);
+                    Ok(val.clone())
+                }
+                other => Err(EvalError::type_mismatch(
+                    "function",
+                    other.to_string(source),
+                    line,
+                )),
+            }
         }
         _ => Err(EvalError::new(
             format!("unknown debug function: {}", name),

@@ -64,6 +64,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              {:<16} Flatten nested list one level\n\n\
              Accessing Elements:\n\
              {:<16} Get first item\n\
+             {:<16} Get last item\n\
              {:<16} Get all items except first\n\
              {:<16} Get item at index\n\
              {:<16} Get length of list\n\n\
@@ -99,7 +100,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              {:<16} Transpose 2D list\n\n\
              Use :doc <function> for detailed documentation.",
             "map", "filter", "fold", "flatmap", "flatten",
-            "head", "tail", "nth", "length",
+            "head", "last", "tail", "nth", "length",
             "take", "drop", "slice", "split_at", "chunks", "windows",
             "zip", "unzip", "enumerate",
             "reverse", "sort", "sort_by", "unique",
@@ -140,7 +141,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
             "gcd", "lcm",
             "sum", "product", "min", "max"
         )),
-        "dict" | "dicts" | "dictionary" | "dictionaries" | "map" | "object" => Some(format!(
+        "dict" | "dicts" | "dictionary" | "dictionaries" | "object" => Some(format!(
             "Dictionary Functions:\n\
              ─────────────────────\n\
              Operations for key-value dictionaries.\n\n\
@@ -334,15 +335,19 @@ pub fn get_category_doc(category: &str) -> Option<String> {
         "debug" | "debugging" | "assert" | "test" | "testing" => Some(format!(
             "Debug & Assert Functions:\n\
              ─────────────────────────\n\
-             Debugging and validation.\n\n\
-             Output:\n\
-             {:<16} Print label and value to stderr\n\
-             {:<16} Pretty-print value structure\n\n\
+             Debugging, tracing, and validation for complex pipelines.\n\n\
+             Tracing (for pipelines):\n\
+             {:<16} Print label and value, return value unchanged\n\
+             {:<16} Auto-numbered quick debug (no label needed)\n\
+             {:<16} Pretty-print internal structure with label\n\
+             {:<16} Run function for side effects, return original value\n\n\
              Validation:\n\
              {:<16} Assert condition or error\n\
              {:<16} Throw custom error\n\n\
+             Pipeline example:\n\
+               data -> spy -> map f -> trace \"after map\" -> filter g -> spy\n\n\
              Use :doc <function> for detailed documentation.",
-            "trace", "debug",
+            "trace", "spy", "debug", "tap",
             "assert", "error"
         )),
         "parse" | "parsing" | "data" | "json" | "yaml" | "toml" | "csv" => Some(format!(
@@ -474,7 +479,8 @@ pub fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("all", "all :: (a -> Bool) -> [a] -> Bool\n  Check if all elements satisfy predicate.\n  Returns true if all pass, false if any fail.\n  Example: all (\\x x > 0) [1, 2, 3] -> true\n  Example: all (\\x x > 0) [1, -2, 3] -> false\n  Example: all (\\x x > 0) [] -> true (vacuous truth)"),
         ("any", "any :: (a -> Bool) -> [a] -> Bool\n  Check if any element satisfies predicate.\n  Returns true if any pass, false if all fail.\n  Example: any (\\x x < 0) [1, 2, -3] -> true\n  Example: any (\\x x < 0) [1, 2, 3] -> false\n  Example: any (\\x x < 0) [] -> false"),
         ("count", "count :: (a -> Bool) -> [a] -> Int\n  Count elements matching predicate.\n  Example: count (\\x x > 5) [1, 6, 3, 8, 5] -> 2\n  Example: count (\\x x == \"a\") [\"a\", \"b\", \"a\"] -> 2"),
-        ("head", "head :: [a] -> a | None\n  Get first item or None.\n  Example: head [1, 2, 3] -> 1"),
+        ("head", "head :: [a] -> a | None\n  Get first item or None.\n  Example: head [1, 2, 3] -> 1\n  Example: head [] -> None"),
+        ("last", "last :: [a] -> a | None\n  Get last item or None.\n  Example: last [1, 2, 3] -> 3\n  Example: last [] -> None"),
         ("nth", "nth :: Int -> [a] -> a | None\n  Get item at index (0-based) or None if out of bounds.\n  Example: nth 0 [1, 2, 3] -> 1\n  Example: nth 2 [1, 2, 3] -> 3\n  Example: nth 5 [1, 2, 3] -> None"),
         ("tail", "tail :: [a] -> [a]\n  Get all items except first.\n  Example: tail [1, 2, 3] -> [2, 3]"),
 
@@ -561,8 +567,10 @@ pub fn get_builtin_doc(func_name: &str) -> Option<String> {
 
         // Assert & Debug
         ("assert", "assert :: Bool -> a -> a\n  Assert condition, return value or error with debug info.\n  Example: assert (is_number x) x\n  Example: assert (x > 0) x\n  Use for input validation and type checking."),
-        ("trace", "trace :: String -> a -> a\n  Print label and value to stderr, return value unchanged.\n  Example: trace \"x\" 42 -> prints \"[TRACE] x: 42\" to stderr, returns 42"),
-        ("debug", "debug :: a -> a\n  Pretty-print value structure to stderr, return value unchanged.\n  Example: debug [1, 2, 3] -> prints structure, returns [1, 2, 3]"),
+        ("trace", "trace :: String -> a -> a\n  Print label and value to stderr, return value unchanged.\n  Perfect for pipelines: data -> trace \"step1\" -> map f -> trace \"step2\"\n  Example: trace \"x\" 42 -> prints \"[TRACE] x: 42\" to stderr, returns 42\n  Example: [1,2,3] -> map (\\x x*2) -> trace \"doubled\""),
+        ("debug", "debug :: String -> a -> a\n  Pretty-print value structure with label to stderr, return value unchanged.\n  Shows internal representation (useful for complex nested structures).\n  Example: debug \"result\" [1, 2, 3] -> prints \"[DEBUG] result: List([...])\""),
+        ("spy", "spy :: a -> a\n  Quick debugging - auto-numbered, prints value and returns it.\n  Perfect for pipelines when you just want to see what's happening.\n  Example: data -> spy -> map f -> spy -> filter g -> spy\n  Output: [SPY:1] ..., [SPY:2] ..., [SPY:3] ...\n  Note: Counter resets when program restarts."),
+        ("tap", "tap :: (a -> b) -> a -> a\n  Run a function on a value for side effects, return the original value.\n  Useful for debugging or logging in the middle of a pipeline.\n  Example: data -> tap (\\x trace \"here\" x) -> map f\n  Example: data -> tap (\\x assert (length x > 0) x) -> process"),
         ("error", "error :: String -> a\n  Throw custom error with message.\n  Example: error \"Invalid input\" -> throws error"),
 
         // Date/Time Operations
@@ -1050,9 +1058,24 @@ Commands:
   deploy <file>      Deploy generated templates to disk
   run <code>         Evaluate code string directly
   repl               Start interactive REPL (Read-Eval-Print Loop)
-  doc                Show builtin function reference
+  doc [name]         Show builtin function reference
   version            Show version information
   help               Show this help message
+
+Documentation:
+  avon doc                   List all builtin functions
+  avon doc <function>        Show help for a specific function (e.g., avon doc map)
+  
+  In the REPL, use :doc with categories to browse functions by type:
+    :doc string    Text manipulation (concat, upper, lower, split, join...)
+    :doc list      List operations (map, filter, fold, head, tail, zip...)
+    :doc math      Math functions (sqrt, pow, floor, ceil, abs, sum...)
+    :doc dict      Dictionary operations (keys, values, get, set, merge...)
+    :doc file      File system (read_file, write_file, glob, abspath...)
+    :doc type      Type checking (is_string, is_number, is_list...)
+    :doc format    Formatting (format_hex, format_json, format_table...)
+    :doc date      Date/time (now, format_date, parse_date...)
+    :doc regex     Regular expressions (regex_match, regex_replace...)
 
 Note: You can omit 'eval' - 'avon <file>' is equivalent to 'avon eval <file>'
       Example: 'avon config.av' works the same as 'avon eval config.av'

@@ -34,7 +34,7 @@ pub fn is_expression_complete_impl(input: &str) -> bool {
     let mut brace_depth = 0;
     let mut in_string = false;
     let mut in_template = false;
-    let mut escape_next = false;
+    let mut string_escape_next = false;
 
     let chars: Vec<char> = input.chars().collect();
     let mut i = 0;
@@ -42,13 +42,18 @@ pub fn is_expression_complete_impl(input: &str) -> bool {
     while i < chars.len() {
         let c = chars[i];
 
-        if escape_next {
-            escape_next = false;
-            i += 1;
-            continue;
-        }
-
+        // Handle escape sequences only inside strings
         if in_string {
+            if string_escape_next {
+                string_escape_next = false;
+                i += 1;
+                continue;
+            }
+            if c == '\\' {
+                string_escape_next = true;
+                i += 1;
+                continue;
+            }
             if c == '"' {
                 in_string = false;
             }
@@ -94,20 +99,18 @@ pub fn is_expression_complete_impl(input: &str) -> bool {
             ')' => paren_depth -= 1,
             '[' => bracket_depth += 1,
             ']' => bracket_depth -= 1,
-            '\\' => {
-                escape_next = true;
-                i += 1;
-                continue;
-            }
+            // Note: backslash outside strings is lambda syntax, not escape
             _ => {}
         }
 
         // Check for keywords (only when not in string/template)
-        if !in_string && !in_template && i + 2 < chars.len() {
+        // Use <= to catch keywords at end of input
+        if !in_string && !in_template {
             let remaining: String = chars[i..].iter().collect();
 
-            // Check for "let" keyword (word boundary)
-            if remaining.starts_with("let")
+            // Check for "let" keyword (word boundary) - 3 chars
+            if i + 3 <= chars.len()
+                && remaining.starts_with("let")
                 && (i == 0 || !chars[i - 1].is_alphanumeric())
                 && (i + 3 >= chars.len() || !chars[i + 3].is_alphanumeric())
             {
@@ -116,8 +119,9 @@ pub fn is_expression_complete_impl(input: &str) -> bool {
                 continue;
             }
 
-            // Check for "in" keyword
-            if remaining.starts_with("in")
+            // Check for "in" keyword - 2 chars
+            if i + 2 <= chars.len()
+                && remaining.starts_with("in")
                 && (i == 0 || !chars[i - 1].is_alphanumeric())
                 && (i + 2 >= chars.len() || !chars[i + 2].is_alphanumeric())
             {
@@ -126,8 +130,9 @@ pub fn is_expression_complete_impl(input: &str) -> bool {
                 continue;
             }
 
-            // Check for "if" keyword
-            if remaining.starts_with("if")
+            // Check for "if" keyword - 2 chars
+            if i + 2 <= chars.len()
+                && remaining.starts_with("if")
                 && (i == 0 || !chars[i - 1].is_alphanumeric())
                 && (i + 2 >= chars.len() || !chars[i + 2].is_alphanumeric())
             {
@@ -136,8 +141,9 @@ pub fn is_expression_complete_impl(input: &str) -> bool {
                 continue;
             }
 
-            // Check for "then" keyword
-            if remaining.starts_with("then")
+            // Check for "then" keyword - 4 chars
+            if i + 4 <= chars.len()
+                && remaining.starts_with("then")
                 && (i == 0 || !chars[i - 1].is_alphanumeric())
                 && (i + 4 >= chars.len() || !chars[i + 4].is_alphanumeric())
             {
@@ -146,8 +152,9 @@ pub fn is_expression_complete_impl(input: &str) -> bool {
                 continue;
             }
 
-            // Check for "else" keyword
-            if remaining.starts_with("else")
+            // Check for "else" keyword - 4 chars
+            if i + 4 <= chars.len()
+                && remaining.starts_with("else")
                 && (i == 0 || !chars[i - 1].is_alphanumeric())
                 && (i + 4 >= chars.len() || !chars[i + 4].is_alphanumeric())
             {

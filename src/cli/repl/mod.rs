@@ -6,7 +6,7 @@ mod state;
 use crate::common::Value;
 use crate::eval::{collect_file_templates, eval, initial_builtins};
 use crate::lexer::tokenize;
-use crate::parser::parse;
+use crate::parser::parse_with_error;
 
 use super::completer::AvonCompleter;
 use super::helpers::is_expression_complete_impl;
@@ -105,10 +105,10 @@ pub fn execute_repl() -> i32 {
     let mut state = ReplState::new(symbols, symbols_rc);
 
     loop {
-        let prompt = if state.input_buffer.is_empty() {
-            "avon> ".to_string()
-        } else {
+        let prompt = if state.pending_let.is_some() || !state.input_buffer.is_empty() {
             "    > ".to_string()
+        } else {
+            "avon> ".to_string()
         };
 
         match rl.readline(&prompt) {
@@ -117,9 +117,29 @@ pub fn execute_repl() -> i32 {
 
                 // Handle empty input
                 if trimmed.is_empty() {
-                    if !state.input_buffer.is_empty() {
-                        state.input_buffer.push('\n');
+                    if state.pending_let.is_some() || !state.input_buffer.is_empty() {
+                        if let Some(ref mut pending) = state.pending_let {
+                            pending.expr_buffer.push('\n');
+                        } else {
+                            state.input_buffer.push('\n');
+                        }
                         continue;
+                    }
+                    continue;
+                }
+
+                // Handle continuation of pending :let command
+                if let Some(ref mut pending) = state.pending_let.take() {
+                    pending.expr_buffer.push('\n');
+                    pending.expr_buffer.push_str(trimmed);
+                    
+                    // Check if the expression is now complete
+                    if is_expression_complete_impl(&pending.expr_buffer) {
+                        // Try to evaluate
+                        execute_pending_let(&pending.var_name, &pending.expr_buffer, &mut state);
+                    } else {
+                        // Still incomplete, keep buffering
+                        state.pending_let = Some(pending.clone());
                     }
                     continue;
                 }
@@ -152,38 +172,48 @@ pub fn execute_repl() -> i32 {
                 // Try to parse and evaluate
                 match tokenize(state.input_buffer.clone()) {
                     Ok(tokens) => {
-                        let ast = parse(tokens);
-                        match eval(ast.program, &mut state.symbols, &state.input_buffer) {
-                            Ok(val) => {
-                                // Check watched variables for changes
-                                let mut changed_vars: Vec<(String, Value)> = Vec::new();
-                                for (name, old_val) in &state.watched_vars {
-                                    if let Some(new_val) = state.symbols.get(name) {
-                                        let old_str = old_val.to_string("");
-                                        let new_str = new_val.to_string("");
-                                        if old_str != new_str {
-                                            println!(
-                                                "[WATCH] {} changed: {} -> {}",
-                                                name, old_str, new_str
-                                            );
-                                            changed_vars.push((name.clone(), new_val.clone()));
+                        match parse_with_error(tokens) {
+                            Ok(ast) => {
+                                match eval(ast.program, &mut state.symbols, &state.input_buffer) {
+                                    Ok(val) => {
+                                        // Check watched variables for changes
+                                        let mut changed_vars: Vec<(String, Value)> = Vec::new();
+                                        for (name, old_val) in &state.watched_vars {
+                                            if let Some(new_val) = state.symbols.get(name) {
+                                                let old_str = old_val.to_string("");
+                                                let new_str = new_val.to_string("");
+                                                if old_str != new_str {
+                                                    println!(
+                                                        "[WATCH] {} changed: {} -> {}",
+                                                        name, old_str, new_str
+                                                    );
+                                                    changed_vars.push((name.clone(), new_val.clone()));
+                                                }
+                                            }
                                         }
+                                        for (name, val) in changed_vars {
+                                            state.watched_vars.insert(name, val);
+                                        }
+
+                                        // Display result nicely
+                                        display_value(&val, &state.input_buffer);
+
+                                        // Add complete expression to history
+                                        let _ = rl.add_history_entry(&state.input_buffer);
+                                        state.input_buffer.clear();
+                                    }
+                                    Err(e) => {
+                                        eprintln!(
+                                            "Error: {}",
+                                            e.pretty_with_file(&state.input_buffer, Some("<repl>"))
+                                        );
+                                        state.input_buffer.clear();
                                     }
                                 }
-                                for (name, val) in changed_vars {
-                                    state.watched_vars.insert(name, val);
-                                }
-
-                                // Display result nicely
-                                display_value(&val, &state.input_buffer);
-
-                                // Add complete expression to history
-                                let _ = rl.add_history_entry(&state.input_buffer);
-                                state.input_buffer.clear();
                             }
                             Err(e) => {
                                 eprintln!(
-                                    "Error: {}",
+                                    "Parse error: {}",
                                     e.pretty_with_file(&state.input_buffer, Some("<repl>"))
                                 );
                                 state.input_buffer.clear();
@@ -201,8 +231,9 @@ pub fn execute_repl() -> i32 {
                         {
                             continue;
                         } else {
-                            eprintln!("Parse error: {}", error_msg);
+                            eprintln!("Lexer error: {}", error_msg);
                             state.input_buffer.clear();
+                            continue;
                         }
                     }
                 }
@@ -272,6 +303,62 @@ fn display_value(val: &Value, input_buffer: &str) {
                 Value::None => "None",
             };
             println!("{} : {}", val.to_string(input_buffer), type_name);
+        }
+    }
+}
+
+/// Execute a pending :let command with a complete expression
+fn execute_pending_let(var_name: &str, expr_str: &str, state: &mut ReplState) {
+    match tokenize(expr_str.to_string()) {
+        Ok(tokens) => {
+            match parse_with_error(tokens) {
+                Ok(ast) => {
+                    match eval(ast.program, &mut state.symbols, expr_str) {
+                        Ok(val) => {
+                            let was_watched = state.watched_vars.contains_key(var_name);
+                            let old_watched_val = state.watched_vars.get(var_name).cloned();
+
+                            state.symbols.insert(var_name.to_string(), val.clone());
+                            state.sync_symbols();
+
+                            if was_watched {
+                                if let Some(watched_old) = old_watched_val {
+                                    let old_str = watched_old.to_string("");
+                                    let new_str = val.to_string("");
+                                    if old_str != new_str {
+                                        println!("[WATCH] {} changed: {} -> {}", var_name, old_str, new_str);
+                                    }
+                                }
+                                state.watched_vars.insert(var_name.to_string(), val.clone());
+                            }
+
+                            let type_name = match val {
+                                Value::String(_) => "String",
+                                Value::Number(_) => "Number",
+                                Value::Bool(_) => "Bool",
+                                Value::List(_) => "List",
+                                Value::Dict(_) => "Dict",
+                                Value::Function { .. } => "Function",
+                                Value::Builtin(_, _) => "Builtin",
+                                Value::FileTemplate { .. } => "FileTemplate",
+                                Value::Template(_, _) => "Template",
+                                Value::Path(_, _) => "Path",
+                                Value::None => "None",
+                            };
+                            println!("Stored: {} : {}", var_name, type_name);
+                        }
+                        Err(e) => {
+                            eprintln!("Error: {}", e.pretty_with_file(expr_str, Some("<repl>")));
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Parse error: {}", e.pretty_with_file(expr_str, Some("<repl>")));
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("Lexer error: {}", e.pretty_with_file(expr_str, Some("<repl>")));
         }
     }
 }

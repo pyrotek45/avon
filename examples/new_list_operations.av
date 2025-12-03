@@ -16,8 +16,8 @@ let sorted_strs = sort strings in
 let reverse_sorted = sort_by (\x neg x) [1, 2, 3, 4, 5] in
 
 # Sort strings by length
-let words = ["a", "aaa", "aa", "aaaa", "aaaaa"] in
-let by_length = sort_by (\x length x) words in
+let word_list = ["a", "aaa", "aa", "aaaa", "aaaaa"] in
+let by_length = sort_by (\x length x) word_list in
 
 # ============================================
 # DEDUPLICATION

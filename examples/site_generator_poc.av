@@ -47,7 +47,7 @@ let template = "
 
 # Simple markdown to HTML converter
 let md_to_html = \content
-    let lines = split content "\n" in
+    let content_lines = split content "\n" in
     let convert = \line
         if starts_with line "# " then
             "<h1>" + (trim (replace line "# " "")) + "</h1>"
@@ -61,7 +61,7 @@ let md_to_html = \content
         else
             "<p>" + line + "</p>"
     in
-    let processed = map convert lines in
+    let processed = map convert content_lines in
     join processed "\n"
 in
 
