@@ -1,5 +1,381 @@
 // CLI documentation functions
 
+/// Get documentation for a category of functions
+pub fn get_category_doc(category: &str) -> Option<String> {
+    let cat = category.to_lowercase();
+    match cat.as_str() {
+        "string" | "strings" | "str" | "text" => Some(format!(
+            "String Functions:\n\
+             ─────────────────\n\
+             Text manipulation and inspection functions.\n\n\
+             Basic Operations:\n\
+             {:<16} Concatenate two strings\n\
+             {:<16} Convert to uppercase\n\
+             {:<16} Convert to lowercase\n\
+             {:<16} Remove leading/trailing whitespace\n\
+             {:<16} Get length of string\n\
+             {:<16} Repeat string n times\n\n\
+             Searching:\n\
+             {:<16} Check if string contains substring\n\
+             {:<16} Check if string starts with prefix\n\
+             {:<16} Check if string ends with suffix\n\n\
+             Splitting/Joining:\n\
+             {:<16} Split string by delimiter\n\
+             {:<16} Join list of strings with separator\n\
+             {:<16} Split string into words (by whitespace)\n\
+             {:<16} Join words with single space\n\
+             {:<16} Split string into lines\n\
+             {:<16} Join lines with newlines\n\n\
+             Modification:\n\
+             {:<16} Replace all occurrences\n\
+             {:<16} Indent each line\n\
+             {:<16} Pad string on left\n\
+             {:<16} Pad string on right\n\n\
+             Character Operations:\n\
+             {:<16} Get character at index\n\
+             {:<16} Convert string to list of chars\n\
+             {:<16} Extract substring\n\n\
+             Predicates:\n\
+             {:<16} Check if all chars are digits\n\
+             {:<16} Check if all chars are alphabetic\n\
+             {:<16} Check if all chars are alphanumeric\n\
+             {:<16} Check if all chars are whitespace\n\
+             {:<16} Check if all chars are uppercase\n\
+             {:<16} Check if all chars are lowercase\n\
+             {:<16} Check if string is empty\n\n\
+             Use :doc <function> for detailed documentation.",
+            "concat", "upper", "lower", "trim", "length", "repeat",
+            "contains", "starts_with", "ends_with",
+            "split", "join", "words", "unwords", "lines", "unlines",
+            "replace", "indent", "pad_left", "pad_right",
+            "char_at", "chars", "slice",
+            "is_digit", "is_alpha", "is_alphanumeric", "is_whitespace",
+            "is_uppercase", "is_lowercase", "is_empty"
+        )),
+        "list" | "lists" | "array" | "arrays" => Some(format!(
+            "List Functions:\n\
+             ───────────────\n\
+             Operations for working with lists (arrays).\n\n\
+             Higher-Order Functions:\n\
+             {:<16} Transform each item\n\
+             {:<16} Keep items matching predicate\n\
+             {:<16} Reduce list to single value\n\
+             {:<16} Map then flatten one level\n\
+             {:<16} Flatten nested list one level\n\n\
+             Accessing Elements:\n\
+             {:<16} Get first item\n\
+             {:<16} Get all items except first\n\
+             {:<16} Get item at index\n\
+             {:<16} Get length of list\n\n\
+             Slicing:\n\
+             {:<16} Take first n items\n\
+             {:<16} Drop first n items\n\
+             {:<16} Extract sublist\n\
+             {:<16} Split list at index\n\
+             {:<16} Split into chunks of size n\n\
+             {:<16} Create sliding windows\n\n\
+             Combining:\n\
+             {:<16} Combine two lists into pairs\n\
+             {:<16} Split list of pairs into two lists\n\
+             {:<16} Add index to each element\n\n\
+             Reordering:\n\
+             {:<16} Reverse list order\n\
+             {:<16} Sort in ascending order\n\
+             {:<16} Sort by function result\n\
+             {:<16} Remove duplicates\n\n\
+             Aggregation:\n\
+             {:<16} Sum all numbers\n\
+             {:<16} Multiply all numbers\n\
+             {:<16} Find minimum value\n\
+             {:<16} Find maximum value\n\
+             {:<16} Count matching items\n\n\
+             Predicates:\n\
+             {:<16} Check if all match predicate\n\
+             {:<16} Check if any match predicate\n\
+             {:<16} Split by predicate\n\n\
+             Advanced:\n\
+             {:<16} Generate all permutations\n\
+             {:<16} Generate all combinations\n\
+             {:<16} Transpose 2D list\n\n\
+             Use :doc <function> for detailed documentation.",
+            "map", "filter", "fold", "flatmap", "flatten",
+            "head", "tail", "nth", "length",
+            "take", "drop", "slice", "split_at", "chunks", "windows",
+            "zip", "unzip", "enumerate",
+            "reverse", "sort", "sort_by", "unique",
+            "sum", "product", "min", "max", "count",
+            "all", "any", "partition",
+            "permutations", "combinations", "transpose"
+        )),
+        "math" | "number" | "numbers" | "numeric" => Some(format!(
+            "Math Functions:\n\
+             ───────────────\n\
+             Mathematical operations on numbers.\n\n\
+             Basic:\n\
+             {:<16} Absolute value\n\
+             {:<16} Negate a number\n\n\
+             Powers & Roots:\n\
+             {:<16} Square root\n\
+             {:<16} Raise to power (x^n)\n\n\
+             Rounding:\n\
+             {:<16} Round down (toward -infinity)\n\
+             {:<16} Round up (toward +infinity)\n\
+             {:<16} Round to nearest integer\n\n\
+             Logarithms:\n\
+             {:<16} Natural logarithm (base e)\n\
+             {:<16} Base-10 logarithm\n\n\
+             Number Theory:\n\
+             {:<16} Greatest common divisor\n\
+             {:<16} Least common multiple\n\n\
+             Aggregation (on lists):\n\
+             {:<16} Sum all numbers in list\n\
+             {:<16} Multiply all numbers in list\n\
+             {:<16} Find minimum in list\n\
+             {:<16} Find maximum in list\n\n\
+             Use :doc <function> for detailed documentation.",
+            "abs", "neg",
+            "sqrt", "pow",
+            "floor", "ceil", "round",
+            "log", "log10",
+            "gcd", "lcm",
+            "sum", "product", "min", "max"
+        )),
+        "dict" | "dicts" | "dictionary" | "dictionaries" | "map" | "object" => Some(format!(
+            "Dictionary Functions:\n\
+             ─────────────────────\n\
+             Operations for key-value dictionaries.\n\n\
+             Access:\n\
+             {:<16} Get value by key (or None)\n\
+             {:<16} Set/update key-value pair\n\
+             {:<16} Check if key exists\n\n\
+             Inspection:\n\
+             {:<16} Get list of all keys\n\
+             {:<16} Get list of all values\n\
+             {:<16} Check if dictionary is empty\n\n\
+             Combining:\n\
+             {:<16} Merge two dictionaries\n\n\
+             Note: Dict syntax uses braces: {{name: \"Alice\", age: 30}}\n\
+             Access fields with dot notation: person.name\n\n\
+             Use :doc <function> for detailed documentation.",
+            "get", "set", "has_key",
+            "keys", "values", "is_empty",
+            "dict_merge"
+        )),
+        "file" | "files" | "io" | "filesystem" | "fs" => Some(format!(
+            "File & Path Functions:\n\
+             ──────────────────────\n\
+             Reading files and working with paths.\n\n\
+             Reading:\n\
+             {:<16} Read entire file as string\n\
+             {:<16} Read file as list of lines\n\
+             {:<16} Fill template file with values\n\n\
+             Path Info:\n\
+             {:<16} Check if file/directory exists\n\
+             {:<16} Get filename from path\n\
+             {:<16} Get directory from path\n\
+             {:<16} Convert to absolute path\n\
+             {:<16} Convert to relative path\n\n\
+             Directory:\n\
+             {:<16} List files recursively\n\
+             {:<16} Find files matching pattern\n\n\
+             Import:\n\
+             {:<16} Import and evaluate Avon file\n\n\
+             Use :doc <function> for detailed documentation.",
+            "readfile", "readlines", "fill_template",
+            "exists", "basename", "dirname", "abspath", "relpath",
+            "walkdir", "glob",
+            "import"
+        )),
+        "type" | "types" | "typecheck" | "checking" => Some(format!(
+            "Type Checking Functions:\n\
+             ────────────────────────\n\
+             Inspect and check value types.\n\n\
+             Type Inspection:\n\
+             {:<16} Get type name as string\n\n\
+             Type Predicates:\n\
+             {:<16} Check if value is string\n\
+             {:<16} Check if value is number\n\
+             {:<16} Check if value is integer\n\
+             {:<16} Check if value is float\n\
+             {:<16} Check if value is list\n\
+             {:<16} Check if value is boolean\n\
+             {:<16} Check if value is function\n\
+             {:<16} Check if value is dictionary\n\
+             {:<16} Check if value is None\n\n\
+             Logic:\n\
+             {:<16} Logical negation\n\n\
+             Use :doc <function> for detailed documentation.",
+            "typeof",
+            "is_string", "is_number", "is_int", "is_float",
+            "is_list", "is_bool", "is_function", "is_dict", "is_none",
+            "not"
+        )),
+        "convert" | "conversion" | "cast" | "transform" => Some(format!(
+            "Type Conversion Functions:\n\
+             ──────────────────────────\n\
+             Convert between types.\n\n\
+             To String:\n\
+             {:<16} Convert any value to string\n\n\
+             To Number:\n\
+             {:<16} Convert string to integer\n\
+             {:<16} Convert string to float\n\n\
+             To Boolean:\n\
+             {:<16} Convert value to boolean\n\n\
+             Character:\n\
+             {:<16} Convert codepoint to character\n\
+             {:<16} Convert string to char list\n\n\
+             Use :doc <function> for detailed documentation.",
+            "to_string",
+            "to_int", "to_float",
+            "to_bool",
+            "to_char", "to_list"
+        )),
+        "format" | "formatting" => Some(format!(
+            "Formatting Functions:\n\
+             ─────────────────────\n\
+             Format values for display.\n\n\
+             Numbers:\n\
+             {:<16} Zero-padded integer\n\
+             {:<16} Float with decimal precision\n\
+             {:<16} Hexadecimal\n\
+             {:<16} Octal\n\
+             {:<16} Binary\n\
+             {:<16} Scientific notation\n\
+             {:<16} Human-readable bytes\n\
+             {:<16} Currency format\n\
+             {:<16} Percentage format\n\n\
+             Text:\n\
+             {:<16} Truncate with ellipsis\n\
+             {:<16} Center-align text\n\
+             {:<16} Format boolean\n\n\
+             Data:\n\
+             {:<16} Join list with separator\n\
+             {:<16} Format as 2D table\n\
+             {:<16} Format as JSON\n\n\
+             Use :doc <function> for detailed documentation.",
+            "format_int", "format_float", "format_hex", "format_octal",
+            "format_binary", "format_scientific", "format_bytes",
+            "format_currency", "format_percent",
+            "truncate", "center", "format_bool",
+            "format_list", "format_table", "format_json"
+        )),
+        "regex" | "pattern" | "patterns" => Some(format!(
+            "Regex Functions:\n\
+             ────────────────\n\
+             Regular expression operations.\n\n\
+             Matching:\n\
+             {:<16} Check if text matches pattern\n\
+             {:<16} Find all matches in text\n\n\
+             Transformation:\n\
+             {:<16} Replace all matches\n\
+             {:<16} Split by pattern\n\n\
+             Note: Use Rust regex syntax.\n\
+             Common patterns: \\d (digit), \\w (word char), \\s (whitespace)\n\
+             Quantifiers: * (0+), + (1+), ? (0-1), {{n}} (exactly n)\n\n\
+             Use :doc <function> for detailed documentation.",
+            "regex_match", "scan",
+            "regex_replace", "regex_split"
+        )),
+        "date" | "dates" | "time" | "datetime" => Some(format!(
+            "Date/Time Functions:\n\
+             ────────────────────\n\
+             Working with dates and times.\n\n\
+             Current Time:\n\
+             {:<16} Get current date/time (ISO 8601)\n\
+             {:<16} Get Unix timestamp (seconds)\n\
+             {:<16} Get timezone offset\n\n\
+             Formatting:\n\
+             {:<16} Format date with pattern\n\
+             {:<16} Parse date string\n\n\
+             Arithmetic:\n\
+             {:<16} Add duration to date\n\
+             {:<16} Calculate difference in seconds\n\n\
+             Duration format: number + unit\n\
+             Units: s (seconds), m (minutes), h (hours),\n\
+                    d (days), w (weeks), y (years)\n\n\
+             Use :doc <function> for detailed documentation.",
+            "now", "timestamp", "timezone",
+            "date_format", "date_parse",
+            "date_add", "date_diff"
+        )),
+        "html" | "markup" => Some(format!(
+            "HTML Functions:\n\
+             ───────────────\n\
+             Generate HTML markup.\n\n\
+             Escaping:\n\
+             {:<16} Escape special HTML characters\n\n\
+             Elements:\n\
+             {:<16} Create HTML tag with content\n\
+             {:<16} Create attribute string\n\n\
+             Markdown:\n\
+             {:<16} Convert markdown to HTML\n\n\
+             Use :doc <function> for detailed documentation.",
+            "html_escape",
+            "html_tag", "html_attr",
+            "markdown_to_html"
+        )),
+        "markdown" | "md" => Some(format!(
+            "Markdown Functions:\n\
+             ───────────────────\n\
+             Generate Markdown text.\n\n\
+             Structure:\n\
+             {:<16} Create heading (level 1-6)\n\
+             {:<16} Create bulleted list\n\n\
+             Inline:\n\
+             {:<16} Create link\n\
+             {:<16} Create inline code\n\n\
+             Conversion:\n\
+             {:<16} Convert markdown to HTML\n\n\
+             Use :doc <function> for detailed documentation.",
+            "md_heading", "md_list",
+            "md_link", "md_code",
+            "markdown_to_html"
+        )),
+        "debug" | "debugging" | "assert" | "test" | "testing" => Some(format!(
+            "Debug & Assert Functions:\n\
+             ─────────────────────────\n\
+             Debugging and validation.\n\n\
+             Output:\n\
+             {:<16} Print label and value to stderr\n\
+             {:<16} Pretty-print value structure\n\n\
+             Validation:\n\
+             {:<16} Assert condition or error\n\
+             {:<16} Throw custom error\n\n\
+             Use :doc <function> for detailed documentation.",
+            "trace", "debug",
+            "assert", "error"
+        )),
+        "parse" | "parsing" | "data" | "json" | "yaml" | "toml" | "csv" => Some(format!(
+            "Data Parsing Functions:\n\
+             ───────────────────────\n\
+             Parse structured data formats.\n\n\
+             Parsing:\n\
+             {:<16} Parse JSON string\n\
+             {:<16} Parse YAML string\n\
+             {:<16} Parse TOML string\n\
+             {:<16} Parse CSV file\n\n\
+             Note: Returns Dict for objects, List for arrays.\n\
+             Access parsed data with .key or get dict \"key\"\n\n\
+             Use :doc <function> for detailed documentation.",
+            "json_parse", "yaml_parse", "toml_parse", "csv_parse"
+        )),
+        "system" | "sys" | "env" | "environment" => Some(format!(
+            "System Functions:\n\
+             ─────────────────\n\
+             System and environment access.\n\n\
+             OS Info:\n\
+             {:<16} Get OS name (linux/macos/windows)\n\n\
+             Environment:\n\
+             {:<16} Read env var (fail if missing)\n\
+             {:<16} Read env var with default\n\n\
+             Use :doc <function> for detailed documentation.",
+            "os",
+            "env_var", "env_var_or"
+        )),
+        _ => None,
+    }
+}
+
 /// Get documentation for a REPL command
 pub fn get_repl_command_doc(cmd_name: &str) -> Option<String> {
     let docs: std::collections::HashMap<&str, &str> = [
@@ -202,6 +578,36 @@ pub fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("os", "os :: String\n  Get operating system name.\n  Returns: \"linux\", \"macos\", or \"windows\""),
         ("env_var", "env_var :: String -> String\n  Read environment variable, fail if missing.\n  Example: env_var \"HOME\" -> \"/home/user\"\n  Fails if variable not set (fail-safe behavior)."),
         ("env_var_or", "env_var_or :: String -> String -> String\n  Read environment variable with default.\n  Example: env_var_or \"PORT\" \"8080\" -> env value or \"8080\""),
+
+        // Math Functions
+        ("abs", "abs :: Number -> Number\n  Get absolute value of a number.\n  Example: abs -5 -> 5\n  Example: abs 3.14 -> 3.14"),
+        ("sqrt", "sqrt :: Number -> Float\n  Calculate the square root of a number.\n  Example: sqrt 16 -> 4.0\n  Example: sqrt 2 -> 1.4142135623730951"),
+        ("pow", "pow :: Number -> Number -> Number\n  Raise a number to a power.\n  Example: pow 2 3 -> 8  (2^3)\n  Example: pow 2 -1 -> 0.5\n  Example: pow 2 0.5 -> 1.4142135623730951"),
+        ("floor", "floor :: Number -> Int\n  Round down to the nearest integer.\n  Example: floor 3.7 -> 3\n  Example: floor -2.3 -> -3\n  Example: floor 5 -> 5  (integers unchanged)"),
+        ("ceil", "ceil :: Number -> Int\n  Round up to the nearest integer.\n  Example: ceil 3.2 -> 4\n  Example: ceil -2.7 -> -2\n  Example: ceil 5 -> 5  (integers unchanged)"),
+        ("round", "round :: Number -> Int\n  Round to the nearest integer (half away from zero).\n  Example: round 3.5 -> 4\n  Example: round 3.4 -> 3\n  Example: round -2.5 -> -3"),
+        ("log", "log :: Number -> Float\n  Calculate the natural logarithm (base e) of a number.\n  Example: log 2.718281828 -> 1.0 (approximately)\n  Example: log 1 -> 0.0\n  Note: Returns NaN for negative numbers, -Infinity for 0."),
+        ("log10", "log10 :: Number -> Float\n  Calculate the base-10 logarithm of a number.\n  Example: log10 100 -> 2.0\n  Example: log10 1000 -> 3.0\n  Example: log10 1 -> 0.0"),
+        ("gcd", "gcd :: Int -> Int -> Int\n  Calculate the greatest common divisor of two integers.\n  Example: gcd 12 8 -> 4\n  Example: gcd 17 5 -> 1  (coprime numbers)"),
+        ("lcm", "lcm :: Int -> Int -> Int\n  Calculate the least common multiple of two integers.\n  Example: lcm 4 6 -> 12\n  Example: lcm 3 5 -> 15"),
+
+        // New String Functions
+        ("words", "words :: String -> [String]\n  Split string into words (by whitespace).\n  Example: words \"hello world\" -> [\"hello\", \"world\"]\n  Example: words \"  multiple   spaces  \" -> [\"multiple\", \"spaces\"]\n  Note: Handles multiple spaces, tabs, and newlines."),
+        ("unwords", "unwords :: [String] -> String\n  Join list of strings with single spaces.\n  Example: unwords [\"hello\", \"world\"] -> \"hello world\"\n  Example: unwords [\"one\", \"two\", \"three\"] -> \"one two three\""),
+        ("lines", "lines :: String -> [String]\n  Split string into lines.\n  Example: lines \"hello\\nworld\" -> [\"hello\", \"world\"]\n  Example: lines \"a\\r\\nb\" -> [\"a\", \"b\"]  (handles Windows line endings)\n  Note: Works with both \\n and \\r\\n line endings."),
+        ("unlines", "unlines :: [String] -> String\n  Join list of strings with newlines.\n  Example: unlines [\"hello\", \"world\"] -> \"hello\\nworld\"\n  Example: unlines [\"line1\", \"line2\", \"line3\"] -> \"line1\\nline2\\nline3\""),
+
+        // List Advanced Functions
+        ("permutations", "permutations :: [a] -> [[a]]\n  Generate all permutations of a list.\n  Example: permutations [1, 2] -> [[1, 2], [2, 1]]\n  Example: permutations [1, 2, 3] -> [[1,2,3], [1,3,2], [2,1,3], [2,3,1], [3,1,2], [3,2,1]]\n  Note: Returns n! permutations for a list of n elements."),
+        ("combinations", "combinations :: Int -> [a] -> [[a]]\n  Generate all combinations of size k from a list.\n  Example: combinations 2 [1, 2, 3] -> [[1, 2], [1, 3], [2, 3]]\n  Example: combinations 1 [\"a\", \"b\", \"c\"] -> [[\"a\"], [\"b\"], [\"c\"]]\n  Note: Order doesn't matter in combinations."),
+        ("chunks", "chunks :: Int -> [a] -> [[a]]\n  Split list into chunks of size n.\n  Example: chunks 2 [1, 2, 3, 4, 5] -> [[1, 2], [3, 4], [5]]\n  Example: chunks 3 [1, 2, 3, 4, 5, 6] -> [[1, 2, 3], [4, 5, 6]]\n  Note: Last chunk may be smaller if list length isn't divisible by n."),
+        ("windows", "windows :: Int -> [a] -> [[a]]\n  Create sliding windows of size n over the list.\n  Example: windows 2 [1, 2, 3, 4] -> [[1, 2], [2, 3], [3, 4]]\n  Example: windows 3 [1, 2, 3, 4, 5] -> [[1, 2, 3], [2, 3, 4], [3, 4, 5]]\n  Note: Returns list-length - n + 1 windows."),
+        ("transpose", "transpose :: [[a]] -> [[a]]\n  Transpose a 2D list (swap rows and columns).\n  Example: transpose [[1, 2], [3, 4]] -> [[1, 3], [2, 4]]\n  Example: transpose [[1, 2, 3], [4, 5, 6]] -> [[1, 4], [2, 5], [3, 6]]\n  Note: Rows should have equal length for predictable results."),
+
+        // Path Functions
+        ("glob", "glob :: String -> [String]\n  Find files matching a glob pattern.\n  Example: glob \"*.av\" -> [\"example.av\", \"test.av\"]\n  Example: glob \"src/**/*.rs\" -> all .rs files under src/\n  Supports: * (any chars), ** (any dirs), ? (single char), [abc] (char class)"),
+        ("abspath", "abspath :: String -> String\n  Convert a path to an absolute path.\n  Example: abspath \"./file.txt\" -> \"/home/user/project/file.txt\"\n  Example: abspath \"../other.txt\" -> \"/home/user/other.txt\"\n  Note: Resolves . and .. components."),
+        ("relpath", "relpath :: String -> String\n  Convert an absolute path to a relative path (from current directory).\n  Example: relpath \"/home/user/project/file.txt\" -> \"file.txt\"\n  Example: relpath \"/home/user/other/file.txt\" -> \"../other/file.txt\""),
     ]
     .iter()
     .cloned()

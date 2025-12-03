@@ -1,15 +1,15 @@
-//! Math functions: abs, gcd, lcm, neg
+//! Math functions: abs, gcd, lcm, neg, sqrt, pow, floor, ceil, round, log, log10
 
 use crate::common::{EvalError, Number, Value};
 
 /// Names of math builtins
-pub const NAMES: &[&str] = &["abs", "gcd", "lcm", "neg"];
+pub const NAMES: &[&str] = &["abs", "ceil", "floor", "gcd", "lcm", "log", "log10", "neg", "pow", "round", "sqrt"];
 
 /// Get arity for math functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
-        "abs" | "neg" => Some(1),
-        "gcd" | "lcm" => Some(2),
+        "abs" | "ceil" | "floor" | "log" | "log10" | "neg" | "round" | "sqrt" => Some(1),
+        "gcd" | "lcm" | "pow" => Some(2),
         _ => None,
     }
 }
@@ -84,6 +84,124 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             match val {
                 Value::Number(Number::Int(i)) => Ok(Value::Number(Number::Int(-i))),
                 Value::Number(Number::Float(f)) => Ok(Value::Number(Number::Float(-f))),
+                other => Err(EvalError::type_mismatch(
+                    "number",
+                    other.to_string(source),
+                    line,
+                )),
+            }
+        }
+        "sqrt" => {
+            let val = &args[0];
+            match val {
+                Value::Number(Number::Int(i)) => {
+                    let result = (*i as f64).sqrt();
+                    Ok(Value::Number(Number::Float(result)))
+                }
+                Value::Number(Number::Float(f)) => {
+                    let result = f.sqrt();
+                    Ok(Value::Number(Number::Float(result)))
+                }
+                other => Err(EvalError::type_mismatch(
+                    "number",
+                    other.to_string(source),
+                    line,
+                )),
+            }
+        }
+        "pow" => {
+            let base = &args[0];
+            let exp = &args[1];
+            match (base, exp) {
+                (Value::Number(Number::Int(b)), Value::Number(Number::Int(e))) => {
+                    if *e >= 0 {
+                        Ok(Value::Number(Number::Int(b.pow(*e as u32))))
+                    } else {
+                        // Negative exponent requires float result
+                        Ok(Value::Number(Number::Float((*b as f64).powi(*e as i32))))
+                    }
+                }
+                (Value::Number(Number::Int(b)), Value::Number(Number::Float(e))) => {
+                    Ok(Value::Number(Number::Float((*b as f64).powf(*e))))
+                }
+                (Value::Number(Number::Float(b)), Value::Number(Number::Int(e))) => {
+                    Ok(Value::Number(Number::Float(b.powi(*e as i32))))
+                }
+                (Value::Number(Number::Float(b)), Value::Number(Number::Float(e))) => {
+                    Ok(Value::Number(Number::Float(b.powf(*e))))
+                }
+                _ => Err(EvalError::type_mismatch(
+                    "two numbers",
+                    format!("{}, {}", base.to_string(source), exp.to_string(source)),
+                    line,
+                )),
+            }
+        }
+        "floor" => {
+            let val = &args[0];
+            match val {
+                Value::Number(Number::Int(i)) => Ok(Value::Number(Number::Int(*i))),
+                Value::Number(Number::Float(f)) => Ok(Value::Number(Number::Int(f.floor() as i64))),
+                other => Err(EvalError::type_mismatch(
+                    "number",
+                    other.to_string(source),
+                    line,
+                )),
+            }
+        }
+        "ceil" => {
+            let val = &args[0];
+            match val {
+                Value::Number(Number::Int(i)) => Ok(Value::Number(Number::Int(*i))),
+                Value::Number(Number::Float(f)) => Ok(Value::Number(Number::Int(f.ceil() as i64))),
+                other => Err(EvalError::type_mismatch(
+                    "number",
+                    other.to_string(source),
+                    line,
+                )),
+            }
+        }
+        "round" => {
+            let val = &args[0];
+            match val {
+                Value::Number(Number::Int(i)) => Ok(Value::Number(Number::Int(*i))),
+                Value::Number(Number::Float(f)) => Ok(Value::Number(Number::Int(f.round() as i64))),
+                other => Err(EvalError::type_mismatch(
+                    "number",
+                    other.to_string(source),
+                    line,
+                )),
+            }
+        }
+        "log" => {
+            let val = &args[0];
+            match val {
+                Value::Number(Number::Int(i)) => {
+                    let result = (*i as f64).ln();
+                    Ok(Value::Number(Number::Float(result)))
+                }
+                Value::Number(Number::Float(f)) => {
+                    let result = f.ln();
+                    Ok(Value::Number(Number::Float(result)))
+                }
+                other => Err(EvalError::type_mismatch(
+                    "number",
+                    other.to_string(source),
+                    line,
+                )),
+            }
+        }
+        "log10" => {
+            let val = &args[0];
+            match val {
+                Value::Number(Number::Int(i)) => {
+                    let result = (*i as f64).log10();
+                    Ok(Value::Number(Number::Float(result)))
+                }
+                Value::Number(Number::Float(f)) => {
+                    let result = f.log10();
+                    Ok(Value::Number(Number::Float(result)))
+                }
                 other => Err(EvalError::type_mismatch(
                     "number",
                     other.to_string(source),

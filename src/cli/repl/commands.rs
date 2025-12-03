@@ -1,5 +1,5 @@
 use crate::cli::commands::process_source;
-use crate::cli::docs::{get_builtin_doc, get_repl_command_doc};
+use crate::cli::docs::{get_builtin_doc, get_category_doc, get_repl_command_doc};
 use crate::cli::helpers::print_file_content;
 use crate::cli::options::CliOptions;
 use crate::cli::repl::state::ReplState;
@@ -263,6 +263,11 @@ pub fn handle_command(
             Some(false)
         }
         "doc" => {
+            println!("Browse by category (use :doc <category>):");
+            println!("  string     list       math       dict       file       type");
+            println!("  format     regex      date       html       markdown   debug");
+            println!("  parse      system     convert");
+            println!();
             println!("Available builtin functions (use :doc <name> for details):");
             let builtins = initial_builtins();
             let builtin_names: Vec<&String> = builtins.keys().collect();
@@ -283,7 +288,7 @@ pub fn handle_command(
             println!("  :test            :benchmark       :benchmark-file  :watch           :unwatch         :pwd             :list            :cd");
             println!("  :doc             :type            :sh");
             println!();
-            println!("Tip: Use :doc <name> to see detailed documentation for any builtin function or REPL command.");
+            println!("Tip: Use :doc <category> for category overview, :doc <name> for specific function.");
             Some(false)
         }
         "inspect" => {
@@ -409,6 +414,12 @@ pub fn handle_command(
                 println!("  Example: :doc map");
                 println!("  Example: :doc pwd");
                 println!("  Example: :doc read");
+                return Some(false);
+            }
+
+            // Check for category documentation first
+            if let Some(doc) = get_category_doc(name) {
+                println!("{}", doc);
                 return Some(false);
             }
 
@@ -910,13 +921,7 @@ pub fn handle_command(
                                 );
                             } else {
                                 let val_str = val.to_string("");
-                                println!("Result: {}", val_str);
-                                if !use_git {
-                                    println!(
-                                        "  Note: Use :let <name> = import \"{}\" to store this value",
-                                        source_name
-                                    );
-                                }
+                                println!("{}", val_str);
                             }
                         }
                         Err(e) => {

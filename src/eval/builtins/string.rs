@@ -1,4 +1,4 @@
-//! String operations: char_at, chars, concat, contains, ends_with, indent, is_alpha, is_alphanumeric, is_digit, is_empty, is_lowercase, is_uppercase, is_whitespace, join, length, lower, pad_left, pad_right, repeat, replace, slice, split, starts_with, trim, upper
+//! String operations: char_at, chars, concat, contains, ends_with, indent, is_alpha, is_alphanumeric, is_digit, is_empty, is_lowercase, is_uppercase, is_whitespace, join, length, lines, lower, pad_left, pad_right, repeat, replace, slice, split, starts_with, trim, unlines, unwords, upper, words
 
 use crate::common::{EvalError, Number, Value};
 use crate::eval::value_to_string_auto;
@@ -20,6 +20,7 @@ pub const NAMES: &[&str] = &[
     "is_whitespace",
     "join",
     "length",
+    "lines",
     "lower",
     "pad_left",
     "pad_right",
@@ -29,17 +30,21 @@ pub const NAMES: &[&str] = &[
     "split",
     "starts_with",
     "trim",
+    "unlines",
+    "unwords",
     "upper",
+    "words",
 ];
 
 /// Get arity for string functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
         "chars" | "is_alpha" | "is_alphanumeric" | "is_digit" | "is_empty" | "is_lowercase"
-        | "is_uppercase" | "is_whitespace" | "length" | "lower" | "trim" | "upper" => Some(1),
+        | "is_uppercase" | "is_whitespace" | "length" | "lines" | "lower" | "trim" | "upper" | "words" => Some(1),
         "char_at" | "concat" | "contains" | "ends_with" | "indent" | "join" | "repeat"
         | "split" | "starts_with" => Some(2),
         "pad_left" | "pad_right" | "replace" | "slice" => Some(3),
+        "unlines" | "unwords" => Some(1),
         _ => None,
     }
 }
@@ -338,6 +343,49 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     str_val.to_string(source),
                     line,
                 )),
+            }
+        }
+        "words" => {
+            let s = value_to_string_auto(&args[0], source, line)?;
+            let word_list: Vec<Value> = s
+                .split_whitespace()
+                .map(|w| Value::String(w.to_string()))
+                .collect();
+            Ok(Value::List(word_list))
+        }
+        "unwords" => {
+            let list = &args[0];
+            if let Value::List(items) = list {
+                let words: Vec<String> = items.iter().map(|v| v.to_string(source)).collect();
+                Ok(Value::String(words.join(" ")))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "lines" => {
+            let s = value_to_string_auto(&args[0], source, line)?;
+            // Handle both \n and \r\n line endings
+            let line_list: Vec<Value> = s
+                .lines()
+                .map(|l| Value::String(l.to_string()))
+                .collect();
+            Ok(Value::List(line_list))
+        }
+        "unlines" => {
+            let list = &args[0];
+            if let Value::List(items) = list {
+                let lines: Vec<String> = items.iter().map(|v| v.to_string(source)).collect();
+                Ok(Value::String(lines.join("\n")))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
             }
         }
         _ => Err(EvalError::new(
