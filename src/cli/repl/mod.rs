@@ -229,6 +229,8 @@ pub fn execute_repl() -> i32 {
                                             "Error: {}",
                                             e.pretty_with_file(&state.input_buffer, Some("<repl>"))
                                         );
+                                        // Add to history even if evaluation fails
+                                        let _ = rl.add_history_entry(&state.input_buffer);
                                         state.input_buffer.clear();
                                     }
                                 }
@@ -238,6 +240,8 @@ pub fn execute_repl() -> i32 {
                                     "Parse error: {}",
                                     e.pretty_with_file(&state.input_buffer, Some("<repl>"))
                                 );
+                                // Add to history even if parsing fails
+                                let _ = rl.add_history_entry(&state.input_buffer);
                                 state.input_buffer.clear();
                             }
                         }
@@ -254,6 +258,8 @@ pub fn execute_repl() -> i32 {
                             continue;
                         } else {
                             eprintln!("Lexer error: {}", error_msg);
+                            // Add to history even if lexing fails
+                            let _ = rl.add_history_entry(&state.input_buffer);
                             state.input_buffer.clear();
                             continue;
                         }
