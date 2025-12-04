@@ -6641,7 +6641,8 @@ mod tests {
     #[test]
     fn test_string_split_join_words() {
         // Test using words and unwords as split/join on whitespace
-        let prog = r#"let sentence = "the quick brown fox" in unwords (reverse (words sentence))"#.to_string();
+        let prog = r#"let sentence = "the quick brown fox" in unwords (reverse (words sentence))"#
+            .to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -6652,7 +6653,8 @@ mod tests {
     #[test]
     fn test_lines_map_unlines() {
         // Test processing each line of a multi-line string
-        let prog = r#"let text = "line1\nline2\nline3" in unlines (map upper (lines text))"#.to_string();
+        let prog =
+            r#"let text = "line1\nline2\nline3" in unlines (map upper (lines text))"#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();

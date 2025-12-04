@@ -77,21 +77,8 @@ const VAR_COMMANDS: &[&str] = &["inspect", "unlet", "watch", "unwatch"];
 
 // Doc categories
 const DOC_CATEGORIES: &[&str] = &[
-    "string",
-    "list",
-    "math",
-    "dict",
-    "type",
-    "format",
-    "file",
-    "date",
-    "regex",
-    "debug",
-    "html",
-    "markdown",
-    "parse",
-    "system",
-    "convert",
+    "string", "list", "math", "dict", "type", "format", "file", "date", "regex", "debug", "html",
+    "markdown", "parse", "system", "convert",
 ];
 
 impl Completer for AvonCompleter {
@@ -106,9 +93,8 @@ impl Completer for AvonCompleter {
         let trimmed = line.trim_start();
 
         // If line starts with ':', we're in command mode
-        if trimmed.starts_with(':') {
+        if let Some(after_colon) = trimmed.strip_prefix(':') {
             // Check if we're completing the command itself or its arguments
-            let after_colon = &trimmed[1..];
             let parts: Vec<&str> = after_colon.split_whitespace().collect();
 
             if parts.is_empty() || (parts.len() == 1 && !after_colon.ends_with(' ')) {

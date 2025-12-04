@@ -44,13 +44,35 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              {:<16} Check if all chars are lowercase\n\
              {:<16} Check if string is empty\n\n\
              Use :doc <function> for detailed documentation.",
-            "concat", "upper", "lower", "trim", "length", "repeat",
-            "contains", "starts_with", "ends_with",
-            "split", "join", "words", "unwords", "lines", "unlines",
-            "replace", "indent", "pad_left", "pad_right",
-            "char_at", "chars", "slice",
-            "is_digit", "is_alpha", "is_alphanumeric", "is_whitespace",
-            "is_uppercase", "is_lowercase", "is_empty"
+            "concat",
+            "upper",
+            "lower",
+            "trim",
+            "length",
+            "repeat",
+            "contains",
+            "starts_with",
+            "ends_with",
+            "split",
+            "join",
+            "words",
+            "unwords",
+            "lines",
+            "unlines",
+            "replace",
+            "indent",
+            "pad_left",
+            "pad_right",
+            "char_at",
+            "chars",
+            "slice",
+            "is_digit",
+            "is_alpha",
+            "is_alphanumeric",
+            "is_whitespace",
+            "is_uppercase",
+            "is_lowercase",
+            "is_empty"
         )),
         "list" | "lists" | "array" | "arrays" => Some(format!(
             "List Functions:\n\
@@ -99,14 +121,40 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              {:<16} Generate all combinations\n\
              {:<16} Transpose 2D list\n\n\
              Use :doc <function> for detailed documentation.",
-            "map", "filter", "fold", "flatmap", "flatten",
-            "head", "last", "tail", "nth", "length",
-            "take", "drop", "slice", "split_at", "chunks", "windows",
-            "zip", "unzip", "enumerate",
-            "reverse", "sort", "sort_by", "unique",
-            "sum", "product", "min", "max", "count",
-            "all", "any", "partition",
-            "permutations", "combinations", "transpose"
+            "map",
+            "filter",
+            "fold",
+            "flatmap",
+            "flatten",
+            "head",
+            "last",
+            "tail",
+            "nth",
+            "length",
+            "take",
+            "drop",
+            "slice",
+            "split_at",
+            "chunks",
+            "windows",
+            "zip",
+            "unzip",
+            "enumerate",
+            "reverse",
+            "sort",
+            "sort_by",
+            "unique",
+            "sum",
+            "product",
+            "min",
+            "max",
+            "count",
+            "all",
+            "any",
+            "partition",
+            "permutations",
+            "combinations",
+            "transpose"
         )),
         "math" | "number" | "numbers" | "numeric" => Some(format!(
             "Math Functions:\n\
@@ -134,12 +182,21 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              {:<16} Find minimum in list\n\
              {:<16} Find maximum in list\n\n\
              Use :doc <function> for detailed documentation.",
-            "abs", "neg",
-            "sqrt", "pow",
-            "floor", "ceil", "round",
-            "log", "log10",
-            "gcd", "lcm",
-            "sum", "product", "min", "max"
+            "abs",
+            "neg",
+            "sqrt",
+            "pow",
+            "floor",
+            "ceil",
+            "round",
+            "log",
+            "log10",
+            "gcd",
+            "lcm",
+            "sum",
+            "product",
+            "min",
+            "max"
         )),
         "dict" | "dicts" | "dictionary" | "dictionaries" | "object" => Some(format!(
             "Dictionary Functions:\n\
@@ -158,9 +215,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              Note: Dict syntax uses braces: {{name: \"Alice\", age: 30}}\n\
              Access fields with dot notation: person.name\n\n\
              Use :doc <function> for detailed documentation.",
-            "get", "set", "has_key",
-            "keys", "values", "is_empty",
-            "dict_merge"
+            "get", "set", "has_key", "keys", "values", "is_empty", "dict_merge"
         )),
         "file" | "files" | "io" | "filesystem" | "fs" => Some(format!(
             "File & Path Functions:\n\
@@ -182,9 +237,16 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              Import:\n\
              {:<16} Import and evaluate Avon file\n\n\
              Use :doc <function> for detailed documentation.",
-            "readfile", "readlines", "fill_template",
-            "exists", "basename", "dirname", "abspath", "relpath",
-            "walkdir", "glob",
+            "readfile",
+            "readlines",
+            "fill_template",
+            "exists",
+            "basename",
+            "dirname",
+            "abspath",
+            "relpath",
+            "walkdir",
+            "glob",
             "import"
         )),
         "type" | "types" | "typecheck" | "checking" => Some(format!(
@@ -207,8 +269,15 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              {:<16} Logical negation\n\n\
              Use :doc <function> for detailed documentation.",
             "typeof",
-            "is_string", "is_number", "is_int", "is_float",
-            "is_list", "is_bool", "is_function", "is_dict", "is_none",
+            "is_string",
+            "is_number",
+            "is_int",
+            "is_float",
+            "is_list",
+            "is_bool",
+            "is_function",
+            "is_dict",
+            "is_none",
             "not"
         )),
         "convert" | "conversion" | "cast" | "transform" => Some(format!(
@@ -226,10 +295,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              {:<16} Convert codepoint to character\n\
              {:<16} Convert string to char list\n\n\
              Use :doc <function> for detailed documentation.",
-            "to_string",
-            "to_int", "to_float",
-            "to_bool",
-            "to_char", "to_list"
+            "to_string", "to_int", "to_float", "to_bool", "to_char", "to_list"
         )),
         "format" | "formatting" => Some(format!(
             "Formatting Functions:\n\
@@ -254,11 +320,21 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              {:<16} Format as 2D table\n\
              {:<16} Format as JSON\n\n\
              Use :doc <function> for detailed documentation.",
-            "format_int", "format_float", "format_hex", "format_octal",
-            "format_binary", "format_scientific", "format_bytes",
-            "format_currency", "format_percent",
-            "truncate", "center", "format_bool",
-            "format_list", "format_table", "format_json"
+            "format_int",
+            "format_float",
+            "format_hex",
+            "format_octal",
+            "format_binary",
+            "format_scientific",
+            "format_bytes",
+            "format_currency",
+            "format_percent",
+            "truncate",
+            "center",
+            "format_bool",
+            "format_list",
+            "format_table",
+            "format_json"
         )),
         "regex" | "pattern" | "patterns" => Some(format!(
             "Regex Functions:\n\
@@ -274,8 +350,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              Common patterns: \\d (digit), \\w (word char), \\s (whitespace)\n\
              Quantifiers: * (0+), + (1+), ? (0-1), {{n}} (exactly n)\n\n\
              Use :doc <function> for detailed documentation.",
-            "regex_match", "scan",
-            "regex_replace", "regex_split"
+            "regex_match", "scan", "regex_replace", "regex_split"
         )),
         "date" | "dates" | "time" | "datetime" => Some(format!(
             "Date/Time Functions:\n\
@@ -295,9 +370,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              Units: s (seconds), m (minutes), h (hours),\n\
                     d (days), w (weeks), y (years)\n\n\
              Use :doc <function> for detailed documentation.",
-            "now", "timestamp", "timezone",
-            "date_format", "date_parse",
-            "date_add", "date_diff"
+            "now", "timestamp", "timezone", "date_format", "date_parse", "date_add", "date_diff"
         )),
         "html" | "markup" => Some(format!(
             "HTML Functions:\n\
@@ -311,9 +384,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              Markdown:\n\
              {:<16} Convert markdown to HTML\n\n\
              Use :doc <function> for detailed documentation.",
-            "html_escape",
-            "html_tag", "html_attr",
-            "markdown_to_html"
+            "html_escape", "html_tag", "html_attr", "markdown_to_html"
         )),
         "markdown" | "md" => Some(format!(
             "Markdown Functions:\n\
@@ -328,9 +399,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              Conversion:\n\
              {:<16} Convert markdown to HTML\n\n\
              Use :doc <function> for detailed documentation.",
-            "md_heading", "md_list",
-            "md_link", "md_code",
-            "markdown_to_html"
+            "md_heading", "md_list", "md_link", "md_code", "markdown_to_html"
         )),
         "debug" | "debugging" | "assert" | "test" | "testing" => Some(format!(
             "Debug & Assert Functions:\n\
@@ -347,8 +416,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              Pipeline example:\n\
                data -> spy -> map f -> trace \"after map\" -> filter g -> spy\n\n\
              Use :doc <function> for detailed documentation.",
-            "trace", "spy", "debug", "tap",
-            "assert", "error"
+            "trace", "spy", "debug", "tap", "assert", "error"
         )),
         "parse" | "parsing" | "data" | "json" | "yaml" | "toml" | "csv" => Some(format!(
             "Data Parsing Functions:\n\
@@ -374,8 +442,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              {:<16} Read env var (fail if missing)\n\
              {:<16} Read env var with default\n\n\
              Use :doc <function> for detailed documentation.",
-            "os",
-            "env_var", "env_var_or"
+            "os", "env_var", "env_var_or"
         )),
         _ => None,
     }
@@ -767,10 +834,7 @@ pub fn print_builtin_docs() {
     // Regex Functions
     println!("Regex Functions:");
     println!("----------------");
-    println!(
-        "  {:<18} :: {}",
-        "regex_match", "String -> String -> Bool"
-    );
+    println!("  {:<18} :: {}", "regex_match", "String -> String -> Bool");
     println!(
         "  {:<18} :: {}",
         "regex_replace", "String -> String -> String -> String"
@@ -942,25 +1006,13 @@ pub fn print_builtin_docs() {
     // Data Utilities
     println!("Data Utilities:");
     println!("---------------");
-    println!(
-        "  {:<18} :: {}",
-        "json_parse", "String -> (Dict|List|a)"
-    );
+    println!("  {:<18} :: {}", "json_parse", "String -> (Dict|List|a)");
     println!("                     (Returns Dict for objects, List for arrays)");
-    println!(
-        "  {:<18} :: {}",
-        "yaml_parse", "String -> (Dict|List|a)"
-    );
+    println!("  {:<18} :: {}", "yaml_parse", "String -> (Dict|List|a)");
     println!("                     (Returns Dict for mappings, List for sequences)");
-    println!(
-        "  {:<18} :: {}",
-        "toml_parse", "String -> (Dict|List|a)"
-    );
+    println!("  {:<18} :: {}", "toml_parse", "String -> (Dict|List|a)");
     println!("                     (Returns Dict for tables, List for arrays)");
-    println!(
-        "  {:<18} :: {}",
-        "csv_parse", "String -> [Dict|[String]]"
-    );
+    println!("  {:<18} :: {}", "csv_parse", "String -> [Dict|[String]]");
     println!("                     (Returns list of Dicts if headers exist, else list of lists)");
     println!("  {:<18} :: {}", "import", "String|Path -> Value");
     println!();

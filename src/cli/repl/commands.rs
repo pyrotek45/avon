@@ -183,7 +183,9 @@ pub fn handle_command(
                 eprintln!("Usage: :let <name> = <expression>");
                 eprintln!("  Example: :let x = 42");
                 eprintln!("  Example: :let config = {{host: \"localhost\", port: 8080}}");
-                eprintln!("  Example: :let f = \\x x * 2  (multi-line expressions continue on next line)");
+                eprintln!(
+                    "  Example: :let f = \\x x * 2  (multi-line expressions continue on next line)"
+                );
                 eprintln!(
                     "  Note: You must include an '=' sign between the variable name and expression"
                 );

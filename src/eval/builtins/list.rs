@@ -38,8 +38,8 @@ pub const NAMES: &[&str] = &[
 /// Get arity for list functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
-        "enumerate" | "flatten" | "head" | "last" | "reverse" | "sort" | "tail" | "transpose" | "unique"
-        | "unzip" => Some(1),
+        "enumerate" | "flatten" | "head" | "last" | "reverse" | "sort" | "tail" | "transpose"
+        | "unique" | "unzip" => Some(1),
         "chunks" | "combinations" | "drop" | "filter" | "flatmap" | "map" | "nth" | "partition"
         | "permutations" | "range" | "sort_by" | "split_at" | "take" | "windows" | "zip" => Some(2),
         "fold" => Some(3),

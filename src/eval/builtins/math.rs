@@ -3,7 +3,9 @@
 use crate::common::{EvalError, Number, Value};
 
 /// Names of math builtins
-pub const NAMES: &[&str] = &["abs", "ceil", "floor", "gcd", "lcm", "log", "log10", "neg", "pow", "round", "sqrt"];
+pub const NAMES: &[&str] = &[
+    "abs", "ceil", "floor", "gcd", "lcm", "log", "log10", "neg", "pow", "round", "sqrt",
+];
 
 /// Get arity for math functions
 pub fn get_arity(name: &str) -> Option<usize> {

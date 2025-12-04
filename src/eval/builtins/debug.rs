@@ -122,7 +122,7 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             // Useful for debugging in pipelines: data -> tap (trace "here") -> map f
             let func = &args[0];
             let val = &args[1];
-            
+
             // Apply the function (for side effects), ignore result
             match func {
                 Value::Function { .. } | Value::Builtin(_, _) => {

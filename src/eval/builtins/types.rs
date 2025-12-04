@@ -214,7 +214,7 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                 }
                 Value::Number(Number::Float(f)) => {
                     let i = *f as i64;
-                    if i < 0 || i > 0x10FFFF {
+                    if !(0..=0x10FFFF).contains(&i) {
                         return Err(EvalError::new(
                             format!("codepoint {} is out of range (0-0x10FFFF)", i),
                             None,

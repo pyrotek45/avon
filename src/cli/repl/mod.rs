@@ -128,7 +128,7 @@ pub fn execute_repl() -> i32 {
                         state.consecutive_empty_lines = 0;
                         continue;
                     }
-                    
+
                     // Track consecutive empty lines to allow cancel (3 empty lines)
                     if trimmed.is_empty() {
                         state.consecutive_empty_lines += 1;
@@ -143,10 +143,10 @@ pub fn execute_repl() -> i32 {
                     } else {
                         state.consecutive_empty_lines = 0;
                     }
-                    
+
                     pending.expr_buffer.push('\n');
                     pending.expr_buffer.push_str(trimmed);
-                    
+
                     // Check if the expression is now complete
                     if is_let_expr_complete(&pending.expr_buffer) {
                         // Try to evaluate
@@ -209,7 +209,8 @@ pub fn execute_repl() -> i32 {
                                                         "[WATCH] {} changed: {} -> {}",
                                                         name, old_str, new_str
                                                     );
-                                                    changed_vars.push((name.clone(), new_val.clone()));
+                                                    changed_vars
+                                                        .push((name.clone(), new_val.clone()));
                                                 }
                                             }
                                         }
@@ -338,55 +339,60 @@ fn display_value(val: &Value, input_buffer: &str) {
 /// Execute a pending :let command with a complete expression
 fn execute_pending_let(var_name: &str, expr_str: &str, state: &mut ReplState) {
     match tokenize(expr_str.to_string()) {
-        Ok(tokens) => {
-            match parse_with_error(tokens) {
-                Ok(ast) => {
-                    match eval(ast.program, &mut state.symbols, expr_str) {
-                        Ok(val) => {
-                            let was_watched = state.watched_vars.contains_key(var_name);
-                            let old_watched_val = state.watched_vars.get(var_name).cloned();
+        Ok(tokens) => match parse_with_error(tokens) {
+            Ok(ast) => match eval(ast.program, &mut state.symbols, expr_str) {
+                Ok(val) => {
+                    let was_watched = state.watched_vars.contains_key(var_name);
+                    let old_watched_val = state.watched_vars.get(var_name).cloned();
 
-                            state.symbols.insert(var_name.to_string(), val.clone());
-                            state.sync_symbols();
+                    state.symbols.insert(var_name.to_string(), val.clone());
+                    state.sync_symbols();
 
-                            if was_watched {
-                                if let Some(watched_old) = old_watched_val {
-                                    let old_str = watched_old.to_string("");
-                                    let new_str = val.to_string("");
-                                    if old_str != new_str {
-                                        println!("[WATCH] {} changed: {} -> {}", var_name, old_str, new_str);
-                                    }
-                                }
-                                state.watched_vars.insert(var_name.to_string(), val.clone());
+                    if was_watched {
+                        if let Some(watched_old) = old_watched_val {
+                            let old_str = watched_old.to_string("");
+                            let new_str = val.to_string("");
+                            if old_str != new_str {
+                                println!(
+                                    "[WATCH] {} changed: {} -> {}",
+                                    var_name, old_str, new_str
+                                );
                             }
-
-                            let type_name = match val {
-                                Value::String(_) => "String",
-                                Value::Number(_) => "Number",
-                                Value::Bool(_) => "Bool",
-                                Value::List(_) => "List",
-                                Value::Dict(_) => "Dict",
-                                Value::Function { .. } => "Function",
-                                Value::Builtin(_, _) => "Builtin",
-                                Value::FileTemplate { .. } => "FileTemplate",
-                                Value::Template(_, _) => "Template",
-                                Value::Path(_, _) => "Path",
-                                Value::None => "None",
-                            };
-                            println!("Stored: {} : {}", var_name, type_name);
                         }
-                        Err(e) => {
-                            eprintln!("Error: {}", e.pretty_with_file(expr_str, Some("<repl>")));
-                        }
+                        state.watched_vars.insert(var_name.to_string(), val.clone());
                     }
+
+                    let type_name = match val {
+                        Value::String(_) => "String",
+                        Value::Number(_) => "Number",
+                        Value::Bool(_) => "Bool",
+                        Value::List(_) => "List",
+                        Value::Dict(_) => "Dict",
+                        Value::Function { .. } => "Function",
+                        Value::Builtin(_, _) => "Builtin",
+                        Value::FileTemplate { .. } => "FileTemplate",
+                        Value::Template(_, _) => "Template",
+                        Value::Path(_, _) => "Path",
+                        Value::None => "None",
+                    };
+                    println!("Stored: {} : {}", var_name, type_name);
                 }
                 Err(e) => {
-                    eprintln!("Parse error: {}", e.pretty_with_file(expr_str, Some("<repl>")));
+                    eprintln!("Error: {}", e.pretty_with_file(expr_str, Some("<repl>")));
                 }
+            },
+            Err(e) => {
+                eprintln!(
+                    "Parse error: {}",
+                    e.pretty_with_file(expr_str, Some("<repl>"))
+                );
             }
-        }
+        },
         Err(e) => {
-            eprintln!("Lexer error: {}", e.pretty_with_file(expr_str, Some("<repl>")));
+            eprintln!(
+                "Lexer error: {}",
+                e.pretty_with_file(expr_str, Some("<repl>"))
+            );
         }
     }
 }

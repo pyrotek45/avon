@@ -40,7 +40,8 @@ pub const NAMES: &[&str] = &[
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
         "chars" | "is_alpha" | "is_alphanumeric" | "is_digit" | "is_empty" | "is_lowercase"
-        | "is_uppercase" | "is_whitespace" | "length" | "lines" | "lower" | "trim" | "upper" | "words" => Some(1),
+        | "is_uppercase" | "is_whitespace" | "length" | "lines" | "lower" | "trim" | "upper"
+        | "words" => Some(1),
         "char_at" | "concat" | "contains" | "ends_with" | "indent" | "join" | "repeat"
         | "split" | "starts_with" => Some(2),
         "pad_left" | "pad_right" | "replace" | "slice" => Some(3),
@@ -369,10 +370,7 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
         "lines" => {
             let s = value_to_string_auto(&args[0], source, line)?;
             // Handle both \n and \r\n line endings
-            let line_list: Vec<Value> = s
-                .lines()
-                .map(|l| Value::String(l.to_string()))
-                .collect();
+            let line_list: Vec<Value> = s.lines().map(|l| Value::String(l.to_string())).collect();
             Ok(Value::List(line_list))
         }
         "unlines" => {

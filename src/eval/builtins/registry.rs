@@ -15,8 +15,11 @@ use super::{
     string, types,
 };
 
+/// Type alias for category module definition
+type CategoryModule = (&'static [&'static str], fn(&str) -> Option<usize>);
+
 /// All category modules for iteration
-const CATEGORY_MODULES: &[(&[&str], fn(&str) -> Option<usize>)] = &[
+const CATEGORY_MODULES: &[CategoryModule] = &[
     (aggregate::NAMES, aggregate::get_arity),
     (debug::NAMES, debug::get_arity),
     (datetime::NAMES, datetime::get_arity),

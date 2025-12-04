@@ -165,7 +165,7 @@ pub fn is_let_expr_complete(input: &str) -> bool {
     // Check for incomplete lambda at end
     let trimmed = input.trim_end();
     let has_incomplete_lambda = ends_with_lambda_param(trimmed);
-    
+
     // Check for incomplete pipeline (ends with ->)
     let ends_with_pipe = trimmed.ends_with("->");
 

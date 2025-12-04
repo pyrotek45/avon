@@ -68,13 +68,13 @@ pub fn run_cli(args: Vec<String>) -> i32 {
             } else {
                 // Got a function name or category
                 let name = rest[0].as_str();
-                
+
                 // Check for category documentation first
                 if let Some(doc) = get_category_doc(name) {
                     println!("{}", doc);
                     return 0;
                 }
-                
+
                 // Check for builtin function documentation
                 let builtins = initial_builtins();
                 if builtins.contains_key(name) {
@@ -87,7 +87,7 @@ pub fn run_cli(args: Vec<String>) -> i32 {
                     }
                     return 0;
                 }
-                
+
                 // Unknown name
                 eprintln!("Unknown function or category: {}", name);
                 eprintln!();
