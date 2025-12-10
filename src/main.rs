@@ -1567,7 +1567,138 @@ mod tests {
     }
 
     #[test]
-    fn test_string_builtins_concat() {
+    fn test_markdown_robustness() {
+        let prog = "markdown_to_html \"# Heading\\n- List item\\n```rust\\nfn main() {}\\n```\\n[Link](https://example.com)\"".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+
+        if let Value::String(s) = v {
+            assert!(s.contains("<h1>Heading</h1>"));
+            assert!(s.contains("<ul>"));
+            assert!(s.contains("<li>List item</li>"));
+            assert!(s.contains("<pre><code class=\"language-rust\">"));
+            assert!(s.contains("<a href=\"https://example.com\">Link</a>"));
+        } else {
+            panic!("Expected string result");
+        }
+    }
+
+    #[test]
+    fn test_markdown_comprehensive_features() {
+        // Test comprehensive markdown features
+        let prog = "markdown_to_html \"# Title\\n\\n**Bold** and *italic* and ***bold italic***\\n\\n> Blockquote\\n\\n- List 1\\n- List 2\\n  - Nested\\n\\n1. Ordered 1\\n2. Ordered 2\\n\\n| A | B |\\n|---|---|\\n| 1 | 2 |\\n\\nText with ~~strikethrough~~\\n\\n- [x] Done\\n- [ ] Todo\"".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+
+        if let Value::String(s) = v {
+            // Headings
+            assert!(s.contains("<h1>Title</h1>"), "Missing h1 tag");
+
+            // Formatting
+            assert!(s.contains("<strong>Bold</strong>"), "Missing strong tag");
+            assert!(s.contains("<em>italic</em>"), "Missing em tag");
+
+            // Blockquotes
+            assert!(s.contains("<blockquote>"), "Missing blockquote tag");
+
+            // Unordered lists
+            assert!(s.contains("<ul>"), "Missing ul tag");
+            assert!(s.contains("<li>List 1</li>"), "Missing list item");
+
+            // Nested lists
+            assert!(s.contains("<ul>"), "Missing nested ul tag");
+            assert!(s.contains("Nested"), "Missing nested item");
+
+            // Ordered lists
+            assert!(s.contains("<ol>"), "Missing ol tag");
+            assert!(s.contains("<li>Ordered 1</li>"), "Missing ordered item");
+
+            // Tables
+            assert!(s.contains("<table>"), "Missing table tag");
+            assert!(s.contains("<thead>"), "Missing thead tag");
+            assert!(s.contains("<tbody>"), "Missing tbody tag");
+
+            // Strikethrough
+            assert!(s.contains("<del>strikethrough</del>"), "Missing del tag");
+
+            // Task lists
+            assert!(s.contains("<input"), "Missing checkbox input");
+            assert!(s.contains("type=\"checkbox\""), "Missing checkbox type");
+        } else {
+            panic!("Expected string result");
+        }
+    }
+
+    #[test]
+    fn test_markdown_special_characters() {
+        // Test HTML escaping and special character handling
+        let prog = "markdown_to_html \"Text with < > & characters\\n\\nHTML: <script>alert('test')</script>\"".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+
+        if let Value::String(s) = v {
+            // Check that special characters are properly escaped
+            assert!(s.contains("&lt;"), "Less-than should be escaped");
+            assert!(s.contains("&gt;"), "Greater-than should be escaped");
+            assert!(s.contains("&amp;"), "Ampersand should be escaped");
+
+            // Script tags should be escaped to prevent XSS
+            assert!(
+                s.contains("<script>"),
+                "Script tag should be in output but escaped"
+            );
+        } else {
+            panic!("Expected string result");
+        }
+    }
+
+    #[test]
+    fn test_markdown_code_blocks() {
+        // Test code block with syntax highlighting
+        let prog = "markdown_to_html \"```python\\ndef hello():\\n    pass\\n```\"".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+
+        if let Value::String(s) = v {
+            assert!(s.contains("<pre><code"), "Missing pre/code tag");
+            assert!(s.contains("language-python"), "Missing language class");
+            assert!(s.contains("def hello"), "Missing code content");
+        } else {
+            panic!("Expected string result");
+        }
+    }
+
+    #[test]
+    fn test_markdown_links() {
+        // Test various link types
+        let prog =
+            "markdown_to_html \"[Link](https://example.com)\\n\\nAuto: https://example.com\""
+                .to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+
+        if let Value::String(s) = v {
+            assert!(
+                s.contains("<a href=\"https://example.com\">Link</a>"),
+                "Missing link"
+            );
+        } else {
+            panic!("Expected string result");
+        }
+    }
+
+    #[test]
+    fn test_markdown_md_heading() {
         let prog = r#"concat "hello" " world""#.to_string();
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
@@ -2204,7 +2335,7 @@ mod tests {
             ("html_attr \"class\" \"btn\"", "class=\"btn\""),
             (
                 "markdown_to_html \"# Hello\\nWorld\"",
-                "<h1>Hello</h1>\n<p>World</p>",
+                "<h1>Hello</h1>\n<p>World</p>\n",
             ),
             ("os", "linux|macos|windows"), // OS-specific output
         ];

@@ -129,6 +129,7 @@ echo -e "${BLUE}Deployment & Integration Tests${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 run_test "Atomic Deployment Test" "$AVON_TESTS_DIR/test_atomic_deployment.sh"
 run_test "Backup Test" "$AVON_TESTS_DIR/test_backup.sh"
+run_test "Markdown to HTML Test" "$AVON_TESTS_DIR/test_markdown.sh"
 
 # Security tests
 echo ""

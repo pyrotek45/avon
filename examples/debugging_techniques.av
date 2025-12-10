@@ -1,0 +1,65 @@
+# Debugging Techniques Demonstration
+# This file shows how to use trace, debug, and type checking for effective debugging
+# Check stderr for [TRACE] and [DEBUG] output when running
+
+# Example 1: Using trace to inspect values
+let _ = trace "Example 1: input value" 5 in
+
+# Example 2: Chaining traces to see value flow
+let x = 5 in
+let _ = trace "after doubling" (x * 2) in
+let _ = trace "after adding 10" ((x * 2) + 10) in
+
+# Example 3: Using debug for dict structure inspection
+let config = {host: "localhost", port: "8080"} in
+let _ = debug config in
+
+# Example 4: Tracing through map operations
+let add_one = \x (trace "map_item" (x + 1)) in
+let numbers = [1, 2, 3] in
+let mapped = map add_one numbers in
+
+# Example 5: Using type checking with is_list
+let type_check = \data
+  let _ = trace "checking type" (is_list data) in
+  data
+in
+let checked_data = type_check [10, 20, 30] in
+
+# Example 6: Tracing filter operations  
+let is_even = \x (x > 0) in
+let numbers_for_filter = [1, 2, 3, 4, 5, 6] in
+let filtered = filter is_even numbers_for_filter in
+
+# Example 7: Tracing fold accumulation
+let sum_fn = \acc \item (trace "fold_step" (acc + item)) in
+let final_sum = fold sum_fn 0 [1, 2, 3, 4, 5] in
+
+# Output results as template
+@debugging_demo.txt {"
+=== Debugging Techniques Demonstration ===
+
+Example 1: trace with input value
+(Check stderr for: [TRACE] Example 1: input value: 5)
+
+Example 2: Chaining traces
+(Check stderr for multiple trace outputs)
+
+Example 3: Debug dict structure
+(Check stderr for: [DEBUG] Dict with host and port)
+
+Example 4: Tracing map - added 1 to each: {format_list mapped ", "}
+
+Example 5: Type checking - verified list data: {format_list checked_data ", "}
+
+Example 6: Filter even (>0) numbers: {format_list filtered ", "}
+
+Example 7: Fold with accumulation - final sum: {final_sum}
+(Check stderr for: [TRACE] fold_step showing each accumulation)
+
+=== All Examples Complete ===
+Run with: avon examples/debugging_techniques.av 2>&1
+The 2>&1 captures stderr to see [TRACE] and [DEBUG] output
+"}
+
+
