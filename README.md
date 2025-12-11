@@ -16,7 +16,7 @@ All documentation is consolidated in these key resources:
 | Resource | What's inside |
 |----------|---------------|
 | [**Tutorial**](./tutorial/TUTORIAL.md) | **Start here!** Complete guide from basics to advanced patterns, including language essentials, templates, CLI usage, style guide, best practices, error handling, debugging, and 10+ gotchas. All in one comprehensive resource. |
-| [**Function reference**](./tutorial/BUILTIN_FUNCTIONS.md) | Complete reference of 156 built-in functions with signatures, descriptions, and quick examples organized by category. |
+| [**Function reference**](./tutorial/BUILTIN_FUNCTIONS.md) | Complete reference of all built-in functions with signatures, descriptions, and quick examples organized by category. |
 
 **Quick Reference:**
 - `avon doc` — Get help on all functions from the command line
@@ -224,7 +224,7 @@ Pipe Operator — Chain expressions without nested parentheses
 
 Functional Programming — Variables, functions, map/filter/fold, conditionals, currying
 
-111 Builtins — String ops, list ops, formatting, date/time, JSON, file I/O, HTML/Markdown helpers
+Rich Standard Library — Extensive built-in functions for string ops, list ops, formatting, date/time, JSON, file I/O, HTML/Markdown helpers
 
 Runtime Type Safety — Avon won't deploy if there's a type error. Sleep soundly. No "undefined is not a function" at 3am.
 

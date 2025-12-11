@@ -343,7 +343,7 @@ Language Agnostic: Avon works with any text format—YAML, JSON, shell scripts, 
 
 Runtime Type Safety: Avon won't deploy if there's a type error. No static types needed—if a type error occurs, deployment simply doesn't happen. Sleep soundly knowing your configs are valid. (Unlike that bash script you wrote at 2am.)
 
-Built-in Utilities: Avon comes with 129 built-in functions for string operations, list operations (map, filter, fold, sort, unique, range), formatting (16 functions), date/time operations, JSON manipulation, file I/O, and HTML/Markdown helpers.
+Built-in Utilities: Avon comes with a comprehensive set of built-in functions for string operations, list operations (map, filter, fold, sort, unique, range), formatting, date/time operations, JSON manipulation, file I/O, and HTML/Markdown helpers.
 
 Debugging Tools: Use `trace`, `debug`, `assert`, and the `--debug` flag to troubleshoot quickly.
 
