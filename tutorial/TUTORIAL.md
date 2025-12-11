@@ -103,7 +103,19 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
    - Advanced List Operations (`flatmap`, `flatten`)
    - Data & Utilities (`import`, `json_parse`, `os`)
 
-9. **[CLI Usage](#cli-usage)**
+9. **[Importing Files from Folders](#importing-files-from-folders)**
+   - Core Pattern: Glob → Map/Filter → Fold
+   - Common Patterns
+     - Load JSON Folder as Dictionary
+     - Import Avon Modules
+     - Filter Files by Extension
+     - Combine Multiple JSON Files
+   - Important: Dict Literal Syntax in Fold
+   - Path Operations (`basename`, `dirname`, `exists`)
+   - Advanced Example: Config Override System
+   - When to Use Importing
+
+10. **[CLI Usage](#cli-usage)**
    - Basic Commands
      - `eval` (evaluate and print)
      - `deploy` (generate files)
@@ -132,7 +144,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
    - Real-World Examples
    - Single File in Git, Many Deployments
 
-10. **[Error handling and debugging](#error-handling-and-debugging)**
+11. **[Error handling and debugging](#error-handling-and-debugging)**
     - Runtime Type Safety
       - How type checking works
       - Error message format
@@ -186,6 +198,8 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
       - Lots of braces getting confusing
       - Interpolation not working
     - Debugging Tips
+
+15. **[Next Steps](#next-steps)**
 
 ---
 
@@ -1152,6 +1166,51 @@ This demonstrates:
 - Calling the function multiple times with different arguments
 - Returning multiple file templates as a list
 
+### Important: Functions with All Defaults
+
+When a function has **all parameters with defaults**, Avon has special behavior:
+
+**When you reference the function at the top level, it auto-evaluates:**
+
+```avon
+let add = \x ? 5 \y ? 10 x + y in
+add
+# Result: 15 (auto-evaluated with defaults)
+```
+
+**But the function is still a function value:**
+
+```avon
+let add = \x ? 5 \y ? 10 x + y in
+typeof add
+# Result: "Function"
+
+is_function add
+# Result: true
+```
+
+**Context matters - in data structures, it stays as a function:**
+
+```avon
+let add = \x ? 5 \y ? 10 x + y in
+{my_func: add}
+# Result: {my_func: <function>}  (NOT auto-evaluated)
+```
+
+**You can still override defaults or use the function value:**
+
+```avon
+let add = \x ? 5 \y ? 10 x + y in
+add 3 4
+# Result: 7 (with custom arguments)
+
+let add = \x ? 5 \y ? 10 x + y in
+let adder = {fn: add} in
+adder.fn  # Still a function value
+```
+
+**Key Takeaway:** Functions remain functions, but top-level auto-evaluation is a convenience feature. If you need the function value itself, store it in a data structure or use a variable.
+
 ---
 
 ## Collections
@@ -1487,6 +1546,141 @@ range 1 10  # [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 # Enumerate for index tracking
 enumerate ["apple", "banana", "cherry"]
 # [[0, "apple"], [1, "banana"], [2, "cherry"]]
+```
+
+### File I/O and Globbing
+
+Avon provides powerful functions for working with files and folders. These are commonly used with list operations like `map`, `filter`, and `fold` to build data pipelines.
+
+#### The File I/O Pipeline
+
+When working with files, you typically:
+
+1. **Discover** files with `glob` (returns file paths)
+2. **Read** file contents with `readfile` or implicit reading in parse functions
+3. **Parse** content with `json_parse`, `yaml_parse`, or `import`
+4. **Transform** results with `map`, `filter`, `fold`
+
+**Example: Step by step**
+```avon
+# Step 1: Discover files (returns paths as strings)
+let files = glob "config/*.json" in
+
+# Step 2: Read and parse each file
+let configs = map (\f json_parse f) files in
+
+# Step 3: Aggregate into a single dict (optional)
+let merged = fold
+  (\acc \f set acc (basename f) (json_parse f))
+  {}
+  files
+in
+merged
+```
+
+#### Core File Functions
+
+| Function | Input | Returns | Notes |
+|----------|-------|---------|-------|
+| `glob pattern` | String pattern | List[String] | File paths matching pattern (e.g., `"*.json"` or `"config/**/*.json"`) |
+| `readfile path` | String or Path | String | Raw file contents as a string |
+| `readlines path` | String or Path | List[String] | File split into lines |
+| `exists path` | String or Path | Bool | Check if file exists |
+| `basename path` | String or Path | String | Filename from path (e.g., `"config/app.json"` → `"app.json"`) |
+| `dirname path` | String or Path | String | Directory from path (e.g., `"config/app.json"` → `"config"`) |
+| `json_parse path_or_content` | String | Dict/List | Parse JSON (tries file path first, then content) |
+| `yaml_parse path_or_content` | String | Dict/List | Parse YAML (tries file path first, then content) |
+| `import path` | String | Any | Evaluate Avon file and return result |
+
+#### Key Behavior: json_parse Accepts File Paths OR Content
+
+`json_parse` is special—it tries to read as a file path first, then falls back to parsing as JSON content:
+
+```avon
+# Pass a file path - json_parse reads and parses it
+json_parse "config.json"              # Success: reads file, parses JSON
+
+# Pass JSON content directly - json_parse tries to read as file (fails)
+json_parse "{\"key\": \"value\"}"     # Error: file not found
+
+# Glob returns paths, which json_parse handles correctly
+let files = glob "*.json" in
+map (\f json_parse f) files           # Works: json_parse reads each file
+```
+
+**The Golden Rule:** `glob` returns **paths**, not content. Use `json_parse`, `readfile`, or `import` to get the actual content.
+
+```
+Discover (glob)
+    ↓ returns: ["file1.json", "file2.json", ...]
+Read & Parse (json_parse, readfile, etc.)
+    ↓ returns: {data: ...}, "content", etc.
+Transform (map, filter, fold, etc.)
+    ↓ returns: organized result
+```
+
+#### Practical Glob Examples
+
+```avon
+glob "*.json"                  # All JSON files in current dir
+glob "config/*.json"           # All JSON in config subdir
+glob "**/*.json"               # Recursive (any depth)
+glob "src/**/*.av"             # All Avon files in src (recursive)
+glob "data/users/*.yaml"       # YAML files in users dir
+```
+
+#### Practical File I/O Patterns
+
+**Pattern: Load and filter files**
+```avon
+let all_files = glob "data/*" in
+let json_only = filter (\f ends_with f ".json") all_files in
+let configs = map (\f json_parse f) json_only in
+configs
+```
+
+**Pattern: Load configs with defaults**
+```avon
+let defaults = {debug: false, timeout: 30} in
+let user_config = json_parse "config.json" in
+let merged = dict_merge defaults user_config in
+merged
+```
+
+**Pattern: Load multiple configs into named dict**
+```avon
+fold
+  (\acc \f
+    set acc (basename f) (json_parse f))
+  {}
+  (glob "config/*.json")
+# Result: {app.json: {...}, db.json: {...}, ...}
+```
+
+**Pattern: Load files excluding certain names**
+```avon
+let active = filter
+  (\f not (starts_with (basename f) "_"))
+  (glob "config/*.json")
+in
+map (\f json_parse f) active
+```
+
+#### Empty Globs and Missing Files
+
+```avon
+# Glob with no matches returns empty list (not an error)
+glob "nonexistent/*.json"      # [] (empty list)
+
+# Reading missing file is an error
+readfile "missing.txt"         # Error: No such file or directory
+json_parse "missing.json"      # Error: No such file or directory
+```
+
+To handle missing files gracefully:
+```avon
+let config = if exists "custom.json" then json_parse "custom.json" else {} in
+config
 ```
 
 ---
@@ -2111,8 +2305,10 @@ Note: `markdown_to_html` accepts both strings and templates, automatically conve
 | Function | Description | Example |
 |----------|-------------|---------|
 | `import path` | Load and evaluate another `.av` file | `import "lib.av"` |
-| `json_parse json_str` | Parse JSON string | `json_parse "{\\"x\\": 1}"` |
+| `json_parse file_or_json` | Parse JSON from file path or string | `json_parse "config.json"` or `json_parse "{\\"x\\": 1}"` |
 | `os` | Get OS string | `os` → `"linux"`, `"macos"`, `"windows"` |
+
+**Important note on `json_parse`:** This function accepts both file paths (as strings) and JSON content. It tries to read the input as a file path first; if the file doesn't exist, it will error (rather than trying to parse as JSON content). For explicit file reading, use `readfile` followed by `json_parse`.
 
 **The `import` Function and Modularity:**
 
@@ -2162,6 +2358,487 @@ let formatted = map (\item concat "service: " item) items in
     {formatted}
 "}
 ```
+
+---
+
+## Importing Files from Folders
+
+Avon's file I/O and list processing capabilities make it powerful for working with entire folders of files. You can load JSON configs, import Avon modules, filter files, and aggregate data—all in a clean, declarative way.
+
+### Core Pattern: Glob → Map/Filter → Fold
+
+The fundamental pattern for working with folders is:
+
+1. **Discover files**: Use `glob` to find files matching a pattern
+2. **Transform or filter**: Use `map` or `filter` to select and transform files
+3. **Accumulate results**: Use `fold` or `flatten` to combine into a single result
+
+**Simple example: Load all JSON configs into a single dictionary**
+
+```avon
+fold
+  (\acc \f set acc (basename f) (json_parse f))
+  {}
+  (glob "config/*.json")
+```
+
+This pattern:
+1. `glob "config/*.json"` - Find all JSON files in config folder
+2. For each file, `json_parse f` reads and parses the JSON (no explicit `readfile` needed)
+3. Use `set acc (basename f) ...` to store in dictionary under the filename
+4. Start with empty dict `{}` as accumulator
+5. Result: One dictionary with all configs merged together
+
+### Common Patterns
+
+#### Pattern 1: Load JSON Folder as Dictionary
+
+Load all JSON files in a folder and merge them into a single dictionary:
+
+```avon
+let config_files = glob "config/*.json" in
+fold
+  (\acc \f
+    let data = json_parse f in
+    dict_merge acc data)
+  {}
+  config_files
+```
+
+Note: `json_parse` automatically reads the file if given a path, so you don't need to call `readfile` first. It accepts both file paths and JSON content strings (but tries to read as a file first).
+
+This is useful for:
+- Loading environment-specific configs that override defaults
+- Merging multiple configuration sources into a single dict
+- Building configuration registries
+
+**Real-world use case:**
+```avon
+let base_config = {host: "localhost", port: 8080, debug: true} in
+let env_overrides = json_parse "config/prod.json" in
+let final_config = dict_merge base_config env_overrides in
+final_config
+```
+
+#### Pattern 2: Import Avon Modules
+
+Load and combine functions from multiple Avon files:
+
+```avon
+let modules = fold
+  (\acc \f set acc (basename f) (import f))
+  {}
+  (glob "lib/*.av")
+in
+modules.math.double 21
+```
+
+This creates a dictionary of module functions. Each file in `lib/` becomes a key in the dictionary.
+
+**Example library files:**
+```avon
+# lib/math.av
+{double: \x x * 2, triple: \x x * 3}
+
+# lib/strings.av  
+{upper: upper, lower: lower}
+```
+
+Then import them:
+```avon
+let libs = fold
+  (\acc \f set acc (basename f) (import f))
+  {}
+  (glob "lib/*.av")
+in
+[libs.math.double 5, libs.strings.upper "hello"]
+# Result: [10, "HELLO"]
+```
+
+#### Pattern 3: Filter Files by Extension
+
+Select only files with a specific extension:
+
+```avon
+let json_files = filter (\f ends_with f ".json") (glob "data/*") in
+map (\f json_parse f) json_files
+```
+
+This is useful for:
+- Processing only JSON files, ignoring other files
+- Handling mixed directory contents
+- Selective data loading
+
+**Practical example: Load only active configurations**
+```avon
+let active_configs = filter
+  (\f (not (starts_with (basename f) "_")))
+  (glob "config/*.json")
+in
+fold
+  (\acc \f set acc (basename f) (json_parse f))
+  {}
+  active_configs
+```
+
+#### Pattern 4: Combine Multiple JSON Files
+
+Load data from multiple JSON files and combine into a single list:
+
+```avon
+flatten
+  (map
+    (\f json_parse f)
+    (glob "data/*.json"))
+```
+
+If each JSON file contains an array, this creates one combined array. Useful for:
+- Aggregating data from multiple sources
+- Building datasets by combining files
+- Processing batch data
+
+**Real-world use case:**
+```avon
+let all_users = flatten
+  (map
+    (\f json_parse f)
+    (glob "users/*.json"))
+in
+length all_users
+# Count total users across all files
+```
+
+### Important: Dict Literal Syntax in Fold
+
+There's one syntax gotcha when using dicts in fold operations. When accumulating dict values, you **must use `set`** to update the accumulator—you can't use dict literals directly.
+
+**❌ WRONG - Dict literal doesn't auto-accumulate:**
+```avon
+fold
+  (\acc \f {data: f})
+  {}
+  (glob "*.txt")
+# Result: Only the last file in {data: ...}
+# The accumulator is NOT updated!
+```
+
+**✅ RIGHT - Use `set` to update accumulator:**
+```avon
+fold
+  (\acc \f set acc (basename f) (readfile f))
+  {}
+  (glob "*.txt")
+# Result: Accumulator updated with each file
+# {file1.txt: "content1", file2.txt: "content2", ...}
+```
+
+The issue: In the wrong version, the expression `{data: f}` creates a new dict each iteration, but it's never merged back into the accumulator. The `set` function properly updates the accumulator.
+
+For details, see [DICT_LITERAL_SYNTAX_ANALYSIS.md](./DICT_LITERAL_SYNTAX_ANALYSIS.md).
+
+### Path Operations
+
+Avon provides helper functions for path manipulation:
+
+- `basename path` - Extract filename from path
+- `dirname path` - Extract directory from path
+- `exists path` - Check if file exists (returns true/false)
+
+**Example: Filter files that exist**
+```avon
+let required_files = ["config.json", "schema.json", "data.json"] in
+let existing = filter (\f exists @{f}) required_files in
+existing
+```
+
+**Example: Group files by directory**
+```avon
+let files = glob "src/**/*.av" in
+let grouped = fold
+  (\acc \f
+    let dir = dirname f in
+    set acc dir (head (get acc dir) || []) + [basename f])
+  {}
+  files
+in
+grouped
+```
+
+### Advanced Example: Config Override System
+
+Build a layered configuration system where files in later directories override earlier ones:
+
+```avon
+let load_dir = \dir
+  fold
+    (\acc \f set acc (basename f) (json_parse f))
+    {}
+    (glob dir "/*.json") in
+
+let base = load_dir "config/base" in
+let env_override = load_dir "config/prod" in
+let instance_override = load_dir "config/prod/instance-1" in
+
+let final_config = dict_merge base env_override in
+let final_config = dict_merge final_config instance_override in
+
+final_config
+```
+
+This creates a configuration precedence chain where later files override earlier ones—perfect for environment-specific deployments.
+
+### Comprehensive Importing Methods
+
+#### Method 1: Single File Import
+
+The simplest approach: import one file directly.
+
+```avon
+let config = json_parse "app.json" in
+let version = config.version in
+@output.txt {"Version: {version}"}
+```
+
+**Use cases:** Loading a single config, reading a template, importing a library.
+
+#### Method 2: Glob with Loop (fold)
+
+Import all files matching a pattern and aggregate them.
+
+```avon
+let config_files = glob "config/*.json" in
+let configs = fold
+  (\acc \f
+    set acc (basename f) (json_parse f))
+  {}
+  config_files
+in
+configs
+```
+
+This creates a dictionary where keys are filenames and values are parsed contents:
+```
+{
+  app.json: {name: "MyApp", version: "1.0.0"},
+  database.json: {host: "localhost", port: 5432},
+  cache.json: {ttl: 3600, redis_host: "cache.local"}
+}
+```
+
+#### Method 3: Filter Then Map
+
+Filter files first, then transform them.
+
+```avon
+let json_files = filter (\f ends_with f ".json") (glob "config/*") in
+let parsed = map (\f json_parse f) json_files in
+parsed
+```
+
+**Use cases:** Load only JSON files, skip certain directories, conditional loading.
+
+#### Method 4: Import Multiple Modules
+
+Load Avon modules from a folder.
+
+```avon
+let libraries = fold
+  (\acc \f
+    set acc (basename f) (import f))
+  {}
+  (glob "lib/*.av")
+in
+libraries
+```
+
+Now `libraries` is a dict where each key is a module filename and each value is what that module returns:
+```
+{
+  math.av: {add: <function>, multiply: <function>},
+  strings.av: {upper: <function>, lower: <function>},
+  lists.av: {concat: <function>, reverse: <function>}
+}
+```
+
+#### Method 5: Import from GitHub (import_git)
+
+Download and evaluate Avon files directly from GitHub repositories. This is useful for sharing reusable modules, configurations, and templates.
+
+⚠️ **Safety First**: `import_git` requires a **commit hash** (not a branch name like "main") to prevent accidental changes to your code if the remote file is updated.
+
+```avon
+let helix_config = import_git "pyrotek45/config/helix.av" "f75d99c0b6803495a86bb0e4ec0ef014a5c57263" in
+@helix_config.toml {helix_config}
+```
+
+**Format:**
+- First argument: `"owner/repo/path/to/file.av"` (relative path within repo)
+- Second argument: full commit hash from GitHub (use `git log --format="%H" path/to/file.av` to get it)
+
+**Use cases:**
+- Sharing Avon libraries across projects
+- Importing configuration templates from public repositories
+- Building deployable Avon modules from GitHub
+- Composing multi-file applications from versioned modules
+
+**Error handling** — Clear error messages if something goes wrong:
+- **File not found (404)**: Shows owner, repo, file path, and commit hash for debugging
+- **Wrong argument type**: Must be two strings, not numbers or other types
+- **Parse error**: If downloaded file has syntax errors, shows the error with context
+- **Network error**: Connection problems are reported clearly
+
+**Example with error handling:**
+```avon
+let config = try
+  import_git "pyrotek45/config/helix.av" "f75d99c0b6803495a86bb0e4ec0ef014a5c57263"
+catch \err
+  {error: err}
+in
+config
+```
+
+#### Method 6: Merge Multiple Configs
+
+Combine multiple JSON files into a single configuration.
+
+```avon
+let config_files = glob "config/*.json" in
+fold
+  (\acc \f
+    let data = json_parse f in
+    dict_merge acc data)
+  {}
+  config_files
+```
+
+This flattens all JSON objects into one.
+
+**Input** (3 separate files):
+- `app.json`: `{version: "1.0.0", name: "MyApp", debug: false, port: 8080}`
+- `database.json`: `{host: "localhost", port: 5432, user: "admin", password: "secret"}`
+- `cache.json`: `{redis_host: "cache.local", redis_port: 6379, ttl: 3600}`
+
+**Output**:
+```
+{
+  version: "1.0.0",
+  name: "MyApp",
+  debug: false,
+  port: 8080,
+  host: "localhost",
+  user: "admin",
+  password: "secret",
+  redis_host: "cache.local",
+  redis_port: 6379,
+  ttl: 3600
+}
+```
+
+#### Method 7: Multi-Folder Import
+
+Load files from multiple directories.
+
+```avon
+let lib_files = glob "lib/**/*.av" in
+let data_files = glob "data/**/*.json" in
+let libs = map (\f import f) lib_files in
+let data = map (\f json_parse f) data_files in
+[libs, data]
+```
+
+### Real-World Importing Scenarios
+
+#### Scenario 1: Multi-Environment Configuration
+
+Generate environment-specific configs from templates and data.
+
+```avon
+let env = "prod" in
+let defaults = json_parse "config/defaults.json" in
+let env_config = json_parse "config/{env}.json" in
+let merged = dict_merge defaults env_config in
+
+@output/{env}.conf {"{
+  \"name\": \"{merged.name}\",
+  \"port\": {merged.port},
+  \"debug\": {merged.debug}
+}"}
+```
+
+#### Scenario 2: Dynamic Function Library
+
+Build a function library by importing multiple modules.
+
+```avon
+let stdlib = fold
+  (\acc \f
+    let module_name = str_replace ".av" "" (basename f) in
+    set acc module_name (import f))
+  {}
+  (glob "lib/*.av")
+in
+
+# Now use: stdlib.math.add, stdlib.strings.upper, etc.
+let result = stdlib.math.add 5 3 in
+@output.txt {"Result: {result}"}
+```
+
+#### Scenario 3: Data Pipeline
+
+Load multiple data files, transform, and export.
+
+```avon
+let users = map (\f json_parse f) (glob "data/users/*.json") in
+let products = map (\f json_parse f) (glob "data/products/*.json") in
+
+let user_count = length users in
+let product_count = length products in
+
+@report.md {"{# Data Report
+- Total Users: {user_count}
+- Total Products: {product_count}
+"}
+```
+
+#### Scenario 4: Kubernetes Manifest Generator
+
+Generate K8s manifests from configuration and template files.
+
+```avon
+let bases = fold
+  (\acc \f set acc (basename f) (json_parse f))
+  {} (glob "k8s/base/*.json") in
+let services = fold
+  (\acc \f set acc (basename f) (json_parse f))
+  {} (glob "k8s/services/*.json") in
+
+@deployment.yaml {"{
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {bases.app.name}
+  namespace: {services.namespace}
+spec:
+  replicas: {bases.app.replicas}
+  labels:
+    app: {bases.app.name}
+}"}
+```
+
+### When to Use Importing
+
+✅ **Great for:**
+- Loading configuration files from directories
+- Building registries of functions or modules
+- Aggregating data from multiple sources
+- Deploying customized versions of templates
+- Sharing reusable code libraries
+- Fetching external templates from GitHub
+
+❌ **Not ideal for:**
+- Real-time file watching (Avon files are evaluated once at deploy time)
+- Large binary files (Avon works with text)
+- Files that change frequently during execution (evaluation is one-time)
 
 ---
 
@@ -3417,7 +4094,245 @@ You referenced a variable that doesn't exist. Check spelling and make sure it's 
 
 ---
 
-## Next Steps
+## Gotchas and Common Pitfalls
+
+Avon is designed to be simple, but like any language, it has edge cases. Here are the things that trip up developers:
+
+### Gotcha 1: Function Parameters Are CLI Arguments
+
+When you define a function with parameters, those parameter names become CLI arguments that the `deploy` command expects:
+
+```avon
+\host \port @config.txt {"Server: {host}:{port}"}
+```
+
+If you try to deploy without arguments, you'll get an error:
+```
+Error: Missing required argument: host
+```
+
+**Solution:** Either provide the arguments:
+```bash
+avon deploy config.av localhost 8080
+```
+
+Or give parameters defaults:
+```avon
+\host ? "localhost" \port ? 8080 @config.txt {"Server: {host}:{port}"}
+```
+
+Then deploy without arguments:
+```bash
+avon deploy config.av
+```
+
+### Gotcha 2: Variables Don't Shadow – They Nest
+
+Avon doesn't allow variable shadowing. If you try to bind a variable that's already in scope, it's an error:
+
+```avon
+let x = 5 in
+let x = 10 in  # Error: x already exists
+x
+```
+
+**Solution:** Use different names for different scopes:
+```avon
+let x = 5 in
+let y = 10 in
+x + y
+```
+
+This might seem restrictive, but it actually prevents bugs where you accidentally reuse a variable name.
+
+### Gotcha 3: Functions with All Defaults Still Return Functions
+
+A common misconception: if a function has all defaults, you might think calling it returns the result. But Avon is functionally pure—functions are values:
+
+```avon
+let greet = \name ? "World" "Hello, {name}!" in
+greet        # This is the result (auto-evaluated at top-level)
+typeof greet # But typeof still shows "Function"
+is_function greet # true
+```
+
+**The key:** Top-level auto-evaluation is a convenience, but if you store the function in a data structure, it stays a function:
+
+```avon
+let greet = \name ? "World" "Hello, {name}!" in
+{fn: greet}  # greet is NOT auto-evaluated here
+```
+
+**Solution:** If you need the result, evaluate it first:
+```avon
+let greet = \name ? "World" "Hello, {name}!" in
+let result = greet in
+{greeting: result}  # Now it's the evaluated result
+```
+
+### Gotcha 4: No Recursion – Use `fold` Instead
+
+Avon doesn't support recursion. If you try to call a function from within itself, it won't work:
+
+```avon
+let countdown = \n
+  if n <= 0 then "Done"
+  else "{n}, {countdown (n - 1)}"  # Won't work!
+in countdown 5
+```
+
+**Why?** Avon is designed for data generation and transformation, not control flow. Recursion can lead to infinite loops and confusion.
+
+**Solution:** Use `fold`, `map`, `filter`, and similar higher-order functions instead:
+
+```avon
+# Instead of recursion, use range + map
+let numbers = [5, 4, 3, 2, 1] in
+join (map to_string numbers) ", "
+# Output: 5, 4, 3, 2, 1
+```
+
+Or use `fold` for reduction:
+```avon
+let sum = fold (\acc \n acc + n) 0 [1, 2, 3, 4, 5] in
+sum  # 15
+```
+
+See [WHY_NO_RECURSION.md](./WHY_NO_RECURSION.md) for more details.
+
+### Gotcha 5: Template Braces Can Be Confusing
+
+When you mix templates with different brace counts, it's easy to get confused:
+
+```avon
+# This tries to interpolate { as a variable (wrong)
+@f.txt {"value: {"}
+
+# This outputs literal { (correct)
+@f.txt {{"value: {"}}
+```
+
+**Solution:** Remember the rule: interpolation uses the **same number of braces** as the template delimiter.
+
+- Single-brace `{" "}`: interpolate with `{ expr }`
+- Double-brace `{{" "}}`: interpolate with `{{ expr }}`
+- Triple-brace `{{{" "}}}`: interpolate with `{{{ expr }}}`
+
+```avon
+# Single-brace template with interpolation
+@f.txt {"Result: { 1 + 2 }"}          # Outputs: Result: 3
+
+# Double-brace template (easier if you need literal braces)
+@f.txt {{"Object: { key: {{ val }} }"}}  # Outputs: Object: { key: val }
+```
+
+### Gotcha 6: `json_parse` Accepts File Paths AND JSON Strings
+
+`json_parse` is clever—it can take either a file path or a JSON string. This can cause confusion:
+
+```avon
+json_parse "settings.json"     # Reads file and parses JSON
+json_parse "{\"name\": \"Alice\"}"  # Parses JSON string directly
+```
+
+If your JSON looks like a file path, it will try to read it as a file:
+```avon
+json_parse "[1, 2, 3]"  # Tries to read file "[1, 2, 3]" (won't work)
+```
+
+**Solution:** Be aware of this dual behavior. If you're parsing a JSON string that looks like a path, `json_parse` will try to read a file first. Usually this isn't a problem because most JSON strings don't look like valid file paths.
+
+### Gotcha 7: Lists in Templates Expand to Multiple Lines
+
+When you interpolate a list in a template, each item goes on its own line:
+
+```avon
+let items = ["apple", "banana", "cherry"] in
+@shopping.txt {"
+    Items:
+    {items}
+"}
+```
+
+Output:
+```
+Items:
+apple
+banana
+cherry
+```
+
+This is **intentional and useful** for generating lists, but it can surprise you if you're expecting inline output.
+
+**Solution:** Use `join` if you want items on one line:
+```avon
+let items = ["apple", "banana", "cherry"] in
+@shopping.txt {"Items: {join items ", "}"}
+```
+
+Output:
+```
+Items: apple, banana, cherry
+```
+
+### Gotcha 8: `glob` Returns Paths, Not Contents
+
+`glob` finds files matching a pattern but returns their **paths**, not contents:
+
+```avon
+glob "config/*.json"
+# Returns: ["config/app.json", "config/db.json"]  (paths only)
+```
+
+If you want contents, you need to `readfile`:
+```avon
+let files = glob "config/*.json" in
+map readfile files
+# Returns: contents of each file
+```
+
+**Solution:** Remember the pipeline:
+1. `glob` → find files (returns paths)
+2. `readfile` → read file contents
+3. `json_parse` → parse JSON
+
+### Gotcha 9: Import Evaluates the Entire File
+
+When you use `import`, the entire file is evaluated as an expression. The result is what the file returns:
+
+```avon
+# math.av
+{double: \x x * 2, square: \x x * x}
+
+# main.av
+let math = import "math.av" in
+math.double 5  # 10
+```
+
+This means the imported file could return anything—a dictionary, a function, a number, a FileTemplate, whatever. This is powerful but means you need to know what each imported file returns.
+
+**Solution:** Make it clear in your file what it returns. Consider a convention like:
+- `lib_*.av` files return function libraries (dicts of functions)
+- `config_*.av` files return configuration dicts
+- `generate_*.av` files return FileTemplates or lists of FileTemplates
+
+### Gotcha 10: Avon is Single-Pass and Simple
+
+Avon intentionally doesn't have advanced features like:
+- Recursion (use `fold` instead)
+- Mutable state (use functional transformations)
+- Complex type system (rely on runtime errors for type safety)
+- Module system beyond `import` (keep dependencies simple)
+
+**Why?** This simplicity makes Avon:
+- Fast (no complex analysis needed)
+- Predictable (what you see is what you get)
+- Easy to learn (fewer concepts)
+- Safe (runtime type safety prevents deployment errors)
+
+**Solution:** Embrace functional programming patterns. They're more powerful than they first appear.
+
+---
 
 Ready to build something? Here are some ideas:
 
