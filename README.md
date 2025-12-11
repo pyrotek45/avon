@@ -16,7 +16,7 @@ All documentation is consolidated in these key resources:
 | Resource | What's inside |
 |----------|---------------|
 | [**TUTORIAL.md**](./tutorial/TUTORIAL.md) | **Start here!** Complete guide from basics to advanced patterns, including language essentials, templates, CLI usage, style guide, best practices, error handling, debugging, and 10+ gotchas. All in one comprehensive resource. |
-| [**BUILTIN_FUNCTIONS.md**](./tutorial/BUILTIN_FUNCTIONS.md) | Complete reference of 100+ built-in functions with signatures, descriptions, and quick examples organized by category. |
+| [**BUILTIN_FUNCTIONS.md**](./tutorial/BUILTIN_FUNCTIONS.md) | Complete reference of 156 built-in functions with signatures, descriptions, and quick examples organized by category. |
 
 **Quick Reference:**
 - `avon doc` — Get help on all functions from the command line
@@ -25,7 +25,7 @@ All documentation is consolidated in these key resources:
 
 **No longer separate documents:** CLI usage, template syntax, importing files, simple configs, style guide, debugging, REPL usage, and security documentation are all integrated into TUTORIAL.md for easy discovery.
 
-Or just run `avon doc` for built-in help on all 100+ functions.
+Or just run `avon doc` for built-in help on all 156 functions.
 
 ---
 

@@ -1,6 +1,6 @@
 # Built-in Functions Reference
 
-Avon comes with a comprehensive standard library of over 150 built-in functions, plus constants like `os`. All functions are curried, meaning they can be partially applied.
+Avon comes with a comprehensive standard library of 156 built-in functions, plus constants like `os`. All functions are curried, meaning they can be partially applied.
 
 **Note:** This document provides a complete reference of all built-in functions with their type signatures. For detailed tutorials on how to use these functions, see [TUTORIAL.md](./TUTORIAL.md), particularly the "Collections" and "Builtin Functions" sections.
 
