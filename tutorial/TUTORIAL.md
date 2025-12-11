@@ -4,7 +4,7 @@ Welcome to Avon! A template language for people who have better things to do tha
 
 Avon is designed for developers who are tired of copy-pasting. Whether you're building Kubernetes manifests, setting up CI/CD pipelines, or generating boilerplate code, Avon turns repetitive tasks into elegant, maintainable code. Life's too short to manually update 47 YAML files.
 
-Avon is a general-purpose tool that handles everything from complex infrastructure projects to simple single-file configs. It's a workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 100+ built-in utilities to any text format.
+Avon is a general-purpose tool that handles everything from complex infrastructure projects to simple single-file configs. It's a workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 156 built-in utilities to any text format.
 
 > Tip: Throughout this guide, look at the `examples/` directory for real-world use cases. Each example demonstrates practical Avon patterns you can adapt for your own projects.
 
@@ -341,11 +341,11 @@ let plugins = ["vim-fugitive", "vim-surround", "vim-commentary", "vim-repeat"] i
 
 When you interpolate a list in a template, each item appears on its own line. This eliminates copy-paste even in a single file.
 
-Language Agnostic: Avon works with any text format—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 100+ built-in utilities to any file.
+Language Agnostic: Avon works with any text format—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 156 built-in utilities to any file.
 
 Runtime Type Safety: Avon won't deploy if there's a type error. No static types needed—if a type error occurs, deployment simply doesn't happen. Sleep soundly knowing your configs are valid. (Unlike that bash script you wrote at 2am.)
 
-Built-in Utilities: Avon comes with 100+ built-in functions for string operations, list operations (map, filter, fold, sort, unique, range), formatting (15 functions), date/time operations, JSON manipulation, file I/O, and HTML/Markdown helpers.
+Built-in Utilities: Avon comes with 156 built-in functions for string operations, list operations (map, filter, fold, sort, unique, range), formatting (16 functions), date/time operations, JSON manipulation, file I/O, and HTML/Markdown helpers.
 
 Debugging Tools: Use `trace`, `debug`, `assert`, and the `--debug` flag to troubleshoot quickly.
 
@@ -2187,7 +2187,7 @@ This generates `config-dev.yml` and `config-prod.yml`.
 
 ## Builtin Functions
 
-Avon comes with a toolkit of **100+ built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
+Avon comes with a toolkit of **156 built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
 
 > **Full Reference:** For a complete list of all built-in functions, see [BUILTIN_FUNCTIONS.md](./BUILTIN_FUNCTIONS.md).
 
