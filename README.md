@@ -369,81 +369,45 @@ map (add 10) [1, 2, 3]  # Returns [11, 12, 13]
 
 ### Kubernetes Multi-Environment Configs
 
-Generate multiple related config files from a single source:
+Generate config files for multiple environments:
 
 ```avon
-# k8s_generator.av
-let services = ["auth", "api", "frontend", "worker", "cache"] in
-let environments = ["dev", "staging", "prod"] in
+let envs = ["dev", "prod"] in
+let replicas = {dev: 1, prod: 3} in
 
-let env_config = {
-  dev:     { replicas: 1, log_level: "debug", resources: "256Mi" },
-  staging: { replicas: 2, log_level: "info",  resources: "512Mi" },
-  prod:    { replicas: 3, log_level: "warn",  resources: "1Gi" }
-} in
-
-let make_deployment = \svc \env 
-  let cfg = get env_config env in
-  @k8s/{env}/{svc}-deployment.yaml {"
+let make_config = \env 
+  @k8s/{env}-deployment.yaml {"
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {svc}
+  name: app
   namespace: {env}
 spec:
-  replicas: {cfg.replicas}
-  template:
-    spec:
-      containers:
-      - name: {svc}
-        image: mycompany/{svc}:latest
-        env:
-        - name: LOG_LEVEL
-          value: {cfg.log_level}
+  replicas: {get replicas env}
 "}
 in
 
-flatmap (\env map (\svc make_deployment svc env) services) environments
+map make_config envs
 ```
 
-**Deploy:**
+Result: 2 deployment files, one for each environment.
 
-```bash
-avon deploy k8s_generator.av --root ./manifests
-```
-
-Result: 15 YAML files organized by environment from one command.
-
-### Environment-Specific Secrets
+### Environment-Specific Config
 
 ```avon
 \env ? "dev"
 
 let config = {
-  dev:  { db_host: "localhost", debug: "true" },
-  prod: { db_host: "db.prod.internal", debug: "false" }
+  dev:  {host: "localhost", debug: "true"},
+  prod: {host: "db.prod", debug: "false"}
 } in
 
 let c = get config env in
-let db_password = env_var_or "DB_PASSWORD" "dev-password" in
 
-@.config/myapp/secrets.env {"
-    DB_HOST={c.db_host}
-    DB_PASSWORD={db_password}
-    DEBUG={c.debug}
+@config.env {"
+HOST={c.host}
+DEBUG={c.debug}
 "}
-```
-
-### Template Replacement
-
-```avon
-let template = read "email_template.txt" in
-let filled = fill_template template {
-  name: "Alice",
-  order_id: "12345", 
-  status: "shipped"
-} in
-@emails/alice.txt {"{filled}"}
 ```
 
 ### CI/CD Pipelines
@@ -451,73 +415,39 @@ let filled = fill_template template {
 Generate CI configs for multiple repositories:
 
 ```avon
-let repos = ["frontend", "backend", "mobile"] in
-map (\repo @.github/workflows/{repo}-ci.yml {"
-  name: {repo} CI
-  on: [push, pull_request]
-  jobs:
-    test:
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v2
-        - run: npm test
+let repos = ["frontend", "backend"] in
+
+map (\repo @{repo}-ci.yml {"
+name: {repo} CI
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm test
 "}) repos
 ```
 
-### Platform-Specific Code Generation
+### Platform-Specific Config
 
 Generate platform-specific configs using the `os` builtin:
 
 ```avon
-# Auto-detect current platform (returns "linux", "macos", or "windows")
 let platform = os in
 
-let platform_config = {
-  linux:   { shell: "/bin/bash",    home: "/home",       pathsep: ":" },
-  macos:   { shell: "/bin/zsh",     home: "/Users",      pathsep: ":" },
-  windows: { shell: "powershell",   home: "C:\\Users",   pathsep: ";" }
+let config = {
+  linux: {shell: "/bin/bash", pathsep: ":"},
+  macos: {shell: "/bin/zsh", pathsep: ":"},
+  windows: {shell: "powershell", pathsep: ";"}
 } in
 
-let includes = {
-  linux:   "#include <unistd.h>\n#include <pthread.h>",
-  windows: "#include <windows.h>\n#include <process.h>",
-  macos:   "#include <unistd.h>\n#include <mach/mach.h>"
-} in
+let c = get config platform in
 
-let cfg = get platform_config platform in
-
-[
-  @platform.h {"
-    #ifndef PLATFORM_H
-    #define PLATFORM_H
-
-    /* Auto-generated for {platform} */
-    {get includes platform}
-
-    #define PLATFORM_NAME \"{platform}\"
-    #define DEFAULT_SHELL \"{cfg.shell}\"
-
-    #endif
-  "},
-
-  @build_config.env {"
-    # Build configuration for {platform}
-    PLATFORM={platform}
-    SHELL={cfg.shell}
-    HOME_BASE={cfg.home}
-    PATH_SEPARATOR={cfg.pathsep}
-  "}
-]
-```
-
-**Deploy:**
-
-```bash
-# For current OS
-avon deploy platform.av --root ./build
-
-# For specific OS (override via CLI)
-avon deploy platform.av --root ./build -platform windows
+@platform-config.env {"
+PLATFORM={platform}
+SHELL={c.shell}
+PATH_SEP={c.pathsep}
+"}
 ```
 
 ---
@@ -608,31 +538,26 @@ avon eval examples/docker_compose_gen.av
 
 ## Language Basics
 
-**Variables:**
+**Variables and functions:**
 
 ```avon
 let port = 8080 in
-let host = "localhost" in
-```
-
-**Functions:**
-
-```avon
 let make_url = \svc \p {"http://{svc}:{p}"} in
+make_url "api" port  # Returns: http://api:8080
 ```
 
-**Dictionaries:**
+**Dictionaries with dot notation:**
 
 ```avon
-let config = {host: host, port: port} in
-config.port  # Access with dot notation
+let config = {host: "localhost", port: 8080} in
+config.port  # Returns: 8080
 ```
 
 **Lists and map:**
 
 ```avon
 let services = ["auth", "api", "web"] in
-map (\s make_url s config.port) services
+map (\s {"http://{s}:8080"}) services
 ```
 
 **Conditionals:**
@@ -646,15 +571,15 @@ if env == "prod" then "3 replicas" else "1 replica"
 
 ```avon
 let math = import "math_lib.av" in
-math.double 21  # Returns 42
+math.double 21  # Returns: 42
 ```
 
 **Generate files:**
 
 ```avon
 @config.yml {"
-  port: {port}
-  debug: {if env == "prod" then "false" else "true"}
+port: 8080
+debug: true
 "}
 ```
 
@@ -680,26 +605,6 @@ concat: type mismatch: expected String, found Number on line 10
 | `debug value` | Pretty-print value structure |
 | `assert condition value` | Validate conditions early |
 | `--debug` flag | Show lexer/parser/evaluator output |
-
----
-
-## Quality & Testing
-
-- **500+ tests passing** — Unit tests, integration tests, and working examples
-- **Clear error messages** — Line numbers and context for all errors
-- **Type-safe** — Runtime type checking prevents deployment errors
-- **Single binary** — No dependencies, easy deployment
-- **Production-ready** — Comprehensive error handling
-
-## Contributing
-
-**Report issues or request features** on GitHub Issues
-
-**Share your Avon programs** in GitHub Discussions
-
-**Submit pull requests** — See `examples/` directory for coding style
-
----
 
 ## Getting Started
 
