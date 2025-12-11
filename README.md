@@ -8,6 +8,7 @@ Avon is a functional language for generating and deploying any text file. Add va
 - **Language agnostic** — Transform any text format
 - **Functional programming** — Variables, functions, map/filter/fold, type safety
 - **Built-in deployment** — Files know where they belong
+- **Atomic deployment** — All-or-nothing, no partial failures
 - **Git integration** — Share templates, deploy anywhere
 - **Extensible** — Combine primitives in creative ways
 
@@ -104,6 +105,17 @@ When you run `avon deploy program.av`, Avon evaluates your program and:
 
 3. **List of FileTemplates** — Writes them all
    - Generate multiple files from one program
+
+### Atomic Deployment
+
+Deployment is atomic — if any error occurs during evaluation or validation, **no files are written**.
+
+**Three-phase process:**
+1. **Evaluate** — Run your program and collect FileTemplates
+2. **Validate** — Check all paths, permissions, and directories
+3. **Write** — Only if phases 1 & 2 succeed, write all files
+
+If evaluation fails (type errors, undefined variables), validation fails (permissions, path issues), or the result isn't deployable, Avon aborts with zero files written. This prevents partial deployments that leave your system in an inconsistent state
 
 **Example outputs:**
 
@@ -253,6 +265,10 @@ Built-in functions for string operations, list operations, formatting, date/time
 ### Runtime Type Safety
 
 Avon won't deploy if there's a type error. Catch issues before deployment.
+
+### Atomic Deployment
+
+All-or-nothing deployment. If any error occurs during evaluation or validation, no files are written. No partial deployments, no inconsistent state.
 
 ### Any Text Format
 
