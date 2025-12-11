@@ -4690,8 +4690,6 @@ let sum = fold (\acc \n acc + n) 0 [1, 2, 3, 4, 5] in
 sum  # 15
 ```
 
-See [WHY_NO_RECURSION.md](./WHY_NO_RECURSION.md) for more details.
-
 ### Gotcha 5: Template Braces Can Be Confusing
 
 When you mix templates with different brace counts, it's easy to get confused:
