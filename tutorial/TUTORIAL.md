@@ -4,7 +4,7 @@ Welcome to Avon! A template language for people who have better things to do tha
 
 Avon is designed for developers who are tired of copy-pasting. Whether you're building Kubernetes manifests, setting up CI/CD pipelines, or generating boilerplate code, Avon turns repetitive tasks into elegant, maintainable code. Life's too short to manually update 47 YAML files.
 
-Avon is a general-purpose tool that handles everything from complex infrastructure projects to simple single-file configs. It's a workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 156 built-in utilities to any text format.
+Avon is a general-purpose tool that handles everything from complex infrastructure projects to simple single-file configs. It's a workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 129 built-in utilities to any text format.
 
 > Tip: Throughout this guide, look at the `examples/` directory for real-world use cases. Each example demonstrates practical Avon patterns you can adapt for your own projects.
 
@@ -219,7 +219,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Functions with All Defaults Still Return Functions
     - No Recursion – Use `fold` Instead
     - Template Braces Can Be Confusing
-    - `json_parse` Accepts File Paths AND JSON Strings
+    - `json_parse` Only Reads from Files
     - Lists in Templates Expand to Multiple Lines
     - `glob` Returns Paths, Not Contents
     - Import Evaluates the Entire File
@@ -339,11 +339,11 @@ let plugins = ["vim-fugitive", "vim-surround", "vim-commentary", "vim-repeat"] i
 
 When you interpolate a list in a template, each item appears on its own line. This eliminates copy-paste even in a single file.
 
-Language Agnostic: Avon works with any text format—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 156 built-in utilities to any file.
+Language Agnostic: Avon works with any text format—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 129 built-in utilities to any file.
 
 Runtime Type Safety: Avon won't deploy if there's a type error. No static types needed—if a type error occurs, deployment simply doesn't happen. Sleep soundly knowing your configs are valid. (Unlike that bash script you wrote at 2am.)
 
-Built-in Utilities: Avon comes with 156 built-in functions for string operations, list operations (map, filter, fold, sort, unique, range), formatting (16 functions), date/time operations, JSON manipulation, file I/O, and HTML/Markdown helpers.
+Built-in Utilities: Avon comes with 129 built-in functions for string operations, list operations (map, filter, fold, sort, unique, range), formatting (16 functions), date/time operations, JSON manipulation, file I/O, and HTML/Markdown helpers.
 
 Debugging Tools: Use `trace`, `debug`, `assert`, and the `--debug` flag to troubleshoot quickly.
 
@@ -1612,20 +1612,20 @@ merged
 | `exists path` | String or Path | Bool | Check if file exists |
 | `basename path` | String or Path | String | Filename from path (e.g., `"config/app.json"` → `"app.json"`) |
 | `dirname path` | String or Path | String | Directory from path (e.g., `"config/app.json"` → `"config"`) |
-| `json_parse path_or_content` | String | Dict/List | Parse JSON (tries file path first, then content) |
-| `yaml_parse path_or_content` | String | Dict/List | Parse YAML (tries file path first, then content) |
+| `json_parse file_path` | String | Dict/List | Parse JSON from file |
+| `yaml_parse file_path` | String | Dict/List | Parse YAML from file |
 | `import path` | String | Any | Evaluate Avon file and return result |
 
-#### Key Behavior: json_parse Accepts File Paths OR Content
+#### Key Behavior: json_parse Only Reads from Files
 
-`json_parse` is special—it tries to read as a file path first, then falls back to parsing as JSON content:
+`json_parse` (and `yaml_parse`, `toml_parse`, `csv_parse`) only read from file paths, not from strings:
 
 ```avon
 # Pass a file path - json_parse reads and parses it
 json_parse "config.json"              # Success: reads file, parses JSON
 
-# Pass JSON content directly - json_parse tries to read as file (fails)
-json_parse "{\"key\": \"value\"}"     # Error: file not found
+# Pass JSON content directly - json_parse tries to read as file (errors)
+json_parse "{\"key\": \"value\"}"     # Error: tries to read file named '{"key": "value"}'
 
 # Glob returns paths, which json_parse handles correctly
 let files = glob "*.json" in
@@ -2184,7 +2184,7 @@ This generates `config-dev.yml` and `config-prod.yml`.
 
 ## Builtin Functions
 
-Avon comes with a toolkit of **156 built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
+Avon comes with a toolkit of **129 built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
 
 > **Full Reference:** For a complete list of all built-in functions, see [BUILTIN_FUNCTIONS.md](./BUILTIN_FUNCTIONS.md).
 
@@ -2378,10 +2378,10 @@ Note: `markdown_to_html` accepts both strings and templates, automatically conve
 | Function | Description | Example |
 |----------|-------------|---------|
 | `import path` | Load and evaluate another `.av` file | `import "lib.av"` |
-| `json_parse file_or_json` | Parse JSON from file path or string | `json_parse "config.json"` or `json_parse "{\\"x\\": 1}"` |
+| `json_parse file_path` | Parse JSON from a file | `json_parse "config.json"` |
 | `os` | Get OS string | `os` → `"linux"`, `"macos"`, `"windows"` |
 
-**Important note on `json_parse`:** This function accepts both file paths (as strings) and JSON content. It tries to read the input as a file path first; if the file doesn't exist, it will error (rather than trying to parse as JSON content). For explicit file reading, use `readfile` followed by `json_parse`.
+**Important note on `json_parse`:** This function only accepts file paths, not JSON strings. It reads the file at the given path and parses its contents as JSON. If you have JSON content in a string variable, you'll need to write it to a file first before using `json_parse`.
 
 **The `import` Function and Modularity:**
 
@@ -2478,7 +2478,7 @@ fold
   config_files
 ```
 
-Note: `json_parse` automatically reads the file if given a path, so you don't need to call `readfile` first. It accepts both file paths and JSON content strings (but tries to read as a file first).
+Note: `json_parse` reads the file directly from the path, so you don't need to call `readfile` first. It only accepts file paths, not JSON strings.
 
 This is useful for:
 - Loading environment-specific configs that override defaults
@@ -2758,15 +2758,13 @@ let helix_config = import_git "pyrotek45/config/helix.av" "f75d99c0b6803495a86bb
 - **Parse error**: If downloaded file has syntax errors, shows the error with context
 - **Network error**: Connection problems are reported clearly
 
-**Example with error handling:**
-```avon
-let config = try
-  import_git "pyrotek45/config/helix.av" "f75d99c0b6803495a86bb0e4ec0ef014a5c57263"
-catch \err
-  {error: err}
-in
-config
-```
+**Note:** Avon does not have try/catch syntax. If `import_git` encounters an error (404, network issue, parse error), it will fail immediately with a descriptive error message. For safe imports, ensure:
+1. The commit hash is correct and exists in the repository
+2. The file path is valid relative to the repository root
+3. The file has valid Avon syntax
+4. You have network connectivity to GitHub
+
+See `examples/import_git_error_handling.av` for examples of error scenarios.
 
 #### Method 6: Merge Multiple Configs
 
@@ -4708,21 +4706,16 @@ When you mix templates with different brace counts, it's easy to get confused:
 @f.txt {{"Object: { key: {{ val }} }"}}  # Outputs: Object: { key: val }
 ```
 
-### Gotcha 6: `json_parse` Accepts File Paths AND JSON Strings
+### Gotcha 6: `json_parse` Only Reads from Files
 
-`json_parse` is clever—it can take either a file path or a JSON string. This can cause confusion:
+`json_parse` reads JSON from files, not from JSON strings directly:
 
 ```avon
-json_parse "settings.json"     # Reads file and parses JSON
-json_parse "{\"name\": \"Alice\"}"  # Parses JSON string directly
+json_parse "settings.json"     # ✓ Reads file and parses JSON
+json_parse "{\"name\": \"Alice\"}"  # ✗ Tries to read file "{\"name\": \"Alice\"}" (errors)
 ```
 
-If your JSON looks like a file path, it will try to read it as a file:
-```avon
-json_parse "[1, 2, 3]"  # Tries to read file "[1, 2, 3]" (won't work)
-```
-
-**Solution:** Be aware of this dual behavior. If you're parsing a JSON string that looks like a path, `json_parse` will try to read a file first. Usually this isn't a problem because most JSON strings don't look like valid file paths.
+**Solution:** `json_parse` always treats its argument as a file path. If you need to parse a JSON string from memory or another source, use `readfile` first to get the content, then pass the file path to `json_parse`. For parsing JSON strings directly in memory, you would need to write the string to a temporary file first (which is rarely needed).
 
 ### Gotcha 7: Lists in Templates Expand to Multiple Lines
 

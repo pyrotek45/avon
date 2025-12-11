@@ -616,10 +616,10 @@ pub fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("walkdir", "walkdir :: String|Path -> [String]\n  List all files in directory recursively.\n  Example: walkdir \"src\" -> [\"src/file1.txt\", \"src/file2.txt\"]"),
 
         // Data Utilities
-        ("json_parse", "json_parse :: String -> (Dict|List|a)\n  Parse JSON string.\n  Returns Dict for objects, List for arrays, or primitive values.\n  Example: json_parse '{\"a\": 1}' -> {a: 1}\n  Example: json_parse '[1, 2]' -> [1, 2]"),
-        ("yaml_parse", "yaml_parse :: String -> (Dict|List|a)\n  Parse YAML string.\n  Returns Dict for mappings, List for sequences, or primitive values.\n  Example: yaml_parse \"a: 1\" -> {a: 1}"),
-        ("toml_parse", "toml_parse :: String -> (Dict|List|a)\n  Parse TOML string.\n  Returns Dict for tables, List for arrays, or primitive values.\n  Example: toml_parse \"a = 1\" -> {a: 1}"),
-        ("csv_parse", "csv_parse :: String -> [Dict|[String]]\n  Parse CSV file path.\n  Returns list of Dicts (if headers exist) or list of lists (if no headers).\n  Example: csv_parse \"data.csv\" -> [{name: \"Alice\", age: \"30\"}, ...]"),
+        ("json_parse", "json_parse :: String -> (Dict|List|a)\n  Parse JSON from file.\n  Returns Dict for objects, List for arrays, or primitive values.\n  Example: json_parse \"config.json\" -> {a: 1}\n  Note: Only reads from files, not JSON strings."),
+        ("yaml_parse", "yaml_parse :: String -> (Dict|List|a)\n  Parse YAML from file.\n  Returns Dict for mappings, List for sequences, or primitive values.\n  Example: yaml_parse \"config.yaml\" -> {a: 1}\n  Note: Only reads from files, not YAML strings."),
+        ("toml_parse", "toml_parse :: String -> (Dict|List|a)\n  Parse TOML from file.\n  Returns Dict for tables, List for arrays, or primitive values.\n  Example: toml_parse \"config.toml\" -> {a: 1}\n  Note: Only reads from files, not TOML strings."),
+        ("csv_parse", "csv_parse :: String -> [Dict|[String]]\n  Parse CSV from file.\n  Returns list of Dicts (if headers exist) or list of lists (if no headers).\n  Example: csv_parse \"data.csv\" -> [{name: \"Alice\", age: \"30\"}, ...]\n  Note: Only reads from files, not CSV strings."),
         ("import", "import :: String|Path -> Value\n  Import and evaluate another Avon file.\n  Example: import \"lib.av\" -> value from lib.av\n  Note: Strings can be absolute (safe for reading). Path literals (@...) must be relative."),
 
         // Type Checking
@@ -1007,14 +1007,17 @@ pub fn print_builtin_docs() {
     println!("Data Utilities:");
     println!("---------------");
     println!("  {:<18} :: {}", "json_parse", "String -> (Dict|List|a)");
-    println!("                     (Returns Dict for objects, List for arrays)");
+    println!("                     (Reads from file, returns Dict for objects, List for arrays)");
     println!("  {:<18} :: {}", "yaml_parse", "String -> (Dict|List|a)");
-    println!("                     (Returns Dict for mappings, List for sequences)");
+    println!("                     (Reads from file, returns Dict for mappings, List for sequences)");
     println!("  {:<18} :: {}", "toml_parse", "String -> (Dict|List|a)");
-    println!("                     (Returns Dict for tables, List for arrays)");
+    println!("                     (Reads from file, returns Dict for tables, List for arrays)");
     println!("  {:<18} :: {}", "csv_parse", "String -> [Dict|[String]]");
-    println!("                     (Returns list of Dicts if headers exist, else list of lists)");
+    println!("                     (Reads from file, returns list of Dicts if headers, else list of lists)");
     println!("  {:<18} :: {}", "import", "String|Path -> Value");
+    println!();
+    println!("  Note: Parse functions (json_parse, yaml_parse, toml_parse, csv_parse) only read from files.");
+    println!("        They do not parse strings directly. Pass a file path, not file content.");
     println!();
 
     // Type Checking & Introspection

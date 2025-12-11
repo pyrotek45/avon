@@ -587,12 +587,6 @@ Debugging tools:
 - Examples: Share your Avon programs in discussions
 - Contributing: PRs welcome! See examples/ for coding style
 
-## License
-
-MIT — Use it however you want. We're not lawyers, and this isn't legal advice. But also, it's MIT, so go nuts.
-
----
-
 ## Get Started Now
 
 ```bash
