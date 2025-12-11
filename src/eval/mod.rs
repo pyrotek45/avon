@@ -828,9 +828,33 @@ fn eval_with_depth(
 
                     let res = match op {
                         Token::Mul(_) => Value::Number(lnumber * rnumber),
-                        Token::Div(_) => Value::Number(lnumber / rnumber),
+                        Token::Div(_) => {
+                            // Check for division by zero
+                            let is_zero = matches!(rnumber, Number::Int(0) | Number::Float(0.0));
+                            if is_zero {
+                                return Err(EvalError::new(
+                                    "division by zero".to_string(),
+                                    None,
+                                    None,
+                                    line,
+                                ));
+                            }
+                            Value::Number(lnumber / rnumber)
+                        }
                         Token::Sub(_) => Value::Number(lnumber - rnumber),
-                        Token::Mod(_) => Value::Number(lnumber % rnumber),
+                        Token::Mod(_) => {
+                            // Check for modulo by zero
+                            let is_zero = matches!(rnumber, Number::Int(0) | Number::Float(0.0));
+                            if is_zero {
+                                return Err(EvalError::new(
+                                    "modulo by zero".to_string(),
+                                    None,
+                                    None,
+                                    line,
+                                ));
+                            }
+                            Value::Number(lnumber % rnumber)
+                        }
                         _ => unreachable!(),
                     };
                     Ok(res)
@@ -1279,25 +1303,29 @@ fn eval_with_depth(
 
             // Generate range
             let mut result = Vec::new();
-            if step_num > 0 {
-                let mut current = start_num;
-                while current <= end_num {
-                    result.push(Value::Number(Number::Int(current)));
-                    current += step_num;
+            match step_num.cmp(&0) {
+                std::cmp::Ordering::Greater => {
+                    let mut current = start_num;
+                    while current <= end_num {
+                        result.push(Value::Number(Number::Int(current)));
+                        current += step_num;
+                    }
                 }
-            } else if step_num < 0 {
-                let mut current = start_num;
-                while current >= end_num {
-                    result.push(Value::Number(Number::Int(current)));
-                    current += step_num;
+                std::cmp::Ordering::Less => {
+                    let mut current = start_num;
+                    while current >= end_num {
+                        result.push(Value::Number(Number::Int(current)));
+                        current += step_num;
+                    }
                 }
-            } else {
-                return Err(EvalError::new(
-                    "range step cannot be zero",
-                    None,
-                    None,
-                    line,
-                ));
+                std::cmp::Ordering::Equal => {
+                    return Err(EvalError::new(
+                        "range step cannot be zero",
+                        None,
+                        None,
+                        line,
+                    ));
+                }
             }
 
             Ok(Value::List(result))

@@ -91,6 +91,78 @@ Creates `./output/hello.txt` with the generated content.
 
 ---
 
+## Built-in Documentation
+
+Avon includes comprehensive built-in documentation for all 40+ functions. The `avon doc` command is one of its most powerful features, enabling developers to quickly learn the tool without leaving the terminal.
+
+**Look up any function:**
+
+```bash
+avon doc map
+```
+
+Output:
+```
+map :: (a -> b) -> [a] -> [b]
+  Transform each item in a list by applying a function.
+  
+  Arguments:
+    1. Function to apply to each element
+    2. List to transform
+  
+  Example: map (\x x * 2) [1, 2, 3] -> [2, 4, 6]
+           Double each number in the list
+  
+  Example: map upper ["hello", "world"] -> ["HELLO", "WORLD"]
+           Convert each string to uppercase
+```
+
+**Browse functions by category:**
+
+```bash
+avon doc string      # All string functions
+avon doc list        # All list functions  
+avon doc dict        # All dictionary functions
+avon doc math        # All math functions
+avon doc io          # All I/O functions
+avon doc template    # All template functions
+```
+
+Example output for `avon doc string`:
+```
+String Functions:
+─────────────────
+Basic Operations:
+concat           Concatenate two strings
+upper            Convert to uppercase
+lower            Convert to lowercase
+trim             Remove leading/trailing whitespace
+...
+```
+
+**Show all available documentation:**
+
+```bash
+avon doc             # Complete function reference
+```
+
+**Quick workflow:**
+
+```bash
+# 1. Browse category
+avon doc list
+
+# 2. Look up specific function
+avon doc filter
+
+# 3. Test it immediately
+avon run 'filter (\x x > 2) [1, 2, 3, 4, 5]'
+```
+
+This tight feedback loop makes learning Avon fast and intuitive. No need to switch to a browser or search through docs—everything you need is in the terminal.
+
+---
+
 ## How Deployment Works
 
 When you run `avon deploy program.av`, Avon evaluates your program and:
@@ -140,7 +212,7 @@ avon eval program.av              # Preview output (no files written)
 avon deploy program.av --root ./  # Write files to disk
 avon run 'expr'                   # Evaluate expression directly
 avon repl                         # Interactive exploration
-avon doc                          # Built-in function reference
+avon doc [function|category]      # Built-in function reference (see above)
 ```
 
 ---

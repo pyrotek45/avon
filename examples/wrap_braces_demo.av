@@ -1,0 +1,99 @@
+# Wrapping Variables in Braces - Demonstration
+# 
+# This example shows how to generate literal braces around interpolated values
+# using simple wrapping functions and string concatenation.
+#
+# KEY CONCEPTS:
+# 1. Wrap function: \x "{" + x + "}"
+#    - Uses single + operator for string concatenation (not ++ or concat)
+#    - Returns a string with braces around the input
+#
+# 2. Template brace levels:
+#    - Single {" "}: interpolate with {x}
+#    - Double {{" "}}: interpolate with {{x}}, single braces are literal
+#    - Triple {{{" "}}}: interpolate with {{{x}}}, double braces are literal
+#
+# 3. Complex interpolations:
+#    - Pre-compute complex expressions before the template
+#    - This avoids nested parentheses issues in template interpolations
+#
+# 4. Use cases:
+#    - Terraform variables: {variable_name}
+#    - JSON templates: {"field": {placeholder}}
+#    - GitHub Actions: ${{ github.ref }}
+#    - Shell scripts: ${VARIABLE}
+
+# Basic wrap function - wraps a value in single braces
+let wrap = \x "{" + x + "}" in
+
+# Example 1: Generate a list of template placeholders
+let vars = ["name", "email", "age"] in
+
+# Example 2: JSON with template placeholders
+let fields = ["name", "email", "age"] in
+
+# Example 3: Terraform variable configuration
+let tf_vars = ["project_id", "region", "instance_type"] in
+
+# Example 4: GitHub Actions workflow with double braces
+let gh_vars = ["ref", "sha", "repository"] in
+
+# Example 5: Configuration with placeholders
+let config_vars = ["host", "port", "ssl_cert"] in
+let config_lines = join (map (\v v + " = " + (wrap v)) config_vars) "\n" in
+
+# Example 6: Shell script with variable references
+let script_vars = ["USER", "HOME", "PATH"] in
+let script_lines = join (map (\v "echo \"" + v + " = $" + (wrap v) + "\"") script_vars) "\n" in
+
+# Pre-compute some complex interpolations
+let json_content = join (map (\f "  \"" + f + "\": " + (wrap f)) fields) ",\n" in
+let tf_content = join (map (\v "    " + v + " = " + (wrap v)) tf_vars) ",\n" in
+let gh_env = join (map (\v "  " + v + ": ${{ github." + v + " }}") gh_vars) "\n" in
+
+# Return all file templates
+[
+  @example1_placeholders.txt {"
+Example 1: Basic Placeholders
+---------------------------------
+{map wrap vars}
+"},
+
+  @example2_template.json {{"
+{
+{{json_content}}
+}
+"}},
+
+  @example3_terraform.tf {{"
+variable "config" {
+  type = map(string)
+  default = {
+{{tf_content}}
+  }
+}
+"}},
+
+  @example4_workflow.yml {{{"
+name: CI Pipeline
+env:
+{{{gh_env}}}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Using refs {{{join gh_vars ", "}}}"
+"}}},
+
+  @example5_config.txt {"
+# Configuration file with variable placeholders
+{config_lines}
+"},
+
+  @example6_script.sh {"
+#!/bin/bash
+# Generated variable template
+{script_lines}
+"}
+]

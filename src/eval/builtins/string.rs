@@ -131,6 +131,14 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
         "repeat" => {
             let st = value_to_string_auto(&args[0], source, line)?;
             if let Value::Number(Number::Int(count)) = &args[1] {
+                if *count < 0 {
+                    return Err(EvalError::new(
+                        format!("repeat count must be non-negative, got {}", count),
+                        None,
+                        None,
+                        line,
+                    ));
+                }
                 Ok(Value::String(st.repeat(*count as usize)))
             } else {
                 Err(EvalError::type_mismatch(
@@ -145,6 +153,14 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let width = &args[1];
             let pad = value_to_string_auto(&args[2], source, line)?;
             if let Value::Number(Number::Int(w)) = width {
+                if *w < 0 {
+                    return Err(EvalError::new(
+                        format!("pad_left width must be non-negative, got {}", w),
+                        None,
+                        None,
+                        line,
+                    ));
+                }
                 let pad_char = pad.chars().next().unwrap_or(' ');
                 let result = format!("{:>width$}", st, width = *w as usize)
                     .replace(' ', &pad_char.to_string());
@@ -162,6 +178,14 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let width = &args[1];
             let pad = value_to_string_auto(&args[2], source, line)?;
             if let Value::Number(Number::Int(w)) = width {
+                if *w < 0 {
+                    return Err(EvalError::new(
+                        format!("pad_right width must be non-negative, got {}", w),
+                        None,
+                        None,
+                        line,
+                    ));
+                }
                 let pad_char = pad.chars().next().unwrap_or(' ');
                 let result = format!("{:<width$}", st, width = *w as usize)
                     .replace(' ', &pad_char.to_string());
@@ -177,6 +201,14 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
         "indent" => {
             let st = value_to_string_auto(&args[0], source, line)?;
             if let Value::Number(Number::Int(n)) = &args[1] {
+                if *n < 0 {
+                    return Err(EvalError::new(
+                        format!("indent spaces must be non-negative, got {}", n),
+                        None,
+                        None,
+                        line,
+                    ));
+                }
                 let indent_str = " ".repeat(*n as usize);
                 let lines: Vec<String> = st
                     .lines()

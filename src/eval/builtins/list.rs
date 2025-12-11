@@ -545,6 +545,19 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             match (start, end) {
                 (Value::Number(Number::Int(s)), Value::Number(Number::Int(e))) => {
                     if s <= e {
+                        // Check for excessively large ranges to prevent OOM
+                        let range_size = e.saturating_sub(*s).saturating_add(1);
+                        if range_size > 10_000_000 {
+                            return Err(EvalError::new(
+                                format!(
+                                    "range {} to {} is too large ({} items, max 10 million)",
+                                    s, e, range_size
+                                ),
+                                None,
+                                None,
+                                line,
+                            ));
+                        }
                         let result: Vec<Value> =
                             (*s..=*e).map(|i| Value::Number(Number::Int(i))).collect();
                         Ok(Value::List(result))
@@ -704,7 +717,17 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let k_val = &args[0];
             let list = &args[1];
             let k = match k_val {
-                Value::Number(Number::Int(i)) => *i as usize,
+                Value::Number(Number::Int(i)) => {
+                    if *i < 0 {
+                        return Err(EvalError::new(
+                            format!("permutations k must be non-negative, got {}", i),
+                            None,
+                            None,
+                            line,
+                        ));
+                    }
+                    *i as usize
+                }
                 _ => {
                     return Err(EvalError::type_mismatch(
                         "integer",
@@ -732,7 +755,17 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let k_val = &args[0];
             let list = &args[1];
             let k = match k_val {
-                Value::Number(Number::Int(i)) => *i as usize,
+                Value::Number(Number::Int(i)) => {
+                    if *i < 0 {
+                        return Err(EvalError::new(
+                            format!("combinations k must be non-negative, got {}", i),
+                            None,
+                            None,
+                            line,
+                        ));
+                    }
+                    *i as usize
+                }
                 _ => {
                     return Err(EvalError::type_mismatch(
                         "integer",

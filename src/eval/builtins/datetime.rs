@@ -85,13 +85,36 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let format_str = value_to_string_auto(&args[1], source, line)?;
 
             match DateTime::parse_from_rfc3339(&date_str) {
-                Ok(dt) => Ok(Value::String(dt.format(&format_str).to_string())),
+                Ok(dt) => {
+                    // Try formatting - catch panics from invalid format strings
+                    let formatted = std::panic::catch_unwind(|| dt.format(&format_str).to_string());
+                    match formatted {
+                        Ok(s) => Ok(Value::String(s)),
+                        Err(_) => Err(EvalError::new(
+                            format!("invalid date format string: '{}'", format_str),
+                            None,
+                            None,
+                            line,
+                        )),
+                    }
+                }
                 Err(_) => {
                     // Try parsing as naive datetime
                     match NaiveDateTime::parse_from_str(&date_str, "%Y-%m-%d %H:%M:%S") {
                         Ok(naive) => {
                             let local = Local.from_local_datetime(&naive).unwrap();
-                            Ok(Value::String(local.format(&format_str).to_string()))
+                            // Try formatting - catch panics from invalid format strings
+                            let formatted =
+                                std::panic::catch_unwind(|| local.format(&format_str).to_string());
+                            match formatted {
+                                Ok(s) => Ok(Value::String(s)),
+                                Err(_) => Err(EvalError::new(
+                                    format!("invalid date format string: '{}'", format_str),
+                                    None,
+                                    None,
+                                    line,
+                                )),
+                            }
                         }
                         Err(_) => Err(EvalError::new(
                             format!(

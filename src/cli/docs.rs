@@ -647,7 +647,7 @@ pub fn get_builtin_doc(func_name: &str) -> Option<String> {
 
         // Date/Time Operations
         ("now", "now :: String\n  Get current date and time in ISO 8601 format.\n  Example: now -> \"2024-03-15T14:30:45+00:00\"\n  Note: Returns RFC 3339 formatted string with timezone offset."),
-        ("date_format", "date_format :: String -> String -> String\n  Format a date string with a custom format.\n  First arg: ISO 8601 date string (from 'now' or 'date_parse')\n  Second arg: strftime format string\n  Example: date_format (now) \"%Y-%m-%d\" -> \"2024-03-15\"\n  Example: date_format (now) \"%B %d, %Y\" -> \"March 15, 2024\"\n  Common formats: %Y (year), %m (month), %d (day), %H (hour), %M (minute), %S (second)\n  See strftime documentation for all format codes."),
+        ("date_format", "date_format :: String -> String -> String\n  Format a date string with a custom format using strftime codes.\n  \n  Arguments:\n    1. ISO 8601 date string (from 'now', 'date_parse', or literal)\n    2. Format string with % codes\n  \n  Common format codes:\n    %Y - 4-digit year (2024)\n    %y - 2-digit year (24)\n    %m - Month number 01-12\n    %B - Full month name (December)\n    %b - Short month name (Dec)\n    %d - Day of month 01-31\n    %H - Hour 00-23 (24-hour)\n    %I - Hour 01-12 (12-hour)\n    %M - Minute 00-59\n    %S - Second 00-59\n    %p - AM/PM\n    %A - Full weekday (Wednesday)\n    %a - Short weekday (Wed)\n  \n  Examples:\n    date_format (now) \"%Y-%m-%d\" -> \"2024-12-11\"\n    date_format (now) \"%B %d, %Y\" -> \"December 11, 2024\"\n    date_format (now) \"%I:%M %p\" -> \"03:30 PM\"\n    date_format (now) \"%A, %B %d\" -> \"Wednesday, December 11\"\n  \n  Note: Invalid format codes will cause an error.\n        Use only standard strftime codes."),
         ("date_parse", "date_parse :: String -> String -> String\n  Parse a date string and return ISO 8601 format.\n  First arg: date string to parse\n  Second arg: strftime format string matching the input\n  Example: date_parse \"2024-03-15 14:30\" \"%Y-%m-%d %H:%M\" -> ISO 8601 string\n  Example: date_parse \"15/03/2024\" \"%d/%m/%Y\" -> ISO 8601 string\n  Returns: RFC 3339 formatted string for use with other date functions."),
         ("date_add", "date_add :: String -> String -> String\n  Add duration to a date.\n  First arg: ISO 8601 date string\n  Second arg: duration string (number + unit)\n  Units: s (seconds), m (minutes), h (hours), d (days), w (weeks), y (years)\n  Example: date_add (now) \"1d\" -> date 1 day from now\n  Example: date_add (now) \"2h\" -> date 2 hours from now\n  Example: date_add (now) \"30m\" -> date 30 minutes from now\n  Example: date_add (now) \"1w\" -> date 1 week from now"),
         ("date_diff", "date_diff :: String -> String -> Int\n  Calculate difference between two dates in seconds.\n  First arg: later date (ISO 8601)\n  Second arg: earlier date (ISO 8601)\n  Example: date_diff date1 date2 -> seconds difference\n  Returns: Positive number if first date is after second, negative if before."),
@@ -1011,7 +1011,9 @@ pub fn print_builtin_docs() {
     println!("  {:<18} :: {}", "json_parse", "String -> (Dict|List|a)");
     println!("                     (Reads from file, returns Dict for objects, List for arrays)");
     println!("  {:<18} :: {}", "yaml_parse", "String -> (Dict|List|a)");
-    println!("                     (Reads from file, returns Dict for mappings, List for sequences)");
+    println!(
+        "                     (Reads from file, returns Dict for mappings, List for sequences)"
+    );
     println!("  {:<18} :: {}", "toml_parse", "String -> (Dict|List|a)");
     println!("                     (Reads from file, returns Dict for tables, List for arrays)");
     println!("  {:<18} :: {}", "csv_parse", "String -> [Dict|[String]]");

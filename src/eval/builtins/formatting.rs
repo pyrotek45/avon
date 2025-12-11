@@ -52,6 +52,15 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     Number::Float(f) => *f as i64,
                 };
                 let formatted = if *w > 0 {
+                    // Limit width to reasonable value to prevent hang/OOM
+                    if *w > 100000 {
+                        return Err(EvalError::new(
+                            format!("format_int width {} is too large (max 100,000)", w),
+                            None,
+                            None,
+                            line,
+                        ));
+                    }
                     format!("{:0width$}", int_val, width = *w as usize)
                 } else {
                     format!("{}", int_val)
@@ -74,6 +83,15 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     Number::Float(f) => *f,
                 };
                 let formatted = if *p >= 0 {
+                    // Limit precision to reasonable value to prevent hang/OOM
+                    if *p > 100 {
+                        return Err(EvalError::new(
+                            format!("format_float precision {} is too large (max 100)", p),
+                            None,
+                            None,
+                            line,
+                        ));
+                    }
                     format!("{:.prec$}", float_val, prec = *p as usize)
                 } else {
                     format!("{}", float_val)
@@ -144,6 +162,15 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     Number::Float(f) => *f,
                 };
                 let formatted = if *p >= 0 {
+                    // Limit precision to reasonable value to prevent hang/OOM
+                    if *p > 100 {
+                        return Err(EvalError::new(
+                            format!("format_scientific precision {} is too large (max 100)", p),
+                            None,
+                            None,
+                            line,
+                        ));
+                    }
                     format!("{:.prec$e}", float_val, prec = *p as usize)
                 } else {
                     format!("{:e}", float_val)
@@ -354,6 +381,15 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     Number::Float(f) => *f,
                 };
                 let formatted = if *p >= 0 {
+                    // Limit precision to reasonable value to prevent hang/OOM
+                    if *p > 100 {
+                        return Err(EvalError::new(
+                            format!("format_percent precision {} is too large (max 100)", p),
+                            None,
+                            None,
+                            line,
+                        ));
+                    }
                     format!("{:.prec$}%", float_val * 100.0, prec = *p as usize)
                 } else {
                     format!("{}%", float_val * 100.0)
@@ -468,6 +504,15 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let text = &args[0];
             let width = &args[1];
             if let (Value::String(s), Value::Number(Number::Int(w))) = (text, width) {
+                const MAX_WIDTH: i64 = 100_000;
+                if *w > MAX_WIDTH {
+                    return Err(EvalError::new(
+                        format!("center width {} is too large (max {})", w, MAX_WIDTH),
+                        None,
+                        None,
+                        line,
+                    ));
+                }
                 let target_width = (*w).max(0) as usize;
                 if s.len() >= target_width {
                     Ok(Value::String(s.clone()))

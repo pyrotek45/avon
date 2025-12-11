@@ -117,20 +117,67 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             match (base, exp) {
                 (Value::Number(Number::Int(b)), Value::Number(Number::Int(e))) => {
                     if *e >= 0 {
-                        Ok(Value::Number(Number::Int(b.pow(*e as u32))))
+                        // Use checked_pow to avoid panic on overflow
+                        match b.checked_pow(*e as u32) {
+                            Some(result) => Ok(Value::Number(Number::Int(result))),
+                            None => {
+                                // Overflow: convert to float
+                                let result = (*b as f64).powi(*e as i32);
+                                if result.is_infinite() {
+                                    Err(EvalError::new(
+                                        format!("pow overflow: {}^{} is too large", b, e),
+                                        None,
+                                        None,
+                                        line,
+                                    ))
+                                } else {
+                                    Ok(Value::Number(Number::Float(result)))
+                                }
+                            }
+                        }
                     } else {
                         // Negative exponent requires float result
                         Ok(Value::Number(Number::Float((*b as f64).powi(*e as i32))))
                     }
                 }
                 (Value::Number(Number::Int(b)), Value::Number(Number::Float(e))) => {
-                    Ok(Value::Number(Number::Float((*b as f64).powf(*e))))
+                    let result = (*b as f64).powf(*e);
+                    if result.is_infinite() {
+                        Err(EvalError::new(
+                            format!("pow overflow: {}^{} is too large", b, e),
+                            None,
+                            None,
+                            line,
+                        ))
+                    } else {
+                        Ok(Value::Number(Number::Float(result)))
+                    }
                 }
                 (Value::Number(Number::Float(b)), Value::Number(Number::Int(e))) => {
-                    Ok(Value::Number(Number::Float(b.powi(*e as i32))))
+                    let result = b.powi(*e as i32);
+                    if result.is_infinite() {
+                        Err(EvalError::new(
+                            format!("pow overflow: {}^{} is too large", b, e),
+                            None,
+                            None,
+                            line,
+                        ))
+                    } else {
+                        Ok(Value::Number(Number::Float(result)))
+                    }
                 }
                 (Value::Number(Number::Float(b)), Value::Number(Number::Float(e))) => {
-                    Ok(Value::Number(Number::Float(b.powf(*e))))
+                    let result = b.powf(*e);
+                    if result.is_infinite() {
+                        Err(EvalError::new(
+                            format!("pow overflow: {}^{} is too large", b, e),
+                            None,
+                            None,
+                            line,
+                        ))
+                    } else {
+                        Ok(Value::Number(Number::Float(result)))
+                    }
                 }
                 _ => Err(EvalError::type_mismatch(
                     "two numbers",

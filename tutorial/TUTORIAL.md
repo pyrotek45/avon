@@ -2039,6 +2039,105 @@ Choose your template delimiter based on what braces appear in your output:
 
 The key insight: **level up your delimiter to make lower-level braces literal**.
 
+#### Using Functions to Wrap Variables in Braces
+
+Sometimes you need to generate literal braces **around interpolated values**. For example, when generating Terraform variables or template placeholders:
+
+**Problem:** You want output like `{variable_name}` where `variable_name` comes from a variable.
+
+**Solution:** Create a simple wrapping function using string concatenation:
+
+```avon
+# Define a wrap function
+let wrap = \x "{" + x + "}" in
+
+# Use it to generate braced placeholders
+let vars = ["name", "email", "age"] in
+{"
+Variables:
+{map wrap vars}
+"}
+```
+
+Output:
+```
+Variables:
+{name}
+{email}
+{age}
+```
+
+**Practical Example: Generating Terraform Variables**
+
+```avon
+let wrap = \x "{" + x + "}" in
+let vars = ["project_id", "region", "instance_type"] in
+
+@variables.tf {"
+variable "config" {
+  type = map(string)
+  default = {
+{join (map (\v "    " + v + " = " + (wrap v)) vars) ",\n"}
+  }
+}
+"}
+```
+
+Output:
+```terraform
+variable "config" {
+  type = map(string)
+  default = {
+    project_id = {project_id},
+    region = {region},
+    instance_type = {instance_type}
+  }
+}
+```
+
+**JSON Generation with Placeholders:**
+
+```avon
+let wrap = \x "{" + x + "}" in
+let fields = ["name", "email", "age"] in
+
+@template.json {"
+{
+{join (map (\v "  \"" + v + "\": " + (wrap v)) fields) ",\n"}
+}
+"}
+```
+
+Output:
+```json
+{
+  "name": {name},
+  "email": {email},
+  "age": {age}
+}
+```
+
+**Key Points:**
+- Use single `+` operator for string concatenation
+- Wrap function: `\x "{" + x + "}"`
+- Double wrap for double braces: `\x "{{" + x + "}}"`
+- Triple wrap for triple braces: `\x "{{{" + x + "}}}"`
+- This works because the function returns a string, which is then interpolated into the template
+
+#### Variable Brace Count (Advanced)
+
+The template delimiter can use **any number of braces**, not just 1-3:
+
+```avon
+# 4 braces
+let x = "value" in {{{{"Text: {{{{x}}}} and {{{literal}}} and {{double}}}}}}
+
+# 5 braces
+let y = "data" in {{{{{"Result: {{{{{y}}}}} and {{{{quad}}}} and {{{three}}}"}}}}}
+```
+
+The rule remains consistent: **interpolation uses the same number of braces as the template delimiter**, and all lower brace counts are treated as literals.
+
 See `tutorial/TEMPLATE_SYNTAX.md` for comprehensive documentation of the template system.
 
 ### Complex Interpolations
@@ -2186,9 +2285,25 @@ This generates `config-dev.yml` and `config-prod.yml`.
 
 Avon comes with a toolkit of **129 built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
 
+> **Quick Reference:** Use `avon doc` to look up any function instantly in your terminal. See [CLI Usage](#cli-usage) section for detailed documentation command examples.
+> 
 > **Full Reference:** For a complete list of all built-in functions, see [BUILTIN_FUNCTIONS.md](./BUILTIN_FUNCTIONS.md).
 
 These utilities work with any file format—whether you're generating hundreds of config files or just managing a single dotfile. Functions like `upper`, `lower`, `format_table`, `json_parse`, and `html_escape` help you manipulate text however you need.
+
+**Examples of using the doc command:**
+
+```bash
+# Look up any function
+avon doc map
+avon doc filter
+avon doc join
+
+# Browse by category
+avon doc string    # All string manipulation functions
+avon doc list      # All list operations
+avon doc dict      # All dictionary functions
+```
 
 ### String Operations
 
@@ -2953,12 +3068,109 @@ avon repl
 ```
 - Starts an interactive shell for exploring Avon
 
-**`doc` - Builtin Documentation:**
+**`doc` - Built-in Documentation:**
+
+The `doc` command is one of Avon's most powerful features for rapid learning. It provides comprehensive, searchable documentation for all 40+ built-in functions without leaving your terminal.
+
 ```bash
+# Show all available documentation
 avon doc
+
+# Look up a specific function
+avon doc map
+avon doc filter
+avon doc join
+
+# Browse functions by category
+avon doc string      # All string functions
+avon doc list        # All list functions  
+avon doc dict        # All dictionary functions
+avon doc math        # All math functions
+avon doc io          # All I/O functions
+avon doc template    # All template functions
+avon doc type        # All type functions
+avon doc logic       # All logic functions
 ```
-- Shows documentation for all builtin functions
-- Lists function signatures and descriptions
+
+**Example: Looking up `map`**
+
+```bash
+$ avon doc map
+```
+
+Output:
+```
+map :: (a -> b) -> [a] -> [b]
+  Transform each item in a list by applying a function.
+  
+  Arguments:
+    1. Function to apply to each element
+    2. List to transform
+  
+  Example: map (\x x * 2) [1, 2, 3] -> [2, 4, 6]
+           Double each number in the list
+  
+  Example: map upper ["hello", "world"] -> ["HELLO", "WORLD"]
+           Convert each string to uppercase
+  
+  Tip: Use with partially applied functions:
+       let double = map (\x x * 2) in
+       double [1, 2, 3]
+```
+
+**Example: Browsing by category**
+
+```bash
+$ avon doc string
+```
+
+Output:
+```
+String Functions:
+─────────────────
+Basic Operations:
+concat           Concatenate two strings
+upper            Convert to uppercase
+lower            Convert to lowercase
+trim             Remove leading/trailing whitespace
+length           Get length of string
+repeat           Repeat string n times
+
+Searching:
+contains         Check if string contains substring
+starts_with      Check if string starts with prefix
+ends_with        Check if string ends with suffix
+...
+```
+
+**Quick learning workflow:**
+
+```bash
+# 1. Browse a category to discover functions
+avon doc list
+
+# 2. Look up specific function documentation
+avon doc filter
+
+# 3. Test it immediately with 'run'
+avon run 'filter (\x x > 2) [1, 2, 3, 4, 5]'
+
+# 4. Use it in your program
+# (edit your .av file with the function you learned)
+
+# 5. Preview with eval
+avon eval myprogram.av
+
+# 6. Deploy when ready
+avon deploy myprogram.av --root ./output --force
+```
+
+This tight feedback loop makes learning Avon intuitive and fast. Each function includes:
+- **Type signature** - Shows parameter and return types
+- **Description** - What the function does
+- **Arguments** - Detailed parameter descriptions
+- **Examples** - Real code showing common usage patterns
+- **Tips** - Best practices and advanced usage
 
 **`version` - Version Information:**
 ```bash
@@ -4706,6 +4918,40 @@ When you mix templates with different brace counts, it's easy to get confused:
 @f.txt {{"Object: { key: {{ val }} }"}}  # Outputs: Object: { key: val }
 ```
 
+**Special case: Wrapping variables in braces**
+
+If you need to generate braces **around** interpolated values (e.g., `{variable_name}` where the variable holds the name), use a wrapping function:
+
+```avon
+# Problem: You want output like {name}, {email}, {age}
+# where the field names come from a list
+
+# Solution: Create a wrap function
+let wrap = \x "{" + x + "}" in
+let fields = ["name", "email", "age"] in
+
+@template.json {"
+{
+{join (map (\f "  \"" + f + "\": " + (wrap f)) fields) ",\n"}
+}
+"}
+```
+
+Output:
+```json
+{
+  "name": {name},
+  "email": {email},
+  "age": {age}
+}
+```
+
+This works because:
+1. The wrap function returns a string: `"{" + x + "}"`
+2. String concatenation uses single `+` operator 
+3. The resulting string is then interpolated into the template
+4. This technique generates template placeholders dynamically from data
+
 ### Gotcha 6: `json_parse` Only Reads from Files
 
 `json_parse` reads JSON from files, not from JSON strings directly:
@@ -4791,7 +5037,253 @@ This means the imported file could return anything—a dictionary, a function, a
 - `config_*.av` files return configuration dicts
 - `generate_*.av` files return FileTemplates or lists of FileTemplates
 
-### Gotcha 10: Avon is Single-Pass and Simple
+### Gotcha 10: Strings vs Templates – Two Different Types
+
+Avon has **two distinct types** for text data, and understanding the difference is crucial:
+
+#### Strings: `"..."` – Literal text with escape sequences
+
+```avon
+"Hello {name}!"       # Literal string: Hello {name}!
+"Line 1\nLine 2"      # Escape sequences work: prints on two lines
+typeof "text"         # String
+```
+
+**Strings:**
+- Use double quotes: `"..."`
+- Support escape sequences: `\n`, `\t`, `\\`, `\"`
+- Braces are literal (no interpolation)
+- Can be concatenated with `+`
+
+#### Templates: `{"..."}` – Interpolated expressions
+
+```avon
+let name = "Alice" in
+{"Hello {name}!"}     # Interpolates: Hello Alice!
+
+let x = 10 in
+{"x = {x}, double = {x * 2}"}  # x = 10, double = 20
+
+typeof {"text"}       # Template
+```
+
+**Templates:**
+- Use curly braces: `{"..."}`
+- Support interpolation: `{expr}` evaluates and inserts the result
+- Escape sequences are literal (no `\n` or `\t` processing)
+- Can be concatenated with `+`: `{"hello"} + {" world"}`
+
+#### Common Mistake: Using the Wrong Type
+
+```avon
+# ✗ Wrong: String doesn't interpolate
+let name = "Bob" in
+"Hello {name}!"  # Returns: Hello {name}!  (literal braces)
+
+# ✓ Correct: Template interpolates
+let name = "Bob" in
+{"Hello {name}!"}  # Returns: Hello Bob!
+```
+
+#### When to Use Each
+
+**Use Strings when:**
+- You need escape sequences (`\n`, `\t`)
+- You need string concatenation
+- You're building paths or simple text
+- You don't need variable interpolation
+
+```avon
+"Line 1\nLine 2\n"          # Escape sequences
+"Hello " + name + "!"        # Concatenation
+"/path/to/file.txt"          # Literal paths
+```
+
+**Use Templates when:**
+- You need to interpolate variables or expressions
+- You're generating code or config with dynamic values
+- You're using deployment templates `@file {...}`
+
+```avon
+{"Server: {host}:{port}"}                    # Interpolation
+{"Sum: {x + y}, Product: {x * y}"}          # Expressions
+@config.json {{"port": {port}}}             # Deployment templates
+```
+
+#### Type Coercion: Templates Auto-Convert for Functions
+
+Here's an important convenience feature: **templates are automatically coerced to strings** when passed to string functions:
+
+```avon
+# String functions accept templates:
+length {"hello"}                    # 5
+trim {"  spaces  "}                 # "spaces"
+split {"a,b,c"} ","                 # ["a", "b", "c"]
+concat {"template"} " string"       # "template string"
+
+# With interpolation:
+let x = 5 in
+length {"Value: {x}"}               # 8 (counts "Value: 5")
+```
+
+**But the `+` operator is strict** - no coercion:
+
+```avon
+{"Hello"} + {" world"}  # ✓ Template + Template works
+"Hello" + " world"      # ✓ String + String works
+
+{"Hello"} + " world"    # ✗ Error: cannot add Template and String
+"Hello" + {" world"}    # ✗ Error: cannot add String and Template
+```
+
+**Why the difference?**
+- Functions use **implicit coercion** for convenience (templates → strings)
+- Operators use **strict typing** to prevent subtle bugs
+- Use `concat` if you need to mix types: `concat {"template"} " string"`
+
+**Key Takeaway:** If you need interpolation, use templates `{"..."}`. If you need escape sequences, use strings `"..."`. String functions accept both and will coerce templates automatically.
+
+### Gotcha 11: Dict Literals Need No Spaces in Shell
+
+When using dicts at the command line, don't put spaces after colons:
+
+```bash
+# ✗ Wrong (causes timeout/hang due to shell brace expansion)
+avon run 'keys {a: 1, b: 2}'
+
+# ✓ Correct (no spaces after colons)
+avon run 'keys {a:1,b:2}'
+```
+
+**Why?** Bash performs brace expansion on `{a: 1}` before Avon sees it. Without spaces, bash treats it as a single token.
+
+**Inside .av files, spaces are fine:**
+```avon
+# In a .av file, this works perfectly:
+let config = {
+  host: "localhost",
+  port: 8080,
+  debug: true
+} in
+config
+```
+
+**Solution:** Only worry about this when passing dicts directly on the command line. In files, format however you like.
+
+### Gotcha 12: Operators Can't Be Used as Prefix Functions
+
+Unlike some functional languages, you can't use operators in prefix position:
+
+```avon
+(+ 1 2)     # ✗ Error: expected function, found unknown
+map (+ 1) [1, 2, 3]  # ✗ Won't work
+```
+
+Operators are **infix only** in Avon:
+
+```avon
+1 + 2       # ✓ Works
+```
+
+**Solution:** Use lambdas to wrap operators:
+```avon
+map (\x x + 1) [1, 2, 3]  # ✓ Returns [2, 3, 4]
+```
+
+### Gotcha 13: String Length Counts UTF-8 Bytes, Not Characters
+
+The `length` function returns UTF-8 byte count, not visual character count:
+
+```avon
+length "hello"    # 5 (ASCII, 1 byte per char)
+length "🌍"       # 4 (emoji is 4 bytes in UTF-8)
+length "世界"     # 6 (3 bytes per character)
+```
+
+**But `chars` works correctly:**
+```avon
+chars "🌍世界"  # ["🌍", "世", "界"] - 3 characters!
+```
+
+**Solution:** Use `length (chars str)` if you need character count:
+```avon
+let str = "Hello 🌍!" in
+length (chars str)  # 8 characters (including emoji)
+```
+
+### Gotcha 14: The `+` Operator Is Generic (But Type-Safe)
+
+The `+` operator works with multiple types for different operations:
+
+```avon
+# Numbers: addition
+5 + 10                    # 15
+
+# Strings: concatenation
+"hello" + " world"        # "hello world"
+
+# Templates: concatenation
+{"hello"} + {" world"}    # "hello world"
+
+# Lists: concatenation
+[1, 2] + [3, 4]          # [1, 2, 3, 4]
+```
+
+**But both operands must be the same type:**
+
+```avon
+"hello" + {"world"}      # ✗ Error: cannot add String and Template
+[1, 2] + "text"          # ✗ Error: cannot add List and String
+```
+
+**The `concat` function** is specific to strings and templates:
+
+```avon
+concat "hello" " world"  # Works with strings
+concat {"hello"} {" world"}  # Works with templates
+concat [1, 2] [3, 4]     # ✗ Error: expected string or template
+```
+
+**Practical tip:** Use `+` for most concatenation. Use `concat` when you need it as a function (e.g., with `fold` or `map`):
+
+### Gotcha 15: No Type Coercion (Be Explicit)
+
+Avon has strict typing with no implicit conversions:
+
+```avon
+"5" == 5        # ✗ Error: cannot compare String with Number
+"hello" + 5     # ✗ Error: cannot add String and Number
+if 1 then "yes" # ✗ Error: expected bool, found 1
+```
+
+**Why?** Type errors catch bugs early. If `if 1` worked, what about `if 0`? Explicit is better.
+
+**Solution:** Convert types explicitly:
+```avon
+to_string 5              # "5"
+to_int "42"              # 42
+to_string 1 + " item"    # "1 item"
+
+# For boolean conditions, use comparisons:
+if (length items) > 0 then "has items" else "empty"
+```
+
+### Gotcha 16: `readfile` Requires UTF-8
+
+Binary files will error when read with `readfile`:
+
+```avon
+readfile "image.png"  # ✗ Error: stream did not contain valid UTF-8
+```
+
+**Why?** Avon works with text, not arbitrary binary data.
+
+**Solution:** Avon is designed for text-based file generation. If you need binary file paths, use `glob` to get paths, not contents:
+```avon
+glob "images/*.png"  # ✓ Returns list of paths
+```
+
+### Gotcha 17: Avon is Single-Pass and Simple
 
 Avon intentionally doesn't have advanced features like:
 - Recursion (use `fold` instead)
