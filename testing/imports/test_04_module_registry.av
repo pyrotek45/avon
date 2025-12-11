@@ -1,0 +1,17 @@
+let modules = glob "test_imports/lib/*.av" in
+let registry = fold (\acc \f
+  let name = replace (basename f) ".av" "" in
+  let entry = {
+    path: f,
+    name: name,
+    exists: exists f
+  } in
+  set acc name entry
+) {} modules in
+{
+  test: "Test 4: Module registry with metadata",
+  success: (length (keys registry)) == 3,
+  modules_registered: length (keys registry),
+  has_math: has_key registry "math",
+  has_strings: has_key registry "strings"
+}

@@ -1,0 +1,50 @@
+# Advent of Code 2024 - Day 12: Paper Rolls (Forklift Access)
+# 
+# Counts the number of paper rolls that have fewer than 4 neighbors (@).
+# Neighbors are counted in the 8 adjacent cells (horizontal, vertical, diagonal).
+# A roll counts toward the answer if it's marked with @ and has < 4 neighbors.
+#
+# Example answer: 13 (for the provided 10x12 grid)
+#
+let input = "..@@.@@@@.
+@@@.@.@.@@
+@@@@@.@.@@
+@.@@@@..@.
+@@.@@@@.@@
+.@@@@@@@.@
+.@.@.@.@@@
+@.@@@.@@@@
+.@@@@@@@@.
+@.@.@@@.@." in
+let rows = split input "\n" in
+let grid = map chars rows in
+let h = length grid in
+let w = if h > 0 then length (head grid) else 0 in
+let at = \row \col
+  if row >= 0 && row < h && col >= 0 && col < w then
+    (nth col (nth row grid)) == "@"
+  else
+    false
+in
+
+let offsets = [
+  [-1, -1], [-1, 0], [-1, 1],
+  [0, -1],           [0, 1],
+  [1, -1],  [1, 0],  [1, 1]
+] in
+
+let neighbors = \r \c
+  count (\off
+    let dr = nth 0 off in
+    let dc = nth 1 off in
+    at (r + dr) (c + dc)
+  ) offsets
+in
+
+let positions = flatmap (\rr map (\cc [rr, cc]) (range 0 (w - 1))) (range 0 (h - 1)) in
+
+count (\pos
+  let r = nth 0 pos in
+  let c = nth 1 pos in
+  at r c && (neighbors r c) < 4
+) positions

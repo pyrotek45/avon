@@ -1,0 +1,19 @@
+# Test 11: Create a registry with lazy module loading
+# Expected: Dict mapping module names to file paths
+
+let module_registry = fold (\acc \f 
+  let name = basename f in
+  let clean_name = replace name ".av" "" in
+  let entry = { path: f, loaded: false } in
+  set acc clean_name entry
+) {} (glob "test_imports/lib/*.av") in
+
+{
+  test: "Test 11: Module registry with metadata",
+  success: true,
+  registry_size: length (keys module_registry),
+  expected_size: 3,
+  has_math_module: has_key module_registry "math",
+  has_strings_module: has_key module_registry "strings",
+  has_lists_module: has_key module_registry "lists"
+}

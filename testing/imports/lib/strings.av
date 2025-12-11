@@ -1,0 +1,6 @@
+# String utilities
+{
+  upcase: \s upper s,
+  downcase: \s lower s,
+  capitalize: \s concat (upper (slice s 0 1)) (slice s 1 (length s))
+}

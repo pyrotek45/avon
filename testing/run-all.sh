@@ -107,6 +107,14 @@ else
     echo -e "${YELLOW}Note: Integration test suite not yet created${NC}"
 fi
 
+# 7. Run import and file I/O tests
+print_header "Import and File I/O Tests"
+if [ -f "$TESTING_DIR/imports/run-import-tests.sh" ]; then
+    run_test_suite "Import and File I/O Tests" "$TESTING_DIR/imports/run-import-tests.sh"
+else
+    echo -e "${YELLOW}Note: Import test suite not yet created${NC}"
+fi
+
 # Summary
 print_header "TEST SUMMARY"
 echo -e "${GREEN}Passed: $TESTS_PASSED${NC}"

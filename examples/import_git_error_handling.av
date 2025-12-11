@@ -1,0 +1,49 @@
+# import_git Error Handling Examples
+#
+# Demonstrates the robust error handling in import_git
+# These examples show what happens when things go wrong
+
+# ============================================
+# Example 1: Missing File (404 Error)
+# ============================================
+# Attempting to import a file that doesn't exist
+#
+# let bad_import = import_git "pyrotek45/config/nonexistent.av" "f75d99c0b6803495a86bb0e4ec0ef014a5c57263" in
+# 
+# Output: Error with debugging info showing:
+#   - owner: 'pyrotek45'
+#   - repo: 'config'
+#   - file path: 'nonexistent.av'
+#   - commit hash: 'f75d99c0b6803495a86bb0e4ec0ef014a5c57263'
+
+
+# ============================================
+# Example 2: Wrong Commit Hash
+# ============================================
+# Using a commit hash that doesn't exist
+#
+# let bad_commit = import_git "pyrotek45/config/helix.av" "0000000000000000000000000000000000000000" in
+#
+# Output: 404 error because the commit doesn't exist in the repository
+
+
+# ============================================
+# Example 3: Type Error - Wrong Argument Type
+# ============================================
+# Arguments must be strings, not numbers
+#
+# let type_error = import_git 123 "f75d99c0b6803495a86bb0e4ec0ef014a5c57263" in
+#
+# Output: Error stating first argument must be a string
+
+
+# ============================================
+# Example: Safe Import Result
+# ============================================
+# Successfully importing from GitHub
+
+let safe_import = import_git "pyrotek45/config/helix.av" "f75d99c0b6803495a86bb0e4ec0ef014a5c57263"
+in
+
+# Show that the import succeeded
+safe_import

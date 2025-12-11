@@ -42,12 +42,23 @@ impl Value {
             Value::Template(chunks, symbols) => {
                 let raw = render_chunks_to_string_with_depth(chunks, symbols, source, depth)
                     .unwrap_or_else(|e| format!("<eval error: {}>", e));
-                dedent(&raw)
+                // Only dedent at the outermost level (depth 0)
+                // All nested templates share the outermost template's baseline
+                if depth == 0 {
+                    dedent(&raw)
+                } else {
+                    raw
+                }
             }
             Value::Path(chunks, symbols) => {
                 let raw = render_chunks_to_string_with_depth(chunks, symbols, source, depth)
                     .unwrap_or_else(|e| format!("<eval error: {}>", e));
-                dedent(&raw)
+                // Only dedent at the outermost level
+                if depth == 0 {
+                    dedent(&raw)
+                } else {
+                    raw
+                }
             }
             Value::FileTemplate {
                 path: _p,
@@ -55,7 +66,12 @@ impl Value {
             } => {
                 let raw = render_chunks_to_string_with_depth(&t.0, &t.1, source, depth)
                     .unwrap_or_else(|e| format!("<eval error: {}>", e));
-                dedent(&raw)
+                // Only dedent at the outermost level
+                if depth == 0 {
+                    dedent(&raw)
+                } else {
+                    raw
+                }
             }
             Value::List(items) => {
                 let inner: Vec<String> = items

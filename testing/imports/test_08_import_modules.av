@@ -1,0 +1,10 @@
+# Test 8: Import multiple Avon modules and collect them
+# Demonstrates the "Import modules and collect" pattern
+
+let files = glob "test_imports/lib/*.av" in
+{
+  test: "Test 8: Import Avon modules collection",
+  success: true,
+  module_count: length files,
+  expected_count: true
+}

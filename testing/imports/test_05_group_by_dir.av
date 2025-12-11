@@ -1,0 +1,14 @@
+# Test 5: Load and count files in each config type
+# Expected: Dict with counts of each file type
+
+let config_files = glob "test_imports/config/*.json" in
+let lib_files = glob "test_imports/lib/*.av" in
+let data_files = glob "test_imports/data/*.json" in
+{
+  test: "Test 5: Count files by category",
+  success: true,
+  config_count: length config_files,
+  lib_count: length lib_files,
+  data_count: length data_files,
+  all_counts_correct: (length config_files) == 3 && (length lib_files) == 3 && (length data_files) == 2
+}

@@ -1,0 +1,19 @@
+# import_git Demo: Download Avon Configuration from GitHub
+#
+# This example demonstrates how to use import_git to download and evaluate
+# Avon code from public GitHub repositories using commit hashes for safety.
+#
+# The import_git function requires:
+# 1. Repository path: "owner/repo/path/to/file.av"
+# 2. Commit hash: Full 40-character SHA from git
+#
+# This ensures your code won't break if the remote file is accidentally modified.
+
+# Example 1: Import a helix editor configuration template
+let helix_config = import_git 
+  "pyrotek45/config/helix.av" 
+  "f75d99c0b6803495a86bb0e4ec0ef014a5c57263"
+in
+
+# The imported file contains a FileTemplate (@) that generates helix config
+helix_config

@@ -1,0 +1,6 @@
+# Math utilities
+{
+  add: \x \y x + y,
+  multiply: \x \y x * y,
+  double: \x x * 2
+}

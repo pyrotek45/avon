@@ -1,0 +1,11 @@
+# Test 1: Import all JSON files from a folder
+# Expected: Dict with filenames as keys and parsed JSON as values
+
+let json_files = glob "test_imports/config/*.json" in
+let result = fold (\acc \f set acc (basename f) (json_parse f)) {} json_files in
+{
+  test: "Test 1: Load JSON folder",
+  success: (has_key result "app.json") && (has_key result "database.json"),
+  files_found: length (keys result),
+  result: result
+}

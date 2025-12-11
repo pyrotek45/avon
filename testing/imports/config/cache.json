@@ -1,0 +1,5 @@
+{
+  "redis_host": "cache.local",
+  "redis_port": 6379,
+  "ttl": 3600
+}

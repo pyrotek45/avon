@@ -1,0 +1,14 @@
+# Test 9: Parse all JSON files and combine into single dataset
+# Expected: Single list combining all data from multiple JSON files
+
+let data_files = glob "test_imports/data/*.json" in
+let all_data = map (\f json_parse f) data_files in
+let flattened = flatten all_data in
+{
+  test: "Test 9: Combine multi-file JSON data",
+  success: true,
+  file_count: length data_files,
+  total_records: length flattened,
+  expected_files: 2,
+  expected_records: 5
+}

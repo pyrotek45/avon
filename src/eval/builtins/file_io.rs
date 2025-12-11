@@ -1,4 +1,4 @@
-//! File I/O functions: basename, dirname, exists, fill_template, import, json_parse, readfile, readlines, walkdir, glob, relpath, abspath, yaml_parse, toml_parse
+//! File I/O functions: basename, dirname, exists, fill_template, import, import_git, json_parse, readfile, readlines, walkdir, glob, relpath, abspath, yaml_parse, toml_parse
 
 use crate::common::{EvalError, Number, Value};
 use crate::eval::{eval, initial_builtins, value_to_path_string};
@@ -18,6 +18,7 @@ pub const NAMES: &[&str] = &[
     "fill_template",
     "glob",
     "import",
+    "import_git",
     "json_parse",
     "readfile",
     "readlines",
@@ -34,7 +35,7 @@ pub fn get_arity(name: &str) -> Option<usize> {
         | "json_parse" | "readfile" | "readlines" | "toml_parse" | "walkdir" | "yaml_parse" => {
             Some(1)
         }
-        "fill_template" | "relpath" => Some(2),
+        "fill_template" | "import_git" | "relpath" => Some(2),
         _ => None,
     }
 }
@@ -58,6 +59,154 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let mut env = initial_builtins();
             let val = eval(ast.program, &mut env, &data)?;
             Ok(val)
+        }
+        "import_git" => {
+            // Arguments: repo_path (owner/repo/path/to/file.av), commit_hash
+            if args.len() != 2 {
+                return Err(EvalError::new(
+                    "import_git expects 2 arguments: repo_path and commit_hash".to_string(),
+                    None,
+                    None,
+                    line,
+                ));
+            }
+
+            let git_path = match &args[0] {
+                Value::String(s) => s.clone(),
+                _ => return Err(EvalError::new(
+                    "import_git: first argument (repo_path) must be a string (e.g. 'owner/repo/file.av')".to_string(),
+                    None,
+                    None,
+                    line,
+                )),
+            };
+
+            let commit_hash = match &args[1] {
+                Value::String(s) => s.clone(),
+                _ => {
+                    return Err(EvalError::new(
+                        "import_git: second argument (commit_hash) must be a string".to_string(),
+                        None,
+                        None,
+                        line,
+                    ))
+                }
+            };
+
+            // Parse the git path: owner/repo/path/to/file
+            let parts: Vec<&str> = git_path.split('/').collect();
+            if parts.len() < 3 {
+                return Err(EvalError::new(
+                    format!(
+                        "import_git path must be 'owner/repo/path/to/file.av', got '{}'",
+                        git_path
+                    ),
+                    None,
+                    None,
+                    line,
+                ));
+            }
+
+            let owner = parts[0];
+            let repo = parts[1];
+            let file_path = parts[2..].join("/");
+
+            // Construct GitHub raw content URL using the specific commit hash
+            let url = format!(
+                "https://raw.githubusercontent.com/{}/{}/{}/{}",
+                owner, repo, commit_hash, file_path
+            );
+
+            // Download the file from GitHub with error handling
+            let response = ureq::get(&url).call().map_err(|e| {
+                let error_str = format!("{}", e);
+                let error_msg = if error_str.contains("404") || error_str.contains("not found") {
+                    format!(
+                        "import_git: file not found (404) at {}. Verify:\n  - owner: '{}'\n  - repo: '{}'\n  - file path: '{}'\n  - commit hash: '{}'",
+                        url, owner, repo, file_path, commit_hash
+                    )
+                } else if error_str.contains("timeout") || error_str.contains("time") {
+                    format!(
+                        "import_git: request timed out downloading from {}. Check network connection.",
+                        url
+                    )
+                } else {
+                    format!(
+                        "import_git: failed to download from {}: {}",
+                        url, e
+                    )
+                };
+                EvalError::new(error_msg, None, None, line)
+            })?;
+
+            let status = response.status();
+            if !status.is_success() {
+                let error_msg = if status == 404 {
+                    format!(
+                        "import_git: file not found (404) at {}. Check:\n  - owner: '{}'\n  - repo: '{}'\n  - file path: '{}'\n  - commit hash: '{}'",
+                        url, owner, repo, file_path, commit_hash
+                    )
+                } else {
+                    format!(
+                        "import_git: failed to fetch {} (HTTP {}). File may not exist at this commit.",
+                        url, status
+                    )
+                };
+                return Err(EvalError::new(error_msg, None, None, line));
+            }
+
+            let content = response.into_body().read_to_string().map_err(|e| {
+                EvalError::new(
+                    format!("import_git: failed to read response from {}: {}", url, e),
+                    None,
+                    None,
+                    line,
+                )
+            })?;
+
+            // Ensure we got actual content
+            if content.is_empty() {
+                return Err(EvalError::new(
+                    format!(
+                        "import_git: downloaded file is empty from {}. File may be corrupted or deleted.",
+                        url
+                    ),
+                    None,
+                    None,
+                    line,
+                ));
+            }
+
+            // Parse and evaluate the downloaded Avon code
+            let tokens = match tokenize(content.clone()) {
+                Ok(t) => t,
+                Err(e) => {
+                    return Err(EvalError::new(
+                        format!(
+                            "import_git: failed to parse downloaded file from {}. Syntax error: {}",
+                            url, e
+                        ),
+                        None,
+                        None,
+                        line,
+                    ))
+                }
+            };
+
+            let ast = parse(tokens);
+            let mut env = initial_builtins();
+            match eval(ast.program, &mut env, &content) {
+                Ok(val) => Ok(val),
+                Err(e) => Err(EvalError::new(
+                    format!(
+                        "import_git: failed to evaluate downloaded file from {}. Error: {}",
+                        url, e.message
+                    ),
+                    None,
+                    None,
+                    line,
+                )),
+            }
         }
         "readfile" => {
             let pathv = &args[0];

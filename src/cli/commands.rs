@@ -497,8 +497,9 @@ fn deploy_files(v: &Value, source: &str, source_name: &str, opts: &CliOptions) -
                         })
                         .collect::<std::path::PathBuf>();
 
-                    // Build the full path within the root
-                    let full_path = root_path.join(&normalized);
+                    // Build the full path within the root using the canonical root path
+                    // This ensures the path is absolute for proper security checks
+                    let full_path = canon_root.join(&normalized);
 
                     // SECURITY: Canonicalize the full path to resolve symlinks
                     // If the path doesn't exist yet, we need to check parent directories

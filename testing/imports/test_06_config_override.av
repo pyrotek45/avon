@@ -1,0 +1,25 @@
+# Test 6: Load configs and override with env vars
+# Expected: Dict with merged config values
+
+let default_config = {
+  db_host: "localhost",
+  db_port: 5432,
+  cache_enabled: true,
+  log_level: "info"
+} in
+
+let env_overrides = {
+  db_host: "production.db",
+  db_port: 3306
+} in
+
+let final_config = dict_merge default_config env_overrides in
+{
+  test: "Test 6: Config merge/override",
+  success: true,
+  final_host: get final_config "db_host",
+  final_port: get final_config "db_port",
+  host_correct: (get final_config "db_host") == "production.db",
+  port_correct: (get final_config "db_port") == 3306,
+  cache_preserved: (get final_config "cache_enabled") == true
+}

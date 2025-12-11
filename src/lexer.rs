@@ -152,12 +152,84 @@ pub fn chunk(stream: &mut Peekable<Chars<'_>>, line: &mut usize) -> Result<Token
                 // Capture the line where the expression content actually starts
                 let expr_line = *line;
                 let mut expr = String::new();
+
+                // Use a stack to track nested template structures
+                // Each entry is (brace_count, is_in_interpolation)
+                let mut template_stack: Vec<(usize, bool)> = Vec::new();
+
                 loop {
                     match stream.next() {
                         Some(c2) => {
                             if c2 == '\n' {
                                 *line += 1;
                             }
+
+                            // Check for quote which might start/end a nested template
+                            if c2 == '"' {
+                                // If we're tracking a template on the stack, check if this closes it
+                                if let Some((nested_open_count, in_interp)) =
+                                    template_stack.last_mut()
+                                {
+                                    if !*in_interp {
+                                        // We're looking at the closing quote of a nested template
+                                        // Check if the required closing braces follow
+                                        let mut matched_braces = 0;
+                                        for _ in 0..*nested_open_count {
+                                            if let Some('}') = stream.peek().cloned() {
+                                                stream.next();
+                                                matched_braces += 1;
+                                            } else {
+                                                break;
+                                            }
+                                        }
+
+                                        expr.push('"');
+                                        for _ in 0..matched_braces {
+                                            expr.push('}');
+                                        }
+
+                                        if matched_braces == *nested_open_count {
+                                            template_stack.pop();
+                                        }
+                                        continue;
+                                    }
+                                }
+                            }
+
+                            // Check for opening braces - could be nested template or interpolation
+                            if c2 == '{' {
+                                let mut brace_count_here = 1;
+                                while let Some('{') = stream.peek().cloned() {
+                                    stream.next();
+                                    expr.push('{');
+                                    brace_count_here += 1;
+                                }
+                                expr.push('{');
+
+                                // Skip whitespace
+                                let mut temp_stream = stream.clone();
+                                while let Some(&wsc) = temp_stream.peek() {
+                                    if wsc.is_whitespace() {
+                                        temp_stream.next();
+                                    } else {
+                                        break;
+                                    }
+                                }
+
+                                // Check what follows the braces
+                                match temp_stream.peek() {
+                                    Some('"') => {
+                                        // This is the start of a nested template
+                                        template_stack.push((brace_count_here, false));
+                                    }
+                                    _ => {
+                                        // This is just braces in an expression, not a template start
+                                        // Continue processing normally
+                                    }
+                                }
+                                continue;
+                            }
+
                             if c2 == '}' {
                                 // Count closing braces to match interpolation terminator
                                 let mut got = 1;
@@ -169,10 +241,12 @@ pub fn chunk(stream: &mut Peekable<Chars<'_>>, line: &mut usize) -> Result<Token
                                         break;
                                     }
                                 }
-                                if got == open_count {
+
+                                // Check if this closes the current interpolation
+                                if got == open_count && template_stack.is_empty() {
                                     break; // end interpolation
                                 } else {
-                                    // Not enough to terminate; treat collected as literal '}' chars inside expr
+                                    // Either not enough braces, or we're inside a nested template
                                     expr.push_str(&"}".repeat(got));
                                     continue;
                                 }

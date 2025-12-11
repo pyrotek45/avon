@@ -68,7 +68,10 @@
               "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.av" } },
               "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.av" } },
               "contentName": "meta.embedded.expression.av",
-              "patterns": [{ "include": "#expression-content" }]
+              "patterns": [
+                { "include": "#nested-template" },
+                { "include": "#expression-content" }
+              ]
             }
           ]
         },
@@ -88,7 +91,10 @@
               "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.av" } },
               "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.av" } },
               "contentName": "meta.embedded.expression.av",
-              "patterns": [{ "include": "#expression-content" }]
+              "patterns": [
+                { "include": "#nested-template" },
+                { "include": "#expression-content" }
+              ]
             }
           ]
         },
@@ -108,7 +114,10 @@
               "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.av" } },
               "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.av" } },
               "contentName": "meta.embedded.expression.av",
-              "patterns": [{ "include": "#expression-content" }]
+              "patterns": [
+                { "include": "#nested-template" },
+                { "include": "#expression-content" }
+              ]
             }
           ]
         },
@@ -128,7 +137,107 @@
               "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.av" } },
               "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.av" } },
               "contentName": "meta.embedded.expression.av",
-              "patterns": [{ "include": "#expression-content" }]
+              "patterns": [
+                { "include": "#nested-template" },
+                { "include": "#expression-content" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "nested-template": {
+      "comment": "Nested templates inside interpolation expressions",
+      "patterns": [
+        {
+          "comment": "Nested quad brace template",
+          "name": "meta.template.nested.av",
+          "begin": "\\{\\{\\{\\{\\\"",
+          "end": "\\\"\\}\\}\\}\\}",
+          "beginCaptures": { "0": { "name": "punctuation.definition.template.begin.av" } },
+          "endCaptures": { "0": { "name": "punctuation.definition.template.end.av" } },
+          "contentName": "string.template.av",
+          "patterns": [
+            {
+              "name": "meta.interpolation.nested.av",
+              "begin": "\\{\\{\\{\\{(?!\\{)",
+              "end": "\\}\\}\\}\\}",
+              "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.av" } },
+              "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.av" } },
+              "contentName": "meta.embedded.expression.av",
+              "patterns": [
+                { "include": "#nested-template" },
+                { "include": "#expression-content" }
+              ]
+            }
+          ]
+        },
+        {
+          "comment": "Nested triple brace template",
+          "name": "meta.template.nested.av",
+          "begin": "\\{\\{\\{\\\"",
+          "end": "\\\"\\}\\}\\}",
+          "beginCaptures": { "0": { "name": "punctuation.definition.template.begin.av" } },
+          "endCaptures": { "0": { "name": "punctuation.definition.template.end.av" } },
+          "contentName": "string.template.av",
+          "patterns": [
+            {
+              "name": "meta.interpolation.nested.av",
+              "begin": "\\{\\{\\{(?!\\{)",
+              "end": "\\}\\}\\}",
+              "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.av" } },
+              "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.av" } },
+              "contentName": "meta.embedded.expression.av",
+              "patterns": [
+                { "include": "#nested-template" },
+                { "include": "#expression-content" }
+              ]
+            }
+          ]
+        },
+        {
+          "comment": "Nested double brace template",
+          "name": "meta.template.nested.av",
+          "begin": "\\{\\{\\\"",
+          "end": "\\\"\\}\\}",
+          "beginCaptures": { "0": { "name": "punctuation.definition.template.begin.av" } },
+          "endCaptures": { "0": { "name": "punctuation.definition.template.end.av" } },
+          "contentName": "string.template.av",
+          "patterns": [
+            {
+              "name": "meta.interpolation.nested.av",
+              "begin": "\\{\\{(?!\\{)",
+              "end": "\\}\\}",
+              "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.av" } },
+              "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.av" } },
+              "contentName": "meta.embedded.expression.av",
+              "patterns": [
+                { "include": "#nested-template" },
+                { "include": "#expression-content" }
+              ]
+            }
+          ]
+        },
+        {
+          "comment": "Nested single brace template",
+          "name": "meta.template.nested.av",
+          "begin": "\\{\\\"",
+          "end": "\\\"\\}",
+          "beginCaptures": { "0": { "name": "punctuation.definition.template.begin.av" } },
+          "endCaptures": { "0": { "name": "punctuation.definition.template.end.av" } },
+          "contentName": "string.template.av",
+          "patterns": [
+            {
+              "name": "meta.interpolation.nested.av",
+              "begin": "\\{(?!\\{)",
+              "end": "\\}",
+              "beginCaptures": { "0": { "name": "punctuation.section.interpolation.begin.av" } },
+              "endCaptures": { "0": { "name": "punctuation.section.interpolation.end.av" } },
+              "contentName": "meta.embedded.expression.av",
+              "patterns": [
+                { "include": "#nested-template" },
+                { "include": "#expression-content" }
+              ]
             }
           ]
         }

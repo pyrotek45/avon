@@ -1,6 +1,6 @@
 # Built-in Functions Reference
 
-Avon comes with a comprehensive standard library of over 100 built-in functions. All functions are curried, meaning they can be partially applied.
+Avon comes with a comprehensive standard library of over 150 built-in functions, plus constants like `os`. All functions are curried, meaning they can be partially applied.
 
 **Note:** This document provides a complete reference of all built-in functions with their type signatures. For detailed tutorials on how to use these functions, see [TUTORIAL.md](./TUTORIAL.md), particularly the "Collections" and "Builtin Functions" sections.
 
@@ -114,7 +114,7 @@ Functions for accessing the system environment.
 |----------|-----------|-------------|
 | `env_var` | `String -> String` | Returns the value of an environment variable. Errors if not set. |
 | `env_var_or` | `String -> String -> String` | Returns the value of an environment variable, or a default if not set. |
-| `os` | `String` | Constant string representing the operating system (e.g., "linux", "macos"). |
+| `os` | *Constant* | A constant string representing the operating system (e.g., "linux", "macos"). This is not a function but a value. |
 
 ## File I/O Functions
 

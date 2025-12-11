@@ -1,0 +1,12 @@
+# Test 3: Filter files by pattern
+# Expected: Only JSON files matching pattern
+
+let all_files = glob "test_imports/config/*" in
+let json_only = filter (\f ends_with f ".json") all_files in
+{
+  test: "Test 3: Filter by extension",
+  success: (length json_only) == 3,
+  total_files: length all_files,
+  json_files: length json_only,
+  all_are_json: fold (\acc \f acc && (ends_with f ".json")) true json_only
+}

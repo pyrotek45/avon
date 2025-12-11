@@ -1,0 +1,12 @@
+# Test 2: Import all Avon modules from a library folder
+# Expected: List of imported modules
+
+let av_files = glob "test_imports/lib/*.av" in
+let modules = map (\f import f) av_files in
+{
+  test: "Test 2: Import Avon modules",
+  success: (length modules) == 3,
+  modules_found: length modules,
+  has_math: (length av_files) > 0,
+  first_module_is_dict: is_dict (nth 0 modules)
+}

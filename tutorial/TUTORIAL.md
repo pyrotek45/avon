@@ -185,18 +185,12 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Keep Templates Readable
     - Return Lists for Multiple Files
 
-12. **[Safety & Security](#safety--security)**
-    - Secrets Management
-      - `env_var` (fail-safe)
-      - `env_var_or` (with defaults)
-    - Deployment Safety
-      - No Partial Writes (atomic deployment)
-      - Directory Creation Checks
-      - Write Error Handling
-    - Preventing Accidental Overwrites
-      - Default behavior (skip existing)
-      - Backup Feature (`--backup`)
-    - Best Practices for Safety
+12. **[Security Best Practices](#security-best-practices)**
+    - Input Validation & Sanitization
+    - Template Safety Patterns
+    - File Deployment Safety
+    - Production Checklist
+    - Path Security
 
 13. **[Real-World Examples](#real-world-examples)**
     - Example 1: Site Generator
@@ -1770,6 +1764,56 @@ version: 1.0
 
 Relative indentation is preserved, so nested structures work perfectly. This is crucial for readability in your Avon code!
 
+### Nested Template Indentation
+
+When templates are interpolated into other templates, the indentation is handled intelligently. Templates maintain a **shared baseline** at the outermost level:
+
+```avon
+let config_line = {"    host: localhost"} in
+let full_config = {"
+[database]
+{config_line}
+    port: 5432
+"} in
+full_config
+```
+
+Output:
+```
+[database]
+    host: localhost
+    port: 5432
+```
+
+The inner template's indentation (4 spaces) aligns properly with the outer template's baseline. This means:
+- Nested templates automatically maintain consistent indentation
+- You don't need to worry about indentation misalignment when interpolating
+- Multi-level template composition works intuitively
+
+**Complex nested example:**
+```avon
+let render_values = {"
+        value1
+        value2
+"} in
+let render_section = \name {"
+    section: {name}
+    values: {render_values}
+"} in
+render_section "config"
+```
+
+Output:
+```
+
+    section: config
+    values: 
+        value1
+        value2
+```
+
+Each level maintains proper relative indentation, creating clean, readable output.
+
 ### Interpolating Lists
 
 When you interpolate a list, its items appear on separate lines:
@@ -1833,13 +1877,13 @@ Templates capture variables from their surrounding scope at the time the templat
 ```avon
 let name = "Alice" in
 let template = {"Hello, {name}"} in
-let name = "Bob" in
-template
-# Still evaluates to: "Hello, Alice"
+let greeting = template in
+greeting
+# Evaluates to: "Hello, Alice"
 # The template captured "Alice" when it was created
 ```
 
-This is important for closures and function returns—templates remember the values from when they were defined, not when they're evaluated.
+This is important for closures and function returns—templates remember the values from when they were defined, not when they're evaluated. The template's interpolation happens at template creation time, not when the template is used.
 
 ### Template Auto-Conversion in String Functions
 
@@ -4145,20 +4189,136 @@ let port = env_var_or "PORT" "8080" in
 # Uses "8080" if PORT env var is not set
 ```
 
+## Security Best Practices
+
+Avon prioritizes safety in code generation. This section covers security considerations for both developers and production deployments.
+
+### Input Validation & Sanitization
+
+Always validate and sanitize user-provided values before using them in templates:
+
+```avon
+# ❌ UNSAFE: Direct interpolation of user input
+@config.json {"command": {user_input}}
+
+# ✅ SAFE: Validate against whitelist
+let commands = ["start", "stop", "restart"] in
+let cmd = if contains commands input then input else "start" in
+@script.sh {"command": {cmd}}
+```
+
+Whitelist validation prevents command injection and template escaping attacks.
+
+### Template Safety Patterns
+
+Avoid dangerous patterns when working with templates:
+
+```avon
+# ❌ DON'T: Treat user input as code
+@exec.sh {exec_command}  # Dangerous if exec_command is user input
+
+# ✅ DO: Treat everything as data
+let safe_value = if starts_with value "safe_" then value else "" in
+@config.json {"value": safe_value}
+```
+
+Avon doesn't execute arbitrary code, so all user input is treated as literal text. Keep it that way.
+
+### File Deployment Safety
+
+The deployment process is designed to be **atomic and fail-safe**:
+
+1. **Three-Phase Deployment:**
+   - **Phase 1: Validation** - All paths checked, no writes occur
+   - **Phase 2: Permission Check** - Verify all files can be written before starting
+   - **Phase 3: Writing** - Only after all validation passes do files get written
+   
+   If any error occurs, **zero files are written**.
+
+2. **Safety Flags:**
+
+```bash
+# PREVIEW first (does NOT write files)
+avon preview config.av --root ./output
+
+# Deploy with safety
+avon deploy config.av --root ./output --backup
+```
+
+| Flag | Behavior | Use When |
+|------|----------|----------|
+| `--root <dir>` | Confine all writes to directory | Always use this |
+| `--backup` | Backup existing files to `.bak` | Updating critical files |
+| `--if-not-exists` | Skip existing files | First-time setup |
+| `--force` | Overwrite immediately | You're certain it's safe |
+
+3. **Default Behavior:**
+By default, `avon deploy` **skips** existing files and prints a warning. This is conservative by design.
+
+### Production Checklist
+
+Before deploying Avon in production:
+
+- [ ] Always use `--root` flag to confine output
+- [ ] Preview with `avon preview` before deploying
+- [ ] Use `--backup` when updating existing configurations
+- [ ] Validate all user input in templates
+- [ ] Store templates in version control (Git)
+- [ ] Review generated code before deployment
+- [ ] Restrict file permissions on deployed files
+- [ ] Keep Avon and dependencies up to date
+
+### Path Security
+
+Path validation in **Avon code** prevents directory traversal attacks:
+
+```bash
+# This is fine - normal file system navigation in the CLI
+cd /some/deep/folder && avon deploy ../config.av --root ./output
+```
+
+However, within Avon code (`@` path literals), directory traversal is blocked:
+
+```avon
+# ❌ BLOCKED: Can't use .. in Avon code to escape --root
+@../escape.json {"hack"}
+
+# ✅ ALLOWED: Paths relative to --root stay within root
+@config.json {"setting"}
+@app/config/settings.json {"debug": true}
+```
+
+This distinction is important:
+- **CLI file paths**: Use them however you want (normal file system rules)
+- **Avon code paths** (`@file.txt`): Must be relative, no `..` allowed (security boundary)
+
+```avon
+# Paths are relative to --root (or current dir)
+@config.json {"setting": "value"}
+
+# Works with nested paths
+@app/config/settings.json {"debug": true}
+
+# Use forward slashes for cross-platform compatibility
+@subdir/file.txt {"content": "data"}
+```
+
+
+
+---
+
+## Real-World Examples
+
 ### Deployment Safety
 
 Avon's deployment process is designed to be **truly atomic** and fail-safe. When deploying a list of FileTemplates, if any file cannot be written, **zero files are written**.
 
-**1. Three-Phase Atomic Deployment**
-
-Avon uses a three-phase approach to ensure atomicity:
+The process uses a three-phase approach to ensure atomicity:
 
 **Phase 1: Preparation & Validation**
 - All paths are validated for security (no path traversal)
 - All parent directories are created
 - No type errors occurred during evaluation
-
-If **any** error occurs during this phase, Avon aborts immediately. **Zero files are written.**
 
 **Phase 2: Write Validation**
 Before writing any files, Avon validates that **all** files can be written:
@@ -4166,86 +4326,16 @@ Before writing any files, Avon validates that **all** files can be written:
 - For backup operations: Verifies backup location is writable
 - For new files: Verifies parent directories are writable
 
-If **any** file fails validation, Avon aborts immediately. **Zero files are written.**
-
-This ensures that when deploying a list like `[@a.txt {...}, @b.txt {...}, @c.txt {...}]`, if `b.txt` cannot be written (e.g., read-only file), then `a.txt` and `c.txt` are also not written. The deployment is truly atomic.
-
 **Phase 3: Writing**
-Only after all files pass validation does Avon proceed to write them. Files are written sequentially, but since all have been validated, write failures are extremely rare (e.g., disk full during write).
+Only after all files pass validation does Avon proceed to write them. Files are written sequentially, but since all have been validated, write failures are extremely rare.
 
-**2. Directory Creation Checks**
-If creating a directory fails (e.g., due to permissions), deployment aborts before any files are written.
-
-**3. Write Error Handling**
-If a file write fails during Phase 3 (e.g., disk full), Avon stops immediately and reports exactly what happened. However, this is rare since all files are validated in Phase 2.
+This ensures truly atomic deployments—either all files write or none do.
 
 ### Preventing Accidental Overwrites
 
 By default, `avon deploy` is **conservative**. It will **skip** any file that already exists on disk and print a warning.
 
-To change this behavior, you must explicitly opt-in:
-
-| Flag | Behavior | Safety Level |
-|------|----------|--------------|
-| (none) | Skip existing files | **Safest** |
-| `--backup` | Backup existing file to `.bak`, then overwrite | **Safe** |
-| `--force` | Overwrite existing files immediately | **Destructive** |
-| `--append` | Append to existing files | **Additive** |
-
-**The Backup Feature (`--backup`)**
-Use `--backup` when you want to update files but keep a safety copy of the old version.
-
-```bash
-avon deploy config.av --backup
-```
-
-If `config.yml` exists, Avon will:
-1. Copy `config.yml` to `config.yml.bak`
-2. Write the new content to `config.yml`
-
-If the backup fails (e.g., permissions), the deployment aborts and the original file is untouched.
-
-### Security Features
-
-**Path Traversal Protection:**
-- All file operations (`readfile`, `import`, `fill_template`) block paths containing `..` (parent directory)
-- When using `--root`, paths are validated to ensure they stay within the root directory
-- Absolute paths without `--root` are blocked if they contain `..`
-
-**File Size Limits:**
-- `readfile`: Maximum 10MB per file (prevents DoS from large files)
-- `import`: Maximum 1MB per source file (prevents DoS from large source files)
-- `fill_template`: Maximum 10MB per template file
-
-**Recursion Depth Limits:**
-- Default limit: 10,000 function calls (prevents stack overflow and infinite loops)
-- Configurable via `--recursion-limit <N>` flag
-- Protects against accidental infinite recursion and malicious code
-
-**Input Validation:**
-- All file paths are validated before access
-- Template interpolation is sandboxed (no arbitrary code execution)
-- Type checking prevents many classes of errors
-
-### Best Practices for Safety
-
-1. **Always use `--root`** to confine deployment to a specific directory:
-   ```bash
-   avon deploy site.av --root ./build
-   ```
-   This prevents accidental writes to system directories like `/etc` or `~`.
-
-2. **Use `env_var`** for all credentials.
-
-3. **Prefer `--backup` over `--force`** when updating critical configurations.
-
-4. **Test with `avon eval` first** to inspect the output before deploying.
-
-5. **Recursion is not supported** - use iterative solutions with `fold`, `map`, and `filter` instead
-
----
-
-## Real-World Examples
+To change this behavior, you must explicitly opt-in with `--backup`, `--force`, or `--append`.
 
 ### Example 1: Static Site Generator
 

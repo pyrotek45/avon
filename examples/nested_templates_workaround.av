@@ -1,0 +1,29 @@
+# Test: Nested Templates Bug and Workaround
+
+## This demonstrates the nested templates bug and the recommended workaround
+
+let username = "pyrotek45" in
+let buttons = [
+  { name: "Home", url: "../index.html" },
+  { name: "GitHub", url: "https://github.com/" + username },
+  { name: "Discord", url: "https://discord.gg/xYVVcerH89" },
+  { name: "YouTube", url: "https://youtube.com/@pyrotek45" },
+  { name: "Programming-langs", url: "../programming-langs.html" },
+  { name: "Avon", url: "../avon.html" }
+] in
+
+# WORKAROUND: Pre-compute the button HTML outside the main template
+# This avoids having a template inside a template interpolation
+let button_html = map (\btn {"<a href=\"{btn.url}\" class=\"btn\">{btn.name}</a>"}) buttons in
+
+# Now use join() to combine the pre-computed values
+let header_html = {"
+    <header class=\"nav\">
+      <p>Linux enjoyer, programming lang dev, musician and free will denier.</p>
+      <div class=\"links\">
+        {join button_html "\n"}
+      </div>
+    </header>
+"} in
+
+header_html

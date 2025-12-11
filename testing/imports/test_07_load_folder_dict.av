@@ -1,0 +1,17 @@
+# Test 7: Load JSON configs as dict via fold and set
+# Demonstrates the "Load Folder as Dict" pattern from documentation
+
+let config_dict = fold (\acc \f 
+  set acc (basename f) (json_parse f)
+) {} (glob "test_imports/config/*.json") in
+
+{
+  test: "Test 7: Load JSON folder as config dict",
+  success: true,
+  has_app: has_key config_dict "app.json",
+  has_database: has_key config_dict "database.json", 
+  has_cache: has_key config_dict "cache.json",
+  total_configs: length (keys config_dict),
+  all_found: (length (keys config_dict)) == 3,
+  app_config_exists: not (is_none (get config_dict "app.json"))
+}

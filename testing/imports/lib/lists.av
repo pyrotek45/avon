@@ -1,0 +1,6 @@
+# List utilities
+{
+  first: \lst if (length lst) > 0 then (nth 0 lst) else None,
+  last: \lst if (length lst) > 0 then (nth ((length lst) - 1) lst) else None,
+  sum_list: \lst fold (\acc \x acc + x) 0 lst
+}

@@ -1,0 +1,13 @@
+# Test 10: Filter files by extension and process
+# Expected: Only JSON files from config directory
+
+let all_config_files = glob "test_imports/config/*" in
+let json_only = filter (\f ends_with f ".json") all_config_files in
+{
+  test: "Test 10: Filter files by extension",
+  success: true,
+  total_files: length all_config_files,
+  json_files: length json_only,
+  all_are_json: (length json_only) == 3,
+  files: json_only
+}

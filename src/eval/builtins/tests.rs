@@ -172,3 +172,70 @@ fn test_csv_parsing() {
         v => panic!("expected list, got {:?}", v),
     }
 }
+
+#[test]
+fn test_nested_templates_single_brace() {
+    // Test basic nested template with single braces
+    let result = eval_prog(r#"{"outer { map (\x {"inner"}) [1] } end"}"#);
+    match result {
+        Value::Template(_, _) => {
+            // Template evaluated successfully - the actual string conversion
+            // is tested through the interpreter's template evaluation
+        }
+        v => panic!("expected template, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_nested_templates_double_brace() {
+    // Test nested template with double braces
+    let result = eval_prog(r#"{{"outer {{map (\x {"inner"}) [1]}}"}} "#);
+    match result {
+        Value::Template(_, _) => {
+            // Template evaluated successfully
+        }
+        v => panic!("expected template, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_nested_templates_mixed_braces() {
+    // Test nested template with mixed brace levels
+    let result = eval_prog(r#"{"a { map (\x {{"double-brace"}}) [1] } b"}"#);
+    match result {
+        Value::Template(_, _) => {
+            // Template evaluated successfully
+        }
+        v => panic!("expected template, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_nested_templates_with_interpolation() {
+    // Test nested template with variable interpolation
+    let result = eval_prog(
+        r#"let items = [{ val: "a" }, { val: "b" }] in
+           {"<div>{ map (\i {"<p>{i.val}</p>"}) items }</div>"}"#,
+    );
+    match result {
+        Value::Template(_, _) => {
+            // Template evaluated successfully with nested templates in map
+        }
+        v => panic!("expected template, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_nested_templates_complex() {
+    // Test complex nested templates with multiple levels
+    let result = eval_prog(
+        r#"let buttons = [{ name: "Home", url: "index.html" }, { name: "About", url: "about.html" }] in
+           {"<nav>{ map (\btn {"<a href=\"{btn.url}\">{btn.name}</a>"}) buttons }</nav>"}"#,
+    );
+    match result {
+        Value::Template(_, _) => {
+            // Template evaluated successfully with nested templates in map
+        }
+        v => panic!("expected template, got {:?}", v),
+    }
+}
