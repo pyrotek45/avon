@@ -63,6 +63,13 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
    - Map (transform every item)
    - Filter (keep what you need)
    - Fold (reduce to a single value)
+   - File I/O and Globbing
+     - The File I/O Pipeline
+     - Core File Functions
+     - Key Behavior: json_parse
+     - Practical Glob Examples
+     - Practical File I/O Patterns
+     - Edge Cases and Error Handling
    - Builtins for Lists (comprehensive list operations)
 
 6. **[Templates](#templates)**
@@ -113,6 +120,19 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
    - Important: Dict Literal Syntax in Fold
    - Path Operations (`basename`, `dirname`, `exists`)
    - Advanced Example: Config Override System
+   - Comprehensive Importing Methods
+     - Method 1: Single File Import
+     - Method 2: Glob with Loop (fold)
+     - Method 3: Filter Then Map
+     - Method 4: Import Multiple Modules
+     - Method 5: Import from GitHub (import_git)
+     - Method 6: Merge Multiple Configs
+     - Method 7: Multi-Folder Import
+   - Real-World Importing Scenarios
+     - Scenario 1: Multi-Environment Configuration
+     - Scenario 2: Dynamic Function Library
+     - Scenario 3: Data Pipeline
+     - Scenario 4: Kubernetes Manifest Generator
    - When to Use Importing
 
 10. **[CLI Usage](#cli-usage)**
@@ -199,7 +219,19 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
       - Interpolation not working
     - Debugging Tips
 
-15. **[Next Steps](#next-steps)**
+15. **[Gotchas and Common Pitfalls](#gotchas-and-common-pitfalls)**
+    - Function Parameters Are CLI Arguments
+    - Variables Don't Shadow – They Nest
+    - Functions with All Defaults Still Return Functions
+    - No Recursion – Use `fold` Instead
+    - Template Braces Can Be Confusing
+    - `json_parse` Accepts File Paths AND JSON Strings
+    - Lists in Templates Expand to Multiple Lines
+    - `glob` Returns Paths, Not Contents
+    - Import Evaluates the Entire File
+    - Avon is Single-Pass and Simple
+
+16. **[Next Steps](#next-steps)**
 
 ---
 
