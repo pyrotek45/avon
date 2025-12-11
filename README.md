@@ -11,7 +11,7 @@ Avon is a functional language for generating and deploying any text file. Add va
 - **Git integration** — Share templates, deploy anywhere
 - **Extensible** — Combine primitives in creative ways
 
-Avon is designed to be powerful and flexible. We're excited to see how creative developers use it in ways we never imagined.
+Avon is designed to be powerful and flexible. I'm excited to see how you use it in ways not even mentioned here.
 
 [![Rust](https://img.shields.io/badge/Rust-1.70%2B-orange)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
@@ -633,17 +633,21 @@ ls examples/
 
 ## What Will You Build?
 
-Avon is a powerful, composable language. The examples here barely scratch the surface of what's possible. We've seen it used for:
+Avon is a powerful, composable language. The examples here barely scratch the surface of what's possible.
 
-- Generating infrastructure configs across cloud providers
-- Building custom static site generators
-- Automating development environment setup
-- Creating code generators and scaffolding tools
-- Managing complex multi-environment deployments
+**Real-world usage:**
+- **[pyrotek45.github.io](https://pyrotek45.github.io)** — This entire website is generated with Avon
+- Infrastructure configs across cloud providers
+- Custom static site generators
+- Development environment automation
+- Code generators and scaffolding tools
+- Multi-environment deployment systems
 
-**But the real power comes from you.** Avon gives you functional programming primitives, file generation, and deployment—how you combine them is limited only by your creativity.
+**The real power comes from how you use it.** Avon gives you functional programming primitives, file generation, and deployment. What you build with them is limited only by your imagination.
 
-We're genuinely excited to see what you build. If you create something interesting, share it in GitHub Discussions. We love seeing Avon used in ways we never imagined.
+Think beyond configuration files. Think beyond the examples shown here. Avon can transform any text, automate any workflow, generate any file structure you need.
+
+**I'm genuinely curious to see what you build.** If you create something interesting, share it in GitHub Discussions. I love seeing Avon used in ways I never thought of.
 
 ---
 
@@ -661,7 +665,7 @@ We're genuinely excited to see what you build. If you create something interesti
 
 **Report issues or request features** on GitHub Issues
 
-**Share your Avon programs** in GitHub Discussions — we love seeing creative uses!
+**Share your Avon programs** in GitHub Discussions — I love seeing creative uses!
 
 **Submit pull requests** — See `examples/` directory for coding style
 
