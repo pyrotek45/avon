@@ -11,20 +11,21 @@ Stop copy-pasting. Start generating. (Your future self will thank you.)
 
 ## Documentation
 
-Jump straight to what you need:
+All documentation is consolidated in these key resources:
 
-| Doc | What's inside |
-|-----|---------------|
-| [Tutorial](./tutorial/TUTORIAL.md) | Learn Avon from scratch (start here!) |
-| [Built-in Functions](./tutorial/BUILTIN_FUNCTIONS.md) | Complete reference of built-in functions |
-| [Template Syntax](./tutorial/TEMPLATE_SYNTAX.md) | Multi-brace delimiters, literal braces, tips & tricks |
-| [Simple Configs](./tutorial/SIMPLE_CONFIGS.md) | Quick examples for common configs |
-| [Style Guide](./tutorial/STYLE_GUIDE.md) | Best practices and conventions |
-| [Debugging Guide](./tutorial/DEBUGGING_GUIDE.md) | When things go wrong |
-| [REPL Usage](./tutorial/REPL_USAGE.md) | Interactive development |
-| [Security](./tutorial/SECURITY.md) | Security model and sandboxing |
+| Resource | What's inside |
+|----------|---------------|
+| [**TUTORIAL.md**](./tutorial/TUTORIAL.md) | **Start here!** Complete guide from basics to advanced patterns, including language essentials, templates, CLI usage, style guide, best practices, error handling, debugging, and 10+ gotchas. All in one comprehensive resource. |
+| [**BUILTIN_FUNCTIONS.md**](./tutorial/BUILTIN_FUNCTIONS.md) | Complete reference of 100+ built-in functions with signatures, descriptions, and quick examples organized by category. |
 
-Or just run `avon doc` for built-in help on all 111 functions.
+**Quick Reference:**
+- `avon doc` — Get help on all functions from the command line
+- `examples/` — 90+ real-world examples demonstrating patterns
+- `tutorial/TUTORIAL.md` — Detailed chapters on every aspect of Avon
+
+**No longer separate documents:** CLI usage, template syntax, importing files, simple configs, style guide, debugging, REPL usage, and security documentation are all integrated into TUTORIAL.md for easy discovery.
+
+Or just run `avon doc` for built-in help on all 100+ functions.
 
 ---
 

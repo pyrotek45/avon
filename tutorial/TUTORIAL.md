@@ -3760,8 +3760,6 @@ These tools ensure that whether you're debugging a simple type mismatch in a sin
 
 ## Best Practices
 
-> See also: For style guidelines and best practices, see [STYLE_GUIDE.md](./STYLE_GUIDE.md)**
-
 ### Write Clear, Composable Code
 
 Break complex logic into smaller functions:
@@ -3834,6 +3832,284 @@ let make_file = \name @{name}.txt {"{name}"} in
 map make_file ["a", "b", "c"]
 # Returns three file templates
 ```
+
+### Style and Formatting Guide
+
+This section consolidates best practices for writing readable, maintainable Avon code.
+
+#### Core Principles
+
+1. **Readability First** — Code should be easy to read and understand
+2. **Consistent Formatting** — Follow these conventions across your projects
+3. **Leverage Dedent** — Avon automatically dedents templates based on first-line indentation
+
+#### Template on Same Line as `in`
+
+**Preferred:**
+```avon
+let name = "Alice" in @greeting.txt {"
+  Hello, {name}!
+  Welcome to Avon.
+"}
+```
+
+**Avoid:**
+```avon
+let name = "Alice" in
+@greeting.txt {"
+Hello, {name}!
+"}
+```
+
+**Reason:** Keeping the template on the same line as `in` makes the relationship clear and improves code readability.
+
+#### Indent Template Content (Leverage Automatic Dedent)
+
+**Preferred:**
+```avon
+@config.yml {"
+  server:
+    host: localhost
+    port: 8080
+  database:
+    name: myapp
+"}
+```
+
+**Avoid:**
+```avon
+@config.yml {"
+server:
+  host: localhost
+  port: 8080
+database:
+  name: myapp
+"}
+```
+
+**Why:** Avon's automatic dedent removes the common leading whitespace from all template lines. This means you can indent your template content in source code for readability without affecting the generated output. The generated file will have correct formatting with no extra leading spaces. This makes nested templates and indented Avon code much more readable.
+
+#### How Dedent Works
+
+1. Avon strips leading and trailing blank lines
+2. Finds the first line with content—that line's indentation becomes the **baseline**
+3. Removes that baseline amount of whitespace from every line
+4. Lines with less indentation than baseline are kept as-is
+5. Blank lines become empty
+
+**Example showing baseline selection:**
+```avon
+let make_config = \service @config/{service}.yml {"
+  service: {service}
+  settings:
+    enabled: true
+    timeout: 30
+"}
+```
+
+The first content line (`service: {service}`) has 2 spaces, so 2 spaces are removed from every line.
+
+**Output** (after dedent):
+```yaml
+service: myapp
+settings:
+  enabled: true
+  timeout: 30
+```
+
+**Pro tip:** You can indent templates as deep as you want in your source code:
+
+```avon
+let environments = ["dev", "staging", "prod"] in
+let make_deploy = \env
+  let replicas = if env == "prod" then "3" else "1" in
+  @deploy-{env}.yaml {"
+    apiVersion: apps/v1
+    kind: Deployment
+    spec:
+      replicas: {replicas}
+  "}
+in
+map make_deploy environments
+```
+
+Even though the template is 4+ levels deep, the generated files have zero leading spaces.
+
+#### Let Bindings
+
+**One binding per line:**
+```avon
+let port = 8080 in
+let host = "localhost" in
+let url = {"http://{host}:{port}"} in
+url
+```
+
+**Cascading lets for readability** break complex logic into named steps:
+```avon
+let services = ["api", "web", "worker"] in
+let make_config = \svc @config-{svc}.yml {"
+  service: {svc}
+"} in
+map make_config services
+```
+
+#### Function Definitions
+
+**Single parameter:**
+```avon
+let double = \x x * 2 in
+map double [1, 2, 3]
+```
+
+**Multiple parameters (curried):**
+```avon
+let make_url = \protocol \host \port {"{protocol}://{host}:{port}"} in
+make_url "https" "example.com" "443"
+```
+
+**Use snake_case for function names:**
+```avon
+let make_kubernetes_manifest = \service \env @k8s/{env}/{service}.yaml {"
+  ...
+"} in
+```
+
+#### Template Delimiter Strategy
+
+When generating code with many braces, use multi-brace delimiters to keep templates clean:
+
+| Output Format | Delimiter | Why |
+|-------------|-----------|-----|
+| YAML, plain text | `{" "}` | Few braces, no escaping |
+| JSON, HCL, Terraform, Lua, Nginx | `{{" "}}` | Single braces are literal |
+| GitHub Actions, Mustache | `{{{" "}}}` | Double braces are literal |
+
+**Examples:**
+```avon
+# YAML: use single braces
+@app.yml {"
+app:
+  name: myapp
+  debug: { debug_mode }
+"}
+
+# JSON: use double braces
+@config.json {{"
+{
+  "app": "{{ app_name }}",
+  "port": {{ port }}
+}
+"}}
+
+# Terraform: use double braces  
+@main.tf {{"
+resource "aws_instance" "web" {
+  ami = "{{ ami_id }}"
+  tags = {
+    Name = "web-server"
+  }
+}
+"}}
+```
+
+**Decision rule:** Choose the delimiter that keeps your template readable. More braces in output? Use more braces in the delimiter!
+
+#### Lists and Collections
+
+**Short lists on one line:**
+```avon
+let colors = ["red", "green", "blue"] in
+```
+
+**Long lists on multiple lines:**
+```avon
+let services = [
+  "auth",
+  "api", 
+  "frontend",
+  "worker",
+  "cache",
+  "db"
+] in
+```
+
+#### Pipe Operator for Chaining
+
+**Preferred:**
+```avon
+let result = [1, 2, 3, 4, 5]
+  -> filter (\x x > 2)
+  -> map (\x x * 2)
+  -> fold (\acc \x acc + x) 0
+in
+result
+```
+
+**Avoid (deeply nested):**
+```avon
+fold (\acc \x acc + x) 0 (map (\x x * 2) (filter (\x x > 2) [1, 2, 3, 4, 5]))
+```
+
+Note: Only `->` is a valid pipe operator. The single `|` is not a pipe operator in Avon.
+
+#### Comments
+
+Use `#` for comments. Place them above the code they describe:
+
+```avon
+# Generate configuration for each environment
+let environments = ["dev", "staging", "prod"] in
+
+# Create a config file for each environment
+let make_config = \env @config-{env}.yml {"
+  environment: {env}
+  debug: {if env == "prod" then "false" else "true"}
+"} in
+
+map make_config environments
+```
+
+#### Complete Style Example
+
+This example demonstrates all style guidelines:
+
+```avon
+# Multi-environment Kubernetes deployment generator
+let services = ["auth", "api", "frontend"] in
+let environments = ["dev", "staging", "prod"] in
+
+# Create a Kubernetes deployment manifest
+let make_k8s_manifest = \service \env @k8s/{env}/{service}-deployment.yaml {"
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: {service}
+    namespace: {env}
+  spec:
+    replicas: {if env == "prod" then "3" else "1"}
+    selector:
+      matchLabels:
+        app: {service}
+"} in
+
+# Generate all manifests
+flatmap (\env map (\svc make_k8s_manifest svc env) services) environments
+```
+
+#### Style Checklist
+
+Before committing your Avon code, verify:
+
+- [ ] Templates start with `{"` on same line as path
+- [ ] Template content is indented for source readability (dedent cleans output)
+- [ ] Let bindings are on separate lines
+- [ ] Functions use `snake_case` naming
+- [ ] Complex logic is broken into named steps
+- [ ] Comments explain the "why", not the "what"
+- [ ] Code is formatted consistently (2-space indentation recommended)
+- [ ] Pipe operator used for chaining operations
+- [ ] Appropriate template delimiter chosen for brace density
 
 ---
 
@@ -3971,18 +4247,112 @@ If the backup fails (e.g., permissions), the deployment aborts and the original 
 
 ## Real-World Examples
 
-### Example 1: Site Generator
+### Example 1: Static Site Generator
 
-> See also: For comprehensive site generator guide with examples from minimal to advanced, see [SITE_GENERATOR.md](./SITE_GENERATOR.md)**
+Avon can be used as a static site generator, similar to Jekyll or Hugo, but with no dependencies and full functional programming support.
 
-See `examples/site_generator.av`. This generates a full website with multiple HTML pages, including:
-- Shared CSS styling
-- Navigation links between pages
-- Dynamic content interpolation
+#### Quick Start: Minimal Example
+
+The simplest example shows the core pattern in just 26 lines:
 
 ```bash
-avon deploy examples/site_generator.av --root ./website --force
+avon deploy examples/site_generator_minimal.av --root ./site --force
 ```
+
+**The Pattern:**
+1. Define markdown content as a template
+2. Create HTML template with comment placeholders
+3. Convert markdown to HTML using `markdown_to_html`
+4. Replace placeholders with `replace`
+5. Generate the file
+
+```avon
+let title = "My Site" in
+let markdown = {"# Hello World
+This is **markdown** content.
+"} in
+let html_template = {"
+<!DOCTYPE html>
+<html>
+<head><title><!-- expand-title --></title></head>
+<body>
+    <h1><!-- expand-title --></h1>
+    <!-- expand-body -->
+</body>
+</html>
+"} in
+
+# Convert markdown to HTML using built-in function
+let html_body = markdown_to_html markdown in
+
+# Replace placeholders (templates auto-convert to strings in string functions)
+let html = replace (replace html_template "<!-- expand-title -->" title) "<!-- expand-body -->" html_body in
+
+@index.html {"{html}"}
+```
+
+**Key Features:**
+- **Templates for content**: Both HTML and markdown use Avon's template syntax `{"..."}` which allows interpolation
+- **Built-in markdown conversion**: The `markdown_to_html` function handles headings, bold, italic, inline code, paragraphs, and line breaks
+- **Template auto-conversion**: When you use `replace` (or any string function), templates automatically convert to strings
+- **Comment placeholders**: HTML comments act as placeholders that get replaced with actual content
+
+#### Multiple Pages Example
+
+For more complex sites with multiple pages:
+
+```avon
+let posts = [
+    {
+        title: "Getting Started",
+        author: "Alice",
+        date: "2024-01-01",
+        slug: "getting-started",
+        content: {"# Getting Started\nWelcome to my blog!"}
+    },
+    {
+        title: "Static Sites",
+        author: "Bob",
+        date: "2024-01-15",
+        slug: "static-sites",
+        content: {"# Static Sites\nStatic sites are great!"}
+    }
+] in
+
+let generate_post = \post
+    let html_body = markdown_to_html post.content in
+    let html = replace (replace (replace html_template "<!-- expand-title -->" post.title) "<!-- expand-body -->" html_body) "<!-- expand-date -->" post.date in
+    @posts/{post.slug}.html {"{html}"}
+in
+
+map generate_post posts
+```
+
+#### Advanced Features
+
+You can extend site generators to support:
+- **Links and images**: Use `replace` and `split` to process markdown-like syntax
+- **Code blocks** with syntax highlighting
+- **Tables** (parse pipe-separated lines)
+- **External markdown files**: Use `readfile "posts/getting-started.md"`
+- **RSS feeds**: Generate XML from post data
+- **Multi-page layouts**: Create templates for about, contact, archives pages
+
+#### Why Avon?
+
+| Feature | Avon | Jekyll | Hugo |
+|---------|------|--------|------|
+| Template System | ✅ | ✅ | ✅ |
+| Markdown Support | ✅ (built-in) | ✅ | ✅ |
+| Functions | ✅ | ❌ | ❌ |
+| Multi-file Output | ✅ | ✅ | ✅ |
+| No Dependencies | ✅ | ❌ | ❌ |
+| Functional Programming | ✅ | ❌ | ❌ |
+| Type Safety | ✅ | ❌ | ❌ |
+
+**Tip:** Use the `--git` flag to share your site generator templates! Put your `.av` file in GitHub, and others can deploy it with custom content: `avon deploy --git user/repo/site_gen.av --root ./site`
+
+See `examples/site_generator_minimal.av`, `examples/site_generator_simple.av`, and `examples/site_generator_advanced.av` for complete working examples.
 
 ### Example 2: Neovim Configuration
 

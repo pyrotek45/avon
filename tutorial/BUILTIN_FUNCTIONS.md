@@ -1,6 +1,26 @@
-# Built-in Functions
+# Built-in Functions Reference
 
 Avon comes with a comprehensive standard library of over 100 built-in functions. All functions are curried, meaning they can be partially applied.
+
+**Note:** This document provides a complete reference of all built-in functions with their type signatures. For detailed tutorials on how to use these functions, see [TUTORIAL.md](./TUTORIAL.md), particularly the "Collections" and "Builtin Functions" sections.
+
+**Quick Navigation:**
+- [Aggregate Functions](#aggregate-functions) — sum, max, min, all, any, count
+- [Date/Time Functions](#datetime-functions) — date operations and timestamps
+- [Debug Functions](#debug-functions) — trace, debug, assert
+- [Dictionary Functions](#dictionary-functions) — get, set, merge, keys, values
+- [Environment Functions](#environment-functions) — env_var, os
+- [File I/O Functions](#file-io-functions) — readfile, glob, import, json_parse
+- [Formatting Functions](#formatting-functions) — format_json, format_csv, format_table
+- [HTML Functions](#html-functions) — html_escape, html_tag, html_attr
+- [List Functions](#list-functions) — map, filter, fold, sort, unique
+- [Markdown Functions](#markdown-functions) — md_heading, md_link, md_list
+- [Math Functions](#math-functions) — abs, pow, sqrt, ceil, floor
+- [Regex Functions](#regex-functions) — regex_match, regex_replace, scan
+- [String Functions](#string-functions) — concat, upper, lower, split, replace
+- [Type Functions](#type-functions) — typeof, is_string, to_int, etc.
+
+---
 
 ## Aggregate Functions
 
@@ -16,9 +36,20 @@ Functions for aggregating values from lists.
 | `product` | `[Number] -> Number` | Returns the product of all numbers in a list. |
 | `sum` | `[Number] -> Number` | Returns the sum of all numbers in a list. |
 
+**Examples:**
+```avon
+sum [1, 2, 3, 4, 5]                    # 15
+product [2, 3, 4]                      # 24
+max [5, 2, 8, 1, 9]                    # 9
+min [5, 2, 8, 1, 9]                    # 1
+all (\x x > 0) [1, 2, 3, 4]            # true
+any (\x x > 3) [1, 2, 3, 4]            # true
+count (\x x > 2) [1, 2, 3, 4, 5]       # 3
+```
+
 ## Date/Time Functions
 
-Functions for working with dates and times.
+Functions for working with dates and times. Dates are represented as ISO 8601 strings (e.g., "2024-12-10T15:30:00Z").
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -30,9 +61,18 @@ Functions for working with dates and times.
 | `timestamp` | `() -> Number` | Returns the current Unix timestamp (seconds since epoch). |
 | `timezone` | `() -> String` | Returns the current timezone offset (e.g., "+00:00"). |
 
+**Examples:**
+```avon
+now                                    # "2024-12-10T15:30:00Z"
+timestamp                              # 1733850600
+timezone                               # "+00:00"
+date_add "2024-12-10T15:30:00Z" "1d"   # "2024-12-11T15:30:00Z"
+date_format "2024-12-10T15:30:00Z" "%Y-%m-%d"  # "2024-12-10"
+```
+
 ## Debug Functions
 
-Functions for debugging and assertions.
+Functions for debugging and assertions. These are essential for development and validation.
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -44,7 +84,16 @@ Functions for debugging and assertions.
 | `tap` | `(a -> b) -> a -> a` | Run a function for side effects, then return original value. |
 | `trace` | `String -> a -> a` | Prints a label and value to stderr, then returns the value. |
 
-## Dictionary Functions
+**Examples:**
+```avon
+assert (5 > 0) "value"                 # "value"
+not true                               # false
+trace "debug" 42                        # prints "[debug] 42" to stderr, returns 42
+```
+
+---
+
+
 
 Functions for working with dictionaries.
 
@@ -81,6 +130,7 @@ Functions for file system operations.
 | `fill_template` | `String\|Path -> Dict\|List -> String` | Reads a file and replaces placeholders `{key}` with values. |
 | `glob` | `String -> [String]` | Returns a list of files matching the glob pattern. |
 | `import` | `String\|Path -> a` | Imports and evaluates another Avon file. |
+| `import_git` | `String -> String -> a` | Downloads and evaluates an Avon file from GitHub by commit hash (e.g., `import_git "owner/repo/file.av" "abc123..."` for GitHub safety). |
 | `json_parse` | `String -> Dict\|List\|a` | Parses a JSON string (from a file) into an Avon value (Dict for objects, List for arrays). |
 | `readfile` | `String\|Path -> String` | Reads the entire content of a file. |
 | `readlines` | `String\|Path -> [String]` | Reads a file line by line into a list. |
@@ -231,6 +281,24 @@ Functions for string manipulation.
 | `unwords` | `[String] -> String` | Joins words with a single space. |
 | `upper` | `String -> String` | Converts the string to uppercase. |
 | `words` | `String -> [String]` | Splits a string into words (by whitespace). |
+
+**Examples:**
+```avon
+concat "hello" "world"                      # "helloworld"
+upper "hello"                               # "HELLO"
+lower "HELLO"                               # "hello"
+split "a,b,c" ","                          # ["a", "b", "c"]
+join ["a", "b", "c"] "-"                    # "a-b-c"
+contains "hello world" "world"              # true
+starts_with "hello" "he"                    # true
+ends_with "hello" "lo"                      # true
+trim "  hello  "                            # "hello"
+length "hello"                              # 5
+char_at "hello" 1                           # "e"
+chars "abc"                                 # ["a", "b", "c"]
+repeat "ab" 3                               # "ababab"
+replace "hello world" "world" "Avon"        # "hello Avon"
+```
 
 ## Type Functions
 
