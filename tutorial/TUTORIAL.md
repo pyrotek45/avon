@@ -303,8 +303,6 @@ Key insight: Return a list of file templates and Avon generates them all in one 
 
 Avon excels at generating hundreds of files, but it's equally powerful for single files. It's a comprehensive workflow layer that makes any file more maintainable and shareable, whether you're managing a single config or building complex multi-file systems.
 
-> See also: For simple config file examples, see [SIMPLE_CONFIGS.md](./SIMPLE_CONFIGS.md)
-
 Perfect for:
 - Dotfiles — Easy way to download and deploy configs to your system
 - Sharing configs — One file in git, many customized deployments
@@ -2158,7 +2156,6 @@ This generates `config-dev.yml` and `config-prod.yml`.
 - **Additive:** Adds new content to the end of existing files
 - Useful for logs, accumulating data, or building files incrementally
 - If file doesn't exist, creates it (same as normal write)
-- > See also: For comprehensive guide on building file contents, see [BUILDING_CONTENTS.md](./BUILDING_CONTENTS.md)**
 
 **`--if-not-exists`** — Only create file if it doesn't already exist
 - **Initialization mode:** Skips files that already exist
@@ -2610,8 +2607,6 @@ fold
 
 The issue: In the wrong version, the expression `{data: f}` creates a new dict each iteration, but it's never merged back into the accumulator. The `set` function properly updates the accumulator.
 
-For details, see [DICT_LITERAL_SYNTAX_ANALYSIS.md](./DICT_LITERAL_SYNTAX_ANALYSIS.md).
-
 ### Path Operations
 
 Avon provides helper functions for path manipulation:
@@ -2959,7 +2954,6 @@ avon run 'map (\x x * 2) [1, 2, 3]'
 avon repl
 ```
 - Starts an interactive shell for exploring Avon
-- See the [Interactive REPL](#interactive-repl) section for details
 
 **`doc` - Builtin Documentation:**
 ```bash
@@ -3303,8 +3297,6 @@ avon eval data.av -x 5
 ### Interactive REPL
 
 The REPL (Read-Eval-Print Loop) is an interactive shell for exploring Avon. It's perfect for learning the language, testing expressions, and debugging. The REPL maintains a persistent symbol table, so variables you define persist across expressions, making it ideal for building up complex computations step by step.
-
-> See also: For comprehensive REPL documentation, see [REPL_USAGE.md](./REPL_USAGE.md)**
 
 Why Use the REPL?**
 
