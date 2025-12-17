@@ -5,9 +5,6 @@
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TESTING_DIR="$PROJECT_ROOT/testing"
 
-# Source common utilities (sets AVON and LSP_BIN)
-source "$TESTING_DIR/common.sh"
-
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -15,6 +12,59 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Parse arguments
+SKIP_CLEAN=false
+for arg in "$@"; do
+    case $arg in
+        --no-clean) SKIP_CLEAN=true ;;
+    esac
+done
+
+echo ""
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}AVON PROJECT - UNIFIED TEST SUITE${NC}"
+echo -e "${BLUE}========================================${NC}"
+echo ""
+echo "Project Root: $PROJECT_ROOT"
+echo "Testing Directory: $TESTING_DIR"
+
+# Step 1: Clean build artifacts for accurate testing
+if [ "$SKIP_CLEAN" = false ]; then
+    echo ""
+    echo -e "${YELLOW}► Cleaning build artifacts...${NC}"
+    rm -rf "$PROJECT_ROOT/target"
+    rm -rf "$PROJECT_ROOT/avon-lsp/target"
+    rm -rf "$PROJECT_ROOT/test-results"
+    echo -e "${GREEN}✓ Clean complete${NC}"
+    
+    # Step 2: Build fresh release binaries
+    echo ""
+    echo -e "${YELLOW}► Building fresh release binaries...${NC}"
+    cd "$PROJECT_ROOT"
+    if cargo build --release 2>&1 | tail -5; then
+        echo -e "${GREEN}✓ Avon build complete${NC}"
+    else
+        echo -e "${RED}✗ Avon build failed${NC}"
+        exit 1
+    fi
+    
+    cd "$PROJECT_ROOT/avon-lsp"
+    if cargo build --release 2>&1 | tail -5; then
+        echo -e "${GREEN}✓ LSP build complete${NC}"
+    else
+        echo -e "${RED}✗ LSP build failed${NC}"
+        exit 1
+    fi
+    cd "$PROJECT_ROOT"
+else
+    echo ""
+    echo -e "${YELLOW}► Skipping clean (--no-clean flag)${NC}"
+fi
+
+# Source common utilities (sets AVON and LSP_BIN)
+source "$TESTING_DIR/common.sh"
+
+echo ""
 echo "Using Avon binary: $AVON"
 
 # Test results tracking
@@ -58,11 +108,6 @@ run_test_suite() {
         return 1
     fi
 }
-
-# Main testing
-print_header "AVON PROJECT - UNIFIED TEST SUITE"
-echo -e "Project Root: ${YELLOW}$PROJECT_ROOT${NC}"
-echo -e "Testing Directory: ${YELLOW}$TESTING_DIR${NC}"
 
 # 1. Run Cargo tests (unit and integration tests)
 print_header "Cargo Tests"
