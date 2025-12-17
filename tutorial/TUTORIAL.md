@@ -224,8 +224,22 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - `glob` Returns Paths, Not Contents
     - Import Evaluates the Entire File
     - Avon is Single-Pass and Simple
+    - `pfold` Requires an Associative Combiner
+    - `&&` and `||` Do Not Short-Circuit
+    - Range with Start > End Returns Empty List
+    - Integer Division for Integer Operands
+    - `zip` Truncates to Shorter List
+    - And more...
 
-16. **[Piping, Stdin, Stdout, and Embedding Avon](#piping-stdin-stdout-and-embedding-avon)**
+16. **[Tips and Tricks](#tips-and-tricks)**
+    - Check List Membership with `any`
+    - Safe Division with Default Value
+    - Type Checking with `typeof` and `is_*`
+    - Function Composition via Pipes
+    - Working with Characters in Strings
+    - And more...
+
+17. **[Piping, Stdin, Stdout, and Embedding Avon](#piping-stdin-stdout-and-embedding-avon)**
     - Piping Avon Source Code into the CLI
     - Piping Data into an Avon Program
     - Capturing Avon Output
@@ -235,7 +249,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Real-World Integration: File Collection Scripts
     - Summary: Stdin/Stdout Modes
 
-17. **[Next Steps](#next-steps)**
+18. **[Next Steps](#next-steps)**
 
 ---
 
@@ -764,9 +778,16 @@ if (x > 0) && (y > 0) then "both positive" else "not both positive"
 # if x > 0 && y > 0 then ...  # Wrong! Parsed as: if x > (0 && y) > 0
 ```
 
-**Short-circuit evaluation:** Both `&&` and `||` use short-circuit evaluation:
-- `a && b`: If `a` is `false`, `b` is not evaluated
-- `a || b`: If `a` is `true`, `b` is not evaluated
+**No short-circuit evaluation:** Unlike many languages, `&&` and `||` evaluate **both operands**:
+```avon
+false && (1 / 0 > 0)  # ERROR: division by zero (right side IS evaluated!)
+true || (1 / 0 > 0)   # ERROR: division by zero (right side IS evaluated!)
+```
+
+If you need short-circuit behavior, use `if-then-else` instead:
+```avon
+if false then 1/0 else 42  # => 42 (right side is NOT evaluated)
+```
 
 ---
 
@@ -5338,6 +5359,283 @@ pfold (\acc \x acc - x) 0 [1, 2, 3, 4, 5]   # 15 (WRONG! Different result!)
 - Small lists (under ~100 elements): The overhead of parallelism outweighs the benefit
 - Simple operations: `map (\x x + 1)` on a small list is faster sequentially
 - `pfold` with subtraction, division, or order-dependent accumulation
+
+### Gotcha 19: `&&` and `||` Do Not Short-Circuit
+
+Unlike most languages, Avon evaluates **both operands** of logical operators:
+
+```avon
+false && (1 / 0 > 0)  # ERROR: division by zero (right side IS evaluated!)
+true || (1 / 0 > 0)   # ERROR: division by zero (right side IS evaluated!)
+```
+
+**Solution:** Use `if-then-else` for short-circuit behavior:
+```avon
+if false then 1/0 else 42  # => 42 (only the else branch is evaluated)
+```
+
+### Gotcha 20: Range with Start > End Returns Empty List
+
+Avon's `range` function only works for ascending sequences:
+
+```avon
+range 1 5    # => [1, 2, 3, 4, 5]
+range 5 1    # => [] (NOT [5, 4, 3, 2, 1]!)
+range 5 5    # => [5] (single element works)
+```
+
+**Solution:** Generate ascending range and reverse:
+```avon
+range 1 5 -> reverse  # => [5, 4, 3, 2, 1]
+```
+
+### Gotcha 21: Integer Division for Integer Operands
+
+Division behavior depends on operand types:
+
+```avon
+10 / 3      # => 3 (integer division!)
+10.0 / 3.0  # => 3.333... (float division)
+10.0 / 3    # => 3.333... (any float operand gives float result)
+```
+
+**Solution:** Use a float operand if you need decimal results: `10.0 / 3`
+
+### Gotcha 22: Floating Point Precision Quirks
+
+Standard IEEE 754 floating-point precision issues apply:
+
+```avon
+0.1 + 0.2        # => 0.30000000000000004
+0.1 + 0.2 == 0.3 # => false!
+```
+
+**Solution:** For financial calculations, work with integers (cents instead of dollars).
+
+### Gotcha 23: `all` on Empty List Returns True
+
+Vacuous truth applies to `all`:
+
+```avon
+all (\x x > 0) []  # => true (vacuously true!)
+any (\x x > 0) []  # => false
+```
+
+This is mathematically correct (universal quantification over empty set is true), but can be surprising.
+
+### Gotcha 24: `zip` Truncates to Shorter List
+
+When zipping lists of different lengths, extra elements are dropped:
+
+```avon
+zip [1, 2, 3] [4, 5]           # => [[1, 4], [2, 5]] (3 is dropped!)
+zip_with (\a \b a + b) [1, 2, 3] [10, 20]  # => [11, 22]
+```
+
+### Gotcha 25: No Power Operator (`^`)
+
+The caret `^` is not a power operator in Avon:
+
+```avon
+2 ^ 8   # ERROR: expected function, found number
+pow 2 8 # => 256 ✓
+```
+
+Use the `pow` function instead.
+
+### Gotcha 26: `min` and `max` Take Lists, Not Two Arguments
+
+Unlike some languages, `min`/`max` operate on lists:
+
+```avon
+min 3 7           # ERROR: expected list
+min [3, 7, 1, 5]  # => 1 ✓
+max [3, 7, 1, 5]  # => 7 ✓
+```
+
+### Gotcha 27: List Element Access Returns `None` for Invalid Indices
+
+Invalid indices don't error—they return `None`:
+
+```avon
+head []              # => None
+nth 10 [1, 2, 3]     # => None (out of bounds)
+nth (neg 1) [1,2,3]  # => None (negative indices don't wrap)
+```
+
+**Tip:** Use `last` for the last element instead of negative indexing.
+
+### Gotcha 28: `contains` is for Strings Only
+
+For list membership, use `any` instead:
+
+```avon
+contains 3 [1, 2, 3]           # ERROR: expected string
+contains "wor" "hello world"   # Works for substrings
+any (\x x == 3) [1, 2, 3, 4]   # => true ✓
+```
+
+---
+
+## Tips and Tricks
+
+This section contains useful patterns and idioms for effective Avon programming.
+
+### Tip: Check List Membership with `any`
+
+Since `contains` only works for strings, use `any` to check if an element exists in a list:
+
+```avon
+# Define a reusable membership check function
+let has_item = \item \list any (\x x == item) list
+in has_item 3 [1, 2, 3, 4]  # => true
+```
+
+### Tip: Safe Division with Default Value
+
+Avoid division by zero errors with a guard:
+
+```avon
+let safe_div = \a \b if b == 0 then none else a / b
+in safe_div 10 0  # => None instead of error
+```
+
+### Tip: Default Value for None Results
+
+Handle `None` results gracefully:
+
+```avon
+let with_default = \default \value if value == none then default else value
+let result = find (\x x > 100) [1, 2, 3]
+in with_default 0 result  # => 0
+```
+
+### Tip: Check if Dict Has a Key
+
+Use `find` on `keys` to check for key existence:
+
+```avon
+let has_key = \key \dict find (\k k == key) (keys dict) != none
+in has_key "a" {a: 1, b: 2}  # => true
+```
+
+### Tip: Use `typeof` for Runtime Type Checking
+
+Determine the type of any value at runtime:
+
+```avon
+typeof 42        # => "Number"
+typeof "hello"   # => "String"
+typeof [1, 2]    # => "List"
+typeof {a: 1}    # => "Dict"
+typeof none      # => "None"
+typeof true      # => "Bool"
+typeof (\x x)    # => "Function"
+```
+
+### Tip: Use `is_*` Functions for Type Guards
+
+Type-specific boolean checks:
+
+```avon
+is_list [1, 2, 3]   # => true
+is_dict {a: 1}      # => true
+is_string "hello"   # => true
+is_number 42        # => true
+is_none none        # => true
+is_bool true        # => true
+```
+
+### Tip: Function Composition via Pipes
+
+Chain transformations in a readable way:
+
+```avon
+let double = \x x * 2
+let inc = \x x + 1
+in 5 -> double -> inc  # => 11
+
+# Or inline for data pipelines
+[1, 2, 3, 4, 5]
+  -> map (\x x * 2)
+  -> filter (\x x > 5)
+  -> fold (\a \b a + b) 0
+# => 18
+```
+
+### Tip: Use `flatten` to Concatenate Lists of Lists
+
+```avon
+flatten [[1, 2], [3, 4], [5]]  # => [1, 2, 3, 4, 5]
+```
+
+### Tip: Group and Partition Data
+
+```avon
+# Partition into matching/non-matching groups
+partition (\x x > 3) [1, 2, 3, 4, 5]  # => [[4, 5], [1, 2, 3]]
+
+# Group by key function
+group_by (\x x % 2) [1, 2, 3, 4, 5]   # => {0: [2, 4], 1: [1, 3, 5]}
+```
+
+### Tip: Use `chars` for String Character Operations
+
+Since `nth` doesn't work on strings directly:
+
+```avon
+# Get character at index
+nth 0 (chars "hello")  # => "h"
+
+# Count actual characters (not bytes)
+length (chars "café")  # => 4 (not 5)
+
+# Iterate over characters
+chars "hello" -> map upper  # => ["H", "E", "L", "L", "O"]
+```
+
+### Tip: Unicode Characters Work Correctly in `chars`
+
+```avon
+chars "αβγ"   # => ["α", "β", "γ"]
+chars "👋🌍"  # => ["👋", "🌍"]
+```
+
+### Tip: Use `neg` for Negative Numbers in Expressions
+
+When you need a negative number as an argument:
+
+```avon
+abs (neg 5)  # => 5
+0 - 5        # Also works: => -5
+```
+
+### Tip: `take` with Large Count is Safe
+
+Requesting more elements than available doesn't error:
+
+```avon
+take 100 [1, 2, 3]  # => [1, 2, 3] (returns what's available)
+take 0 [1, 2, 3]    # => []
+```
+
+### Tip: Map with Index Using `zip`
+
+```avon
+let items = ["a", "b", "c"]
+let indices = range 0 (length items - 1)
+in zip indices items  # => [[0, "a"], [1, "b"], [2, "c"]]
+```
+
+### Tip: Extract Nested Data from Lists of Dicts
+
+```avon
+let users = [
+  {name: "Alice", age: 30},
+  {name: "Bob", age: 25}
+]
+in users -> map (\u u.name)  # => ["Alice", "Bob"]
+```
 
 ---
 
