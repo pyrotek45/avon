@@ -316,7 +316,7 @@ Functions for string manipulation.
 | `char_at` | `String -> Number -> String` | Returns the character at the given index. |
 | `chars` | `String -> [String]` | Returns a list of characters in the string. |
 | `concat` | `String -> String -> String` | Concatenates two strings. |
-| `contains` | `String -> String -> Bool` | Returns true if the string contains the substring. |
+| `contains` | `String -> String -> Bool` or `a -> [a] -> Bool` | Returns true if string contains substring, OR if list contains element. |
 | `ends_with` | `String -> String -> Bool` | Returns true if the string ends with the suffix. |
 | `indent` | `String -> Number -> String` | Indents each line of the string by n spaces. |
 | `is_alpha` | `String -> Bool` | Returns true if the string contains only alphabetic characters. |
@@ -350,7 +350,8 @@ upper "hello"                               # "HELLO"
 lower "HELLO"                               # "hello"
 split "a,b,c" ","                          # ["a", "b", "c"]
 join ["a", "b", "c"] "-"                    # "a-b-c"
-contains "hello world" "world"              # true
+contains "hello world" "world"              # true (string contains substring)
+contains 3 [1, 2, 3, 4]                     # true (list contains element)
 starts_with "hello" "he"                    # true
 ends_with "hello" "lo"                      # true
 trim "  hello  "                            # "hello"

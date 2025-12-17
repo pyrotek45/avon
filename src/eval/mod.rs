@@ -576,83 +576,124 @@ fn eval_with_depth(
         Expr::Number(value, _) => Ok(Value::Number(value)),
         Expr::String(value, _) => Ok(Value::String(value)),
         Expr::Binary { lhs, op, rhs, line } => {
+            // Handle short-circuit evaluation for && and || BEFORE evaluating both operands
+            match &op {
+                Token::And(_) => {
+                    // Short-circuit: only evaluate rhs if lhs is true
+                    let l_eval = eval_with_depth(*lhs.clone(), symbols, source, depth + 1)?;
+                    match l_eval {
+                        Value::Bool(false) => return Ok(Value::Bool(false)), // Short-circuit!
+                        Value::Bool(true) => {
+                            let r_eval = eval_with_depth(*rhs.clone(), symbols, source, depth + 1)?;
+                            match r_eval {
+                                Value::Bool(rb) => return Ok(Value::Bool(rb)),
+                                other => {
+                                    let r_type = match other {
+                                        Value::Number(_) => "number",
+                                        Value::String(_) => "string",
+                                        Value::List(_) => "list",
+                                        Value::Bool(_) => "bool",
+                                        Value::Function { .. } => "function",
+                                        Value::Template(_, _) => "template",
+                                        Value::Path(_, _) => "path",
+                                        Value::Dict(_) => "dict",
+                                        Value::None => "none",
+                                        _ => "unknown",
+                                    };
+                                    return Err(EvalError::new(
+                                        format!("cannot use && with bool and {}", r_type),
+                                        None,
+                                        None,
+                                        line,
+                                    ));
+                                }
+                            }
+                        }
+                        other => {
+                            let l_type = match other {
+                                Value::Number(_) => "number",
+                                Value::String(_) => "string",
+                                Value::List(_) => "list",
+                                Value::Bool(_) => "bool",
+                                Value::Function { .. } => "function",
+                                Value::Template(_, _) => "template",
+                                Value::Path(_, _) => "path",
+                                Value::Dict(_) => "dict",
+                                Value::None => "none",
+                                _ => "unknown",
+                            };
+                            return Err(EvalError::new(
+                                format!("cannot use && with {} (left operand must be bool)", l_type),
+                                None,
+                                None,
+                                line,
+                            ));
+                        }
+                    }
+                }
+                Token::Or(_) => {
+                    // Short-circuit: only evaluate rhs if lhs is false
+                    let l_eval = eval_with_depth(*lhs.clone(), symbols, source, depth + 1)?;
+                    match l_eval {
+                        Value::Bool(true) => return Ok(Value::Bool(true)), // Short-circuit!
+                        Value::Bool(false) => {
+                            let r_eval = eval_with_depth(*rhs.clone(), symbols, source, depth + 1)?;
+                            match r_eval {
+                                Value::Bool(rb) => return Ok(Value::Bool(rb)),
+                                other => {
+                                    let r_type = match other {
+                                        Value::Number(_) => "number",
+                                        Value::String(_) => "string",
+                                        Value::List(_) => "list",
+                                        Value::Bool(_) => "bool",
+                                        Value::Function { .. } => "function",
+                                        Value::Template(_, _) => "template",
+                                        Value::Path(_, _) => "path",
+                                        Value::Dict(_) => "dict",
+                                        Value::None => "none",
+                                        _ => "unknown",
+                                    };
+                                    return Err(EvalError::new(
+                                        format!("cannot use || with bool and {}", r_type),
+                                        None,
+                                        None,
+                                        line,
+                                    ));
+                                }
+                            }
+                        }
+                        other => {
+                            let l_type = match other {
+                                Value::Number(_) => "number",
+                                Value::String(_) => "string",
+                                Value::List(_) => "list",
+                                Value::Bool(_) => "bool",
+                                Value::Function { .. } => "function",
+                                Value::Template(_, _) => "template",
+                                Value::Path(_, _) => "path",
+                                Value::Dict(_) => "dict",
+                                Value::None => "none",
+                                _ => "unknown",
+                            };
+                            return Err(EvalError::new(
+                                format!("cannot use || with {} (left operand must be bool)", l_type),
+                                None,
+                                None,
+                                line,
+                            ));
+                        }
+                    }
+                }
+                _ => {} // Other operators handled below with eager evaluation
+            }
+
+            // For all other operators, evaluate both sides eagerly
             let l_eval = eval_with_depth(*lhs.clone(), symbols, source, depth + 1)?;
             let r_eval = eval_with_depth(*rhs.clone(), symbols, source, depth + 1)?;
 
             match op {
-                // handle logical operators
-                Token::And(_) => match (l_eval.clone(), r_eval.clone()) {
-                    (Value::Bool(lb), Value::Bool(rb)) => Ok(Value::Bool(lb && rb)),
-                    (a, b) => {
-                        let l_type = match a {
-                            Value::Number(_) => "number",
-                            Value::String(_) => "string",
-                            Value::List(_) => "list",
-                            Value::Bool(_) => "bool",
-                            Value::Function { .. } => "function",
-                            Value::Template(_, _) => "template",
-                            Value::Path(_, _) => "path",
-                            Value::Dict(_) => "dict",
-                            Value::None => "none",
-                            _ => "unknown",
-                        };
-                        let r_type = match b {
-                            Value::Number(_) => "number",
-                            Value::String(_) => "string",
-                            Value::List(_) => "list",
-                            Value::Bool(_) => "bool",
-                            Value::Function { .. } => "function",
-                            Value::Template(_, _) => "template",
-                            Value::Path(_, _) => "path",
-                            Value::Dict(_) => "dict",
-                            Value::None => "none",
-                            _ => "unknown",
-                        };
-
-                        Err(EvalError::new(
-                            format!("cannot use && with {} and {}", l_type, r_type),
-                            None,
-                            None,
-                            line,
-                        ))
-                    }
-                },
-                Token::Or(_) => match (l_eval.clone(), r_eval.clone()) {
-                    (Value::Bool(lb), Value::Bool(rb)) => Ok(Value::Bool(lb || rb)),
-                    (a, b) => {
-                        let l_type = match a {
-                            Value::Number(_) => "number",
-                            Value::String(_) => "string",
-                            Value::List(_) => "list",
-                            Value::Bool(_) => "bool",
-                            Value::Function { .. } => "function",
-                            Value::Template(_, _) => "template",
-                            Value::Path(_, _) => "path",
-                            Value::Dict(_) => "dict",
-                            Value::None => "none",
-                            _ => "unknown",
-                        };
-                        let r_type = match b {
-                            Value::Number(_) => "number",
-                            Value::String(_) => "string",
-                            Value::List(_) => "list",
-                            Value::Bool(_) => "bool",
-                            Value::Function { .. } => "function",
-                            Value::Template(_, _) => "template",
-                            Value::Path(_, _) => "path",
-                            Value::Dict(_) => "dict",
-                            Value::None => "none",
-                            _ => "unknown",
-                        };
-
-                        Err(EvalError::new(
-                            format!("cannot use || with {} and {}", l_type, r_type),
-                            None,
-                            None,
-                            line,
-                        ))
-                    }
-                },
+                // Note: And and Or are handled above with short-circuit, these are unreachable
+                Token::And(_) | Token::Or(_) => unreachable!(),
                 Token::Add(_) => match (l_eval.clone(), r_eval.clone()) {
                     (Value::Number(ln), Value::Number(rn)) => Ok(Value::Number(ln + rn)),
                     (Value::String(ls), Value::String(rs)) => {
@@ -775,15 +816,17 @@ fn eval_with_depth(
                         ))
                     }
                 },
-                Token::Mul(_) | Token::Div(_) | Token::Sub(_) | Token::Mod(_) => {
+                Token::Mul(_) | Token::Div(_) | Token::IntDiv(_) | Token::Sub(_) | Token::Mod(_) | Token::Power(_) => {
                     let lnumber = match l_eval {
                         Value::Number(n) => n,
                         other => {
                             let op_name = match op {
                                 Token::Mul(_) => "*",
                                 Token::Div(_) => "/",
+                                Token::IntDiv(_) => "//",
                                 Token::Sub(_) => "-",
                                 Token::Mod(_) => "%",
+                                Token::Power(_) => "**",
                                 _ => "unknown",
                             };
                             return Err(EvalError::type_mismatch(
@@ -807,8 +850,10 @@ fn eval_with_depth(
                             let op_name = match op {
                                 Token::Mul(_) => "*",
                                 Token::Div(_) => "/",
+                                Token::IntDiv(_) => "//",
                                 Token::Sub(_) => "-",
                                 Token::Mod(_) => "%",
+                                Token::Power(_) => "**",
                                 _ => "unknown",
                             };
                             return Err(EvalError::type_mismatch(
@@ -829,7 +874,7 @@ fn eval_with_depth(
                     let res = match op {
                         Token::Mul(_) => Value::Number(lnumber * rnumber),
                         Token::Div(_) => {
-                            // Check for division by zero
+                            // Division always returns float (like Python 3)
                             let is_zero = matches!(rnumber, Number::Int(0) | Number::Float(0.0));
                             if is_zero {
                                 return Err(EvalError::new(
@@ -839,7 +884,51 @@ fn eval_with_depth(
                                     line,
                                 ));
                             }
-                            Value::Number(lnumber / rnumber)
+                            // Convert to float for division
+                            let lval = match lnumber {
+                                Number::Int(i) => i as f64,
+                                Number::Float(f) => f,
+                            };
+                            let rval = match rnumber {
+                                Number::Int(i) => i as f64,
+                                Number::Float(f) => f,
+                            };
+                            Value::Number(Number::Float(lval / rval))
+                        }
+                        Token::IntDiv(_) => {
+                            // Integer division (floor division) - returns int
+                            let is_zero = matches!(rnumber, Number::Int(0) | Number::Float(0.0));
+                            if is_zero {
+                                return Err(EvalError::new(
+                                    "integer division by zero".to_string(),
+                                    None,
+                                    None,
+                                    line,
+                                ));
+                            }
+                            match (lnumber, rnumber) {
+                                (Number::Int(a), Number::Int(b)) => {
+                                    // Floor division for integers
+                                    let quotient = a / b;
+                                    let remainder = a % b;
+                                    // Adjust for floor division (round toward negative infinity)
+                                    let result = if remainder != 0 && (a < 0) != (b < 0) {
+                                        quotient - 1
+                                    } else {
+                                        quotient
+                                    };
+                                    Value::Number(Number::Int(result))
+                                }
+                                (Number::Float(a), Number::Int(b)) => {
+                                    Value::Number(Number::Int((a / b as f64).floor() as i64))
+                                }
+                                (Number::Int(a), Number::Float(b)) => {
+                                    Value::Number(Number::Int((a as f64 / b).floor() as i64))
+                                }
+                                (Number::Float(a), Number::Float(b)) => {
+                                    Value::Number(Number::Int((a / b).floor() as i64))
+                                }
+                            }
                         }
                         Token::Sub(_) => Value::Number(lnumber - rnumber),
                         Token::Mod(_) => {
@@ -854,6 +943,35 @@ fn eval_with_depth(
                                 ));
                             }
                             Value::Number(lnumber % rnumber)
+                        }
+                        Token::Power(_) => {
+                            // Exponentiation: base ** exp
+                            match (lnumber, rnumber) {
+                                (Number::Int(base), Number::Int(exp)) => {
+                                    if exp >= 0 && exp <= u32::MAX as i64 {
+                                        // Use integer power for non-negative exponents
+                                        let result = (base as f64).powi(exp as i32);
+                                        // Return int if result is a whole number and fits in i64
+                                        if result.fract() == 0.0 && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
+                                            Value::Number(Number::Int(result as i64))
+                                        } else {
+                                            Value::Number(Number::Float(result))
+                                        }
+                                    } else {
+                                        // Negative exponent or very large exp -> float
+                                        Value::Number(Number::Float((base as f64).powf(exp as f64)))
+                                    }
+                                }
+                                (Number::Int(base), Number::Float(exp)) => {
+                                    Value::Number(Number::Float((base as f64).powf(exp)))
+                                }
+                                (Number::Float(base), Number::Int(exp)) => {
+                                    Value::Number(Number::Float(base.powi(exp as i32)))
+                                }
+                                (Number::Float(base), Number::Float(exp)) => {
+                                    Value::Number(Number::Float(base.powf(exp)))
+                                }
+                            }
                         }
                         _ => unreachable!(),
                     };

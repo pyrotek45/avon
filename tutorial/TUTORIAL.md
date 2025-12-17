@@ -225,9 +225,9 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Import Evaluates the Entire File
     - Avon is Single-Pass and Simple
     - `pfold` Requires an Associative Combiner
-    - `&&` and `||` Do Not Short-Circuit
+    - Division Always Returns Float (Use `//` for Integer Division)
     - Range with Start > End Returns Empty List
-    - Integer Division for Integer Operands
+    - Power Operator `**` is Right-Associative
     - `zip` Truncates to Shorter List
     - And more...
 
@@ -534,8 +534,19 @@ Arithmetic Operators:
 a + b                      # Addition (numbers), concatenation (strings/lists/templates/paths)
 a - b                      # Subtraction (numbers only)
 a * b                      # Multiplication (numbers only)
-a / b                      # Division (numbers only)
+a / b                      # Division - always returns float (like Python 3)
+a // b                     # Integer division (floor division, toward -∞)
 a % b                      # Modulo/Remainder (numbers only)
+a ** b                     # Exponentiation (power, right-associative)
+```
+
+**Division Examples:**
+```avon
+10 / 3     # => 3.333... (always float)
+10 // 3    # => 3 (integer division)
+-7 // 2    # => -4 (floors toward negative infinity)
+2 ** 8     # => 256
+2 ** 0.5   # => 1.414... (square root)
 ```
 
 <!-- In Avon, "5" + 3 is a type error, not "53". You're welcome. -->
@@ -552,8 +563,8 @@ a <= b                     # Less or equal (numbers only)
 
 Logical Operators:
 ```avon
-a && b                     # Logical AND (both must be true)
-a || b                     # Logical OR (at least one must be true)
+a && b                     # Logical AND (short-circuits: b not evaluated if a is false)
+a || b                     # Logical OR (short-circuits: b not evaluated if a is true)
 not a                      # Logical NOT (returns true if false, false if true)
 ```
 
@@ -567,7 +578,6 @@ a -> b                     # Pipe: pass a as first argument to b
 The pipe operator `->` (not `|`) chains expressions, passing the left-hand side as the first argument to the right-hand side. This eliminates nested parentheses and makes code more readable.
 
 Note: Only `->` is a valid pipe operator. The single `|` character is not a pipe operator in Avon.
-
 **Basic pipe:**
 ```avon
 [1, 2, 3] -> length        # Equivalent to: length [1, 2, 3]
@@ -778,15 +788,16 @@ if (x > 0) && (y > 0) then "both positive" else "not both positive"
 # if x > 0 && y > 0 then ...  # Wrong! Parsed as: if x > (0 && y) > 0
 ```
 
-**No short-circuit evaluation:** Unlike many languages, `&&` and `||` evaluate **both operands**:
+**Short-circuit evaluation:** Avon's `&&` and `||` operators properly short-circuit:
 ```avon
-false && (1 / 0 > 0)  # ERROR: division by zero (right side IS evaluated!)
-true || (1 / 0 > 0)   # ERROR: division by zero (right side IS evaluated!)
+false && (1 / 0 > 0)  # => false (right side is NOT evaluated!)
+true || (1 / 0 > 0)   # => true (right side is NOT evaluated!)
 ```
 
-If you need short-circuit behavior, use `if-then-else` instead:
+This means you can safely write guard conditions:
 ```avon
-if false then 1/0 else 42  # => 42 (right side is NOT evaluated)
+let x = none in
+(x != none) && (x > 5)  # Safe! If x is none, the comparison isn't evaluated
 ```
 
 ---
@@ -5360,18 +5371,21 @@ pfold (\acc \x acc - x) 0 [1, 2, 3, 4, 5]   # 15 (WRONG! Different result!)
 - Simple operations: `map (\x x + 1)` on a small list is faster sequentially
 - `pfold` with subtraction, division, or order-dependent accumulation
 
-### Gotcha 19: `&&` and `||` Do Not Short-Circuit
+### Gotcha 19: Division Always Returns Float
 
-Unlike most languages, Avon evaluates **both operands** of logical operators:
+Division `/` always returns a float, even for integer operands:
 
 ```avon
-false && (1 / 0 > 0)  # ERROR: division by zero (right side IS evaluated!)
-true || (1 / 0 > 0)   # ERROR: division by zero (right side IS evaluated!)
+10 / 3       # => 3.3333... (NOT 3!)
+6 / 2        # => 3.0 (float, not int)
+-7 / 2       # => -3.5
 ```
 
-**Solution:** Use `if-then-else` for short-circuit behavior:
+**Solution:** Use `//` for integer (floor) division:
 ```avon
-if false then 1/0 else 42  # => 42 (only the else branch is evaluated)
+10 // 3      # => 3 (integer floor division)
+6 // 2       # => 3 (integer)
+-7 // 2      # => -4 (floors toward negative infinity)
 ```
 
 ### Gotcha 20: Range with Start > End Returns Empty List
@@ -5392,17 +5406,16 @@ range 1 5 -> reverse  # => [5, 4, 3, 2, 1]
 [1..5] -> reverse     # => [5, 4, 3, 2, 1]
 ```
 
-### Gotcha 21: Integer Division for Integer Operands
+### Gotcha 21: Power Operator is Right-Associative
 
-Division behavior depends on operand types:
+The `**` operator associates to the right, unlike most other operators:
 
 ```avon
-10 / 3      # => 3 (integer division!)
-10.0 / 3.0  # => 3.333... (float division)
-10.0 / 3    # => 3.333... (any float operand gives float result)
+2 ** 3 ** 2   # => 512 (evaluates as 2 ** (3 ** 2) = 2 ** 9)
+(2 ** 3) ** 2 # => 64 (explicit left grouping)
 ```
 
-**Solution:** Use a float operand if you need decimal results: `10.0 / 3`
+This matches mathematical convention where $2^{3^2} = 2^9 = 512$.
 
 ### Gotcha 22: Floating Point Precision Quirks
 
@@ -5468,15 +5481,22 @@ nth (neg 1) [1,2,3]  # => None (negative indices don't wrap)
 
 **Tip:** Use `last` for the last element instead of negative indexing.
 
-### Gotcha 28: `contains` is for Strings Only
+### Gotcha 28: `contains` Has Different Semantics for Strings vs Lists
 
-For list membership, use `any` instead:
+The `contains` function is overloaded for both strings and lists:
 
 ```avon
-contains 3 [1, 2, 3]           # ERROR: expected string
-contains "wor" "hello world"   # Works for substrings
-any (\x x == 3) [1, 2, 3, 4]   # => true ✓
+# For strings: contains "haystack" "needle" => checks if haystack contains needle
+contains "hello world" "wor"    # => true
+
+# For lists: contains elem list => checks if list contains elem
+contains 3 [1, 2, 3, 4]         # => true
+contains "apple" ["apple", "banana"]  # => true
 ```
+
+Note the argument order difference:
+- Strings: `contains haystack needle`
+- Lists: `contains element list`
 
 ---
 
@@ -5484,14 +5504,16 @@ any (\x x == 3) [1, 2, 3, 4]   # => true ✓
 
 This section contains useful patterns and idioms for effective Avon programming.
 
-### Tip: Check List Membership with `any`
+### Tip: Check List Membership with `contains` or `any`
 
-Since `contains` only works for strings, use `any` to check if an element exists in a list:
+Use `contains` for simple membership checks, or `any` for complex predicates:
 
 ```avon
-# Define a reusable membership check function
-let has_item = \item \list any (\x x == item) list
-in has_item 3 [1, 2, 3, 4]  # => true
+# Simple membership with contains
+contains 3 [1, 2, 3, 4]  # => true
+
+# Complex predicates with any
+any (\x x > 5) [1, 2, 3, 10]  # => true (checks if any element > 5)
 ```
 
 ### Tip: Safe Division with Default Value

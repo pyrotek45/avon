@@ -45,15 +45,15 @@ mod tests {
             other => panic!("expected int -10, got {:?}", other),
         }
 
-        // Test division with negative
+        // Test division with negative (now returns float)
         let prog3 = "10 / -2".to_string();
         let tokens3 = tokenize(prog3.clone()).expect("tokenize");
         let ast3 = parse(tokens3);
         let mut symbols3 = initial_builtins();
         let v3 = eval(ast3.program, &mut symbols3, &prog3).expect("eval");
         match v3 {
-            Value::Number(Number::Int(n)) => assert_eq!(n, -5),
-            other => panic!("expected int -5, got {:?}", other),
+            Value::Number(Number::Float(f)) => assert_eq!(f, -5.0),
+            other => panic!("expected float -5.0, got {:?}", other),
         }
     }
 
@@ -5307,27 +5307,29 @@ mod tests {
 
     #[test]
     fn test_edge_case_division_by_one() {
+        // Division always returns float now (like Python 3)
         let prog = "100 / 1";
         let tokens = tokenize(prog.to_string()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, prog).expect("eval");
         match v {
-            Value::Number(Number::Int(n)) => assert_eq!(n, 100),
-            other => panic!("expected 100, got {:?}", other),
+            Value::Number(Number::Float(f)) => assert_eq!(f, 100.0),
+            other => panic!("expected 100.0, got {:?}", other),
         }
     }
 
     #[test]
     fn test_edge_case_zero_divided_by_number() {
+        // Division always returns float now (like Python 3)
         let prog = "0 / 5";
         let tokens = tokenize(prog.to_string()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
         let v = eval(ast.program, &mut symbols, prog).expect("eval");
         match v {
-            Value::Number(Number::Int(n)) => assert_eq!(n, 0),
-            other => panic!("expected 0, got {:?}", other),
+            Value::Number(Number::Float(f)) => assert_eq!(f, 0.0),
+            other => panic!("expected 0.0, got {:?}", other),
         }
     }
 

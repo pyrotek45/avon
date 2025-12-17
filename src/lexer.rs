@@ -633,9 +633,25 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, EvalError> {
                 }
                 output.push(Token::Sub(line))
             }
-            '/' => output.push(Token::Div(line)),
+            '/' => {
+                // Check for integer division operator //
+                if let Some('/') = stream.peek() {
+                    stream.next();
+                    output.push(Token::IntDiv(line));
+                    continue;
+                }
+                output.push(Token::Div(line))
+            }
             '%' => output.push(Token::Mod(line)),
-            '*' => output.push(Token::Mul(line)),
+            '*' => {
+                // Check for power operator **
+                if let Some('*') = stream.peek() {
+                    stream.next();
+                    output.push(Token::Power(line));
+                    continue;
+                }
+                output.push(Token::Mul(line))
+            }
             '(' => output.push(Token::LParen(line)),
             ')' => output.push(Token::RParen(line)),
             '\\' => output.push(Token::BackSlash(line)),

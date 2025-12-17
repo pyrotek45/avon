@@ -121,9 +121,24 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             Ok(Value::String(s.trim().to_string()))
         }
         "contains" => {
-            let sa = value_to_string_auto(&args[0], source, line)?;
-            let sb = value_to_string_auto(&args[1], source, line)?;
-            Ok(Value::Bool(sa.contains(&sb)))
+            // Overloaded: works for both strings and lists
+            // For strings: contains "haystack" "needle" => true if "haystack" contains "needle"
+            // For lists: contains elem list => true if list contains elem
+            match &args[1] {
+                Value::List(items) => {
+                    // List membership check - compare using string representation
+                    let needle = &args[0];
+                    let needle_str = needle.to_string(source);
+                    let found = items.iter().any(|item| item.to_string(source) == needle_str);
+                    Ok(Value::Bool(found))
+                }
+                _ => {
+                    // String contains check - original semantics: contains haystack needle
+                    let sa = value_to_string_auto(&args[0], source, line)?;
+                    let sb = value_to_string_auto(&args[1], source, line)?;
+                    Ok(Value::Bool(sa.contains(&sb)))
+                }
+            }
         }
         "starts_with" => {
             let sa = value_to_string_auto(&args[0], source, line)?;

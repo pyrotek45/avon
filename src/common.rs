@@ -22,7 +22,9 @@ pub enum Token {
     NotEqual(usize),
     Mul(usize),
     Div(usize),
+    IntDiv(usize),    // // integer division (floor division)
     Mod(usize),
+    Power(usize),     // ** exponentiation operator
     Add(usize),
     Sub(usize),
     Dot(usize),
@@ -61,7 +63,9 @@ impl Token {
             Token::NotEqual(l) => *l,
             Token::Mul(l) => *l,
             Token::Div(l) => *l,
+            Token::IntDiv(l) => *l,
             Token::Mod(l) => *l,
+            Token::Power(l) => *l,
             Token::Add(l) => *l,
             Token::Sub(l) => *l,
             Token::Dot(l) => *l,
@@ -90,7 +94,11 @@ impl Token {
     }
 
     pub fn is_factor_op(&self) -> bool {
-        matches!(self, Token::Mul(_) | Token::Div(_) | Token::Mod(_))
+        matches!(self, Token::Mul(_) | Token::Div(_) | Token::IntDiv(_) | Token::Mod(_))
+    }
+
+    pub fn is_power_op(&self) -> bool {
+        matches!(self, Token::Power(_))
     }
 }
 

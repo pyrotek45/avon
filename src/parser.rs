@@ -295,8 +295,31 @@ pub fn parse_unary(stream: &mut Peekable<Iter<Token>>) -> Expr {
     }
 }
 
+/// Parse power expressions (** operator)
+/// Power is right-associative: 2 ** 3 ** 2 = 2 ** (3 ** 2) = 2 ** 9 = 512
+pub fn parse_power(stream: &mut Peekable<Iter<Token>>) -> Expr {
+    let lhs = parse_unary(stream);
+
+    if let Some(peek) = stream.peek() {
+        if peek.is_power_op() {
+            let op = stream.next().expect("token exists after peek").clone();
+            let line = op.line();
+            // Right-associative: recursively parse the right side
+            let rhs = parse_power(stream);
+            return Expr::Binary {
+                lhs: Box::new(lhs),
+                op,
+                rhs: Box::new(rhs),
+                line,
+            };
+        }
+    }
+
+    lhs
+}
+
 pub fn parse_factor(stream: &mut Peekable<Iter<Token>>) -> Expr {
-    let mut lhs = parse_unary(stream);
+    let mut lhs = parse_power(stream);  // Changed from parse_unary to parse_power
 
     while let Some(peek) = stream.peek() {
         if !peek.is_factor_op() {
@@ -305,7 +328,7 @@ pub fn parse_factor(stream: &mut Peekable<Iter<Token>>) -> Expr {
         // Safe: we just peeked and confirmed there's a token
         let op = stream.next().expect("token exists after peek").clone();
         let line = op.line();
-        let rhs = parse_unary(stream);
+        let rhs = parse_power(stream);  // Changed from parse_unary to parse_power
         lhs = Expr::Binary {
             lhs: Box::new(lhs),
             op,
