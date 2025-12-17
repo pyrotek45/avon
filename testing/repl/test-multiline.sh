@@ -3,7 +3,13 @@
 # REPL Multi-line Input Test Suite
 # Tests various multi-line input scenarios for :let command
 
-AVON="${1:-./target/debug/avon}"
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+
+# Allow override from command line argument
+AVON="${1:-$AVON}"
+
 PASSED=0
 FAILED=0
 
@@ -22,7 +28,7 @@ run_test() {
     
     if echo "$result" | grep -q "$expected_pattern"; then
         echo -e "${GREEN}✓${NC} $name"
-        ((PASSED++))
+        ((PASSED++)))
     else
         echo -e "${RED}✗${NC} $name"
         echo "  Input: $input"

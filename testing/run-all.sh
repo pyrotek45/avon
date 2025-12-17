@@ -5,12 +5,17 @@
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TESTING_DIR="$PROJECT_ROOT/testing"
 
+# Source common utilities (sets AVON and LSP_BIN)
+source "$TESTING_DIR/common.sh"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+echo "Using Avon binary: $AVON"
 
 # Test results tracking
 TESTS_PASSED=0

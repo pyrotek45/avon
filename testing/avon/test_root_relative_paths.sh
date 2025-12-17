@@ -3,7 +3,10 @@
 # This is a regression test for the bug where relative --root paths would falsely detect
 # path traversal when deploying files with nested paths like @config/file.json
 
-AVON="./target/debug/avon"
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+
 TEST_DIR=$(mktemp -d)
 trap "rm -rf $TEST_DIR" EXIT
 

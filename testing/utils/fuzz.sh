@@ -3,6 +3,10 @@
 # Tests the interpreter with random inputs to find crashes and security issues
 # NOTE: This fuzz suite is STRICT - failures indicate bugs that need fixing
 
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+
 FAILED=0
 PASSED=0
 
@@ -10,19 +14,13 @@ echo "Avon Fuzzing Test Suite"
 echo "======================="
 echo ""
 
-# Build avon if needed
-if [ ! -f "./target/debug/avon" ]; then
-    echo "Building avon..."
-    cargo build --quiet
-fi
-
 # Test 1: Path traversal attempts
 echo "Test 1: Path Traversal Protection"
 echo "----------------------------------"
 test_path_traversal() {
     local test_name="$1"
     local code="$2"
-    if ./target/debug/avon run "$code" 2>&1 | grep -q "not allowed\|traversal"; then
+    if $AVON run "$code" 2>&1 | grep -q "not allowed\|traversal"; then
         echo "  ✓ $test_name: Correctly blocked"
         ((PASSED++))
         return 0
@@ -51,7 +49,7 @@ echo "Test 3: Large Input Protection"
 echo "-------------------------------"
 test_large_input() {
     # Test with a moderately large string
-    if timeout 5 ./target/debug/avon run 'let s = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" in length s' 2>&1 > /dev/null; then
+    if timeout 5 $AVON run 'let s = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" in length s' 2>&1 > /dev/null; then
         echo "  ✓ Large string handled safely"
         ((PASSED++))
         return 0
@@ -72,7 +70,7 @@ echo "----------------------------------"
 test_malformed() {
     local code="$1"
     # STRICT: All malformed syntax MUST be rejected with an error
-    if ./target/debug/avon run "$code" 2>&1 | grep -q "error\|Error\|expected"; then
+    if $AVON run "$code" 2>&1 | grep -q "error\|Error\|expected"; then
         echo "  ✓ Malformed syntax correctly rejected: ${code:0:50}..."
         ((PASSED++))
         return 0
@@ -97,7 +95,7 @@ echo "--------------------------------------"
 test_template_injection() {
     local code="$1"
     # STRICT: Template injection attempts MUST be rejected or safely handled
-    local result=$(timeout 2 ./target/debug/avon run "$code" 2>&1)
+    local result=$(timeout 2 $AVON run "$code" 2>&1)
     if echo "$result" | grep -q "error\|Error"; then
         echo "  ✓ Template injection attempt blocked"
         ((PASSED++))

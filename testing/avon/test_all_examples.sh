@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Test all example files to ensure they execute without errors
 
-TESTING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT_ROOT="$(cd "$TESTING_DIR/.." && pwd)"
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+AVON_BIN="$AVON"
+
 EXAMPLES_DIR="$PROJECT_ROOT/examples"
-AVON_BIN="$PROJECT_ROOT/target/debug/avon"
 
 FAILED=()
 PASSED=()

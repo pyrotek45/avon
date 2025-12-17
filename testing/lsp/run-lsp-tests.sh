@@ -19,7 +19,10 @@ NC='\033[0m'
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TESTING_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-PROJECT_ROOT="$(cd "$TESTING_DIR/.." && pwd)"
+
+# Source common utilities for binary detection
+source "$TESTING_DIR/common.sh"
+
 LSP_PROJECT="$PROJECT_ROOT/avon-lsp"
 RESULTS_DIR="$PROJECT_ROOT/test-results/lsp"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
@@ -162,9 +165,12 @@ log "Example validation: $VALID valid, $INVALID invalid"
 print_section "LSP Startup Performance"
 log ""
 
-LSP_BIN="$LSP_PROJECT/target/release/avon-lsp"
-if [ ! -f "$LSP_BIN" ]; then
-    LSP_BIN="$LSP_PROJECT/target/debug/avon-lsp"
+# LSP_BIN is set by common.sh with fallback logic
+if [ -z "$LSP_BIN" ]; then
+    LSP_BIN="$LSP_PROJECT/target/release/avon-lsp"
+    if [ ! -f "$LSP_BIN" ]; then
+        LSP_BIN="$LSP_PROJECT/target/debug/avon-lsp"
+    fi
 fi
 
 if [ -f "$LSP_BIN" ]; then

@@ -24,10 +24,11 @@ NC='\033[0m' # No Color
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TESTING_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-PROJECT_ROOT="$(cd "$TESTING_DIR/.." && pwd)"
+
+# Source common utilities for binary detection
+source "$TESTING_DIR/common.sh"
+
 LSP_PROJECT="$PROJECT_ROOT/avon-lsp"
-LSP_BIN="$LSP_PROJECT/target/debug/avon-lsp"
-LSP_RELEASE_BIN="$LSP_PROJECT/target/release/avon-lsp"
 EXAMPLES_DIR="$PROJECT_ROOT/examples"
 TEST_RESULTS_DIR="$PROJECT_ROOT/test-results"
 VERBOSE=false

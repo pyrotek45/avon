@@ -1,7 +1,11 @@
 #!/bin/bash
 # Test AoC 2024 Day 15 pattern detection - Find product IDs that are patterns repeated twice
 
-AVON_BIN="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)/target/debug/avon"
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+AVON_BIN="$AVON"
+
 TEST_FILE="/tmp/test_aoc_patterns.av"
 
 cat > "$TEST_FILE" << 'EOF'

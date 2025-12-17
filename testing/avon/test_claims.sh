@@ -2,9 +2,9 @@
 # Test all documentation claims
 # This ensures that the docs are accurate and bulletproof
 
-TESTING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT_ROOT="$(cd "$TESTING_DIR/.." && pwd)"
-AVON="$PROJECT_ROOT/target/debug/avon"
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
 
 PASSED=0
 FAILED=0

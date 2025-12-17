@@ -2,7 +2,10 @@
 # Test script for REPL functionality
 # This tests the REPL by sending commands via stdin
 
-AVON="./target/debug/avon"
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+
 TEST_INPUT="test_repl_input.txt"
 OUTPUT_FILE="/tmp/repl_test_output.txt"
 

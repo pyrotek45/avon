@@ -4,17 +4,14 @@
 
 set -e
 
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+
 echo "Testing None Handling..."
 echo "========================="
 echo ""
 
-# Build avon if needed
-if [ ! -f "./target/debug/avon" ]; then
-    echo "Building avon..."
-    cargo build --quiet
-fi
-
-AVON="./target/debug/avon"
 PASSED=0
 FAILED=0
 

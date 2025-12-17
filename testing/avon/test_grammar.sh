@@ -2,9 +2,11 @@
 # Test script for grammar comprehensive file
 # Ensures the grammar file parses and evaluates correctly
 
-TESTING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT_ROOT="$(cd "$TESTING_DIR/.." && pwd)"
-AVON_BIN="$PROJECT_ROOT/target/debug/avon"
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+AVON_BIN="$AVON"
+
 GRAMMAR_FILE="$PROJECT_ROOT/examples/grammar_comprehensive.av"
 
 echo "Testing grammar comprehensive file..."

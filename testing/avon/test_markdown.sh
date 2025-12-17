@@ -4,6 +4,11 @@
 
 set -e
 
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+AVON_BIN="$AVON"
+
 # Colors for output
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -12,10 +17,6 @@ NC='\033[0m' # No Color
 
 PASSED=0
 FAILED=0
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-AVON_BIN="$PROJECT_ROOT/target/debug/avon"
 
 cd "$PROJECT_ROOT"
 

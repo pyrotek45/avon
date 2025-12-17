@@ -1,7 +1,11 @@
 #!/bin/bash
 # Test arithmetic operations including overflow/underflow handling
 
-AVON_BIN="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)/target/debug/avon"
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+AVON_BIN="$AVON"
+
 TEST_FILE="/tmp/test_arithmetic.av"
 
 cat > "$TEST_FILE" << 'EOF'

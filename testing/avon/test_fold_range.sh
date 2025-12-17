@@ -1,7 +1,11 @@
 #!/bin/bash
 # Test fold with range iteration to ensure correct behavior with inclusive ranges
 
-AVON_BIN="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" && pwd)/target/debug/avon"
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+AVON_BIN="$AVON"
+
 TEST_FILE="/tmp/test_fold_range.av"
 
 cat > "$TEST_FILE" << 'EOF'

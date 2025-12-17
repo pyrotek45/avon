@@ -4,7 +4,10 @@
 
 set +e
 
-AVON="./target/debug/avon"
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+
 PASSED=0
 FAILED=0
 

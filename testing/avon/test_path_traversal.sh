@@ -4,7 +4,10 @@
 
 # Don't use set -e here - we need to check exit codes manually
 
-AVON="./target/debug/avon"
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+
 TEST_DIR="/tmp/avon_path_traversal_test"
 rm -rf "$TEST_DIR"
 mkdir -p "$TEST_DIR"

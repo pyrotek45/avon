@@ -2,6 +2,10 @@
 # Comprehensive Security Test Suite for Avon
 # Tests for known vulnerabilities, edge cases, and injection attempts
 
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+
 FAILED=0
 PASSED=0
 
@@ -17,12 +21,6 @@ echo "║       Avon Comprehensive Security Test Suite                  ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
 
-# Build avon if needed
-if [ ! -f "./target/debug/avon" ]; then
-    echo "Building avon..."
-    cargo build --quiet
-fi
-
 # ============================================================================
 # SECTION 1: PATH TRAVERSAL VULNERABILITIES
 # ============================================================================
@@ -33,7 +31,7 @@ echo ""
 test_path_traversal() {
     local test_name="$1"
     local code="$2"
-    local result=$(./target/debug/avon run "$code" 2>&1)
+    local result=$($AVON run "$code" 2>&1)
     
     if echo "$result" | grep -qi "not allowed\|traversal\|error"; then
         echo -e "  ${GREEN}✓${NC} $test_name"
@@ -49,7 +47,7 @@ test_path_traversal() {
 test_path_read_allowed() {
     local test_name="$1"
     local code="$2"
-    local result=$(./target/debug/avon run "$code" 2>&1)
+    local result=$($AVON run "$code" 2>&1)
     
     # Reading is safe - absolute paths should work
     if echo "$result" | grep -qvi "error\|not allowed\|traversal"; then
@@ -97,7 +95,7 @@ echo ""
 test_injection() {
     local test_name="$1"
     local code="$2"
-    local result=$(timeout 3 ./target/debug/avon run "$code" 2>&1)
+    local result=$(timeout 3 $AVON run "$code" 2>&1)
     
     if echo "$result" | grep -qi "error\|Error"; then
         echo -e "  ${GREEN}✓${NC} $test_name (error detected)"
@@ -138,7 +136,7 @@ echo ""
 test_malformed() {
     local test_name="$1"
     local code="$2"
-    local result=$(./target/debug/avon run "$code" 2>&1)
+    local result=$($AVON run "$code" 2>&1)
     
     if echo "$result" | grep -qi "error\|Error\|expected"; then
         echo -e "  ${GREEN}✓${NC} $test_name (rejected)"
@@ -180,7 +178,7 @@ echo ""
 test_resource() {
     local test_name="$1"
     local code="$2"
-    local result=$(timeout 5 ./target/debug/avon run "$code" 2>&1)
+    local result=$(timeout 5 $AVON run "$code" 2>&1)
     
     if [ $? -eq 124 ]; then
         echo -e "  ${RED}✗${NC} $test_name - TIMEOUT (resource exhaustion)"
@@ -213,7 +211,7 @@ echo ""
 test_type_safety() {
     local test_name="$1"
     local code="$2"
-    local result=$(./target/debug/avon run "$code" 2>&1)
+    local result=$($AVON run "$code" 2>&1)
     
     if echo "$result" | grep -qi "type\|mismatch\|expected"; then
         echo -e "  ${GREEN}✓${NC} $test_name (type error detected)"
@@ -242,7 +240,7 @@ echo ""
 test_env_safety() {
     local test_name="$1"
     local code="$2"
-    local result=$(./target/debug/avon run "$code" 2>&1)
+    local result=$($AVON run "$code" 2>&1)
     
     if ! echo "$result" | grep -qi "error\|Error"; then
         echo -e "  ${GREEN}✓${NC} $test_name (handled safely)"
@@ -269,7 +267,7 @@ echo ""
 test_special_chars() {
     local test_name="$1"
     local code="$2"
-    local result=$(timeout 2 ./target/debug/avon run "$code" 2>&1)
+    local result=$(timeout 2 $AVON run "$code" 2>&1)
     
     if echo "$result" | grep -qi "error\|Error"; then
         echo -e "  ${GREEN}✓${NC} $test_name (error handling)"
@@ -309,7 +307,7 @@ echo ""
 test_fs_boundary() {
     local test_name="$1"
     local code="$2"
-    local result=$(./target/debug/avon run "$code" 2>&1)
+    local result=$($AVON run "$code" 2>&1)
     
     if echo "$result" | grep -qi "not allowed\|traversal\|error"; then
         echo -e "  ${GREEN}✓${NC} $test_name (blocked)"

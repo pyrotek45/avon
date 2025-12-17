@@ -1,7 +1,10 @@
 #!/bin/bash
 # Test that absolute path literals (@/) are blocked by the lexer in both run and deploy
 
-AVON="./target/debug/avon"
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+
 TMP_FILE="/tmp/avon_path_literal_block.av"
 
 set -e

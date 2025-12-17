@@ -2,9 +2,11 @@
 # Test script for bulletproof comprehensive test file
 # Ensures the bulletproof test file parses and evaluates correctly
 
-TESTING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT_ROOT="$(cd "$TESTING_DIR/.." && pwd)"
-AVON_BIN="$PROJECT_ROOT/target/debug/avon"
+# Source common utilities for AVON binary detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../common.sh"
+AVON_BIN="$AVON"
+
 BULLETPROOF_FILE="$PROJECT_ROOT/examples/bulletproof.av"
 
 echo "Testing bulletproof comprehensive file..."
