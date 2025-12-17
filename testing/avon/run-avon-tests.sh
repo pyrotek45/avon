@@ -89,6 +89,7 @@ run_test "None Handling" "$AVON_TEST_DIR/test_none_handling.sh"
 run_test "Scoping Rules" "$AVON_TEST_DIR/test_scoping_rules.sh"
 run_test "Claims" "$AVON_TEST_DIR/test_claims.sh"
 run_test "REPL" "$AVON_TEST_DIR/test_repl.sh"
+run_test "Parallel Functions" "$AVON_TEST_DIR/test_parallel_functions.sh"
 
 # Summary
 print_section "Avon Tests Summary"

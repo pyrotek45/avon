@@ -5309,6 +5309,36 @@ Avon intentionally doesn't have advanced features like:
 
 **Solution:** Embrace functional programming patterns. They're more powerful than they first appear.
 
+### Gotcha 18: `pfold` Requires an Associative Combiner
+
+The parallel functions `pmap`, `pfilter`, and `pfold` use multiple CPU cores for better performance on large lists. While `pmap` and `pfilter` always produce identical results to their sequential counterparts, **`pfold` requires the combiner function to be associative**.
+
+```avon
+# ✓ Associative operations work correctly with pfold
+fold (\acc \x acc + x) 0 [1, 2, 3, 4, 5]    # 15
+pfold (\acc \x acc + x) 0 [1, 2, 3, 4, 5]   # 15 (same result!)
+
+fold (\acc \x acc * x) 1 [1, 2, 3, 4, 5]    # 120
+pfold (\acc \x acc * x) 1 [1, 2, 3, 4, 5]   # 120 (same result!)
+
+# ✗ Non-associative operations give DIFFERENT results
+fold (\acc \x acc - x) 0 [1, 2, 3, 4, 5]    # -15
+pfold (\acc \x acc - x) 0 [1, 2, 3, 4, 5]   # 15 (WRONG! Different result!)
+```
+
+**Why?** Parallel fold splits the list into chunks, folds each chunk in parallel, then combines the results. For non-associative operations like subtraction or division, the order of operations matters:
+- Sequential: `((((0 - 1) - 2) - 3) - 4) - 5 = -15`
+- Parallel: Chunks may combine as `(0 - 1 - 2) - (3 - 4 - 5) = 3` or other orders
+
+**When to use parallel functions:**
+- `pmap`/`pfilter`: Safe to use anytime; ideal for large lists (1000+ elements) with CPU-intensive functions
+- `pfold`: Only use with **associative** combiners: `+`, `*`, `max`, `min`, `and`, `or`, `++` (list concat)
+
+**When NOT to use parallel functions:**
+- Small lists (under ~100 elements): The overhead of parallelism outweighs the benefit
+- Simple operations: `map (\x x + 1)` on a small list is faster sequentially
+- `pfold` with subtraction, division, or order-dependent accumulation
+
 ---
 
 ## Piping, Stdin, Stdout, and Embedding Avon

@@ -200,6 +200,9 @@ Functions for working with lists.
 | `nth` | `Number -> [a] -> a\|None` | Returns the item at index (0-based), or None if out of bounds. |
 | `partition` | `(a -> Bool) -> [a] -> [[a], [a]]` | Splits a list into two lists: [matches, non-matches]. |
 | `permutations` | `Number -> [a] -> [[a]]` | Returns all permutations of length k. |
+| `pfilter` | `(a -> Bool) -> [a] -> [a]` | Parallel filter. Like `filter` but uses multiple CPU cores. |
+| `pfold` | `(b -> a -> b) -> b -> [a] -> b` | Parallel fold. **Requires an associative combiner function.** |
+| `pmap` | `(a -> b) -> [a] -> [b]` | Parallel map. Like `map` but uses multiple CPU cores. |
 | `range` | `Number -> Number -> [Number]` | Generates a list of numbers from start to end (inclusive). |
 | `reverse` | `[a] -> [a]` | Returns the list in reverse order. |
 | `sample` | `Number -> [a] -> [a]` | Returns n unique random elements from a list. Errors if n > length. |
@@ -222,6 +225,13 @@ Functions for working with lists.
 map (\x x * 2) [1, 2, 3]                # [2, 4, 6]
 filter (\x x > 2) [1, 2, 3, 4, 5]       # [3, 4, 5]
 fold (\acc \x acc + x) 0 [1, 2, 3]     # 6
+
+# Parallel list operations (same results, uses multiple CPU cores)
+pmap (\x x * 2) [1, 2, 3]               # [2, 4, 6]
+pfilter (\x x > 2) [1, 2, 3, 4, 5]      # [3, 4, 5]
+pfold (\acc \x acc + x) 0 [1, 2, 3]    # 6
+# NOTE: pfold requires an ASSOCIATIVE combiner (e.g., +, *, max, min)
+# Non-associative operations like subtraction will give different results!
 
 # Random selection
 choice [1, 2, 3, 4, 5]                  # A random element, e.g., 3
