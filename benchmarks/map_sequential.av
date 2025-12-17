@@ -1,0 +1,5 @@
+# Benchmark: Sequential map on a large list
+
+let data = range 1 50000 in
+let result = map (\x x * x + x * 2 + 1) data in
+length result

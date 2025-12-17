@@ -1,10 +1,11 @@
-//! List operations: choice, chunks, combinations, drop, enumerate, filter, find, find_index, flatmap, flatten, fold, group_by, head, intersperse, last, map, nth, partition, permutations, range, reverse, sample, shuffle, sort, sort_by, split_at, tail, take, transpose, unique, unzip, windows, zip, zip_with
+//! List operations: choice, chunks, combinations, drop, enumerate, filter, find, find_index, flatmap, flatten, fold, group_by, head, intersperse, last, map, nth, partition, permutations, pfilter, pfold, pmap, range, reverse, sample, shuffle, sort, sort_by, split_at, tail, take, transpose, unique, unzip, windows, zip, zip_with
 
 use crate::common::{EvalError, Number, Value};
 use crate::eval::apply_function;
 use itertools::Itertools;
 use rand::seq::SliceRandom;
 use rand::Rng;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
@@ -29,6 +30,9 @@ pub const NAMES: &[&str] = &[
     "nth",
     "partition",
     "permutations",
+    "pfilter",
+    "pfold",
+    "pmap",
     "range",
     "reverse",
     "sample",
@@ -52,9 +56,11 @@ pub fn get_arity(name: &str) -> Option<usize> {
         "choice" | "enumerate" | "flatten" | "head" | "last" | "reverse" | "shuffle" | "sort"
         | "tail" | "transpose" | "unique" | "unzip" => Some(1),
         "chunks" | "combinations" | "drop" | "filter" | "find" | "find_index" | "flatmap"
-        | "group_by" | "intersperse" | "map" | "nth" | "partition" | "permutations" | "range"
-        | "sample" | "sort_by" | "split_at" | "take" | "windows" | "zip" => Some(2),
-        "fold" | "zip_with" => Some(3),
+        | "group_by" | "intersperse" | "map" | "nth" | "partition" | "permutations" | "pfilter"
+        | "pmap" | "range" | "sample" | "sort_by" | "split_at" | "take" | "windows" | "zip" => {
+            Some(2)
+        }
+        "fold" | "pfold" | "zip_with" => Some(3),
         _ => None,
     }
 }
@@ -1057,6 +1063,158 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     result.push(item.clone());
                 }
                 Ok(Value::List(result))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "pmap" => {
+            // pmap :: (a -> b) -> [a] -> [b]
+            // Parallel version of map using rayon
+            let func = &args[0];
+            let list = &args[1];
+            if let Value::List(items) = list {
+                let func = func.clone();
+                let source = source.to_string();
+
+                let results: Result<Vec<Value>, EvalError> = items
+                    .par_iter()
+                    .map(|item| {
+                        apply_function(&func, item.clone(), &source, line).map_err(|mut err| {
+                            if !err.message.starts_with("pmap:") {
+                                err.message = format!("pmap: {}", err.message);
+                            }
+                            err
+                        })
+                    })
+                    .collect();
+
+                Ok(Value::List(results?))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "pfilter" => {
+            // pfilter :: (a -> Bool) -> [a] -> [a]
+            // Parallel version of filter using rayon
+            let func = &args[0];
+            let list = &args[1];
+            if let Value::List(items) = list {
+                let func = func.clone();
+                let source = source.to_string();
+
+                // Evaluate predicates in parallel
+                let predicate_results: Result<Vec<(Value, bool)>, EvalError> = items
+                    .par_iter()
+                    .map(|item| {
+                        let res = apply_function(&func, item.clone(), &source, line).map_err(
+                            |mut err| {
+                                if !err.message.starts_with("pfilter:") {
+                                    err.message = format!("pfilter: {}", err.message);
+                                }
+                                err
+                            },
+                        )?;
+                        match res {
+                            Value::Bool(b) => Ok((item.clone(), b)),
+                            other => Err(EvalError::type_mismatch("bool", other.to_string(&source), line)),
+                        }
+                    })
+                    .collect();
+
+                // Filter based on results (maintaining order)
+                let filtered: Vec<Value> = predicate_results?
+                    .into_iter()
+                    .filter(|(_, keep)| *keep)
+                    .map(|(item, _)| item)
+                    .collect();
+
+                Ok(Value::List(filtered))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "pfold" => {
+            // pfold :: (a -> a -> a) -> a -> [a] -> a
+            // Parallel fold using rayon
+            // Note: The combining function must be associative for correct results
+            // Strategy: Split list into chunks, fold each chunk in parallel, then combine results
+            let func = &args[0];
+            let identity = args[1].clone();
+            let list = &args[2];
+            if let Value::List(items) = list {
+                if items.is_empty() {
+                    return Ok(identity);
+                }
+
+                let func = func.clone();
+                let source = source.to_string();
+
+                // Calculate chunk size based on number of CPUs
+                let num_threads = rayon::current_num_threads();
+                let chunk_size = (items.len() / num_threads).max(1);
+
+                // Process chunks in parallel
+                let chunk_results: Result<Vec<Value>, EvalError> = items
+                    .chunks(chunk_size)
+                    .collect::<Vec<_>>()
+                    .par_iter()
+                    .map(|chunk| {
+                        // Sequential fold within each chunk
+                        let mut acc = identity.clone();
+                        for item in *chunk {
+                            let step =
+                                apply_function(&func, acc, &source, line).map_err(|mut err| {
+                                    if !err.message.starts_with("pfold:") {
+                                        err.message = format!("pfold: {}", err.message);
+                                    }
+                                    err
+                                })?;
+                            acc = apply_function(&step, item.clone(), &source, line).map_err(
+                                |mut err| {
+                                    if !err.message.starts_with("pfold:") {
+                                        err.message = format!("pfold: {}", err.message);
+                                    }
+                                    err
+                                },
+                            )?;
+                        }
+                        Ok(acc)
+                    })
+                    .collect();
+
+                // Combine chunk results sequentially
+                let partial_results = chunk_results?;
+                let mut final_acc = identity;
+                for partial in partial_results {
+                    let step =
+                        apply_function(&func, final_acc, &source, line).map_err(|mut err| {
+                            if !err.message.starts_with("pfold:") {
+                                err.message = format!("pfold: {}", err.message);
+                            }
+                            err
+                        })?;
+                    final_acc =
+                        apply_function(&step, partial, &source, line).map_err(|mut err| {
+                            if !err.message.starts_with("pfold:") {
+                                err.message = format!("pfold: {}", err.message);
+                            }
+                            err
+                        })?;
+                }
+
+                Ok(final_acc)
             } else {
                 Err(EvalError::type_mismatch(
                     "list",

@@ -32,6 +32,9 @@ pkgs.mkShell {
     
     # Helpful tools for development
     git            # Version control
+    
+    # Benchmarking
+    hyperfine      # Command-line benchmarking tool
   ];
 
   shellHook = ''

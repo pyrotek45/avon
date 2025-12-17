@@ -36,3 +36,4 @@ sha2 = "0.10"
 md-5 = "0.10"
 uuid = { version = "1.11", features = ["v4"] }
 rand = "0.8"
+rayon = "1.10"

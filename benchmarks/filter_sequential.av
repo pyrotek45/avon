@@ -1,0 +1,5 @@
+# Benchmark: Sequential filter on a large list
+
+let data = range 1 50000 in
+let result = filter (\x (x * x + x) % 7 == 0) data in
+length result

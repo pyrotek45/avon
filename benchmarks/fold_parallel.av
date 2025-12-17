@@ -1,0 +1,4 @@
+# Benchmark: Parallel fold on a list
+
+let data = range 1 10000 in
+pfold (\a \b a + b) 0 data

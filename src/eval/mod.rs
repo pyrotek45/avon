@@ -1101,7 +1101,7 @@ fn eval_with_depth(
                 ident,
                 default: default_val,
                 expr,
-                env: std::rc::Rc::new(symbols.clone()), // Rc wraps a snapshot of the current environment
+                env: std::sync::Arc::new(symbols.clone()), // Arc for thread-safe parallel execution
             })
         }
         Expr::Application { lhs, rhs, line } => {
