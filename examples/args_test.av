@@ -1,0 +1,5 @@
+# Test the args builtin
+# Run with: avon eval examples/args_test.av file1.txt file2.txt file3.txt
+
+# Simply output all arguments
+args

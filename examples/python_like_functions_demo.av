@@ -1,0 +1,65 @@
+# Python-like List Functions Demo
+# ================================
+# Showcasing: choice, shuffle, sample, find, find_index, group_by, zip_with, intersperse
+
+# 1. CHOICE - Random element from list
+let choice_colors = ["red", "green", "blue", "yellow", "purple"] in
+let choice_picked = choice choice_colors in
+let colors_str = join choice_colors ", " in
+let choice_result = {"1. CHOICE: Picked '{choice_picked}' from [{colors_str}]"} in
+
+# 2. SHUFFLE - Randomize list order  
+let shuffle_cards = [1..10] in
+let shuffle_result_list = shuffle shuffle_cards in
+let shuffle_str = join (map to_string shuffle_result_list) ", " in
+let shuffle_result = {"2. SHUFFLE: [{shuffle_str}] (was [1..10])"} in
+
+# 3. SAMPLE - Select n unique random elements
+let sample_pool = [1..20] in
+let sample_picked = sample 5 sample_pool in
+let sample_str = join (map to_string (sort sample_picked)) ", " in
+let sample_result = {"3. SAMPLE: [{sample_str}] (5 unique from 1-20)"} in
+
+# 4. FIND - First element matching predicate
+let find_nums = [3, 7, 2, 9, 4, 11, 6] in
+let find_result_val = find (\x x > 8) find_nums in
+let find_nums_str = join (map to_string find_nums) ", " in
+let find_result = {"4. FIND: First >8 is {find_result_val} in [{find_nums_str}]"} in
+
+# 5. FIND_INDEX - Index of first matching element
+let find_idx_words = ["apple", "banana", "cherry"] in
+let find_idx_result_val = find_index (\w w == "banana") find_idx_words in
+let find_index_result = {"5. FIND_INDEX: 'banana' is at index {find_idx_result_val}"} in
+
+# 6. GROUP_BY - Group elements by key function
+let group_nums = [1..10] in
+let group_result_val = group_by (\n n % 3) group_nums in
+let group_by_result = {"6. GROUP_BY mod 3: {group_result_val}"} in
+
+# 7. ZIP_WITH - Combine two lists with function
+let zip_a = [1, 2, 3] in
+let zip_b = [10, 20, 30] in
+let zip_result_val = zip_with (\x \y x + y) zip_a zip_b in
+let zip_a_str = join (map to_string zip_a) ", " in
+let zip_b_str = join (map to_string zip_b) ", " in
+let zip_result_str = join (map to_string zip_result_val) ", " in
+let zip_with_result = {"7. ZIP_WITH (+): [{zip_a_str}] + [{zip_b_str}] = [{zip_result_str}]"} in
+
+# 8. INTERSPERSE - Insert separator between elements
+let inter_items = ["a", "b", "c"] in
+let inter_result_val = intersperse "-" inter_items in
+let inter_items_str = join inter_items ", " in
+let inter_result_str = join inter_result_val ", " in
+let intersperse_result = {"8. INTERSPERSE: [{inter_items_str}] -> [{inter_result_str}]"} in
+
+# Return all results
+join [
+    choice_result,
+    shuffle_result,
+    sample_result,
+    find_result,
+    find_index_result,
+    group_by_result,
+    zip_with_result,
+    intersperse_result
+] "\n"

@@ -281,6 +281,15 @@ pub fn process_source(
             }
 
             let mut symbols = initial_builtins();
+
+            // Inject `args` - a list of all positional CLI arguments
+            let args_list: Vec<Value> = opts
+                .pos_args
+                .iter()
+                .map(|s| Value::String(s.clone()))
+                .collect();
+            symbols.insert("args".to_string(), Value::List(args_list));
+
             match eval(ast.program, &mut symbols, &source) {
                 Ok(mut v) => {
                     // Apply arguments logic

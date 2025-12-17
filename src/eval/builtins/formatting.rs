@@ -19,6 +19,8 @@ pub const NAMES: &[&str] = &[
     "format_percent",
     "format_scientific",
     "format_table",
+    "format_toml",
+    "format_yaml",
     "truncate",
 ];
 
@@ -26,7 +28,7 @@ pub const NAMES: &[&str] = &[
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
         "format_binary" | "format_bytes" | "format_csv" | "format_hex" | "format_json"
-        | "format_octal" => Some(1),
+        | "format_octal" | "format_toml" | "format_yaml" => Some(1),
         "center" | "format_bool" | "format_currency" | "format_float" | "format_int"
         | "format_list" | "format_percent" | "format_scientific" | "format_table" | "truncate" => {
             Some(2)
@@ -277,6 +279,22 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let val = &args[0];
             let json_str = format_json_value(val, source, line)?;
             Ok(Value::String(json_str))
+        }
+        "format_yaml" => {
+            let val = &args[0];
+            let yaml_val = value_to_yaml(val, source);
+            let yaml_str = serde_yaml::to_string(&yaml_val).map_err(|e| {
+                EvalError::new(format!("YAML serialization error: {}", e), None, None, line)
+            })?;
+            Ok(Value::String(yaml_str))
+        }
+        "format_toml" => {
+            let val = &args[0];
+            let toml_val = value_to_toml(val, source);
+            let toml_str = toml::to_string_pretty(&toml_val).map_err(|e| {
+                EvalError::new(format!("TOML serialization error: {}", e), None, None, line)
+            })?;
+            Ok(Value::String(toml_str))
         }
         "format_csv" => {
             let val = &args[0];
@@ -578,4 +596,69 @@ fn format_json_value(val: &Value, source: &str, _line: usize) -> Result<String, 
                 .replace('"', "\\\"")
         ),
     })
+}
+
+// Helper to convert Value to serde_yaml::Value
+fn value_to_yaml(val: &Value, source: &str) -> serde_yaml::Value {
+    match val {
+        Value::String(s) => serde_yaml::Value::String(s.clone()),
+        Value::Number(Number::Int(i)) => serde_yaml::Value::Number(serde_yaml::Number::from(*i)),
+        Value::Number(Number::Float(f)) => {
+            // Handle special float cases
+            if f.is_nan() || f.is_infinite() {
+                serde_yaml::Value::String(f.to_string())
+            } else {
+                serde_yaml::Value::Number(serde_yaml::Number::from(*f))
+            }
+        }
+        Value::Bool(b) => serde_yaml::Value::Bool(*b),
+        Value::List(items) => {
+            let yaml_items: Vec<serde_yaml::Value> =
+                items.iter().map(|v| value_to_yaml(v, source)).collect();
+            serde_yaml::Value::Sequence(yaml_items)
+        }
+        Value::Dict(dict) => {
+            let mut map = serde_yaml::Mapping::new();
+            for (k, v) in dict.iter() {
+                map.insert(
+                    serde_yaml::Value::String(k.clone()),
+                    value_to_yaml(v, source),
+                );
+            }
+            serde_yaml::Value::Mapping(map)
+        }
+        Value::None => serde_yaml::Value::Null,
+        other => serde_yaml::Value::String(other.to_string(source)),
+    }
+}
+
+// Helper to convert Value to toml::Value
+fn value_to_toml(val: &Value, source: &str) -> toml::Value {
+    match val {
+        Value::String(s) => toml::Value::String(s.clone()),
+        Value::Number(Number::Int(i)) => toml::Value::Integer(*i),
+        Value::Number(Number::Float(f)) => {
+            // Handle special float cases - TOML doesn't support NaN/Infinity
+            if f.is_nan() || f.is_infinite() {
+                toml::Value::String(f.to_string())
+            } else {
+                toml::Value::Float(*f)
+            }
+        }
+        Value::Bool(b) => toml::Value::Boolean(*b),
+        Value::List(items) => {
+            let toml_items: Vec<toml::Value> =
+                items.iter().map(|v| value_to_toml(v, source)).collect();
+            toml::Value::Array(toml_items)
+        }
+        Value::Dict(dict) => {
+            let mut map = toml::map::Map::new();
+            for (k, v) in dict.iter() {
+                map.insert(k.clone(), value_to_toml(v, source));
+            }
+            toml::Value::Table(map)
+        }
+        Value::None => toml::Value::String("null".to_string()),
+        other => toml::Value::String(other.to_string(source)),
+    }
 }

@@ -5,7 +5,7 @@ A standalone Language Server Protocol implementation for the Avon template langu
 ## Features
 
 - **Real-time Diagnostics** - Instant error reporting as you type
-- **Code Completion** - Autocomplete for all 111+ built-in functions
+- **Code Completion** - Autocomplete for all 137 built-in functions
 - **Accurate Validation** - Uses the same lexer, parser, and evaluator as the Avon compiler for perfect accuracy
 - **Zero False Positives** - No duplicate parsing logic, just direct reuse of compiler validation
 

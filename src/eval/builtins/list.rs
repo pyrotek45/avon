@@ -1,21 +1,29 @@
-//! List operations: chunks, combinations, drop, enumerate, filter, flatmap, flatten, fold, head, last, map, nth, partition, permutations, range, reverse, sort, sort_by, split_at, tail, take, transpose, unique, unzip, windows, zip
+//! List operations: choice, chunks, combinations, drop, enumerate, filter, find, find_index, flatmap, flatten, fold, group_by, head, intersperse, last, map, nth, partition, permutations, range, reverse, sample, shuffle, sort, sort_by, split_at, tail, take, transpose, unique, unzip, windows, zip, zip_with
 
 use crate::common::{EvalError, Number, Value};
 use crate::eval::apply_function;
 use itertools::Itertools;
+use rand::seq::SliceRandom;
+use rand::Rng;
+use std::collections::HashMap;
 use std::collections::HashSet;
 
 /// Names of list builtins
 pub const NAMES: &[&str] = &[
+    "choice",
     "chunks",
     "combinations",
     "drop",
     "enumerate",
     "filter",
+    "find",
+    "find_index",
     "flatmap",
     "flatten",
     "fold",
+    "group_by",
     "head",
+    "intersperse",
     "last",
     "map",
     "nth",
@@ -23,6 +31,8 @@ pub const NAMES: &[&str] = &[
     "permutations",
     "range",
     "reverse",
+    "sample",
+    "shuffle",
     "sort",
     "sort_by",
     "split_at",
@@ -33,16 +43,18 @@ pub const NAMES: &[&str] = &[
     "unzip",
     "windows",
     "zip",
+    "zip_with",
 ];
 
 /// Get arity for list functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
-        "enumerate" | "flatten" | "head" | "last" | "reverse" | "sort" | "tail" | "transpose"
-        | "unique" | "unzip" => Some(1),
-        "chunks" | "combinations" | "drop" | "filter" | "flatmap" | "map" | "nth" | "partition"
-        | "permutations" | "range" | "sort_by" | "split_at" | "take" | "windows" | "zip" => Some(2),
-        "fold" => Some(3),
+        "choice" | "enumerate" | "flatten" | "head" | "last" | "reverse" | "shuffle" | "sort"
+        | "tail" | "transpose" | "unique" | "unzip" => Some(1),
+        "chunks" | "combinations" | "drop" | "filter" | "find" | "find_index" | "flatmap"
+        | "group_by" | "intersperse" | "map" | "nth" | "partition" | "permutations" | "range"
+        | "sample" | "sort_by" | "split_at" | "take" | "windows" | "zip" => Some(2),
+        "fold" | "zip_with" => Some(3),
         _ => None,
     }
 }
@@ -595,7 +607,17 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let size_val = &args[0];
             let list = &args[1];
             let size = match size_val {
-                Value::Number(Number::Int(i)) => *i as usize,
+                Value::Number(Number::Int(i)) => {
+                    if *i <= 0 {
+                        return Err(EvalError::new(
+                            format!("windows size must be positive, got {}", i),
+                            None,
+                            None,
+                            line,
+                        ));
+                    }
+                    *i as usize
+                }
                 _ => {
                     return Err(EvalError::type_mismatch(
                         "integer",
@@ -604,14 +626,6 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     ))
                 }
             };
-            if size == 0 {
-                return Err(EvalError::new(
-                    "windows size must be non-zero".to_string(),
-                    None,
-                    None,
-                    line,
-                ));
-            }
             if let Value::List(items) = list {
                 let result: Vec<Value> = items
                     .windows(size)
@@ -630,7 +644,17 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let size_val = &args[0];
             let list = &args[1];
             let size = match size_val {
-                Value::Number(Number::Int(i)) => *i as usize,
+                Value::Number(Number::Int(i)) => {
+                    if *i <= 0 {
+                        return Err(EvalError::new(
+                            format!("chunk size must be positive, got {}", i),
+                            None,
+                            None,
+                            line,
+                        ));
+                    }
+                    *i as usize
+                }
                 _ => {
                     return Err(EvalError::type_mismatch(
                         "integer",
@@ -639,14 +663,6 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     ))
                 }
             };
-            if size == 0 {
-                return Err(EvalError::new(
-                    "chunk size must be non-zero".to_string(),
-                    None,
-                    None,
-                    line,
-                ));
-            }
             if let Value::List(items) = list {
                 let result: Vec<Value> = items
                     .chunks(size)
@@ -780,6 +796,266 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     .combinations(k)
                     .map(|c| Value::List(c.into_iter().cloned().collect()))
                     .collect();
+                Ok(Value::List(result))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "choice" => {
+            // choice :: [a] -> a
+            // Pick a random element from a list
+            let list = &args[0];
+            if let Value::List(items) = list {
+                if items.is_empty() {
+                    return Err(EvalError::new(
+                        "choice: cannot choose from empty list".to_string(),
+                        None,
+                        None,
+                        line,
+                    ));
+                }
+                let mut rng = rand::thread_rng();
+                let idx = rng.gen_range(0..items.len());
+                Ok(items[idx].clone())
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "shuffle" => {
+            // shuffle :: [a] -> [a]
+            // Return a randomly shuffled copy of the list
+            let list = &args[0];
+            if let Value::List(items) = list {
+                let mut result = items.clone();
+                let mut rng = rand::thread_rng();
+                result.shuffle(&mut rng);
+                Ok(Value::List(result))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "sample" => {
+            // sample :: Number -> [a] -> [a]
+            // Pick n random elements without replacement
+            let n_val = &args[0];
+            let list = &args[1];
+            let n = match n_val {
+                Value::Number(Number::Int(i)) => {
+                    if *i < 0 {
+                        return Err(EvalError::new(
+                            format!("sample: count must be non-negative, got {}", i),
+                            None,
+                            None,
+                            line,
+                        ));
+                    }
+                    *i as usize
+                }
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "integer",
+                        n_val.to_string(source),
+                        line,
+                    ))
+                }
+            };
+            if let Value::List(items) = list {
+                if n > items.len() {
+                    return Err(EvalError::new(
+                        format!(
+                            "sample: cannot sample {} items from list of length {}",
+                            n,
+                            items.len()
+                        ),
+                        None,
+                        None,
+                        line,
+                    ));
+                }
+                let mut rng = rand::thread_rng();
+                let result: Vec<Value> = items.choose_multiple(&mut rng, n).cloned().collect();
+                Ok(Value::List(result))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "find" => {
+            // find :: (a -> Bool) -> [a] -> a | None
+            // Find first element matching predicate
+            let func = &args[0];
+            let list = &args[1];
+            if let Value::List(items) = list {
+                for item in items {
+                    let res =
+                        apply_function(func, item.clone(), source, line).map_err(|mut err| {
+                            if !err.message.starts_with("find:") {
+                                err.message = format!("find: {}", err.message);
+                            }
+                            err
+                        })?;
+                    match res {
+                        Value::Bool(true) => return Ok(item.clone()),
+                        Value::Bool(false) => {}
+                        other => {
+                            return Err(EvalError::type_mismatch(
+                                "bool",
+                                other.to_string(source),
+                                line,
+                            ))
+                        }
+                    }
+                }
+                Ok(Value::None)
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "find_index" => {
+            // find_index :: (a -> Bool) -> [a] -> Number | None
+            // Find index of first element matching predicate
+            let func = &args[0];
+            let list = &args[1];
+            if let Value::List(items) = list {
+                for (idx, item) in items.iter().enumerate() {
+                    let res =
+                        apply_function(func, item.clone(), source, line).map_err(|mut err| {
+                            if !err.message.starts_with("find_index:") {
+                                err.message = format!("find_index: {}", err.message);
+                            }
+                            err
+                        })?;
+                    match res {
+                        Value::Bool(true) => return Ok(Value::Number(Number::Int(idx as i64))),
+                        Value::Bool(false) => {}
+                        other => {
+                            return Err(EvalError::type_mismatch(
+                                "bool",
+                                other.to_string(source),
+                                line,
+                            ))
+                        }
+                    }
+                }
+                Ok(Value::None)
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "group_by" => {
+            // group_by :: (a -> b) -> [a] -> Dict
+            // Group list elements by a key function
+            let func = &args[0];
+            let list = &args[1];
+            if let Value::List(items) = list {
+                let mut groups: HashMap<String, Vec<Value>> = HashMap::new();
+                for item in items {
+                    let key_val =
+                        apply_function(func, item.clone(), source, line).map_err(|mut err| {
+                            if !err.message.starts_with("group_by:") {
+                                err.message = format!("group_by: {}", err.message);
+                            }
+                            err
+                        })?;
+                    // Convert key to string for Dict key
+                    let key = key_val.to_string(source);
+                    groups.entry(key).or_default().push(item.clone());
+                }
+                // Convert to Dict
+                let dict: HashMap<String, Value> = groups
+                    .into_iter()
+                    .map(|(k, v)| (k, Value::List(v)))
+                    .collect();
+                Ok(Value::Dict(dict))
+            } else {
+                Err(EvalError::type_mismatch(
+                    "list",
+                    list.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "zip_with" => {
+            // zip_with :: (a -> b -> c) -> [a] -> [b] -> [c]
+            // Combine two lists with a function
+            let func = &args[0];
+            let list1 = &args[1];
+            let list2 = &args[2];
+            match (list1, list2) {
+                (Value::List(items1), Value::List(items2)) => {
+                    let mut result = Vec::new();
+                    let len = std::cmp::min(items1.len(), items2.len());
+                    for i in 0..len {
+                        // Apply function to first arg, then to second arg (curried)
+                        let partial = apply_function(func, items1[i].clone(), source, line)
+                            .map_err(|mut err| {
+                                if !err.message.starts_with("zip_with:") {
+                                    err.message = format!("zip_with: {}", err.message);
+                                }
+                                err
+                            })?;
+                        let res = apply_function(&partial, items2[i].clone(), source, line)
+                            .map_err(|mut err| {
+                                if !err.message.starts_with("zip_with:") {
+                                    err.message = format!("zip_with: {}", err.message);
+                                }
+                                err
+                            })?;
+                        result.push(res);
+                    }
+                    Ok(Value::List(result))
+                }
+                (Value::List(_), other) => Err(EvalError::type_mismatch(
+                    "list",
+                    other.to_string(source),
+                    line,
+                )),
+                (other, _) => Err(EvalError::type_mismatch(
+                    "list",
+                    other.to_string(source),
+                    line,
+                )),
+            }
+        }
+        "intersperse" => {
+            // intersperse :: a -> [a] -> [a]
+            // Insert element between all list items
+            let sep = &args[0];
+            let list = &args[1];
+            if let Value::List(items) = list {
+                if items.is_empty() {
+                    return Ok(Value::List(vec![]));
+                }
+                let mut result = Vec::with_capacity(items.len() * 2 - 1);
+                for (i, item) in items.iter().enumerate() {
+                    if i > 0 {
+                        result.push(sep.clone());
+                    }
+                    result.push(item.clone());
+                }
                 Ok(Value::List(result))
             } else {
                 Err(EvalError::type_mismatch(

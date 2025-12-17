@@ -1,50 +1,78 @@
-# ============================================================================
-# Demonstration of new Avon builtins: slice(), char_at(), chars()
-# ============================================================================
+# New Builtins Demo
+# Demonstrates the newly implemented builtin functions
 
-# Define a demo that shows all the new features
-let demo = 
-  let text = "hello world" in
-  let _ = trace "slice text 0 5" (slice text 0 5) in
-  let _ = trace "slice text 6 11" (slice text 6 11) in
-  let _ = trace "slice text 1 5" (slice text 1 5) in
-  
-  let nums = [10, 20, 30, 40, 50, 60] in
-  let _ = trace "slice nums 1 4" (slice nums 1 4) in
-  let _ = trace "slice nums 0 3" (slice nums 0 3) in
-  
-  let word = "example" in
-  let _ = trace "char_at word 0" (char_at word 0) in
-  let _ = trace "char_at word 3" (char_at word 3) in
-  let _ = trace "char_at word 6" (char_at word 6) in
-  
-  let str = "hello" in
-  let char_list = chars str in
-  let _ = trace "chars 'hello'" char_list in
-  let _ = trace "length of chars" (length char_list) in
-  
-  let input_str = "abc" in
-  let uppercase_chars = map (\c upper c) (chars input_str) in
-  let _ = trace "uppercase each char" uppercase_chars in
-  let _ = trace "join back together" (join uppercase_chars "") in
-  
-  let is_repeating_pattern = \text
-    let len = length text in
-    if len % 2 != 0 then
-      false
-    else
-      let half = len / 2 in
-      let first = slice text 0 half in
-      let second = slice text half len in
-      first == second
-  in
-  
-  let _ = trace "is '55' repeating" (is_repeating_pattern "55") in
-  let _ = trace "is '6464' repeating" (is_repeating_pattern "6464") in
-  let _ = trace "is '123' repeating" (is_repeating_pattern "123") in
-  let _ = trace "is '123123' repeating" (is_repeating_pattern "123123") in
-  
-  trace "DEMO COMPLETE" "✓ All new builtins working!"
-in
+# ============ UUID Generation ============
+# Generate unique identifiers (UUID v4)
+let request_id = uuid in
+let session_id = uuid in
 
-demo
+# ============ Random Numbers ============
+# Random integers in a range (inclusive)
+let port = random_int 8000 9000 in
+let retry_count = random_int 1 5 in
+
+# Random floats for testing
+let threshold = random_float 0.0 1.0 in
+
+# ============ YAML Formatting ============
+let config = {
+  database: {
+    host: "localhost",
+    port: 5432,
+    name: "myapp"
+  },
+  cache: {
+    enabled: true,
+    ttl: 300
+  }
+} in
+let yaml_output = format_yaml config in
+
+# ============ TOML Formatting ============
+let toml_output = format_toml config in
+
+# ============ Environment Variables ============
+# Get all environment variables as a dict
+let all_env = env_vars in
+let env_count = all_env -> keys -> length in
+
+# ============ Existing Features (already implemented) ============
+# base64 encoding (for Kubernetes secrets)
+let secret = "super-secret-password" in
+let encoded = base64_encode secret in
+let decoded = base64_decode encoded in
+
+# Hashing
+let file_hash = hash_sha256 "file contents here" in
+let md5_hash = hash_md5 "quick check" in
+
+# ============ Demo Output ============
+{"
+New Builtins Demo
+=================
+
+UUID Generation:
+  Request ID: {request_id}
+  Session ID: {session_id}
+
+Random Numbers:
+  Random Port: {port}
+  Retry Count: {retry_count}
+  Threshold: {threshold}
+
+YAML Output:
+{yaml_output}
+TOML Output:
+{toml_output}
+Environment Variables:
+  Total count: {env_count}
+
+Base64 Demo:
+  Original: {secret}
+  Encoded: {encoded}
+  Decoded: {decoded}
+
+Hash Demo:
+  SHA256: {file_hash}
+  MD5: {md5_hash}
+"}

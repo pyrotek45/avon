@@ -6792,4 +6792,663 @@ mod tests {
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         assert_eq!(v.to_string(&prog), "LINE1\nLINE2\nLINE3");
     }
+
+    #[test]
+    fn test_args_builtin_available() {
+        // Test that args can be used when injected into symbols table
+        let prog = "args".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        // Inject args the same way the CLI does
+        symbols.insert(
+            "args".to_string(),
+            Value::List(vec![
+                Value::String("file1.txt".to_string()),
+                Value::String("file2.txt".to_string()),
+            ]),
+        );
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[file1.txt, file2.txt]");
+    }
+
+    #[test]
+    fn test_args_builtin_operations() {
+        // Test that args works with list operations
+        let prog = "args -> length".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        symbols.insert(
+            "args".to_string(),
+            Value::List(vec![
+                Value::String("a.txt".to_string()),
+                Value::String("b.txt".to_string()),
+                Value::String("c.txt".to_string()),
+            ]),
+        );
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "3");
+    }
+
+    #[test]
+    fn test_args_builtin_filter() {
+        // Test that args works with filter (common use case for file selection)
+        let prog = r#"args -> filter (\a (a != ""))"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        symbols.insert(
+            "args".to_string(),
+            Value::List(vec![
+                Value::String("run".to_string()),
+                Value::String("file.txt".to_string()),
+                Value::String("".to_string()),
+            ]),
+        );
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[run, file.txt]");
+    }
+
+    #[test]
+    fn test_args_builtin_empty() {
+        // Test that args works when empty (like in REPL mode)
+        let prog = "args".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        symbols.insert("args".to_string(), Value::List(vec![]));
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[]");
+    }
+
+    // ====== NEW BUILTIN TESTS ======
+
+    // format_yaml tests
+    #[test]
+    fn test_format_yaml_dict() {
+        let prog = r#"format_yaml { name: "test", count: 42 }"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        let s = v.to_string(&prog);
+        assert!(s.contains("name:"));
+        assert!(s.contains("test"));
+        assert!(s.contains("count:"));
+        assert!(s.contains("42"));
+    }
+
+    #[test]
+    fn test_format_yaml_list() {
+        let prog = "format_yaml [1, 2, 3]".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        let s = v.to_string(&prog);
+        assert!(s.contains("- 1"));
+        assert!(s.contains("- 2"));
+        assert!(s.contains("- 3"));
+    }
+
+    #[test]
+    fn test_format_yaml_nested() {
+        let prog = r#"format_yaml { user: { name: "alice", age: 30 } }"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        let s = v.to_string(&prog);
+        assert!(s.contains("user:"));
+        assert!(s.contains("name:"));
+        assert!(s.contains("alice"));
+    }
+
+    #[test]
+    fn test_format_yaml_empty() {
+        let prog = "format_yaml {}".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        // Empty dict should serialize to "{}" or similar
+        let _ = v.to_string(&prog);
+    }
+
+    // format_toml tests
+    #[test]
+    fn test_format_toml_dict() {
+        let prog = r#"format_toml { name: "test", count: 42 }"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        let s = v.to_string(&prog);
+        assert!(s.contains("name"));
+        assert!(s.contains("test"));
+        assert!(s.contains("count"));
+        assert!(s.contains("42"));
+    }
+
+    #[test]
+    fn test_format_toml_nested() {
+        let prog = r#"format_toml { database: { host: "localhost", port: 5432 } }"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        let s = v.to_string(&prog);
+        assert!(s.contains("database"));
+        assert!(s.contains("host"));
+        assert!(s.contains("localhost"));
+    }
+
+    #[test]
+    fn test_format_toml_array() {
+        let prog = r#"format_toml { items: [1, 2, 3] }"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        let s = v.to_string(&prog);
+        assert!(s.contains("items"));
+        assert!(s.contains("1"));
+        assert!(s.contains("2"));
+        assert!(s.contains("3"));
+    }
+
+    // uuid tests
+    #[test]
+    fn test_uuid_format() {
+        let prog = "uuid".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        let s = v.to_string(&prog);
+        // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (36 chars with hyphens)
+        assert_eq!(s.len(), 36);
+        assert!(s.contains("-"));
+        // Check it has 4 hyphens
+        assert_eq!(s.matches('-').count(), 4);
+    }
+
+    #[test]
+    fn test_uuid_unique() {
+        // Two UUIDs should be different
+        let prog1 = "uuid".to_string();
+        let prog2 = "uuid".to_string();
+        let tokens1 = tokenize(prog1.clone()).expect("tokenize");
+        let tokens2 = tokenize(prog2.clone()).expect("tokenize");
+        let ast1 = parse(tokens1);
+        let ast2 = parse(tokens2);
+        let mut symbols1 = initial_builtins();
+        let mut symbols2 = initial_builtins();
+        let v1 = eval(ast1.program, &mut symbols1, &prog1).expect("eval");
+        let v2 = eval(ast2.program, &mut symbols2, &prog2).expect("eval");
+        assert_ne!(v1.to_string(&prog1), v2.to_string(&prog2));
+    }
+
+    // random_int tests
+    #[test]
+    fn test_random_int_range() {
+        let prog = "random_int 1 10".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Number(Number::Int(i)) => {
+                assert!(
+                    (1..=10).contains(&i),
+                    "random_int should be in range 1..10, got {}",
+                    i
+                );
+            }
+            other => panic!("expected int, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_random_int_same_bounds() {
+        let prog = "random_int 5 5".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Number(Number::Int(i)) => {
+                assert_eq!(i, 5, "random_int 5 5 should be 5");
+            }
+            other => panic!("expected int, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_random_int_invalid_range() {
+        let prog = "random_int 10 1".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.message.contains("min") && err.message.contains("max"));
+    }
+
+    #[test]
+    fn test_random_int_negative_range() {
+        let prog = "random_int (neg 10) (neg 1)".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Number(Number::Int(i)) => {
+                assert!(
+                    (-10..=-1).contains(&i),
+                    "random_int should be in range -10..-1, got {}",
+                    i
+                );
+            }
+            other => panic!("expected int, got {:?}", other),
+        }
+    }
+
+    // random_float tests
+    #[test]
+    fn test_random_float_range() {
+        let prog = "random_float 0.0 1.0".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Number(Number::Float(f)) => {
+                assert!(
+                    (0.0..=1.0).contains(&f),
+                    "random_float should be in range 0.0..1.0, got {}",
+                    f
+                );
+            }
+            other => panic!("expected float, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_random_float_same_bounds() {
+        let prog = "random_float 2.5 2.5".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Number(Number::Float(f)) => {
+                let expected = 2.5_f64;
+                assert!(
+                    (f - expected).abs() < f64::EPSILON,
+                    "random_float 2.5 2.5 should be 2.5"
+                );
+            }
+            other => panic!("expected float, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_random_float_invalid_range() {
+        let prog = "random_float 10.0 1.0".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.message.contains("min") && err.message.contains("max"));
+    }
+
+    // env_vars tests
+    #[test]
+    fn test_env_vars_returns_dict() {
+        std::env::set_var("AVON_TEST_ENV_VARS", "test_value");
+        let prog = "env_vars".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Dict(map) => {
+                assert!(map.contains_key("AVON_TEST_ENV_VARS"));
+                match map.get("AVON_TEST_ENV_VARS") {
+                    Some(Value::String(s)) => assert_eq!(s, "test_value"),
+                    other => panic!("expected string value, got {:?}", other),
+                }
+            }
+            other => panic!("expected dict, got {:?}", other),
+        }
+        std::env::remove_var("AVON_TEST_ENV_VARS");
+    }
+
+    #[test]
+    fn test_env_vars_common_vars() {
+        // Test that common environment variables are present
+        let prog = "env_vars".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Dict(map) => {
+                // PATH should be set on most systems
+                assert!(map.contains_key("PATH") || map.contains_key("HOME") || !map.is_empty());
+            }
+            other => panic!("expected dict, got {:?}", other),
+        }
+    }
+
+    // ====== PYTHON-LIKE LIST FUNCTION TESTS ======
+
+    // choice tests
+    #[test]
+    fn test_choice_returns_element_from_list() {
+        let prog = "choice [1, 2, 3, 4, 5]".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Number(Number::Int(i)) => {
+                assert!(
+                    (1..=5).contains(&i),
+                    "choice should return element from list"
+                );
+            }
+            other => panic!("expected number, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_choice_empty_list_error() {
+        let prog = "choice []".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err());
+        assert!(result.err().unwrap().message.contains("empty list"));
+    }
+
+    #[test]
+    fn test_choice_single_element() {
+        let prog = "choice [42]".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Number(Number::Int(i)) => assert_eq!(i, 42),
+            other => panic!("expected 42, got {:?}", other),
+        }
+    }
+
+    // shuffle tests
+    #[test]
+    fn test_shuffle_returns_same_elements() {
+        let prog = "shuffle [1, 2, 3] -> sort".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[1, 2, 3]");
+    }
+
+    #[test]
+    fn test_shuffle_empty_list() {
+        let prog = "shuffle []".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[]");
+    }
+
+    #[test]
+    fn test_shuffle_preserves_length() {
+        let prog = "shuffle [1, 2, 3, 4, 5] -> length".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "5");
+    }
+
+    // sample tests
+    #[test]
+    fn test_sample_returns_correct_count() {
+        let prog = "sample 3 [1, 2, 3, 4, 5] -> length".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "3");
+    }
+
+    #[test]
+    fn test_sample_zero() {
+        let prog = "sample 0 [1, 2, 3]".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[]");
+    }
+
+    #[test]
+    fn test_sample_too_many_error() {
+        let prog = "sample 10 [1, 2, 3]".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err());
+        assert!(result.err().unwrap().message.contains("cannot sample"));
+    }
+
+    #[test]
+    fn test_sample_negative_error() {
+        let prog = "sample (neg 1) [1, 2, 3]".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let result = eval(ast.program, &mut symbols, &prog);
+        assert!(result.is_err());
+    }
+
+    // find tests
+    #[test]
+    fn test_find_returns_first_match() {
+        let prog = r#"find (\x x > 5) [1, 3, 7, 2, 9]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "7");
+    }
+
+    #[test]
+    fn test_find_returns_none_when_not_found() {
+        let prog = r#"find (\x x > 100) [1, 3, 7, 2, 9]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert!(matches!(v, Value::None));
+    }
+
+    #[test]
+    fn test_find_empty_list() {
+        let prog = r#"find (\x x > 0) []"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert!(matches!(v, Value::None));
+    }
+
+    // find_index tests
+    #[test]
+    fn test_find_index_returns_correct_index() {
+        let prog = r#"find_index (\x x > 5) [1, 3, 7, 2, 9]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "2");
+    }
+
+    #[test]
+    fn test_find_index_returns_none_when_not_found() {
+        let prog = r#"find_index (\x x > 100) [1, 3, 7]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert!(matches!(v, Value::None));
+    }
+
+    #[test]
+    fn test_find_index_first_element() {
+        let prog = r#"find_index (\x x == 1) [1, 2, 3]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "0");
+    }
+
+    // group_by tests
+    #[test]
+    fn test_group_by_modulo() {
+        let prog = r#"group_by (\x x % 2) [1, 2, 3, 4, 5, 6]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Dict(map) => {
+                assert!(map.contains_key("0") || map.contains_key("1"));
+            }
+            other => panic!("expected dict, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_group_by_empty_list() {
+        let prog = r#"group_by (\x x) []"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Dict(map) => assert!(map.is_empty()),
+            other => panic!("expected empty dict, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_group_by_string_keys() {
+        let prog = r#"group_by length ["a", "bb", "ccc", "dd"]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        match v {
+            Value::Dict(map) => {
+                assert!(map.contains_key("1") || map.contains_key("2") || map.contains_key("3"));
+            }
+            other => panic!("expected dict, got {:?}", other),
+        }
+    }
+
+    // zip_with tests
+    #[test]
+    fn test_zip_with_addition() {
+        let prog = r#"zip_with (\a \b a + b) [1, 2, 3] [10, 20, 30]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[11, 22, 33]");
+    }
+
+    #[test]
+    fn test_zip_with_different_lengths() {
+        let prog = r#"zip_with (\a \b a + b) [1, 2] [10, 20, 30, 40]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[11, 22]");
+    }
+
+    #[test]
+    fn test_zip_with_empty_list() {
+        let prog = r#"zip_with (\a \b a + b) [] [1, 2, 3]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[]");
+    }
+
+    #[test]
+    fn test_zip_with_multiplication() {
+        let prog = r#"zip_with (\a \b a * b) [2, 3, 4] [5, 6, 7]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[10, 18, 28]");
+    }
+
+    // intersperse tests
+    #[test]
+    fn test_intersperse_strings() {
+        let prog = r#"intersperse ", " ["a", "b", "c"]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[a, , , b, , , c]");
+    }
+
+    #[test]
+    fn test_intersperse_numbers() {
+        let prog = "intersperse 0 [1, 2, 3]".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[1, 0, 2, 0, 3]");
+    }
+
+    #[test]
+    fn test_intersperse_empty_list() {
+        let prog = "intersperse 0 []".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[]");
+    }
+
+    #[test]
+    fn test_intersperse_single_element() {
+        let prog = "intersperse 0 [42]".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[42]");
+    }
 }

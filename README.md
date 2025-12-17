@@ -93,7 +93,7 @@ Creates `./output/hello.txt` with the generated content.
 
 ## Built-in Documentation
 
-Avon includes comprehensive built-in documentation for all 40+ functions. The `avon doc` command is one of its most powerful features, enabling developers to quickly learn the tool without leaving the terminal.
+Avon includes comprehensive built-in documentation for all 137 functions. The `avon doc` command is one of its most powerful features, enabling developers to quickly learn the tool without leaving the terminal.
 
 **Look up any function:**
 

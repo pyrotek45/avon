@@ -1,0 +1,14 @@
+# Simple file collector using the `args` builtin
+# Extracts file paths from command-line arguments
+#
+# Example usage:
+#   avon eval wormhole_demo.av build src/main.rs src/lib.rs
+#   Output: src/main.rs (first existing file)
+#
+# This pattern is useful for build tools, bundlers, or any CLI
+# that needs to identify which files to process from user arguments.
+
+# Use the args builtin to get all positional arguments as a list
+# Filter to only files that actually exist, then get the first one
+args -> filter (\f (exists f)) -> head
+

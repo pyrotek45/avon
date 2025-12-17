@@ -1036,7 +1036,7 @@ fn eval_with_depth(
                     Value::Builtin(name, args) if args.is_empty() => {
                         // Check if this is a zero-arity builtin that should be executed
                         let arity = match name.as_str() {
-                            "now" | "timestamp" | "timezone" => 0,
+                            "now" | "timestamp" | "timezone" | "uuid" | "env_vars" => 0,
                             _ => 1, // Default arity for safety
                         };
                         if arity == 0 {

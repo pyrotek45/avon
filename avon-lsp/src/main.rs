@@ -114,20 +114,27 @@ impl LanguageServer for Backend {
         let builtins = initial_builtins();
 
         for (name, value) in builtins.iter() {
-            // Only include builtin functions and functions in completions
-            match value {
-                Value::Builtin(_, _) | Value::Function { .. } => {
-                    if name.starts_with(word) {
-                        completions.push(CompletionItem {
-                            label: name.clone(),
-                            kind: Some(CompletionItemKind::FUNCTION),
-                            detail: Some("builtin function".to_string()),
-                            insert_text: Some(name.clone()),
-                            ..Default::default()
-                        });
+            // Include builtin functions, functions, and constants (like os, args)
+            if name.starts_with(word) {
+                let (kind, detail) = match value {
+                    Value::Builtin(_, _) | Value::Function { .. } => {
+                        (CompletionItemKind::FUNCTION, "builtin function".to_string())
                     }
-                }
-                _ => {}
+                    Value::String(_) => {
+                        (CompletionItemKind::CONSTANT, "builtin constant".to_string())
+                    }
+                    Value::List(_) => {
+                        (CompletionItemKind::CONSTANT, "builtin constant".to_string())
+                    }
+                    _ => continue,
+                };
+                completions.push(CompletionItem {
+                    label: name.clone(),
+                    kind: Some(kind),
+                    detail: Some(detail),
+                    insert_text: Some(name.clone()),
+                    ..Default::default()
+                });
             }
         }
 

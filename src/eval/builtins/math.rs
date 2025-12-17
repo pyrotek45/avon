@@ -1,17 +1,32 @@
-//! Math functions: abs, gcd, lcm, neg, sqrt, pow, floor, ceil, round, log, log10
+//! Math functions: abs, gcd, lcm, neg, sqrt, pow, floor, ceil, round, log, log10, random_int, random_float, uuid
 
 use crate::common::{EvalError, Number, Value};
+use rand::Rng;
 
 /// Names of math builtins
 pub const NAMES: &[&str] = &[
-    "abs", "ceil", "floor", "gcd", "lcm", "log", "log10", "neg", "pow", "round", "sqrt",
+    "abs",
+    "ceil",
+    "floor",
+    "gcd",
+    "lcm",
+    "log",
+    "log10",
+    "neg",
+    "pow",
+    "random_float",
+    "random_int",
+    "round",
+    "sqrt",
+    "uuid",
 ];
 
 /// Get arity for math functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
         "abs" | "ceil" | "floor" | "log" | "log10" | "neg" | "round" | "sqrt" => Some(1),
-        "gcd" | "lcm" | "pow" => Some(2),
+        "gcd" | "lcm" | "pow" | "random_int" | "random_float" => Some(2),
+        "uuid" => Some(0),
         _ => None,
     }
 }
@@ -257,6 +272,101 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     line,
                 )),
             }
+        }
+        "random_int" => {
+            let min_val = &args[0];
+            let max_val = &args[1];
+            match (min_val, max_val) {
+                (Value::Number(Number::Int(min)), Value::Number(Number::Int(max))) => {
+                    if min > max {
+                        return Err(EvalError::new(
+                            format!(
+                                "random_int: min ({}) must be less than or equal to max ({})",
+                                min, max
+                            ),
+                            None,
+                            None,
+                            line,
+                        ));
+                    }
+                    let mut rng = rand::thread_rng();
+                    let result = rng.gen_range(*min..=*max);
+                    Ok(Value::Number(Number::Int(result)))
+                }
+                _ => Err(EvalError::type_mismatch(
+                    "two integers",
+                    format!(
+                        "{}, {}",
+                        min_val.to_string(source),
+                        max_val.to_string(source)
+                    ),
+                    line,
+                )),
+            }
+        }
+        "random_float" => {
+            let min_val = &args[0];
+            let max_val = &args[1];
+            match (min_val, max_val) {
+                (Value::Number(min_num), Value::Number(max_num)) => {
+                    let min = match min_num {
+                        Number::Int(i) => *i as f64,
+                        Number::Float(f) => *f,
+                    };
+                    let max = match max_num {
+                        Number::Int(i) => *i as f64,
+                        Number::Float(f) => *f,
+                    };
+                    // Handle NaN and Infinity
+                    if min.is_nan() || max.is_nan() {
+                        return Err(EvalError::new(
+                            "random_float: min and max cannot be NaN".to_string(),
+                            None,
+                            None,
+                            line,
+                        ));
+                    }
+                    if min.is_infinite() || max.is_infinite() {
+                        return Err(EvalError::new(
+                            "random_float: min and max cannot be infinite".to_string(),
+                            None,
+                            None,
+                            line,
+                        ));
+                    }
+                    if min > max {
+                        return Err(EvalError::new(
+                            format!(
+                                "random_float: min ({}) must be less than or equal to max ({})",
+                                min, max
+                            ),
+                            None,
+                            None,
+                            line,
+                        ));
+                    }
+                    // Handle edge case where min == max
+                    if (min - max).abs() < f64::EPSILON {
+                        return Ok(Value::Number(Number::Float(min)));
+                    }
+                    let mut rng = rand::thread_rng();
+                    let result = rng.gen_range(min..=max);
+                    Ok(Value::Number(Number::Float(result)))
+                }
+                _ => Err(EvalError::type_mismatch(
+                    "two numbers",
+                    format!(
+                        "{}, {}",
+                        min_val.to_string(source),
+                        max_val.to_string(source)
+                    ),
+                    line,
+                )),
+            }
+        }
+        "uuid" => {
+            let id = uuid::Uuid::new_v4();
+            Ok(Value::String(id.to_string()))
         }
         _ => Err(EvalError::new(
             format!("unknown math function: {}", name),

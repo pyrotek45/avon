@@ -114,6 +114,7 @@ Functions for accessing the system environment.
 |----------|-----------|-------------|
 | `env_var` | `String -> String` | Returns the value of an environment variable. Errors if not set. |
 | `env_var_or` | `String -> String -> String` | Returns the value of an environment variable, or a default if not set. |
+| `env_vars` | `() -> Dict` | Returns a dictionary of all environment variables. |
 | `os` | *Constant* | A constant string representing the operating system (e.g., "linux", "macos"). This is not a function but a value. |
 
 ## File I/O Functions
@@ -160,6 +161,8 @@ Functions for formatting values.
 | `format_percent` | `Number -> Number -> String` | Formats a number as a percentage. |
 | `format_scientific` | `Number -> Number -> String` | Formats a number in scientific notation. |
 | `format_table` | `[[String]]\|Dict -> String -> String` | Formats data as a table with a separator. |
+| `format_toml` | `a -> String` | Serializes a value to a TOML string. |
+| `format_yaml` | `a -> String` | Serializes a value to a YAML string. |
 | `truncate` | `String -> Number -> String` | Truncates a string to a maximum length, adding "...". |
 
 ## HTML Functions
@@ -178,15 +181,20 @@ Functions for working with lists.
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
+| `choice` | `[a] -> a` | Returns a random element from a list. Errors on empty list. |
 | `chunks` | `Number -> [a] -> [[a]]` | Splits the list into chunks of size n. |
 | `combinations` | `Number -> [a] -> [[a]]` | Returns all combinations of length k. |
 | `drop` | `Number -> [a] -> [a]` | Returns the list without the first n items. |
 | `enumerate` | `[a] -> [[Number, a]]` | Returns a list of [index, item] pairs. |
 | `filter` | `(a -> Bool) -> [a] -> [a]` | Returns a list of items where the predicate is true. |
+| `find` | `(a -> Bool) -> [a] -> a\|None` | Returns the first item matching the predicate, or None. |
+| `find_index` | `(a -> Bool) -> [a] -> Number\|None` | Returns the index of the first matching item, or None. |
 | `flatmap` | `(a -> [b]\|b) -> [a] -> [b]` | Maps a function and flattens the result. |
 | `flatten` | `[[a]] -> [a]` | Flattens a list of lists. |
 | `fold` | `(b -> a -> b) -> b -> [a] -> b` | Reduces a list to a single value using an accumulator. |
+| `group_by` | `(a -> k) -> [a] -> Dict[k, [a]]` | Groups list items by the result of a key function. |
 | `head` | `[a] -> a\|None` | Returns the first item, or None if empty. |
+| `intersperse` | `a -> [a] -> [a]` | Inserts a separator between each element of a list. |
 | `last` | `[a] -> a\|None` | Returns the last item, or None if empty. |
 | `map` | `(a -> b) -> [a] -> [b]` | Applies a function to each item in the list. |
 | `nth` | `Number -> [a] -> a\|None` | Returns the item at index (0-based), or None if out of bounds. |
@@ -194,6 +202,8 @@ Functions for working with lists.
 | `permutations` | `Number -> [a] -> [[a]]` | Returns all permutations of length k. |
 | `range` | `Number -> Number -> [Number]` | Generates a list of numbers from start to end (inclusive). |
 | `reverse` | `[a] -> [a]` | Returns the list in reverse order. |
+| `sample` | `Number -> [a] -> [a]` | Returns n unique random elements from a list. Errors if n > length. |
+| `shuffle` | `[a] -> [a]` | Returns a new list with elements in random order. |
 | `sort` | `[a] -> [a]` | Sorts the list. |
 | `sort_by` | `(a -> b) -> [a] -> [a]` | Sorts the list based on the result of the key function. |
 | `split_at` | `Number -> [a] -> [[a], [a]]` | Splits the list at the given index. |
@@ -204,6 +214,44 @@ Functions for working with lists.
 | `unzip` | `[[a, b]] -> [[a], [b]]` | Splits a list of pairs into two lists. |
 | `windows` | `Number -> [a] -> [[a]]` | Returns sliding windows of size n. |
 | `zip` | `[a] -> [b] -> [[a, b]]` | Combines two lists into a list of pairs. |
+| `zip_with` | `(a -> b -> c) -> [a] -> [b] -> [c]` | Combines two lists using a function. |
+
+**Examples:**
+```avon
+# Basic list operations
+map (\x x * 2) [1, 2, 3]                # [2, 4, 6]
+filter (\x x > 2) [1, 2, 3, 4, 5]       # [3, 4, 5]
+fold (\acc \x acc + x) 0 [1, 2, 3]     # 6
+
+# Random selection
+choice [1, 2, 3, 4, 5]                  # A random element, e.g., 3
+shuffle [1, 2, 3, 4, 5]                 # A randomized list, e.g., [3, 1, 5, 2, 4]
+sample 3 [1, 2, 3, 4, 5]                # 3 random unique elements, e.g., [2, 5, 1]
+
+# Finding elements
+find (\x x > 5) [1, 3, 7, 2, 9]         # 7 (first match)
+find (\x x > 100) [1, 2, 3]             # None (no match)
+find_index (\x x > 5) [1, 3, 7, 2, 9]   # 2 (index of 7)
+
+# Grouping elements
+group_by (\x x % 2) [1, 2, 3, 4, 5, 6]  # {0: [2, 4, 6], 1: [1, 3, 5]}
+group_by length ["a", "bb", "c", "ddd"] # {1: ["a", "c"], 2: ["bb"], 3: ["ddd"]}
+
+# Combining lists with functions
+zip_with (\a \b a + b) [1, 2, 3] [10, 20, 30]   # [11, 22, 33]
+zip_with (\a \b a * b) [2, 3, 4] [5, 6, 7]      # [10, 18, 28]
+
+# Inserting separators
+intersperse 0 [1, 2, 3]                 # [1, 0, 2, 0, 3]
+intersperse ", " ["a", "b", "c"]        # ["a", ", ", "b", ", ", "c"]
+
+# Other list operations
+take 3 [1, 2, 3, 4, 5]                  # [1, 2, 3]
+drop 2 [1, 2, 3, 4, 5]                  # [3, 4, 5]
+unique [1, 2, 2, 3, 3, 3]               # [1, 2, 3]
+reverse [1, 2, 3]                       # [3, 2, 1]
+sort [3, 1, 4, 1, 5]                    # [1, 1, 3, 4, 5]
+```
 
 ## Markdown Functions
 
@@ -232,8 +280,11 @@ Mathematical functions.
 | `log10` | `Number -> Number` | Returns the base-10 logarithm. |
 | `neg` | `Number -> Number` | Negates a number. |
 | `pow` | `Number -> Number -> Number` | Raises a number to a power (x^n). |
+| `random_float` | `Number -> Number -> Number` | Returns a random float in the range [min, max]. |
+| `random_int` | `Number -> Number -> Number` | Returns a random integer in the range [min, max] (inclusive). |
 | `round` | `Number -> Number` | Rounds to the nearest integer. |
 | `sqrt` | `Number -> Number` | Returns the square root. |
+| `uuid` | `() -> String` | Generates a new random UUID v4 string. |
 
 ## Regex Functions
 

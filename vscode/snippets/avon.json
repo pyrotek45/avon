@@ -24,6 +24,16 @@
     "body": "filter (\\\\${1:x} ${2:x > 0}) ${3:list}",
     "description": "Filter a list with a predicate"
   },
+  "Args Filter Existing Files": {
+    "prefix": "args-filter",
+    "body": "args -> filter (\\\\f (exists f))",
+    "description": "Filter command line arguments to only existing files"
+  },
+  "Args Map Process": {
+    "prefix": "args-map",
+    "body": "args -> map (\\\\${1:arg} ${2:arg})",
+    "description": "Map over command line arguments"
+  },
   "List": {
     "prefix": "[",
     "body": "[${1:item1}, ${2:item2}]",
@@ -68,5 +78,75 @@
     "prefix": "..",
     "body": "[${1:1}..${2:10}]",
     "description": "Create a range of numbers"
+  },
+  "Format YAML": {
+    "prefix": "format_yaml",
+    "body": "format_yaml ${1:value}",
+    "description": "Serialize a value to YAML"
+  },
+  "Format TOML": {
+    "prefix": "format_toml",
+    "body": "format_toml ${1:value}",
+    "description": "Serialize a value to TOML"
+  },
+  "UUID": {
+    "prefix": "uuid",
+    "body": "uuid",
+    "description": "Generate a random UUID v4"
+  },
+  "Random Integer": {
+    "prefix": "random_int",
+    "body": "random_int ${1:min} ${2:max}",
+    "description": "Generate a random integer in range [min, max]"
+  },
+  "Random Float": {
+    "prefix": "random_float",
+    "body": "random_float ${1:min} ${2:max}",
+    "description": "Generate a random float in range [min, max]"
+  },
+  "Environment Variables": {
+    "prefix": "env_vars",
+    "body": "env_vars",
+    "description": "Get all environment variables as a dictionary"
+  },
+  "Choice - Random Element": {
+    "prefix": "choice",
+    "body": "choice ${1:list}",
+    "description": "Select a random element from a list"
+  },
+  "Shuffle List": {
+    "prefix": "shuffle",
+    "body": "shuffle ${1:list}",
+    "description": "Randomly shuffle the elements of a list"
+  },
+  "Sample Elements": {
+    "prefix": "sample",
+    "body": "sample ${1:count} ${2:list}",
+    "description": "Select n unique random elements from a list"
+  },
+  "Find Element": {
+    "prefix": "find",
+    "body": "find (\\\\${1:x} ${2:x > 0}) ${3:list}",
+    "description": "Find the first element matching a predicate"
+  },
+  "Find Index": {
+    "prefix": "find_index",
+    "body": "find_index (\\\\${1:x} ${2:x > 0}) ${3:list}",
+    "description": "Find the index of the first matching element"
+  },
+  "Group By Key": {
+    "prefix": "group_by",
+    "body": "group_by (\\\\${1:x} ${2:x % 2}) ${3:list}",
+    "description": "Group list elements by a key function"
+  },
+  "Zip With Function": {
+    "prefix": "zip_with",
+    "body": "zip_with (\\\\${1:a} \\\\${2:b} ${3:a + b}) ${4:list1} ${5:list2}",
+    "description": "Combine two lists using a function"
+  },
+  "Intersperse Separator": {
+    "prefix": "intersperse",
+    "body": "intersperse ${1:separator} ${2:list}",
+    "description": "Insert a separator between each element of a list"
   }
 }

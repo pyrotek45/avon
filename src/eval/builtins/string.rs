@@ -1,15 +1,22 @@
-//! String operations: char_at, chars, concat, contains, ends_with, indent, is_alpha, is_alphanumeric, is_digit, is_empty, is_lowercase, is_uppercase, is_whitespace, join, length, lines, lower, pad_left, pad_right, repeat, replace, slice, split, starts_with, trim, unlines, unwords, upper, words
+//! String operations: base64_decode, base64_encode, char_at, chars, concat, contains, ends_with, hash_md5, hash_sha256, indent, is_alpha, is_alphanumeric, is_digit, is_empty, is_lowercase, is_uppercase, is_whitespace, join, length, lines, lower, pad_left, pad_right, repeat, replace, slice, split, starts_with, trim, unlines, unwords, upper, words
 
 use crate::common::{EvalError, Number, Value};
 use crate::eval::value_to_string_auto;
+use base64::{engine::general_purpose::STANDARD, Engine};
+use md5::Md5;
+use sha2::{Digest, Sha256};
 
 /// Names of string builtins
 pub const NAMES: &[&str] = &[
+    "base64_decode",
+    "base64_encode",
     "char_at",
     "chars",
     "concat",
     "contains",
     "ends_with",
+    "hash_md5",
+    "hash_sha256",
     "indent",
     "is_alpha",
     "is_alphanumeric",
@@ -39,9 +46,9 @@ pub const NAMES: &[&str] = &[
 /// Get arity for string functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
-        "chars" | "is_alpha" | "is_alphanumeric" | "is_digit" | "is_empty" | "is_lowercase"
-        | "is_uppercase" | "is_whitespace" | "length" | "lines" | "lower" | "trim" | "upper"
-        | "words" => Some(1),
+        "base64_decode" | "base64_encode" | "chars" | "hash_md5" | "hash_sha256" | "is_alpha"
+        | "is_alphanumeric" | "is_digit" | "is_empty" | "is_lowercase" | "is_uppercase"
+        | "is_whitespace" | "length" | "lines" | "lower" | "trim" | "upper" | "words" => Some(1),
         "char_at" | "concat" | "contains" | "ends_with" | "indent" | "join" | "repeat"
         | "split" | "starts_with" => Some(2),
         "pad_left" | "pad_right" | "replace" | "slice" => Some(3),
@@ -58,6 +65,44 @@ pub fn is_builtin(name: &str) -> bool {
 /// Execute a string builtin function
 pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<Value, EvalError> {
     match name {
+        "base64_encode" => {
+            let s = value_to_string_auto(&args[0], source, line)?;
+            Ok(Value::String(STANDARD.encode(s.as_bytes())))
+        }
+        "base64_decode" => {
+            let s = value_to_string_auto(&args[0], source, line)?;
+            match STANDARD.decode(s.as_bytes()) {
+                Ok(bytes) => match String::from_utf8(bytes) {
+                    Ok(decoded) => Ok(Value::String(decoded)),
+                    Err(e) => Err(EvalError::new(
+                        format!("base64_decode: decoded bytes are not valid UTF-8: {}", e),
+                        None,
+                        None,
+                        line,
+                    )),
+                },
+                Err(e) => Err(EvalError::new(
+                    format!("base64_decode: invalid base64 input: {}", e),
+                    None,
+                    None,
+                    line,
+                )),
+            }
+        }
+        "hash_sha256" => {
+            let s = value_to_string_auto(&args[0], source, line)?;
+            let mut hasher = Sha256::new();
+            hasher.update(s.as_bytes());
+            let result = hasher.finalize();
+            Ok(Value::String(format!("{:x}", result)))
+        }
+        "hash_md5" => {
+            let s = value_to_string_auto(&args[0], source, line)?;
+            let mut hasher = Md5::new();
+            hasher.update(s.as_bytes());
+            let result = hasher.finalize();
+            Ok(Value::String(format!("{:x}", result)))
+        }
         "concat" => {
             let sa = value_to_string_auto(&args[0], source, line)?;
             let sb = value_to_string_auto(&args[1], source, line)?;

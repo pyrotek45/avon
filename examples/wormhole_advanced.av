@@ -1,0 +1,21 @@
+# Advanced file collector using the `args` builtin
+# Extracts multiple file paths from command-line arguments
+#
+# Example usage:
+#   avon eval wormhole_advanced.av build src/main.rs src/lib.rs tests/test.rs
+#   Output:
+#   src/main.rs
+#   src/lib.rs
+#   tests/test.rs
+#
+# This pattern is useful for build tools, bundlers, or any CLI
+# that needs to collect multiple files from user arguments.
+# Non-file arguments (like "build" or flags) are automatically filtered out.
+
+# Use args to get ALL positional arguments as a list (no limit!)
+# Filter to only args that exist as files (commands and flags are filtered out)
+let files = args -> filter (\f (exists f)) in
+
+# Return one file per line
+join files "\n"
+

@@ -1,15 +1,17 @@
-//! Environment functions: env_var, env_var_or, os
+//! Environment functions: env_var, env_var_or, env_vars, os
 
 use crate::common::{EvalError, Value};
+use std::collections::HashMap;
 
 /// Names of environment builtins
-pub const NAMES: &[&str] = &["env_var", "env_var_or", "os"];
+pub const NAMES: &[&str] = &["env_var", "env_var_or", "env_vars", "os"];
 
 /// Get arity for environment functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
         "env_var" => Some(1),
         "env_var_or" => Some(2),
+        "env_vars" => Some(0),
         // "os" is a constant, not a function - no arity
         _ => None,
     }
@@ -73,6 +75,15 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     line,
                 ))
             }
+        }
+        "env_vars" => {
+            // env_vars :: () -> Dict
+            // Returns a dictionary of all environment variables.
+            let mut map = HashMap::new();
+            for (key, val) in std::env::vars() {
+                map.insert(key, Value::String(val));
+            }
+            Ok(Value::Dict(map))
         }
         _ => Err(EvalError::new(
             format!("unknown env function: {}", name),

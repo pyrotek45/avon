@@ -99,6 +99,9 @@ pub fn initial_builtins() -> HashMap<String, Value> {
         Value::String(std::env::consts::OS.to_string()),
     );
 
+    // Add args as an empty list by default (CLI will override with actual args)
+    m.insert("args".to_string(), Value::List(vec![]));
+
     m
 }
 
@@ -137,8 +140,8 @@ mod tests {
     fn test_all_builtins_have_arity() {
         let builtins = initial_builtins();
         for (name, _) in builtins.iter() {
-            if name == "os" {
-                continue; // os is a constant, not a function
+            if name == "os" || name == "args" {
+                continue; // os and args are constants, not functions
             }
             assert!(
                 get_builtin_arity(name).is_some(),
@@ -152,8 +155,8 @@ mod tests {
     fn test_all_builtins_are_registered() {
         let builtins = initial_builtins();
         for (name, _) in builtins.iter() {
-            if name == "os" {
-                continue; // os is a constant, not a function
+            if name == "os" || name == "args" {
+                continue; // os and args are constants, not functions
             }
             assert!(
                 is_builtin_name(name),

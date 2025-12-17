@@ -4,7 +4,7 @@ Welcome to Avon! A template language for people who have better things to do tha
 
 Avon is designed for developers who are tired of copy-pasting. Whether you're building Kubernetes manifests, setting up CI/CD pipelines, or generating boilerplate code, Avon turns repetitive tasks into elegant, maintainable code. Life's too short to manually update 47 YAML files.
 
-Avon is a general-purpose tool that handles everything from complex infrastructure projects to simple single-file configs. It's a workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 129 built-in utilities to any text format.
+Avon is a general-purpose tool that handles everything from complex infrastructure projects to simple single-file configs. It's a workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 137 built-in utilities to any text format.
 
 > Tip: Throughout this guide, look at the `examples/` directory for real-world use cases. Each example demonstrates practical Avon patterns you can adapt for your own projects.
 
@@ -225,7 +225,17 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Import Evaluates the Entire File
     - Avon is Single-Pass and Simple
 
-16. **[Next Steps](#next-steps)**
+16. **[Piping, Stdin, Stdout, and Embedding Avon](#piping-stdin-stdout-and-embedding-avon)**
+    - Piping Avon Source Code into the CLI
+    - Piping Data into an Avon Program
+    - Capturing Avon Output
+    - Exit Codes
+    - Debug Output Goes to Stderr
+    - Embedding Avon in Other Programs
+    - Real-World Integration: File Collection Scripts
+    - Summary: Stdin/Stdout Modes
+
+17. **[Next Steps](#next-steps)**
 
 ---
 
@@ -339,7 +349,7 @@ let plugins = ["vim-fugitive", "vim-surround", "vim-commentary", "vim-repeat"] i
 
 When you interpolate a list in a template, each item appears on its own line. This eliminates copy-paste even in a single file.
 
-Language Agnostic: Avon works with any text format—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 129 built-in utilities to any file.
+Language Agnostic: Avon works with any text format—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 137 built-in utilities to any file.
 
 Runtime Type Safety: Avon won't deploy if there's a type error. No static types needed—if a type error occurs, deployment simply doesn't happen. Sleep soundly knowing your configs are valid. (Unlike that bash script you wrote at 2am.)
 
@@ -2283,7 +2293,7 @@ This generates `config-dev.yml` and `config-prod.yml`.
 
 ## Builtin Functions
 
-Avon comes with a toolkit of **129 built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
+Avon comes with a toolkit of **137 built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
 
 > **Quick Reference:** Use `avon doc` to look up any function instantly in your terminal. See [CLI Usage](#cli-usage) section for detailed documentation command examples.
 > 
@@ -5298,6 +5308,298 @@ Avon intentionally doesn't have advanced features like:
 - Safe (runtime type safety prevents deployment errors)
 
 **Solution:** Embrace functional programming patterns. They're more powerful than they first appear.
+
+---
+
+## Piping, Stdin, Stdout, and Embedding Avon
+
+Avon works great with shell pipes and can be embedded in other programs. Here's how:
+
+### Piping Avon Source Code into the CLI
+
+You can pipe Avon **source code** to the CLI using `--stdin` or `-` as the filename:
+
+```bash
+# Using --stdin flag
+echo '1 + 2' | avon eval --stdin
+# Output: 3
+
+# Using '-' as filename (same effect)
+echo 'map (\x x * 2) [1, 2, 3]' | avon eval -
+# Output: [2, 4, 6]
+```
+
+This is useful when generating Avon programs dynamically or fetching them from other sources.
+
+### Piping Data into an Avon Program
+
+If you want your Avon program to **read piped data** (not source code), use `avon run` with a code argument and read from `/dev/stdin`:
+
+```bash
+# Pipe data into an Avon program
+echo -e 'hello\nworld\ntest' | avon run 'readfile "/dev/stdin"'
+# Output:
+# hello
+# world
+# test
+
+# Process piped data line by line
+echo -e 'alice\nbob\ncharlie' | avon run 'map upper (lines (readfile "/dev/stdin"))'
+# Output: [ALICE, BOB, CHARLIE]
+```
+
+**Key difference:**
+- `--stdin` or `-`: Avon reads stdin as **program source**
+- `readfile "/dev/stdin"`: Avon program reads stdin as **data**
+
+When you use `avon run 'code'`, the code is passed as an argument, so stdin remains available for the program to read via `/dev/stdin`.
+
+**Note:** This works on Linux/macOS. On Windows, `/dev/stdin` is not available.
+
+### Capturing Avon Output
+
+Avon prints results to stdout, making it easy to capture in shell scripts or other programs:
+
+```bash
+# Capture output in a variable
+result=$(avon run '[1, 2, 3] -> map (\x x * 10) -> fold (\a \b a + b) 0')
+echo "Captured result: $result"
+# Output: Captured result: 60
+```
+
+### Exit Codes
+
+Avon returns proper exit codes for scripting:
+- **0**: Success
+- **1**: Error (syntax, runtime, or missing arguments)
+
+```bash
+# Success case
+avon run '42 * 2'
+echo "Exit code: $?"
+# Output:
+# 84
+# Exit code: 0
+
+# Error case
+avon run 'unknown_function 1'
+echo "Exit code: $?"
+# Output:
+# unknown symbol: unknown_function on line 1 in <input>
+# Exit code: 1
+```
+
+### Debug Output Goes to Stderr
+
+The `trace` and `spy` builtins print to stderr, keeping stdout clean for results:
+
+```bash
+# trace output goes to stderr, result to stdout
+avon run 'let _ = trace "debug" 42 in 100'
+# stderr: [TRACE] debug: 42
+# stdout: 100
+
+# Suppress debug output, keep only result
+avon run 'let _ = trace "debug" 42 in 100' 2>/dev/null
+# Output: 100
+```
+
+This is useful in pipelines where you want debug info but need clean output:
+
+```bash
+# Debug goes to terminal, clean result goes to next command
+avon run 'let _ = trace "step1" [1,2,3] in map (\x x*2) [1,2,3]' 2>&1 | head -1
+```
+
+### Embedding Avon in Other Programs
+
+Any program can spawn Avon and capture results. Here's the pattern:
+
+**Bash:**
+```bash
+#!/bin/bash
+result=$(avon run 'map (\x x * 2) [1, 2, 3]')
+if [ $? -eq 0 ]; then
+    echo "Success: $result"
+else
+    echo "Avon failed"
+fi
+```
+
+**Python:**
+```python
+import subprocess
+
+result = subprocess.run(
+    ["avon", "run", "1 + 2 + 3"],
+    capture_output=True,
+    text=True
+)
+
+if result.returncode == 0:
+    print(f"Result: {result.stdout.strip()}")  # "6"
+else:
+    print(f"Error: {result.stderr}")
+```
+
+**Node.js:**
+```javascript
+const { execSync } = require('child_process');
+
+try {
+    const result = execSync('avon run "join [1,2,3] \\"-\\""').toString().trim();
+    console.log(`Result: ${result}`);  // "1-2-3"
+} catch (e) {
+    console.error(`Error: ${e.stderr}`);
+}
+```
+
+### Real-World Integration: File Collection Scripts
+
+A common use case is integrating Avon into build tools or utilities that need to know which files to process. For example, a bundler might need to collect source files, or a deployment tool might need to identify which files to ship.
+
+**The scenario:** Your tool runs `mytool build src/main.rs src/lib.rs` and needs to extract the file paths from those arguments.
+
+#### Using the `args` Builtin (Recommended)
+
+The `args` builtin provides all positional command-line arguments as a list. This is the cleanest approach:
+
+**A file-collector script (`.collect-files`):**
+
+```avon
+# .collect-files - extract files from command args using args builtin
+# When user runs: mytool build src/main.rs src/lib.rs
+# Your tool calls: avon eval .collect-files build src/main.rs src/lib.rs
+# Returns: src/main.rs (first existing file)
+
+# args contains all positional arguments: ["build", "src/main.rs", "src/lib.rs"]
+# Filter to only files that exist
+args -> filter (\f (exists f)) -> head
+```
+
+**Calling it from your tool:**
+
+```bash
+# Pass the original command args to avon
+avon eval .collect-files build src/main.rs src/lib.rs
+# Output: src/main.rs
+```
+
+**Handling multiple files with `args`:**
+
+```avon
+# .collect-files - extract multiple files from args
+# args gives us ALL command line arguments as a list - no limit!
+
+# Filter to only files that exist (flags like --verbose are filtered out)
+let files = args -> filter (\f (exists f)) in
+
+# Return one file per line
+join files "\n"
+```
+
+```bash
+avon eval .collect-files build src/main.rs src/lib.rs tests/test.rs
+# Output:
+# src/main.rs
+# src/lib.rs
+# tests/test.rs
+```
+
+**Why `args` is powerful:**
+- No limit on number of arguments (unlike `\arg1 ? ""` which requires predefined parameters)
+- Automatically available in every script
+- Works with `filter`, `map`, `fold`, and all list operations
+- Clean one-liner for common cases
+
+#### Alternative: Named Parameters
+
+For simpler cases with known argument positions, you can also use named parameters with defaults:
+
+```avon
+# .collect-files - using named parameters
+\cmd ? ""
+\file ? ""
+
+# Return the file if it exists
+if exists file then file else ""
+```
+
+This works but is limited to the number of parameters you define.
+
+**Using glob patterns instead:**
+
+If you want the user to specify a pattern rather than individual files:
+
+```avon
+# .collect-files - glob-based file collection
+\pattern ? "src/*.rs"
+
+join (glob pattern) "\n"
+```
+
+```bash
+avon eval .collect-files "src/*.rs"
+# Output: all .rs files in src/
+```
+
+**Parsing in Rust:**
+
+```rust
+use std::process::Command;
+
+fn get_files_from_avon(config_file: &str, args: &[String]) -> Result<Vec<String>, String> {
+    // Call avon with the config file and pass through all args
+    let mut cmd_args = vec!["eval".to_string(), config_file.to_string()];
+    cmd_args.extend(args.iter().cloned());
+    
+    let output = Command::new("avon")
+        .args(&cmd_args)
+        .output()
+        .map_err(|e| format!("Failed to run avon: {}", e))?;
+    
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+    
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    // Parse newline-separated output
+    let files: Vec<String> = stdout
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(|s| s.to_string())
+        .collect();
+    
+    Ok(files)
+}
+
+// Usage in your tool:
+// let user_args = vec!["build", "src/main.rs", "src/lib.rs"];
+// let files = get_files_from_avon(".collect-files", &user_args)?;
+// for file in files {
+//     bundle.add_file(&file)?;
+// }
+```
+
+**Why this pattern works well:**
+- Users write simple config files to customize which files to collect
+- Your tool passes command args directly to `avon eval <config> <args...>`
+- The config file uses `exists` to verify files are real
+- Exit code 0 = success, 1 = error (check stderr for details)
+- Output is newline-separated for easy parsing
+- The `glob` builtin handles all the pattern matching
+- The `args` builtin gives access to all command-line arguments
+
+### Summary: Stdin/Stdout Modes
+
+| Mode | Command | Stdin Used For | Output |
+|------|---------|----------------|--------|
+| Source from stdin | `cat prog.av \| avon eval --stdin` | Program source | Result to stdout |
+| Source from stdin | `echo '1+2' \| avon eval -` | Program source | Result to stdout |
+| Data from stdin | `cat data \| avon run 'readfile "/dev/stdin"'` | Data for program | Result to stdout |
+| Normal file | `avon eval prog.av` | Not used | Result to stdout |
+| Inline code | `avon run '1+2'` | Available for `/dev/stdin` | Result to stdout |
 
 ---
 
