@@ -63,17 +63,20 @@ let x = 5 in let y = x + 5 in y  # ✓ Works
 
 ### Gotcha: Range with Start > End Returns Empty List
 
-Descending ranges don't work automatically:
+Descending ranges don't work automatically (applies to both `range` function and `[a..b]` shorthand):
 
 ```avon
 range 1 5    # => [1, 2, 3, 4, 5]
+[1..5]       # => [1, 2, 3, 4, 5] (shorthand syntax)
 range 5 1    # => [] (empty, not [5, 4, 3, 2, 1]!)
+[5..1]       # => [] (shorthand also returns empty)
 range 5 5    # => [5] (single element works)
 ```
 
 **Tip:** For descending ranges, generate ascending then reverse:
 ```avon
 range 1 5 -> reverse  # => [5, 4, 3, 2, 1]
+[1..5] -> reverse     # => [5, 4, 3, 2, 1]
 ```
 
 ### Gotcha: Integer Division for Integers
@@ -277,8 +280,8 @@ in has_item 3 [1, 2, 3, 4]  # => true
 ### Tip: Safe Dict Key Check
 
 ```avon
-let has_key = \key \dict find (\k k == key) (keys dict) != none
-in has_key "a" {a: 1, b: 2}  # => true
+let check = \key \dict (find (\k k == key) (keys dict)) != none
+in check "a" {a: 1, b: 2}  # => true
 ```
 
 ### Tip: Function Composition via Pipes
@@ -381,8 +384,8 @@ in with_default 0 result  # => 0
 
 ```avon
 let items = ["a", "b", "c"]
-let indexed = zip (range 0 (length items - 1)) items
-in indexed  # => [[0, "a"], [1, "b"], [2, "c"]]
+let len = length items
+in zip (range 0 (len - 1)) items  # => [[0, "a"], [1, "b"], [2, "c"]]
 ```
 
 ### Pattern: Dict from Lists

@@ -5376,17 +5376,20 @@ if false then 1/0 else 42  # => 42 (only the else branch is evaluated)
 
 ### Gotcha 20: Range with Start > End Returns Empty List
 
-Avon's `range` function only works for ascending sequences:
+Avon's `range` function (and shorthand `[a..b]` syntax) only works for ascending sequences:
 
 ```avon
 range 1 5    # => [1, 2, 3, 4, 5]
+[1..5]       # => [1, 2, 3, 4, 5] (shorthand syntax)
 range 5 1    # => [] (NOT [5, 4, 3, 2, 1]!)
+[5..1]       # => [] (shorthand also returns empty)
 range 5 5    # => [5] (single element works)
 ```
 
 **Solution:** Generate ascending range and reverse:
 ```avon
 range 1 5 -> reverse  # => [5, 4, 3, 2, 1]
+[1..5] -> reverse     # => [5, 4, 3, 2, 1]
 ```
 
 ### Gotcha 21: Integer Division for Integer Operands
@@ -5515,8 +5518,8 @@ in with_default 0 result  # => 0
 Use `find` on `keys` to check for key existence:
 
 ```avon
-let has_key = \key \dict find (\k k == key) (keys dict) != none
-in has_key "a" {a: 1, b: 2}  # => true
+let check = \key \dict (find (\k k == key) (keys dict)) != none
+in check "a" {a: 1, b: 2}  # => true
 ```
 
 ### Tip: Use `typeof` for Runtime Type Checking
@@ -5623,8 +5626,8 @@ take 0 [1, 2, 3]    # => []
 
 ```avon
 let items = ["a", "b", "c"]
-let indices = range 0 (length items - 1)
-in zip indices items  # => [[0, "a"], [1, "b"], [2, "c"]]
+let len = length items
+in zip (range 0 (len - 1)) items  # => [[0, "a"], [1, "b"], [2, "c"]]
 ```
 
 ### Tip: Extract Nested Data from Lists of Dicts
