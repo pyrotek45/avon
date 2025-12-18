@@ -2592,6 +2592,21 @@ Note: `markdown_to_html` accepts both strings and templates, automatically conve
 
 **String to bool conversions:** `"true"`, `"yes"`, `"1"`, `"on"` -> `true`; `"false"`, `"no"`, `"0"`, `"off"`, `""` -> `false`
 
+### Type Checking Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `typeof val` | Get type name as string | `typeof 42` → `"Number"` |
+| `is_string val` | Check if string | `is_string "hi"` → `true` |
+| `is_number val` | Check if number (int or float) | `is_number 3.14` → `true` |
+| `is_int val` | Check if integer | `is_int 42` → `true` |
+| `is_float val` | Check if float | `is_float 3.14` → `true` |
+| `is_bool val` | Check if boolean | `is_bool true` → `true` |
+| `is_list val` | Check if list | `is_list [1,2,3]` → `true` |
+| `is_function val` | Check if function | `is_function length` → `true` |
+| `is_none val` | Check if None | `is_none (head [])` → `true` |
+| `is_empty val` | Check if empty (string/list/dict) | `is_empty []` → `true` |
+
 <!-- Fun fact: The number of ways to convert a string to a boolean is inversely proportional to the number of production incidents it will cause. -->
 
 ### Advanced List Operations
