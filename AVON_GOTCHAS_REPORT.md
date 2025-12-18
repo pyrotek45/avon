@@ -229,20 +229,21 @@ pow 2 63               # May overflow to negative
 ### Gotcha: No Power Operator `^`
 
 ```avon
-2 ^ 8   # ERROR: expected function, found number
-pow 2 8 # => 256 ✓
+2 ** 8       # => 256 (power operator)
+2 ** 3 ** 2  # => 512 (right-associative: 2 ** (3 ** 2))
+pow 2 8      # => 256 (function form also works)
 ```
 
-### Gotcha: Logical Operators Don't Short-Circuit
+### Note: Logical Operators Now Short-Circuit
 
-Both sides of `&&` and `||` are evaluated:
+`&&` and `||` properly short-circuit evaluation:
 
 ```avon
-false && (1 / 0 > 0)  # ERROR: division by zero (not short-circuited)
-true || (1 / 0 > 0)   # ERROR: division by zero
+false && (1 / 0 > 0)  # => false (right side NOT evaluated)
+true || (1 / 0 > 0)   # => true (right side NOT evaluated)
 
-# But if-then-else DOES short-circuit:
-if false then 1/0 else 42  # => 42 ✓
+# Safe guard pattern:
+x != 0 && (y / x > 1)  # Safe - won't divide by zero if x == 0
 ```
 
 ---
@@ -461,9 +462,10 @@ to_string none   # => "None"
 2. **String length = bytes** - Use `chars` for character count
 3. **No variable shadowing** - Use unique names
 4. **Range is ascending only** - Reverse for descending
-5. **Integer division for ints** - Use floats for decimal results
+5. **Division `/` always returns float** - Use `//` for integer division
 6. **Comparison types must match** - No cross-type comparison
-7. **`&&`/`||` don't short-circuit** - Use `if-then-else` instead
+7. **`&&`/`||` do short-circuit** - Safe to use guards like `x != 0 && (y / x > 1)`
 8. **pfold needs associative ops** - Subtraction/division won't work correctly
-9. **Use `any` for list membership** - `contains` is strings only
+9. **`contains` works for strings AND lists** - `contains 3 [1,2,3]` returns true
 10. **Use dot notation for dicts** - `d.key` is cleaner than `get`
+11. **Power operator `**` is right-associative** - `2 ** 3 ** 2` = 512

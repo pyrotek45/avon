@@ -7453,4 +7453,238 @@ mod tests {
         let v = eval(ast.program, &mut symbols, &prog).expect("eval");
         assert_eq!(v.to_string(&prog), "[42]");
     }
+
+    // ==========================================
+    // Tests for new language features
+    // ==========================================
+
+    // Power operator tests
+    #[test]
+    fn test_power_operator_basic() {
+        let prog = "2 ** 3".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "8");
+    }
+
+    #[test]
+    fn test_power_operator_right_associative() {
+        // 2 ** 3 ** 2 should be 2 ** (3 ** 2) = 2 ** 9 = 512
+        let prog = "2 ** 3 ** 2".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "512");
+    }
+
+    #[test]
+    fn test_power_operator_with_floats() {
+        let prog = "4.0 ** 0.5".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "2");
+    }
+
+    #[test]
+    fn test_power_operator_zero_exponent() {
+        let prog = "5 ** 0".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "1");
+    }
+
+    #[test]
+    fn test_power_operator_precedence() {
+        // ** should have higher precedence than *
+        // 2 * 3 ** 2 should be 2 * (3 ** 2) = 2 * 9 = 18
+        let prog = "2 * 3 ** 2".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "18");
+    }
+
+    // Integer division tests
+    #[test]
+    fn test_integer_division_basic() {
+        let prog = "10 // 3".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "3");
+    }
+
+    #[test]
+    fn test_integer_division_negative() {
+        // Floor division toward negative infinity
+        let prog = "(neg 7) // 2".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "-4");
+    }
+
+    #[test]
+    fn test_integer_division_exact() {
+        let prog = "6 // 2".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "3");
+    }
+
+    #[test]
+    fn test_float_division_always_returns_float() {
+        let prog = "10 / 3".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        // Should be a float, not an integer
+        match v {
+            Value::Number(Number::Float(_)) => {}
+            _ => panic!("expected float, got {:?}", v),
+        }
+    }
+
+    #[test]
+    fn test_float_division_exact_still_float() {
+        let prog = "6 / 2".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        // Even exact division returns float
+        match v {
+            Value::Number(Number::Float(f)) => assert_eq!(f, 3.0),
+            _ => panic!("expected float, got {:?}", v),
+        }
+    }
+
+    // Short-circuit evaluation tests
+    #[test]
+    fn test_short_circuit_and_false_first() {
+        // false && (error-causing-expr) should return false without evaluating right side
+        let prog = "false && (1 / 0 > 0)".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "false");
+    }
+
+    #[test]
+    fn test_short_circuit_or_true_first() {
+        // true || (error-causing-expr) should return true without evaluating right side
+        let prog = "true || (1 / 0 > 0)".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "true");
+    }
+
+    #[test]
+    fn test_short_circuit_and_evaluates_both_when_true() {
+        let prog = "true && true".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "true");
+    }
+
+    #[test]
+    fn test_short_circuit_or_evaluates_both_when_false() {
+        let prog = "false || false".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "false");
+    }
+
+    #[test]
+    fn test_short_circuit_practical_guard() {
+        // Common pattern: check before dividing
+        let prog = "let x = 0 in x != 0 && (10 / x > 2)".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "false");
+    }
+
+    // Contains with list tests
+    #[test]
+    fn test_contains_list_found() {
+        let prog = "contains 3 [1, 2, 3, 4]".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "true");
+    }
+
+    #[test]
+    fn test_contains_list_not_found() {
+        let prog = "contains 5 [1, 2, 3, 4]".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "false");
+    }
+
+    #[test]
+    fn test_contains_list_string_elements() {
+        let prog = r#"contains "apple" ["apple", "banana", "cherry"]"#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "true");
+    }
+
+    #[test]
+    fn test_contains_list_empty() {
+        let prog = "contains 1 []".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "false");
+    }
+
+    #[test]
+    fn test_contains_string_still_works() {
+        // Ensure string contains still works
+        let prog = r#"contains "hello world" "world""#.to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "true");
+    }
+
+    #[test]
+    fn test_contains_list_with_pipeline() {
+        let prog = "[1, 2, 3, 4, 5] -> filter (\\x contains x [2, 4])".to_string();
+        let tokens = tokenize(prog.clone()).expect("tokenize");
+        let ast = parse(tokens);
+        let mut symbols = initial_builtins();
+        let v = eval(ast.program, &mut symbols, &prog).expect("eval");
+        assert_eq!(v.to_string(&prog), "[2, 4]");
+    }
 }
