@@ -79,15 +79,18 @@ range 1 5 -> reverse  # => [5, 4, 3, 2, 1]
 [1..5] -> reverse     # => [5, 4, 3, 2, 1]
 ```
 
-### Gotcha: Integer Division for Integers
+### Note: Division Semantics
 
-Division behaves differently based on operand types:
+Division now consistently returns floats, with a separate operator for integer division:
 
 ```avon
-10 / 3      # => 3 (integer division!)
-10.0 / 3.0  # => 3.333... (float division)
-10 / 3.0    # => 3.333... (if either is float, result is float)
+10 / 3      # => 3.333... (always returns float)
+10 / 5      # => 2.0 (still a float, even for exact division)
+10 // 3     # => 3 (integer/floor division, toward -∞)
+-7 // 2     # => -4 (floors toward negative infinity)
 ```
+
+**Tip:** Use `//` for integer division when you need whole numbers.
 
 ### Gotcha: Floating Point Precision
 
@@ -159,14 +162,21 @@ min [3, 7, 1, 5]  # => 1 ✓
 max [3, 7, 1, 5]  # => 7 ✓
 ```
 
-### Gotcha: `contains` is for Strings Only
+### Note: `contains` Works for Strings AND Lists
+
+The `contains` function now works for both substring checks and list membership:
 
 ```avon
-contains "wor" "hello world"  # => false (checks substring)
+# String usage:
+contains "hello world" "world"  # => true (substring check)
 "hello world" -> contains "world"  # Works with pipe
 
-# For list membership, use `any`:
-any (\x x == 3) [1, 2, 3, 4]  # => true
+# List membership:
+contains 3 [1, 2, 3, 4]  # => true (element is in list)
+contains "apple" ["banana", "cherry"]  # => false
+
+# You can also use `any` for more complex conditions:
+any (\x x > 3) [1, 2, 3, 4]  # => true
 ```
 
 ### Gotcha: `zip` Truncates to Shorter List

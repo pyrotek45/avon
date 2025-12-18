@@ -186,12 +186,16 @@ pub fn get_category_doc(category: &str) -> Option<String> {
             "Math Functions:\n\
              ───────────────\n\
              Mathematical operations on numbers.\n\n\
+             Operators:\n\
+             {:<16} Power (right-associative: 2**3**2 = 512)\n\
+             {:<16} Float division (always returns float)\n\
+             {:<16} Integer division (floor toward -∞)\n\n\
              Basic:\n\
              {:<16} Absolute value\n\
              {:<16} Negate a number\n\n\
              Powers & Roots:\n\
              {:<16} Square root\n\
-             {:<16} Raise to power (x^n)\n\n\
+             {:<16} Raise to power (function form)\n\n\
              Rounding:\n\
              {:<16} Round down (toward -infinity)\n\
              {:<16} Round up (toward +infinity)\n\
@@ -208,6 +212,9 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              {:<16} Find minimum in list\n\
              {:<16} Find maximum in list\n\n\
              Use :doc <function> for detailed documentation.",
+            "a ** b",
+            "a / b",
+            "a // b",
             "abs",
             "neg",
             "sqrt",
@@ -531,7 +538,7 @@ pub fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("split", "split :: (String|Template) -> (String|Template) -> [String]\n  Split a string into a list of parts using a delimiter.\n  \n  Arguments:\n    1. String to split\n    2. Delimiter (what to split by)\n  \n  Example: split \"a,b,c\" \",\" -> [\"a\", \"b\", \"c\"]\n           Split by comma\n  \n  Example: split \"one-two-three\" \"-\" -> [\"one\", \"two\", \"three\"]\n           Split by dash\n  \n  Example: split \"line1\\nline2\\nline3\" \"\\n\" -> [\"line1\", \"line2\", \"line3\"]\n           Split by newline (or use 'lines' function)\n  \n  Tip: Use with map to process each part\n  Note: Accepts both strings and templates (templates auto-convert to strings)"),
         ("join", "join :: [String] -> (String|Template) -> String\n  Join a list of strings into one string, with a separator between each.\n  \n  Arguments:\n    1. List of strings to join\n    2. Separator to put between strings\n  \n  Example: join [\"a\", \"b\", \"c\"] \", \" -> \"a, b, c\"\n           Join with comma and space\n  \n  Example: join [\"file\", \"txt\"] \".\" -> \"file.txt\"\n           Join with dot\n  \n  Example: join [\"usr\", \"local\", \"bin\"] \"/\" -> \"usr/local/bin\"\n           Build a path\n  \n  Tip: Opposite of split\n  Note: Separator accepts both strings and templates (templates auto-convert to strings)"),
         ("replace", "replace :: (String|Template) -> (String|Template) -> (String|Template) -> String\n  Replace ALL occurrences of a substring with another string.\n  \n  Arguments:\n    1. Original string\n    2. Substring to find\n    3. Replacement string\n  \n  Example: replace \"hello\" \"l\" \"L\" -> \"heLLo\"\n           Replace all 'l' with 'L'\n  \n  Example: replace \"foo_bar_baz\" \"_\" \"-\" -> \"foo-bar-baz\"\n           Replace underscores with dashes\n  \n  Example: replace \"v1.0.0\" \"1\" \"2\" -> \"v2.0.0\"\n           Bump version number\n  \n  Tip: Replaces ALL matches, not just the first one\n  Note: All arguments accept both strings and templates (templates auto-convert to strings)"),
-        ("contains", "contains :: (String|Template) -> (String|Template) -> Bool\n  Check if a string contains a specific substring anywhere inside it.\n  \n  Arguments:\n    1. String to search in\n    2. Substring to search for\n  \n  Example: contains \"hello world\" \"world\" -> true\n           \"world\" is in \"hello world\"\n  \n  Example: contains \"hello\" \"xyz\" -> false\n           \"xyz\" is not found\n  \n  Example: contains \"config.yaml\" \".yaml\" -> true\n           Check file extension\n  \n  Example: filter (\\file contains file \".av\") file_list\n           Filter for Avon files\n  \n  Use case: Search text, validate content, filter by substring\n  Note: Both arguments accept strings and templates (templates auto-convert to strings)"),
+        ("contains", "contains :: (String|Template) -> (String|Template|List) -> Bool\n  Check if a string contains a substring, or if a list contains an element.\n  \n  For strings:\n    Arguments:\n      1. String to search in\n      2. Substring to search for\n  \n    Example: contains \"hello world\" \"world\" -> true\n             \"world\" is in \"hello world\"\n  \n    Example: contains \"hello\" \"xyz\" -> false\n             \"xyz\" is not found\n  \n  For lists (element membership):\n    Arguments:\n      1. Element to search for\n      2. List to search in\n  \n    Example: contains 3 [1, 2, 3, 4] -> true\n             3 is in the list\n  \n    Example: contains \"apple\" [\"banana\", \"cherry\"] -> false\n             \"apple\" is not in the list\n  \n    Example: filter (\\x contains x valid_values) input_list\n             Keep only valid items\n  \n  Use case: Search text, validate content, check membership\n  Note: For strings, both arguments accept strings and templates"),
         ("starts_with", "starts_with :: (String|Template) -> (String|Template) -> Bool\n  Check if a string starts with a specific prefix.\n  \n  Arguments:\n    1. String to check\n    2. Prefix to look for\n  \n  Example: starts_with \"hello\" \"he\" -> true\n           Starts with \"he\"\n  \n  Example: starts_with \"hello\" \"lo\" -> false\n           Doesn't start with \"lo\"\n  \n  Example: starts_with \"test_file.av\" \"test\" -> true\n           Check if filename starts with \"test\"\n  \n  Example: filter (\\line starts_with line \"ERROR\") log_lines\n           Find error lines in logs\n  \n  Use case: Filter by prefix, validate format, categorize strings\n  Note: Both arguments accept strings and templates (templates auto-convert to strings)"),
         ("ends_with", "ends_with :: (String|Template) -> (String|Template) -> Bool\n  Check if a string ends with a specific suffix.\n  \n  Arguments:\n    1. String to check\n    2. Suffix to look for\n  \n  Example: ends_with \"hello\" \"lo\" -> true\n           Ends with \"lo\"\n  \n  Example: ends_with \"hello\" \"he\" -> false\n           Doesn't end with \"he\"\n  \n  Example: ends_with \"file.txt\" \".txt\" -> true\n           Check file extension\n  \n  Example: filter (\\file ends_with file \".av\") file_list\n           Get only .av files\n  \n  Use case: Check file extensions, validate suffixes, filter by ending\n  Note: Both arguments accept strings and templates (templates auto-convert to strings)"),
         ("length", "length :: (String|Template|List) -> Int\n  Get the number of characters in a string or items in a list.\n  \n  Arguments:\n    1. String or list to measure\n  \n  Example: length \"hello\" -> 5\n           Count characters\n  \n  Example: length [1, 2, 3] -> 3\n           Count list items\n  \n  Example: length \"\" -> 0\n           Empty string has length 0\n  \n  Example: if length input > 10 then \"too long\" else input\n           Validate input length\n  \n  Use case: Validation, counting, conditional logic\n  Note: Templates are converted to strings before measuring length"),
