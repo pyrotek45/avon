@@ -2623,6 +2623,21 @@ Note: `markdown_to_html` accepts both strings and templates, automatically conve
 | `is_none val` | Check if None | `is_none (head [])` → `true` |
 | `is_empty val` | Check if empty (string/list/dict) | `is_empty []` → `true` |
 
+### Formatting Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `format_json val` | Convert to JSON string | `format_json {a: 1}` → `"{\"a\": 1}"` |
+| `format_table data sep` | Format as 2D table | `format_table [["a","b"],["1","2"]] " \| "` |
+| `format_hex n` | Number to hexadecimal | `format_hex 255` → `"ff"` |
+| `format_binary n` | Number to binary | `format_binary 5` → `"101"` |
+| `format_octal n` | Number to octal | `format_octal 8` → `"10"` |
+| `format_bytes n` | Human-readable bytes | `format_bytes 1048576` → `"1 MB"` |
+| `format_currency n sym` | Format as currency | `format_currency 1234.5 "$"` → `"$1,234.50"` |
+| `format_percent n prec` | Format as percentage | `format_percent 0.756 1` → `"75.6%"` |
+| `truncate s maxlen` | Truncate with "..." | `truncate "hello world" 8` → `"hello..."` |
+| `center s width` | Center-align text | `center "hi" 6` → `"  hi  "` |
+
 <!-- Fun fact: The number of ways to convert a string to a boolean is inversely proportional to the number of production incidents it will cause. -->
 
 ### Advanced List Operations
