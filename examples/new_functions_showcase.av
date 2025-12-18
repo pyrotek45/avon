@@ -121,14 +121,15 @@ let demo_sqrt =
   }
 in
 
-# pow - Raise to power (x^n)
+# pow - Raise to power (also available as ** operator)
 let demo_pow =
   {
-    square: pow 5 2,                      # 25
-    cube: pow 3 3,                        # 27
+    square: pow 5 2,                      # 25  (or: 5 ** 2)
+    cube: pow 3 3,                        # 27  (or: 3 ** 3)
     power_of_zero: pow 5 0,               # 1
     negative_exp: pow 2 (0 - 1),          # 0.5
-    powers_of_two: map (pow 2) [0, 1, 2, 3, 4, 5]  # [1, 2, 4, 8, 16, 32]
+    powers_of_two: map (pow 2) [0, 1, 2, 3, 4, 5],  # [1, 2, 4, 8, 16, 32]
+    operator_form: 2 ** 10                # 1024
   }
 in
 
