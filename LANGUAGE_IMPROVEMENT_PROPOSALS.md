@@ -130,35 +130,21 @@ range_down 5 1  # => [5, 4, 3, 2, 1]
 
 ---
 
-### 4. `contains` Only Works on Strings
+### 4. ✅ IMPLEMENTED: `contains` Now Works on Lists
 
-**Current Behavior:**
+**Status:** Fixed! `contains` is now overloaded for both strings and lists.
+
+**Previous Behavior:**
 ```avon
 contains 3 [1, 2, 3]  # ERROR: expected string
 ```
 
-**Expected:** Check if element is in list
-
-**Impact:**
-- Forces awkward `any (\x x == 3) list` pattern
-- `contains` name suggests it should work for lists
-
-**Proposed Fixes:**
-
-A) **Overload `contains` for lists:**
+**New Behavior:**
 ```avon
-contains 3 [1, 2, 3]      # => true (list membership)
+contains 3 [1, 2, 3]          # => true (list membership)
 contains "wor" "hello world"  # => true (substring)
+contains "apple" ["banana"]   # => false
 ```
-
-B) **Add `elem` or `member` function:**
-```avon
-elem 3 [1, 2, 3]  # => true
-```
-
-**Recommendation:** Option A (overload) - more intuitive
-
-**Effort:** Low (modify contains builtin)
 
 ---
 

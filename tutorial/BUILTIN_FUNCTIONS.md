@@ -279,6 +279,11 @@ Functions for generating Markdown.
 
 Mathematical functions.
 
+**Operators:** In addition to these functions, Avon supports math operators:
+- `**` — Power/exponentiation (right-associative): `2 ** 3` → `8`
+- `/` — Division (always returns float): `10 / 3` → `3.333...`
+- `//` — Integer division (floor toward -∞): `10 // 3` → `3`
+
 | Function | Signature | Description |
 |----------|-----------|-------------|
 | `abs` | `Number -> Number` | Returns the absolute value of a number. |
@@ -289,7 +294,7 @@ Mathematical functions.
 | `log` | `Number -> Number` | Returns the natural logarithm (base e). |
 | `log10` | `Number -> Number` | Returns the base-10 logarithm. |
 | `neg` | `Number -> Number` | Negates a number. |
-| `pow` | `Number -> Number -> Number` | Raises a number to a power (x^n). |
+| `pow` | `Number -> Number -> Number` | Raises a number to a power. Also available as `**` operator. |
 | `random_float` | `Number -> Number -> Number` | Returns a random float in the range [min, max]. |
 | `random_int` | `Number -> Number -> Number` | Returns a random integer in the range [min, max] (inclusive). |
 | `round` | `Number -> Number` | Rounds to the nearest integer. |

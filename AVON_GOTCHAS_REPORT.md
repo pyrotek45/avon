@@ -226,12 +226,15 @@ pow 2 62               # => 4611686018427387904 (works)
 pow 2 63               # May overflow to negative
 ```
 
-### Gotcha: No Power Operator `^`
+### Note: Power Operator `**` (Not `^`)
+
+The power operator is `**`, not `^`:
 
 ```avon
 2 ** 8       # => 256 (power operator)
 2 ** 3 ** 2  # => 512 (right-associative: 2 ** (3 ** 2))
 pow 2 8      # => 256 (function form also works)
+2 ^ 8        # ERROR: ^ is not recognized
 ```
 
 ### Note: Logical Operators Now Short-Circuit

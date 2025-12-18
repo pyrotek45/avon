@@ -5448,16 +5448,17 @@ zip [1, 2, 3] [4, 5]           # => [[1, 4], [2, 5]] (3 is dropped!)
 zip_with (\a \b a + b) [1, 2, 3] [10, 20]  # => [11, 22]
 ```
 
-### Gotcha 25: No Power Operator (`^`)
+### Gotcha 25: Caret `^` is Not a Power Operator
 
-The caret `^` is not a power operator in Avon:
+The caret `^` is not recognized in Avon. Use `**` for exponentiation:
 
 ```avon
-2 ^ 8   # ERROR: expected function, found number
-pow 2 8 # => 256 ✓
+2 ^ 8    # ERROR: expected function, found number
+2 ** 8   # => 256 ✓ (use ** for power)
+pow 2 8  # => 256 ✓ (function form also works)
 ```
 
-Use the `pow` function instead.
+Note: `**` is right-associative (see Gotcha 21).
 
 ### Gotcha 26: `min` and `max` Take Lists, Not Two Arguments
 
