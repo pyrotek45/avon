@@ -2458,6 +2458,9 @@ Lists are the heart of Avon, and Avon provides comprehensive list operations:
 | `split_at n list` | Split list at index n | `split_at 2 [1,2,3,4,5]` → `[[1,2], [3,4,5]]` |
 | `find pred list` | Find first item matching predicate (or `None`) | `find (\x x > 2) [1,2,3,4]` → `3` |
 | `find_index pred list` | Find index of first match (or `None`) | `find_index (\x x > 2) [1,2,3,4]` → `2` |
+| `intersperse sep list` | Insert separator between elements | `intersperse 0 [1,2,3]` → `[1,0,2,0,3]` |
+| `transpose matrix` | Transpose rows/columns of nested lists | `transpose [[1,2],[3,4]]` → `[[1,3],[2,4]]` |
+| `zip_with f l1 l2` | Combine two lists with a function | `zip_with (\a \b a+b) [1,2] [10,20]` → `[11,22]` |
 
 Examples:
 ```avon
