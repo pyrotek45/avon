@@ -73,11 +73,15 @@ range 5 1    # => [] (empty, not [5, 4, 3, 2, 1]!)
 range 5 5    # => [5] (single element works)
 ```
 
-**Tip:** For descending ranges, generate ascending then reverse:
+**Tip:** For descending ranges, use step syntax or reverse:
 ```avon
-range 1 5 -> reverse  # => [5, 4, 3, 2, 1]
+[10, -1 .. 0]         # => [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0] (step of -1)
+[10, -2 .. 0]         # => [10, 8, 6, 4, 2, 0] (step of -2)
+range 1 5 -> reverse  # => [5, 4, 3, 2, 1] (generate then reverse)
 [1..5] -> reverse     # => [5, 4, 3, 2, 1]
 ```
+
+**Range step syntax:** `[start, step .. end]` where `step` is the increment value.
 
 ### Note: Division Semantics
 

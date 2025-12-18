@@ -178,7 +178,7 @@ let test_range_large = trace "large range result" [1 .. 100] in
 let test_range_negative = [-5 .. 5] in
 
 let test_range_with_step = [0, 2 .. 10] in
-let test_range_negative_step = [10, 8 .. 0] in
+let test_range_negative_step = [10, -1 .. 0] in
 let test_range_large_step = [0, 10 .. 100] in
 let test_range_with_expr = [(1 + 1) .. (5 + 5)] in
 

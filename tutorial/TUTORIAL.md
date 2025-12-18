@@ -5400,8 +5400,10 @@ range 5 1    # => [] (NOT [5, 4, 3, 2, 1]!)
 range 5 5    # => [5] (single element works)
 ```
 
-**Solution:** Generate ascending range and reverse:
+**Solution:** Use step syntax or reverse:
 ```avon
+[10, -1 .. 0]         # => [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0] (step of -1)
+[10, -2 .. 0]         # => [10, 8, 6, 4, 2, 0] (step of -2)
 range 1 5 -> reverse  # => [5, 4, 3, 2, 1]
 [1..5] -> reverse     # => [5, 4, 3, 2, 1]
 ```
