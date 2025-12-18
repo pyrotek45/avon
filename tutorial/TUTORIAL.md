@@ -2458,8 +2458,6 @@ Lists are the heart of Avon, and Avon provides comprehensive list operations:
 | `split_at n list` | Split list at index n | `split_at 2 [1,2,3,4,5]` → `[[1,2], [3,4,5]]` |
 | `find pred list` | Find first item matching predicate (or `None`) | `find (\x x > 2) [1,2,3,4]` → `3` |
 | `find_index pred list` | Find index of first match (or `None`) | `find_index (\x x > 2) [1,2,3,4]` → `2` |
-| `min list` | Get minimum value (or `None` if empty) | `min [3,1,4,1,5]` → `1` |
-| `max list` | Get maximum value (or `None` if empty) | `max [3,1,4,1,5]` → `5` |
 
 Examples:
 ```avon
