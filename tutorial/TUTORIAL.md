@@ -505,6 +505,16 @@ some_identifier            # Letters, digits, underscores
 _private                   # Underscores are valid
 ```
 
+#### Comments
+
+```avon
+# This is a comment - everything after # is ignored
+let x = 42 in              # Inline comments work too
+x + 1
+```
+
+Comments start with `#` and continue to the end of the line. Use them to explain your code.
+
 #### Function Literals
 
 ```avon
@@ -569,6 +579,32 @@ not a                      # Logical NOT (returns true if false, false if true)
 ```
 
 These work on actual booleans, not "truthy" values. `0`, `""`, and `[]` aren't secretly `false` here.
+
+**Operator Precedence Table:**
+
+From highest to lowest precedence:
+
+| Precedence | Operators/Operations | Associativity | Description |
+|------------|---------------------|---------------|-------------|
+| 1 (highest) | `()` `[]` `{}` | - | Grouping, lists, dicts |
+| 2 | `-x` (unary) | - | Unary minus |
+| 3 | `**` | Right | Exponentiation |
+| 4 | `*` `/` `//` `%` | Left | Multiplication, division |
+| 5 | `+` `-` | Left | Addition, subtraction |
+| 6 | `==` `!=` `>` `<` `>=` `<=` | Left | Comparison |
+| 7 | function application | Left | `f x`, `map (\x x) list` |
+| 8 | `&&` | Left | Logical AND |
+| 9 | `not` | - | Logical NOT |
+| 10 | `\|\|` | Left | Logical OR |
+| 11 (lowest) | `->` | Left | Pipe |
+
+**Key precedence rules:**
+- Unary minus binds tighter than `**`: `-2 ** 2` → `(-2) ** 2` = `4`
+- `**` binds tighter than `*`: `2 * 3 ** 2` → `2 * (3 ** 2)` = `18`
+- `**` is right-associative: `2 ** 3 ** 2` → `2 ** (3 ** 2)` = `512`
+- `&&` binds tighter than `||`: `true || false && false` → `true || (false && false)` = `true`
+- Arithmetic binds tighter than comparison: `1 + 2 < 5` → `(1 + 2) < 5` = `true`
+- Pipe has lowest precedence: use parens for `([1,2,3] -> length) + 5`
 
 Pipe Operator:
 ```avon
