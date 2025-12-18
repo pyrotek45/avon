@@ -2414,6 +2414,24 @@ avon doc dict      # All dictionary functions
 | `any pred list` | True if any item matches | `any (\x x > 5) [1, 6]` → `true` |
 | `count pred list` | Count matching items | `count (\x x % 2 == 0) [1, 2, 3, 4]` → `2` |
 
+### Math Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `abs n` | Absolute value | `abs -5` → `5` |
+| `sqrt n` | Square root | `sqrt 16` → `4.0` |
+| `floor n` | Round down | `floor 3.7` → `3` |
+| `ceil n` | Round up | `ceil 3.2` → `4` |
+| `round n` | Round to nearest | `round 3.5` → `4` |
+| `pow base exp` | Power (also `**`) | `pow 2 3` → `8` |
+| `log n` | Natural logarithm | `log 2.718` → `1.0` |
+| `log10 n` | Base-10 logarithm | `log10 100` → `2.0` |
+| `gcd a b` | Greatest common divisor | `gcd 12 8` → `4` |
+| `lcm a b` | Least common multiple | `lcm 4 6` → `12` |
+| `random_int min max` | Random integer (inclusive) | `random_int 1 10` → `7` (varies) |
+| `random_float min max` | Random float in range | `random_float 0.0 1.0` → `0.42` (varies) |
+| `uuid` | Generate UUID v4 | `uuid` → `"550e8400-..."` |
+
 ### Regex Functions
 
 | Function | Description | Example |
