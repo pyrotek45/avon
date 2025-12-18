@@ -2432,6 +2432,22 @@ avon doc dict      # All dictionary functions
 | `random_float min max` | Random float in range | `random_float 0.0 1.0` → `0.42` (varies) |
 | `uuid` | Generate UUID v4 | `uuid` → `"550e8400-..."` |
 
+### Date/Time Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `now` | Current ISO 8601 datetime | `now` → `"2024-12-10T15:30:00Z"` |
+| `timestamp` | Current Unix timestamp | `timestamp` → `1733850600` |
+| `timezone` | Current timezone offset | `timezone` → `"+00:00"` |
+| `date_format dt fmt` | Format datetime | `date_format "2024-12-10T15:30:00Z" "%Y-%m-%d"` → `"2024-12-10"` |
+| `date_parse str fmt` | Parse datetime string | `date_parse "2024-12-10" "%Y-%m-%d"` → `"2024-12-10T00:00:00Z"` |
+| `date_add dt offset` | Add to datetime | `date_add "2024-12-10T00:00:00Z" "1d"` → `"2024-12-11T00:00:00Z"` |
+| `date_diff dt1 dt2` | Days between dates | `date_diff "2024-12-01" "2024-12-10"` → `9` |
+
+**Date format codes:** `%Y` year, `%m` month, `%d` day, `%H` hour, `%M` minute, `%S` second
+
+**Offset units:** `Nd` = N days, `Nh` = N hours, `Nm` = N minutes, `Ns` = N seconds
+
 ### Regex Functions
 
 | Function | Description | Example |
