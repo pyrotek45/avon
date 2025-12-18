@@ -2461,6 +2461,11 @@ Lists are the heart of Avon, and Avon provides comprehensive list operations:
 | `intersperse sep list` | Insert separator between elements | `intersperse 0 [1,2,3]` → `[1,0,2,0,3]` |
 | `transpose matrix` | Transpose rows/columns of nested lists | `transpose [[1,2],[3,4]]` → `[[1,3],[2,4]]` |
 | `zip_with f l1 l2` | Combine two lists with a function | `zip_with (\a \b a+b) [1,2] [10,20]` → `[11,22]` |
+| `shuffle list` | Randomly reorder elements | `shuffle [1,2,3]` → `[2,3,1]` (varies) |
+| `sample n list` | Get n unique random elements | `sample 2 [1,2,3,4,5]` → `[3,1]` (varies) |
+| `choice list` | Get one random element | `choice ["a","b","c"]` → `"b"` (varies) |
+| `combinations k list` | All k-element combinations | `combinations 2 [1,2,3]` → `[[1,2],[1,3],[2,3]]` |
+| `permutations k list` | All k-element permutations | `permutations 2 [1,2,3]` → `[[1,2],[1,3],[2,1],...]` |
 
 Examples:
 ```avon
