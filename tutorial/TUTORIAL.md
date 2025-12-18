@@ -2453,6 +2453,9 @@ Lists are the heart of Avon, and Avon provides comprehensive list operations:
 | `nth n list` | Get element at index n (0-based, or `None` if out of bounds) | `nth 1 [1,2,3]` → `2` |
 | `tail list` | Get all but first element | `tail [1,2,3,4]` → `[2,3,4]` |
 | `last list` | Get last element (or `None` if empty) | `last [1,2,3]` → `3` |
+| `take n list` | Get first n elements | `take 2 [1,2,3,4]` → `[1,2]` |
+| `drop n list` | Remove first n elements | `drop 2 [1,2,3,4]` → `[3,4]` |
+| `split_at n list` | Split list at index n | `split_at 2 [1,2,3,4,5]` → `[[1,2], [3,4,5]]` |
 | `find pred list` | Find first item matching predicate (or `None`) | `find (\x x > 2) [1,2,3,4]` → `3` |
 | `find_index pred list` | Find index of first match (or `None`) | `find_index (\x x > 2) [1,2,3,4]` → `2` |
 

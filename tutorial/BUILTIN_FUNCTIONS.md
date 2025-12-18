@@ -203,6 +203,7 @@ Functions for working with lists.
 | `pfilter` | `(a -> Bool) -> [a] -> [a]` | Parallel filter. Like `filter` but uses multiple CPU cores. |
 | `pfold` | `(b -> a -> b) -> b -> [a] -> b` | Parallel fold. **Requires an associative combiner function.** |
 | `pmap` | `(a -> b) -> [a] -> [b]` | Parallel map. Like `map` but uses multiple CPU cores. |
+| `drop` | `Number -> [a] -> [a]` | Removes the first n items. |
 | `range` | `Number -> Number -> [Number]` | Generates a list of numbers from start to end (inclusive). |
 | `reverse` | `[a] -> [a]` | Returns the list in reverse order. |
 | `sample` | `Number -> [a] -> [a]` | Returns n unique random elements from a list. Errors if n > length. |
