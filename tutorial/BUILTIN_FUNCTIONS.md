@@ -196,6 +196,7 @@ Functions for working with lists.
 | `head` | `[a] -> a\|None` | Returns the first item, or None if empty. |
 | `intersperse` | `a -> [a] -> [a]` | Inserts a separator between each element of a list. |
 | `last` | `[a] -> a\|None` | Returns the last item, or None if empty. |
+| `length` | `[a] -> Number` | Returns the number of items in the list. |
 | `map` | `(a -> b) -> [a] -> [b]` | Applies a function to each item in the list. |
 | `nth` | `Number -> [a] -> a\|None` | Returns the item at index (0-based), or None if out of bounds. |
 | `partition` | `(a -> Bool) -> [a] -> [[a], [a]]` | Splits a list into two lists: [matches, non-matches]. |
