@@ -1124,7 +1124,11 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                         )?;
                         match res {
                             Value::Bool(b) => Ok((item.clone(), b)),
-                            other => Err(EvalError::type_mismatch("bool", other.to_string(&source), line)),
+                            other => Err(EvalError::type_mismatch(
+                                "bool",
+                                other.to_string(&source),
+                                line,
+                            )),
                         }
                     })
                     .collect();

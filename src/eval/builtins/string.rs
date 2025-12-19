@@ -129,7 +129,9 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     // List membership check - compare using string representation
                     let needle = &args[0];
                     let needle_str = needle.to_string(source);
-                    let found = items.iter().any(|item| item.to_string(source) == needle_str);
+                    let found = items
+                        .iter()
+                        .any(|item| item.to_string(source) == needle_str);
                     Ok(Value::Bool(found))
                 }
                 _ => {
