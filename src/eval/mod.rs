@@ -623,7 +623,10 @@ fn eval_with_depth(
                                 _ => "unknown",
                             };
                             return Err(EvalError::new(
-                                format!("cannot use && with {} (left operand must be bool)", l_type),
+                                format!(
+                                    "cannot use && with {} (left operand must be bool)",
+                                    l_type
+                                ),
                                 None,
                                 None,
                                 line,
@@ -676,7 +679,10 @@ fn eval_with_depth(
                                 _ => "unknown",
                             };
                             return Err(EvalError::new(
-                                format!("cannot use || with {} (left operand must be bool)", l_type),
+                                format!(
+                                    "cannot use || with {} (left operand must be bool)",
+                                    l_type
+                                ),
                                 None,
                                 None,
                                 line,
@@ -816,7 +822,12 @@ fn eval_with_depth(
                         ))
                     }
                 },
-                Token::Mul(_) | Token::Div(_) | Token::IntDiv(_) | Token::Sub(_) | Token::Mod(_) | Token::Power(_) => {
+                Token::Mul(_)
+                | Token::Div(_)
+                | Token::IntDiv(_)
+                | Token::Sub(_)
+                | Token::Mod(_)
+                | Token::Power(_) => {
                     let lnumber = match l_eval {
                         Value::Number(n) => n,
                         other => {
@@ -908,6 +919,11 @@ fn eval_with_depth(
                             }
                             match (lnumber, rnumber) {
                                 (Number::Int(a), Number::Int(b)) => {
+                                    // Handle overflow: MIN / -1
+                                    if a == i64::MIN && b == -1 {
+                                        return Ok(Value::Number(Number::Int(a)));
+                                        // wrapping behavior: MIN / -1 = MIN
+                                    }
                                     // Floor division for integers
                                     let quotient = a / b;
                                     let remainder = a % b;
@@ -952,7 +968,10 @@ fn eval_with_depth(
                                         // Use integer power for non-negative exponents
                                         let result = (base as f64).powi(exp as i32);
                                         // Return int if result is a whole number and fits in i64
-                                        if result.fract() == 0.0 && result >= i64::MIN as f64 && result <= i64::MAX as f64 {
+                                        if result.fract() == 0.0
+                                            && result >= i64::MIN as f64
+                                            && result <= i64::MAX as f64
+                                        {
                                             Value::Number(Number::Int(result as i64))
                                         } else {
                                             Value::Number(Number::Float(result))

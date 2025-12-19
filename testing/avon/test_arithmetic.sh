@@ -20,7 +20,7 @@ let t1 = (
     if add_overflow == min_i64 then
         trace "PASS: Addition overflow wrapped correctly" "ok"
     else
-        trace ("FAIL: Addition overflow: " + add_overflow) "fail"
+        trace ("FAIL: Addition overflow: " + (to_string add_overflow)) "fail"
 ) in
 
 let t2 = (
@@ -28,7 +28,7 @@ let t2 = (
     if sub_underflow == max_i64 then
         trace "PASS: Subtraction underflow wrapped correctly" "ok"
     else
-        trace ("FAIL: Subtraction underflow: " + sub_underflow) "fail"
+        trace ("FAIL: Subtraction underflow: " + (to_string sub_underflow)) "fail"
 ) in
 
 let t3 = (
@@ -36,15 +36,15 @@ let t3 = (
     if mul_overflow == -2 then
         trace "PASS: Multiplication overflow wrapped correctly" "ok"
     else
-        trace ("FAIL: Multiplication overflow: " + mul_overflow) "fail"
+        trace ("FAIL: Multiplication overflow: " + (to_string mul_overflow)) "fail"
 ) in
 
 let t4 = (
-    let div_edge = min_i64 / -1 in
+    let div_edge = min_i64 // -1 in
     if div_edge == min_i64 then
-        trace "PASS: Division edge case (MIN / -1) handled correctly" "ok"
+        trace "PASS: Division edge case (MIN // -1) handled correctly" "ok"
     else
-        trace ("FAIL: Division edge case: " + div_edge) "fail"
+        trace ("FAIL: Division edge case: " + (to_string div_edge)) "fail"
 ) in
 
 let t5 = (
@@ -52,7 +52,7 @@ let t5 = (
     if neg_prec == -10 then
         trace "PASS: 5 * -2 parsed correctly" "ok"
     else
-        trace ("FAIL: 5 * -2 parsed incorrectly: " + neg_prec) "fail"
+        trace ("FAIL: 5 * -2 parsed incorrectly: " + (to_string neg_prec)) "fail"
 ) in
 
 "DONE"
