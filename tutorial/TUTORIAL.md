@@ -555,9 +555,38 @@ a ** b                     # Exponentiation (power, right-associative)
 10 / 3     # => 3.333... (always float)
 10 // 3    # => 3 (integer division)
 -7 // 2    # => -4 (floors toward negative infinity)
+7 // -3    # => -3 (floors toward negative infinity)
 2 ** 8     # => 256
 2 ** 0.5   # => 1.414... (square root)
+4 ** 0.5   # => 2 (exact integer result)
 ```
+
+**Modulo Examples:**
+```avon
+10 % 3     # => 1
+-7 % 3     # => -1 (sign follows dividend)
+7 % -3     # => 1
+```
+
+**Arithmetic Edge Cases & Error Handling:**
+
+Avon handles arithmetic edge cases gracefully without crashing:
+
+| Operation | Result | Notes |
+|-----------|--------|-------|
+| `10 / 0` | Error: "division by zero" | Runtime error |
+| `10 // 0` | Error: "integer division by zero" | Runtime error |
+| `10 % 0` | Error: "modulo by zero" | Runtime error |
+| `0 ** 0` | `1` | Mathematical convention |
+| `0 ** -1` | `inf` | Infinity |
+| `(-1) ** 0.5` | `NaN` | Not a real number |
+| `2 ** 1000` | Large float | Very large numbers become floats |
+| `MAX_I64 + 1` | Wraps to `MIN_I64` | Integer overflow wraps |
+| `MIN_I64 - 1` | Wraps to `MAX_I64` | Integer underflow wraps |
+| `MIN_I64 // -1` | `MIN_I64` | Overflow wraps (returns MIN) |
+| `MIN_I64 % -1` | `0` | Mathematically correct |
+
+> **Note:** Integer arithmetic uses wrapping semantics for overflow/underflow. This is intentional and consistent across all integer operations.
 
 <!-- In Avon, "5" + 3 is a type error, not "53". You're welcome. -->
 
@@ -2420,8 +2449,8 @@ avon doc dict      # All dictionary functions
 |----------|-------------|---------|
 | `abs n` | Absolute value | `abs -5` → `5` |
 | `sqrt n` | Square root | `sqrt 16` → `4.0` |
-| `floor n` | Round down | `floor 3.7` → `3` |
-| `ceil n` | Round up | `ceil 3.2` → `4` |
+| `floor n` | Round down (toward -∞) | `floor 3.7` → `3`, `floor (-2.5)` → `-3` |
+| `ceil n` | Round up (toward +∞) | `ceil 3.2` → `4`, `ceil (-2.5)` → `-2` |
 | `round n` | Round to nearest | `round 3.5` → `4` |
 | `pow base exp` | Power (also `**`) | `pow 2 3` → `8` |
 | `log n` | Natural logarithm | `log 2.718` → `1.0` |
@@ -2431,6 +2460,16 @@ avon doc dict      # All dictionary functions
 | `random_int min max` | Random integer (inclusive) | `random_int 1 10` → `7` (varies) |
 | `random_float min max` | Random float in range | `random_float 0.0 1.0` → `0.42` (varies) |
 | `uuid` | Generate UUID v4 | `uuid` → `"550e8400-..."` |
+
+**Math Function Edge Cases:**
+
+| Expression | Result | Notes |
+|------------|--------|-------|
+| `sqrt (-1)` | `NaN` | Square root of negative |
+| `log 0` | `-inf` | Logarithm of zero |
+| `log (-1)` | `NaN` | Logarithm of negative |
+| `gcd 0 0` | `0` | GCD with both zeros |
+| `gcd 0 n` | `n` | GCD with one zero |
 
 ### Date/Time Functions
 

@@ -284,23 +284,32 @@ Mathematical functions.
 **Operators:** In addition to these functions, Avon supports math operators:
 - `**` — Power/exponentiation (right-associative): `2 ** 3` → `8`
 - `/` — Division (always returns float): `10 / 3` → `3.333...`
-- `//` — Integer division (floor toward -∞): `10 // 3` → `3`
+- `//` — Integer division (floor toward -∞): `10 // 3` → `3`, `-7 // 3` → `-3`
+- `%` — Modulo/remainder: `10 % 3` → `1`
+
+**Arithmetic Edge Cases:** All operators handle edge cases gracefully:
+- Division/modulo by zero → Runtime error (not a panic)
+- Integer overflow → Wraps (e.g., `MAX + 1` → `MIN`)
+- `MIN // -1` → `MIN` (wrapping behavior)
+- `MIN % -1` → `0` (mathematically correct)
+- `0 ** -1` → `inf`, `(-1) ** 0.5` → `NaN`, `0 ** 0` → `1`
+- `sqrt (-1)` → `NaN`, `log 0` → `-inf`, `log (-1)` → `NaN`
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
 | `abs` | `Number -> Number` | Returns the absolute value of a number. |
-| `ceil` | `Number -> Number` | Rounds up to the nearest integer. |
-| `floor` | `Number -> Number` | Rounds down to the nearest integer. |
+| `ceil` | `Number -> Number` | Rounds up to the nearest integer (toward +∞). |
+| `floor` | `Number -> Number` | Rounds down to the nearest integer (toward -∞). |
 | `gcd` | `Number -> Number -> Number` | Returns the greatest common divisor of two numbers. |
 | `lcm` | `Number -> Number -> Number` | Returns the least common multiple of two numbers. |
-| `log` | `Number -> Number` | Returns the natural logarithm (base e). |
-| `log10` | `Number -> Number` | Returns the base-10 logarithm. |
+| `log` | `Number -> Number` | Returns the natural logarithm (base e). Returns `-inf` for 0, `NaN` for negative. |
+| `log10` | `Number -> Number` | Returns the base-10 logarithm. Returns `-inf` for 0, `NaN` for negative. |
 | `neg` | `Number -> Number` | Negates a number. |
 | `pow` | `Number -> Number -> Number` | Raises a number to a power. Also available as `**` operator. |
 | `random_float` | `Number -> Number -> Number` | Returns a random float in the range [min, max]. |
 | `random_int` | `Number -> Number -> Number` | Returns a random integer in the range [min, max] (inclusive). |
 | `round` | `Number -> Number` | Rounds to the nearest integer. |
-| `sqrt` | `Number -> Number` | Returns the square root. |
+| `sqrt` | `Number -> Number` | Returns the square root. Returns `NaN` for negative numbers. |
 | `uuid` | `() -> String` | Generates a new random UUID v4 string. |
 
 ## Regex Functions
