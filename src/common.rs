@@ -22,9 +22,9 @@ pub enum Token {
     NotEqual(usize),
     Mul(usize),
     Div(usize),
-    IntDiv(usize),    // // integer division (floor division)
+    IntDiv(usize), // // integer division (floor division)
     Mod(usize),
-    Power(usize),     // ** exponentiation operator
+    Power(usize), // ** exponentiation operator
     Add(usize),
     Sub(usize),
     Dot(usize),
@@ -94,7 +94,10 @@ impl Token {
     }
 
     pub fn is_factor_op(&self) -> bool {
-        matches!(self, Token::Mul(_) | Token::Div(_) | Token::IntDiv(_) | Token::Mod(_))
+        matches!(
+            self,
+            Token::Mul(_) | Token::Div(_) | Token::IntDiv(_) | Token::Mod(_)
+        )
     }
 
     pub fn is_power_op(&self) -> bool {
@@ -197,7 +200,14 @@ impl std::ops::Rem for Number {
 
     fn rem(self, other: Number) -> Number {
         match (self, other) {
-            (Number::Int(v), Number::Int(r)) => Number::Int(v % r),
+            (Number::Int(v), Number::Int(r)) => {
+                // Handle overflow: MIN % -1 would panic, but mathematically it's 0
+                if v == i64::MIN && r == -1 {
+                    Number::Int(0)
+                } else {
+                    Number::Int(v % r)
+                }
+            }
             (Number::Int(v), Number::Float(r)) => Number::Float((v as f64) % r),
             (Number::Float(v), Number::Int(r)) => Number::Float(v % (r as f64)),
             (Number::Float(v), Number::Float(r)) => Number::Float(v % r),

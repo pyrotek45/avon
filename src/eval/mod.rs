@@ -964,8 +964,8 @@ fn eval_with_depth(
                             // Exponentiation: base ** exp
                             match (lnumber, rnumber) {
                                 (Number::Int(base), Number::Int(exp)) => {
-                                    if exp >= 0 && exp <= u32::MAX as i64 {
-                                        // Use integer power for non-negative exponents
+                                    if exp >= 0 && exp <= i32::MAX as i64 {
+                                        // Use integer power for non-negative exponents that fit in i32
                                         let result = (base as f64).powi(exp as i32);
                                         // Return int if result is a whole number and fits in i64
                                         if result.fract() == 0.0
@@ -977,7 +977,7 @@ fn eval_with_depth(
                                             Value::Number(Number::Float(result))
                                         }
                                     } else {
-                                        // Negative exponent or very large exp -> float
+                                        // Negative exponent or very large exp -> use powf
                                         Value::Number(Number::Float((base as f64).powf(exp as f64)))
                                     }
                                 }
@@ -985,7 +985,12 @@ fn eval_with_depth(
                                     Value::Number(Number::Float((base as f64).powf(exp)))
                                 }
                                 (Number::Float(base), Number::Int(exp)) => {
-                                    Value::Number(Number::Float(base.powi(exp as i32)))
+                                    // Use powi only if exp fits in i32, otherwise use powf
+                                    if exp >= i32::MIN as i64 && exp <= i32::MAX as i64 {
+                                        Value::Number(Number::Float(base.powi(exp as i32)))
+                                    } else {
+                                        Value::Number(Number::Float(base.powf(exp as f64)))
+                                    }
                                 }
                                 (Number::Float(base), Number::Float(exp)) => {
                                     Value::Number(Number::Float(base.powf(exp)))
