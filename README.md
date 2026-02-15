@@ -749,24 +749,8 @@ Think beyond configuration files. Think beyond the examples shown here. Avon can
 
 ---
 
-## Contributing
-
-**Report issues or request features** on GitHub Issues
-
-**Share your Avon programs** in GitHub Discussions — I love seeing creative uses!
-
-**Submit pull requests** — See `examples/` directory for coding style
-
----
-
 ## Resources
 
 - [Tutorial](./tutorial/TUTORIAL.md) — Complete language guide
 - [Function Reference](./tutorial/BUILTIN_FUNCTIONS.md) — Built-in function documentation
 - `avon doc` — Command-line help
-
----
-
-## License
-
-MIT License - See LICENSE file for details
