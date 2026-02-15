@@ -258,6 +258,32 @@ pub fn parse_atom(stream: &mut Peekable<Iter<Token>>) -> Expr {
 pub fn parse_postfix(stream: &mut Peekable<Iter<Token>>) -> Expr {
     let mut expr = parse_atom(stream);
 
+    // Handle FileTemplate: Path followed by Template
+    if let Expr::Path(ref path_chunks, path_line) = expr {
+        if let Some(Token::Template(_, _)) = stream.peek() {
+            if let Some(Token::Template(template_chunks, _)) = stream.next() {
+                return Expr::FileTemplate {
+                    path: path_chunks.clone(),
+                    template: template_chunks.clone(),
+                    line: path_line,
+                };
+            }
+        }
+        // Also check for @ followed by Template: @path @{...}
+        if let Some(Token::At(_)) = stream.peek() {
+            stream.next(); // consume @
+            if let Some(Token::Template(_, _)) = stream.peek() {
+                if let Some(Token::Template(template_chunks, _)) = stream.next() {
+                    return Expr::FileTemplate {
+                        path: path_chunks.clone(),
+                        template: template_chunks.clone(),
+                        line: path_line,
+                    };
+                }
+            }
+        }
+    }
+
     // Handle member access (dot notation)
     while let Some(Token::Dot(line)) = stream.peek() {
         let line = *line;
@@ -542,56 +568,7 @@ fn try_parse_expr(stream: &mut Peekable<Iter<Token>>) -> ParseResult<Expr> {
                     line,
                 });
             }
-            Token::Path(chunks, line) => {
-                let line = *line;
-                let path_chunks = chunks.clone();
-                stream.next();
-                match stream.peek() {
-                    Some(Token::Template(template_chunks, _)) => {
-                        stream.next();
-                        return Ok(Expr::FileTemplate {
-                            path: path_chunks.clone(),
-                            template: template_chunks.clone(),
-                            line,
-                        });
-                    }
-                    Some(Token::At(_)) => {
-                        stream.next();
-                        match stream.next() {
-                            Some(Token::Template(template_chunks, _)) => {
-                                return Ok(Expr::FileTemplate {
-                                    path: path_chunks.clone(),
-                                    template: template_chunks.clone(),
-                                    line,
-                                });
-                            }
-                            a => {
-                                return Err(EvalError::new(
-                                    format!("expected template after '@', got {:?}", a),
-                                    Some("template string".to_string()),
-                                    Some(format!("{:?}", a)),
-                                    line,
-                                ))
-                            }
-                        }
-                    }
-                    _ => {
-                        // Check if this path is part of a pipe or other expression
-                        // We've consumed the token, so we return the path expr directly
-                        // but we need to continue parsing if it's part of a larger expression.
-                        // The original logic returned immediately, preventing `path -> function`.
-                        // However, `try_parse_expr` is expected to parse the *whole* expression if it starts with these tokens.
 
-                        // If we return here, we miss the pipe logic at the end of the function.
-                        // We should construct the LHS and then fall through to `parse_pipe` logic logic below,
-                        // BUT `try_parse_expr` structure is a bit rigid.
-
-                        // A better approach: parse the prefix part, then continue.
-                        let lhs = Expr::Path(path_chunks, line);
-                        return Ok(parse_pipe_suffix(stream, lhs));
-                    }
-                }
-            }
             Token::Identifier(ident, line) if ident == "if" => {
                 let line = *line;
                 eat(stream, Token::Identifier(String::from("if"), 0))?;

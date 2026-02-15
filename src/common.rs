@@ -156,7 +156,12 @@ impl std::ops::Div for Number {
             // Use floor division for integers
             (Number::Int(v), Number::Int(r)) => {
                 if r == 0 {
-                    panic!("division by zero");
+                    // Return float infinity instead of panicking
+                    return Number::Float(if v >= 0 {
+                        f64::INFINITY
+                    } else {
+                        f64::NEG_INFINITY
+                    });
                 }
 
                 // Handle overflow: MIN / -1
@@ -201,6 +206,10 @@ impl std::ops::Rem for Number {
     fn rem(self, other: Number) -> Number {
         match (self, other) {
             (Number::Int(v), Number::Int(r)) => {
+                // Handle modulo by zero: return NaN as float instead of panicking
+                if r == 0 {
+                    return Number::Float(f64::NAN);
+                }
                 // Handle overflow: MIN % -1 would panic, but mathematically it's 0
                 if v == i64::MIN && r == -1 {
                     Number::Int(0)

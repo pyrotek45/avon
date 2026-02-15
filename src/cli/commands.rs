@@ -668,7 +668,18 @@ fn deploy_files(v: &Value, source: &str, source_name: &str, opts: &CliOptions) -
                 }
 
                 if *should_backup {
-                    let mut backup_name = write_path.file_name().unwrap().to_os_string();
+                    let file_name = match write_path.file_name() {
+                        Some(name) => name.to_os_string(),
+                        None => {
+                            eprintln!(
+                                "Error: Cannot determine file name for backup: {}",
+                                write_path.display()
+                            );
+                            eprintln!("Deployment aborted. No files were written.");
+                            return 1;
+                        }
+                    };
+                    let mut backup_name = file_name;
                     backup_name.push(".bak");
                     let backup_path = write_path.with_file_name(backup_name);
 
@@ -720,7 +731,17 @@ fn deploy_files(v: &Value, source: &str, source_name: &str, opts: &CliOptions) -
             let mut written_files = Vec::new();
             for (write_path, content, exists, should_backup) in prepared_files {
                 if should_backup {
-                    let mut backup_name = write_path.file_name().unwrap().to_os_string();
+                    let file_name = match write_path.file_name() {
+                        Some(name) => name.to_os_string(),
+                        None => {
+                            eprintln!(
+                                "Error: Cannot determine file name for backup: {}",
+                                write_path.display()
+                            );
+                            return 1;
+                        }
+                    };
+                    let mut backup_name = file_name;
                     backup_name.push(".bak");
                     let backup_path = write_path.with_file_name(backup_name);
 

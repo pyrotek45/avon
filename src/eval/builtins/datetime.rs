@@ -102,7 +102,20 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     // Try parsing as naive datetime
                     match NaiveDateTime::parse_from_str(&date_str, "%Y-%m-%d %H:%M:%S") {
                         Ok(naive) => {
-                            let local = Local.from_local_datetime(&naive).unwrap();
+                            let local = match Local.from_local_datetime(&naive).earliest() {
+                                Some(dt) => dt,
+                                None => {
+                                    return Err(EvalError::new(
+                                        format!(
+                                            "ambiguous or invalid local time: '{}'",
+                                            date_str
+                                        ),
+                                        None,
+                                        None,
+                                        line,
+                                    ));
+                                }
+                            };
                             // Try formatting - catch panics from invalid format strings
                             let formatted =
                                 std::panic::catch_unwind(|| local.format(&format_str).to_string());
@@ -137,7 +150,20 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
 
             match NaiveDateTime::parse_from_str(&date_str, &format_str) {
                 Ok(naive) => {
-                    let local = Local.from_local_datetime(&naive).unwrap();
+                    let local = match Local.from_local_datetime(&naive).earliest() {
+                        Some(dt) => dt,
+                        None => {
+                            return Err(EvalError::new(
+                                format!(
+                                    "ambiguous or invalid local time: '{}'",
+                                    date_str
+                                ),
+                                None,
+                                None,
+                                line,
+                            ));
+                        }
+                    };
                     Ok(Value::String(local.to_rfc3339()))
                 }
                 Err(_) => {
@@ -147,7 +173,20 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                             let naive = date
                                 .and_hms_opt(0, 0, 0)
                                 .unwrap_or(NaiveDateTime::default());
-                            let local = Local.from_local_datetime(&naive).unwrap();
+                            let local = match Local.from_local_datetime(&naive).earliest() {
+                                Some(dt) => dt,
+                                None => {
+                                    return Err(EvalError::new(
+                                        format!(
+                                            "ambiguous or invalid local time: '{}'",
+                                            date_str
+                                        ),
+                                        None,
+                                        None,
+                                        line,
+                                    ));
+                                }
+                            };
                             Ok(Value::String(local.to_rfc3339()))
                         }
                         Err(_) => Err(EvalError::new(

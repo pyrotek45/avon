@@ -208,6 +208,15 @@ impl AvonHighlighter {
     /// Highlight an interpolation expression inside a string/template
     fn highlight_interpolation(&self, expr: &str) -> String {
         let mut result = String::new();
+
+        // Guard against incomplete interpolation (e.g., unterminated "{" at end of input)
+        if expr.len() < 2 {
+            result.push_str(colors::INTERPOLATION);
+            result.push_str(expr);
+            result.push_str(colors::RESET);
+            return result;
+        }
+
         result.push_str(colors::INTERPOLATION);
         result.push('{');
         result.push_str(colors::RESET);
