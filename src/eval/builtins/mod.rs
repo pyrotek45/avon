@@ -10,8 +10,8 @@
 //! - datetime: date_add, date_diff, date_format, date_parse, now, timestamp, timezone
 //! - dict: dict_merge, get, has_key, keys, set, values
 //! - env: env_var, env_var_or, os
-//! - file_io: basename, dirname, exists, fill_template, import, json_parse, readfile, readlines, walkdir
-//! - formatting: center, format_*, truncate
+//! - file_io: basename, dirname, exists, fill_template, import, json_parse, opml_parse, readfile, readlines, walkdir, xml_parse
+//! - formatting: center, format_*, format_opml, format_xml, truncate
 //! - html: html_attr, html_escape, html_tag
 //! - list: drop, enumerate, filter, flatmap, flatten, fold, head, map, partition, range, reverse, sort, sort_by, split_at, tail, take, unique, unzip, zip
 //! - markdown: markdown_to_html, md_code, md_heading, md_link, md_list

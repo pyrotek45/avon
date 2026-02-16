@@ -1,4 +1,4 @@
-//! File I/O functions: basename, dirname, exists, fill_template, import, import_git, json_parse, readfile, readlines, walkdir, glob, relpath, abspath, yaml_parse, toml_parse
+//! File I/O functions: basename, dirname, exists, fill_template, html_parse, html_parse_string, import, import_git, ini_parse, ini_parse_string, json_parse, json_parse_string, opml_parse, opml_parse_string, readfile, readlines, walkdir, glob, relpath, abspath, xml_parse, xml_parse_string, yaml_parse, yaml_parse_string, toml_parse, toml_parse_string, csv_parse, csv_parse_string
 
 use crate::common::{EvalError, Number, Value};
 use crate::eval::{eval, initial_builtins, value_to_path_string};
@@ -13,28 +13,42 @@ pub const NAMES: &[&str] = &[
     "abspath",
     "basename",
     "csv_parse",
+    "csv_parse_string",
     "dirname",
     "exists",
     "fill_template",
     "glob",
+    "html_parse",
+    "html_parse_string",
     "import",
     "import_git",
+    "ini_parse",
+    "ini_parse_string",
     "json_parse",
+    "json_parse_string",
+    "opml_parse",
+    "opml_parse_string",
     "readfile",
     "readlines",
     "relpath",
     "toml_parse",
+    "toml_parse_string",
     "walkdir",
+    "xml_parse",
+    "xml_parse_string",
     "yaml_parse",
+    "yaml_parse_string",
 ];
 
 /// Get arity for file I/O functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
-        "abspath" | "basename" | "csv_parse" | "dirname" | "exists" | "glob" | "import"
-        | "json_parse" | "readfile" | "readlines" | "toml_parse" | "walkdir" | "yaml_parse" => {
-            Some(1)
-        }
+        "abspath" | "basename" | "csv_parse" | "csv_parse_string" | "dirname" | "exists"
+        | "glob" | "html_parse" | "html_parse_string" | "import" | "ini_parse"
+        | "ini_parse_string" | "json_parse" | "json_parse_string" | "opml_parse"
+        | "opml_parse_string" | "readfile" | "readlines" | "toml_parse" | "toml_parse_string"
+        | "walkdir" | "xml_parse" | "xml_parse_string" | "yaml_parse"
+        | "yaml_parse_string" => Some(1),
         "fill_template" | "import_git" | "relpath" => Some(2),
         _ => None,
     }
@@ -334,41 +348,30 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let pathv = &args[0];
             if let Value::String(p) = pathv {
                 let data = std::fs::read_to_string(p).map_err(|e| {
-                    EvalError::new(format!("failed to read {}: {}", p, e), None, None, line)
+                    EvalError::new(
+                        format!("json_parse: failed to read {}: {}", p, e),
+                        None,
+                        None,
+                        line,
+                    )
                 })?;
-                let jr: serde_json::Value = serde_json::from_str(&data).map_err(|e| {
-                    EvalError::new(format!("json parse error: {}", e), None, None, line)
-                })?;
-                fn conv(j: &serde_json::Value) -> Value {
-                    match j {
-                        serde_json::Value::Null => Value::None,
-                        serde_json::Value::Bool(b) => Value::Bool(*b),
-                        serde_json::Value::Number(n) => {
-                            if let Some(i) = n.as_i64() {
-                                Value::Number(Number::Int(i))
-                            } else if let Some(f) = n.as_f64() {
-                                Value::Number(Number::Float(f))
-                            } else {
-                                Value::None
-                            }
-                        }
-                        serde_json::Value::String(s) => Value::String(s.clone()),
-                        serde_json::Value::Array(a) => Value::List(a.iter().map(conv).collect()),
-                        serde_json::Value::Object(o) => {
-                            // Convert JSON object to Dict (hash map)
-                            let mut map = HashMap::new();
-                            for (k, v) in o.iter() {
-                                map.insert(k.clone(), conv(v));
-                            }
-                            Value::Dict(map)
-                        }
-                    }
-                }
-                Ok(conv(&jr))
+                parse_json_string(&data, line)
             } else {
                 Err(EvalError::type_mismatch(
                     "string",
                     pathv.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "json_parse_string" => {
+            let val = &args[0];
+            if let Value::String(s) = val {
+                parse_json_string(s, line)
+            } else {
+                Err(EvalError::type_mismatch(
+                    "string",
+                    val.to_string(source),
                     line,
                 ))
             }
@@ -464,46 +467,30 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let pathv = &args[0];
             if let Value::String(p) = pathv {
                 let data = std::fs::read_to_string(p).map_err(|e| {
-                    EvalError::new(format!("failed to read {}: {}", p, e), None, None, line)
+                    EvalError::new(
+                        format!("yaml_parse: failed to read {}: {}", p, e),
+                        None,
+                        None,
+                        line,
+                    )
                 })?;
-                let yr: serde_yaml::Value = serde_yaml::from_str(&data).map_err(|e| {
-                    EvalError::new(format!("yaml parse error: {}", e), None, None, line)
-                })?;
-                fn conv(y: &serde_yaml::Value) -> Value {
-                    match y {
-                        serde_yaml::Value::Null => Value::None,
-                        serde_yaml::Value::Bool(b) => Value::Bool(*b),
-                        serde_yaml::Value::Number(n) => {
-                            if let Some(i) = n.as_i64() {
-                                Value::Number(Number::Int(i))
-                            } else if let Some(f) = n.as_f64() {
-                                Value::Number(Number::Float(f))
-                            } else {
-                                Value::None
-                            }
-                        }
-                        serde_yaml::Value::String(s) => Value::String(s.clone()),
-                        serde_yaml::Value::Sequence(a) => Value::List(a.iter().map(conv).collect()),
-                        serde_yaml::Value::Mapping(m) => {
-                            let mut map = HashMap::new();
-                            for (k, v) in m {
-                                if let serde_yaml::Value::String(ks) = k {
-                                    map.insert(ks.clone(), conv(v));
-                                } else {
-                                    let ks = format!("{:?}", k);
-                                    map.insert(ks, conv(v));
-                                }
-                            }
-                            Value::Dict(map)
-                        }
-                        serde_yaml::Value::Tagged(t) => conv(&t.value),
-                    }
-                }
-                Ok(conv(&yr))
+                parse_yaml_string(&data, line)
             } else {
                 Err(EvalError::type_mismatch(
                     "string",
                     pathv.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "yaml_parse_string" => {
+            let val = &args[0];
+            if let Value::String(s) = val {
+                parse_yaml_string(s, line)
+            } else {
+                Err(EvalError::type_mismatch(
+                    "string",
+                    val.to_string(source),
                     line,
                 ))
             }
@@ -512,29 +499,14 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             let pathv = &args[0];
             if let Value::String(p) = pathv {
                 let data = std::fs::read_to_string(p).map_err(|e| {
-                    EvalError::new(format!("failed to read {}: {}", p, e), None, None, line)
+                    EvalError::new(
+                        format!("toml_parse: failed to read {}: {}", p, e),
+                        None,
+                        None,
+                        line,
+                    )
                 })?;
-                let tr: toml::Value = toml::from_str(&data).map_err(|e| {
-                    EvalError::new(format!("toml parse error: {}", e), None, None, line)
-                })?;
-                fn conv(t: &toml::Value) -> Value {
-                    match t {
-                        toml::Value::String(s) => Value::String(s.clone()),
-                        toml::Value::Integer(i) => Value::Number(Number::Int(*i)),
-                        toml::Value::Float(f) => Value::Number(Number::Float(*f)),
-                        toml::Value::Boolean(b) => Value::Bool(*b),
-                        toml::Value::Datetime(d) => Value::String(d.to_string()),
-                        toml::Value::Array(a) => Value::List(a.iter().map(conv).collect()),
-                        toml::Value::Table(t) => {
-                            let mut map = HashMap::new();
-                            for (k, v) in t {
-                                map.insert(k.clone(), conv(v));
-                            }
-                            Value::Dict(map)
-                        }
-                    }
-                }
-                Ok(conv(&tr))
+                parse_toml_string(&data, line)
             } else {
                 Err(EvalError::type_mismatch(
                     "string",
@@ -543,46 +515,174 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                 ))
             }
         }
+        "toml_parse_string" => {
+            let val = &args[0];
+            if let Value::String(s) = val {
+                parse_toml_string(s, line)
+            } else {
+                Err(EvalError::type_mismatch(
+                    "string",
+                    val.to_string(source),
+                    line,
+                ))
+            }
+        }
         "csv_parse" => {
             let pathv = &args[0];
             if let Value::String(p) = pathv {
-                let mut reader = csv::Reader::from_path(p).map_err(|e| {
-                    EvalError::new(format!("failed to read csv {}: {}", p, e), None, None, line)
+                let data = std::fs::read_to_string(p).map_err(|e| {
+                    EvalError::new(
+                        format!("csv_parse: failed to read {}: {}", p, e),
+                        None,
+                        None,
+                        line,
+                    )
                 })?;
-
-                let mut rows = Vec::new();
-
-                // Try to read headers
-                let headers = reader.headers().cloned().unwrap_or_default();
-                let has_headers = !headers.is_empty();
-
-                for result in reader.records() {
-                    let record = result.map_err(|e| {
-                        EvalError::new(format!("csv record error: {}", e), None, None, line)
-                    })?;
-
-                    if has_headers {
-                        let mut row_dict = HashMap::new();
-                        for (i, field) in record.iter().enumerate() {
-                            if let Some(header) = headers.get(i) {
-                                row_dict
-                                    .insert(header.to_string(), Value::String(field.to_string()));
-                            }
-                        }
-                        rows.push(Value::Dict(row_dict));
-                    } else {
-                        let row_list: Vec<Value> = record
-                            .iter()
-                            .map(|s| Value::String(s.to_string()))
-                            .collect();
-                        rows.push(Value::List(row_list));
-                    }
-                }
-                Ok(Value::List(rows))
+                parse_csv_string(&data, line)
             } else {
                 Err(EvalError::type_mismatch(
                     "string",
                     pathv.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "csv_parse_string" => {
+            let val = &args[0];
+            if let Value::String(s) = val {
+                parse_csv_string(s, line)
+            } else {
+                Err(EvalError::type_mismatch(
+                    "string",
+                    val.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "ini_parse" => {
+            let pathv = &args[0];
+            if let Value::String(p) = pathv {
+                let data = std::fs::read_to_string(p).map_err(|e| {
+                    EvalError::new(
+                        format!("ini_parse: failed to read {}: {}", p, e),
+                        None,
+                        None,
+                        line,
+                    )
+                })?;
+                parse_ini_string(&data, line)
+            } else {
+                Err(EvalError::type_mismatch(
+                    "string",
+                    pathv.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "ini_parse_string" => {
+            let val = &args[0];
+            if let Value::String(s) = val {
+                parse_ini_string(s, line)
+            } else {
+                Err(EvalError::type_mismatch(
+                    "string",
+                    val.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "html_parse" => {
+            let pathv = &args[0];
+            if let Value::String(p) = pathv {
+                let data = std::fs::read_to_string(p).map_err(|e| {
+                    EvalError::new(
+                        format!("html_parse: failed to read {}: {}", p, e),
+                        None,
+                        None,
+                        line,
+                    )
+                })?;
+                parse_html_string(&data)
+            } else {
+                Err(EvalError::type_mismatch(
+                    "string",
+                    pathv.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "html_parse_string" => {
+            let val = &args[0];
+            if let Value::String(s) = val {
+                parse_html_string(s)
+            } else {
+                Err(EvalError::type_mismatch(
+                    "string",
+                    val.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "xml_parse" => {
+            let pathv = &args[0];
+            if let Value::String(p) = pathv {
+                let data = std::fs::read_to_string(p).map_err(|e| {
+                    EvalError::new(
+                        format!("xml_parse: failed to read {}: {}", p, e),
+                        None,
+                        None,
+                        line,
+                    )
+                })?;
+                parse_xml_string(&data, line)
+            } else {
+                Err(EvalError::type_mismatch(
+                    "string",
+                    pathv.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "xml_parse_string" => {
+            let val = &args[0];
+            if let Value::String(s) = val {
+                parse_xml_string(s, line)
+            } else {
+                Err(EvalError::type_mismatch(
+                    "string",
+                    val.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "opml_parse" => {
+            let pathv = &args[0];
+            if let Value::String(p) = pathv {
+                let data = std::fs::read_to_string(p).map_err(|e| {
+                    EvalError::new(
+                        format!("opml_parse: failed to read {}: {}", p, e),
+                        None,
+                        None,
+                        line,
+                    )
+                })?;
+                parse_opml_string(&data, line)
+            } else {
+                Err(EvalError::type_mismatch(
+                    "string",
+                    pathv.to_string(source),
+                    line,
+                ))
+            }
+        }
+        "opml_parse_string" => {
+            let val = &args[0];
+            if let Value::String(s) = val {
+                parse_opml_string(s, line)
+            } else {
+                Err(EvalError::type_mismatch(
+                    "string",
+                    val.to_string(source),
                     line,
                 ))
             }
@@ -594,4 +694,297 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             line,
         )),
     }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// String-parsing helpers (shared between *_parse and *_parse_string)
+// ═══════════════════════════════════════════════════════════════
+
+/// Parse a JSON string into an Avon Value.
+fn parse_json_string(data: &str, line: usize) -> Result<Value, EvalError> {
+    let jr: serde_json::Value = serde_json::from_str(data).map_err(|e| {
+        EvalError::new(format!("json parse error: {}", e), None, None, line)
+    })?;
+    fn conv(j: &serde_json::Value) -> Value {
+        match j {
+            serde_json::Value::Null => Value::None,
+            serde_json::Value::Bool(b) => Value::Bool(*b),
+            serde_json::Value::Number(n) => {
+                if let Some(i) = n.as_i64() {
+                    Value::Number(Number::Int(i))
+                } else if let Some(f) = n.as_f64() {
+                    Value::Number(Number::Float(f))
+                } else {
+                    Value::None
+                }
+            }
+            serde_json::Value::String(s) => Value::String(s.clone()),
+            serde_json::Value::Array(a) => Value::List(a.iter().map(conv).collect()),
+            serde_json::Value::Object(o) => {
+                let mut map = HashMap::new();
+                for (k, v) in o.iter() {
+                    map.insert(k.clone(), conv(v));
+                }
+                Value::Dict(map)
+            }
+        }
+    }
+    Ok(conv(&jr))
+}
+
+/// Parse a YAML string into an Avon Value.
+fn parse_yaml_string(data: &str, line: usize) -> Result<Value, EvalError> {
+    let yr: serde_yaml::Value = serde_yaml::from_str(data).map_err(|e| {
+        EvalError::new(format!("yaml parse error: {}", e), None, None, line)
+    })?;
+    fn conv(y: &serde_yaml::Value) -> Value {
+        match y {
+            serde_yaml::Value::Null => Value::None,
+            serde_yaml::Value::Bool(b) => Value::Bool(*b),
+            serde_yaml::Value::Number(n) => {
+                if let Some(i) = n.as_i64() {
+                    Value::Number(Number::Int(i))
+                } else if let Some(f) = n.as_f64() {
+                    Value::Number(Number::Float(f))
+                } else {
+                    Value::None
+                }
+            }
+            serde_yaml::Value::String(s) => Value::String(s.clone()),
+            serde_yaml::Value::Sequence(a) => Value::List(a.iter().map(conv).collect()),
+            serde_yaml::Value::Mapping(m) => {
+                let mut map = HashMap::new();
+                for (k, v) in m {
+                    if let serde_yaml::Value::String(ks) = k {
+                        map.insert(ks.clone(), conv(v));
+                    } else {
+                        let ks = format!("{:?}", k);
+                        map.insert(ks, conv(v));
+                    }
+                }
+                Value::Dict(map)
+            }
+            serde_yaml::Value::Tagged(t) => conv(&t.value),
+        }
+    }
+    Ok(conv(&yr))
+}
+
+/// Parse a TOML string into an Avon Value.
+fn parse_toml_string(data: &str, line: usize) -> Result<Value, EvalError> {
+    let tr: toml::Value = toml::from_str(data).map_err(|e| {
+        EvalError::new(format!("toml parse error: {}", e), None, None, line)
+    })?;
+    fn conv(t: &toml::Value) -> Value {
+        match t {
+            toml::Value::String(s) => Value::String(s.clone()),
+            toml::Value::Integer(i) => Value::Number(Number::Int(*i)),
+            toml::Value::Float(f) => Value::Number(Number::Float(*f)),
+            toml::Value::Boolean(b) => Value::Bool(*b),
+            toml::Value::Datetime(d) => Value::String(d.to_string()),
+            toml::Value::Array(a) => Value::List(a.iter().map(conv).collect()),
+            toml::Value::Table(t) => {
+                let mut map = HashMap::new();
+                for (k, v) in t {
+                    map.insert(k.clone(), conv(v));
+                }
+                Value::Dict(map)
+            }
+        }
+    }
+    Ok(conv(&tr))
+}
+
+/// Parse a CSV string into an Avon Value (List of Dicts or Lists).
+fn parse_csv_string(data: &str, line: usize) -> Result<Value, EvalError> {
+    let mut reader = csv::Reader::from_reader(data.as_bytes());
+    let mut rows = Vec::new();
+    let headers = reader.headers().cloned().unwrap_or_default();
+    let has_headers = !headers.is_empty();
+    for result in reader.records() {
+        let record = result.map_err(|e| {
+            EvalError::new(format!("csv record error: {}", e), None, None, line)
+        })?;
+        if has_headers {
+            let mut row_dict = HashMap::new();
+            for (i, field) in record.iter().enumerate() {
+                if let Some(header) = headers.get(i) {
+                    row_dict.insert(header.to_string(), Value::String(field.to_string()));
+                }
+            }
+            rows.push(Value::Dict(row_dict));
+        } else {
+            let row_list: Vec<Value> = record
+                .iter()
+                .map(|s| Value::String(s.to_string()))
+                .collect();
+            rows.push(Value::List(row_list));
+        }
+    }
+    Ok(Value::List(rows))
+}
+
+/// Parse an XML string into an Avon Value.
+fn parse_xml_string(data: &str, line: usize) -> Result<Value, EvalError> {
+    let doc = roxmltree::Document::parse(data).map_err(|e| {
+        EvalError::new(format!("xml parse error: {}", e), None, None, line)
+    })?;
+    fn conv_node(node: &roxmltree::Node) -> Value {
+        if node.is_text() {
+            return Value::String(node.text().unwrap_or("").to_string());
+        }
+        if !node.is_element() {
+            return Value::None;
+        }
+        let mut map = HashMap::new();
+        map.insert(
+            "tag".to_string(),
+            Value::String(node.tag_name().name().to_string()),
+        );
+        let attrs: HashMap<String, Value> = node
+            .attributes()
+            .map(|a| (a.name().to_string(), Value::String(a.value().to_string())))
+            .collect();
+        if !attrs.is_empty() {
+            map.insert("attrs".to_string(), Value::Dict(attrs));
+        }
+        let children: Vec<Value> = node
+            .children()
+            .filter(|c| {
+                c.is_element()
+                    || (c.is_text() && c.text().map_or(false, |t| !t.trim().is_empty()))
+            })
+            .map(|c| conv_node(&c))
+            .collect();
+        if children.len() == 1 {
+            if let Value::String(s) = &children[0] {
+                map.insert("text".to_string(), Value::String(s.clone()));
+            } else {
+                map.insert("children".to_string(), Value::List(children));
+            }
+        } else if !children.is_empty() {
+            map.insert("children".to_string(), Value::List(children));
+        }
+        Value::Dict(map)
+    }
+    let root = doc.root_element();
+    Ok(conv_node(&root))
+}
+
+/// Parse an HTML string into an Avon Value.
+fn parse_html_string(data: &str) -> Result<Value, EvalError> {
+    let document = scraper::Html::parse_document(data);
+    fn build_element(el_ref: scraper::ElementRef) -> Value {
+        let el = el_ref.value();
+        let mut map = HashMap::new();
+        map.insert("tag".to_string(), Value::String(el.name().to_string()));
+        let attrs: HashMap<String, Value> = el
+            .attrs()
+            .map(|(k, v)| (k.to_string(), Value::String(v.to_string())))
+            .collect();
+        if !attrs.is_empty() {
+            map.insert("attrs".to_string(), Value::Dict(attrs));
+        }
+        let children: Vec<Value> = el_ref
+            .children()
+            .filter_map(|child| {
+                if let Some(child_el) = scraper::ElementRef::wrap(child) {
+                    Some(build_element(child_el))
+                } else if let Some(text) = child.value().as_text() {
+                    let t = text.text.to_string();
+                    if t.trim().is_empty() {
+                        None
+                    } else {
+                        Some(Value::String(t))
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+        if children.len() == 1 {
+            if let Value::String(s) = &children[0] {
+                map.insert("text".to_string(), Value::String(s.clone()));
+            } else {
+                map.insert("children".to_string(), Value::List(children));
+            }
+        } else if !children.is_empty() {
+            map.insert("children".to_string(), Value::List(children));
+        }
+        Value::Dict(map)
+    }
+    Ok(build_element(document.root_element()))
+}
+
+/// Parse an OPML string into an Avon Value.
+fn parse_opml_string(data: &str, line: usize) -> Result<Value, EvalError> {
+    let doc = roxmltree::Document::parse(data).map_err(|e| {
+        EvalError::new(format!("opml parse error: {}", e), None, None, line)
+    })?;
+    let root = doc.root_element();
+    let mut head_map = HashMap::new();
+    if let Some(head) = root.children().find(|c| c.has_tag_name("head")) {
+        for child in head.children().filter(|c| c.is_element()) {
+            let tag = child.tag_name().name().to_string();
+            let text = child.text().unwrap_or("").to_string();
+            head_map.insert(tag, Value::String(text));
+        }
+    }
+    fn conv_outline(node: &roxmltree::Node) -> Value {
+        let mut map = HashMap::new();
+        for attr in node.attributes() {
+            map.insert(
+                attr.name().to_string(),
+                Value::String(attr.value().to_string()),
+            );
+        }
+        let children: Vec<Value> = node
+            .children()
+            .filter(|c| c.has_tag_name("outline"))
+            .map(|c| conv_outline(&c))
+            .collect();
+        if !children.is_empty() {
+            map.insert("children".to_string(), Value::List(children));
+        }
+        Value::Dict(map)
+    }
+    let mut outlines = Vec::new();
+    if let Some(body) = root.children().find(|c| c.has_tag_name("body")) {
+        for child in body.children().filter(|c| c.has_tag_name("outline")) {
+            outlines.push(conv_outline(&child));
+        }
+    }
+    let mut result = HashMap::new();
+    let version = root.attribute("version").unwrap_or("2.0").to_string();
+    result.insert("version".to_string(), Value::String(version));
+    if !head_map.is_empty() {
+        result.insert("head".to_string(), Value::Dict(head_map));
+    }
+    result.insert("outlines".to_string(), Value::List(outlines));
+    Ok(Value::Dict(result))
+}
+
+/// Parse an INI string into an Avon Value.
+fn parse_ini_string(data: &str, line: usize) -> Result<Value, EvalError> {
+    let ini = ini::Ini::load_from_str(data).map_err(|e| {
+        EvalError::new(format!("ini parse error: {}", e), None, None, line)
+    })?;
+    let mut top = HashMap::new();
+    for (section, props) in ini.iter() {
+        let mut section_map = HashMap::new();
+        for (key, val) in props.iter() {
+            section_map.insert(key.to_string(), Value::String(val.to_string()));
+        }
+        match section {
+            Some(name) => {
+                top.insert(name.to_string(), Value::Dict(section_map));
+            }
+            None => {
+                if !section_map.is_empty() {
+                    top.insert("global".to_string(), Value::Dict(section_map));
+                }
+            }
+        }
+    }
+    Ok(Value::Dict(top))
 }

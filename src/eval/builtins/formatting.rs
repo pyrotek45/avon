@@ -12,14 +12,18 @@ pub const NAMES: &[&str] = &[
     "format_currency",
     "format_float",
     "format_hex",
+    "format_html",
+    "format_ini",
     "format_int",
     "format_json",
     "format_list",
     "format_octal",
+    "format_opml",
     "format_percent",
     "format_scientific",
     "format_table",
     "format_toml",
+    "format_xml",
     "format_yaml",
     "truncate",
 ];
@@ -27,8 +31,11 @@ pub const NAMES: &[&str] = &[
 /// Get arity for formatting functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
-        "format_binary" | "format_bytes" | "format_csv" | "format_hex" | "format_json"
-        | "format_octal" | "format_toml" | "format_yaml" => Some(1),
+        "format_binary" | "format_bytes" | "format_csv" | "format_hex" | "format_html"
+        | "format_ini" | "format_json" | "format_octal" | "format_opml" | "format_toml"
+        | "format_xml" | "format_yaml" => {
+            Some(1)
+        }
         "center" | "format_bool" | "format_currency" | "format_float" | "format_int"
         | "format_list" | "format_percent" | "format_scientific" | "format_table" | "truncate" => {
             Some(2)
@@ -295,6 +302,26 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                 EvalError::new(format!("TOML serialization error: {}", e), None, None, line)
             })?;
             Ok(Value::String(toml_str))
+        }
+        "format_ini" => {
+            let val = &args[0];
+            let ini_str = value_to_ini(val, source, line)?;
+            Ok(Value::String(ini_str))
+        }
+        "format_html" => {
+            let val = &args[0];
+            let html_str = value_to_html(val, source, 0);
+            Ok(Value::String(html_str))
+        }
+        "format_xml" => {
+            let val = &args[0];
+            let xml_str = value_to_xml(val, source, 0);
+            Ok(Value::String(xml_str))
+        }
+        "format_opml" => {
+            let val = &args[0];
+            let opml_str = value_to_opml(val, source, line)?;
+            Ok(Value::String(opml_str))
         }
         "format_csv" => {
             let val = &args[0];
@@ -660,5 +687,306 @@ fn value_to_toml(val: &Value, source: &str) -> toml::Value {
         }
         Value::None => toml::Value::String("null".to_string()),
         other => toml::Value::String(other.to_string(source)),
+    }
+}
+
+/// Convert an Avon Dict to INI format string.
+///
+/// Expected structure: Dict of sections, where each section is a Dict of key=value pairs.
+///   {section1: {key1: "val1", key2: "val2"}, section2: {key3: "val3"}}
+///
+/// A "global" section's keys are written without a section header.
+fn value_to_ini(val: &Value, source: &str, line: usize) -> Result<String, EvalError> {
+    match val {
+        Value::Dict(sections) => {
+            let mut out = String::new();
+            let mut first = true;
+            // Write "global" section first (no header)
+            if let Some(Value::Dict(globals)) = sections.get("global") {
+                let mut keys: Vec<&String> = globals.keys().collect();
+                keys.sort();
+                for k in keys {
+                    if let Some(v) = globals.get(k) {
+                        out.push_str(&format!("{}={}\n", k, v.to_string(source)));
+                    }
+                }
+                first = false;
+            }
+            // Write named sections
+            let mut section_names: Vec<&String> = sections
+                .keys()
+                .filter(|k| k.as_str() != "global")
+                .collect();
+            section_names.sort();
+            for name in section_names {
+                if let Some(Value::Dict(props)) = sections.get(name) {
+                    if !first {
+                        out.push('\n');
+                    }
+                    out.push_str(&format!("[{}]\n", name));
+                    let mut keys: Vec<&String> = props.keys().collect();
+                    keys.sort();
+                    for k in keys {
+                        if let Some(v) = props.get(k) {
+                            out.push_str(&format!("{}={}\n", k, v.to_string(source)));
+                        }
+                    }
+                    first = false;
+                }
+            }
+            Ok(out)
+        }
+        _ => Err(EvalError::new(
+            "format_ini: expected a Dict of sections".to_string(),
+            None,
+            None,
+            line,
+        )),
+    }
+}
+
+/// Convert an Avon Value (Dict with tag/attrs/children/text) to an XML string.
+///
+/// Expected Dict structure (matches xml_parse output):
+///   {tag: "div", attrs: {class: "main"}, children: [...]}
+///   {tag: "p", text: "hello"}
+///
+/// Non-dict values are rendered as text content.
+fn value_to_xml(val: &Value, source: &str, depth: usize) -> String {
+    let indent = "  ".repeat(depth);
+    match val {
+        Value::Dict(dict) => {
+            let tag = match dict.get("tag") {
+                Some(Value::String(s)) => s.clone(),
+                _ => return format!("{}{}", indent, val.to_string(source)),
+            };
+
+            // Build opening tag with attributes
+            let mut open = format!("<{}", tag);
+            if let Some(Value::Dict(attrs)) = dict.get("attrs") {
+                let mut attr_keys: Vec<&String> = attrs.keys().collect();
+                attr_keys.sort();
+                for k in attr_keys {
+                    if let Some(v) = attrs.get(k) {
+                        let v_str = match v {
+                            Value::String(s) => s.clone(),
+                            other => other.to_string(source),
+                        };
+                        open.push_str(&format!(" {}=\"{}\"", k, xml_escape(&v_str)));
+                    }
+                }
+            }
+
+            // Check for text content
+            if let Some(Value::String(text)) = dict.get("text") {
+                return format!("{}{}>{}</{}>", indent, open, xml_escape(text), tag);
+            }
+
+            // Check for children
+            if let Some(Value::List(children)) = dict.get("children") {
+                if children.is_empty() {
+                    return format!("{}{} />", indent, open);
+                }
+                let mut out = format!("{}{}>\n", indent, open);
+                for child in children {
+                    out.push_str(&value_to_xml(child, source, depth + 1));
+                    out.push('\n');
+                }
+                out.push_str(&format!("{}</{}>", indent, tag));
+                return out;
+            }
+
+            // Self-closing tag
+            format!("{}{} />", indent, open)
+        }
+        Value::String(s) => format!("{}{}", indent, xml_escape(s)),
+        other => format!("{}{}", indent, xml_escape(&other.to_string(source))),
+    }
+}
+
+/// Escape special XML characters
+fn xml_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
+}
+
+/// HTML void elements that must not have a closing tag
+const HTML_VOID_ELEMENTS: &[&str] = &[
+    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param",
+    "source", "track", "wbr",
+];
+
+/// Escape special HTML characters
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
+}
+
+/// Convert an Avon Value (Dict with tag/attrs/children/text) to an HTML string.
+fn value_to_html(val: &Value, source: &str, depth: usize) -> String {
+    let indent = "  ".repeat(depth);
+    match val {
+        Value::Dict(dict) => {
+            let tag = match dict.get("tag") {
+                Some(Value::String(s)) => s.clone(),
+                _ => return format!("{}{}", indent, val.to_string(source)),
+            };
+
+            let is_void = HTML_VOID_ELEMENTS.contains(&tag.as_str());
+
+            // Build opening tag with attributes
+            let mut open = format!("<{}", tag);
+            if let Some(Value::Dict(attrs)) = dict.get("attrs") {
+                let mut attr_keys: Vec<&String> = attrs.keys().collect();
+                attr_keys.sort();
+                for k in attr_keys {
+                    if let Some(v) = attrs.get(k) {
+                        let v_str = match v {
+                            Value::String(s) => s.clone(),
+                            other => other.to_string(source),
+                        };
+                        open.push_str(&format!(" {}=\"{}\"", k, html_escape(&v_str)));
+                    }
+                }
+            }
+
+            // Void elements: self-closing, no children or text
+            if is_void {
+                return format!("{}{}>", indent, open);
+            }
+
+            // Check for text content (non-empty text takes priority)
+            let has_text = matches!(dict.get("text"), Some(Value::String(s)) if !s.is_empty());
+
+            if has_text {
+                if let Some(Value::String(text)) = dict.get("text") {
+                    return format!("{}{}>{}</{}>", indent, open, html_escape(text), tag);
+                }
+            }
+
+            // Check for children
+            if let Some(Value::List(children)) = dict.get("children") {
+                if children.is_empty() {
+                    return format!("{}{}></{}>", indent, open, tag);
+                }
+                let mut out = format!("{}{}>\n", indent, open);
+                for child in children {
+                    out.push_str(&value_to_html(child, source, depth + 1));
+                    out.push('\n');
+                }
+                out.push_str(&format!("{}</{}>", indent, tag));
+                return out;
+            }
+
+            // Empty element (non-void)
+            format!("{}{}></{}>", indent, open, tag)
+        }
+        Value::String(s) => format!("{}{}", indent, html_escape(s)),
+        other => format!("{}{}", indent, html_escape(&other.to_string(source))),
+    }
+}
+/// Convert an Avon Value (Dict with version/head/outlines) to an OPML string.
+///
+/// Expected Dict structure (matches opml_parse output):
+///   {version: "2.0", head: {title: "My Feeds"}, outlines: [...]}
+///
+/// Each outline: {text: "News", type: "rss", xmlUrl: "...", children: [...]}
+fn value_to_opml(val: &Value, source: &str, line: usize) -> Result<String, EvalError> {
+    match val {
+        Value::Dict(dict) => {
+            let version = match dict.get("version") {
+                Some(Value::String(s)) => s.clone(),
+                _ => "2.0".to_string(),
+            };
+
+            let mut out = String::new();
+            out.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+            out.push_str(&format!("<opml version=\"{}\">\n", version));
+
+            // Head section
+            if let Some(Value::Dict(head)) = dict.get("head") {
+                out.push_str("  <head>\n");
+                let mut head_keys: Vec<&String> = head.keys().collect();
+                head_keys.sort();
+                for k in head_keys {
+                    if let Some(v) = head.get(k) {
+                        let text = match v {
+                            Value::String(s) => s.clone(),
+                            other => other.to_string(source),
+                        };
+                        out.push_str(&format!("    <{}>{}</{}>\n", k, xml_escape(&text), k));
+                    }
+                }
+                out.push_str("  </head>\n");
+            }
+
+            // Body section
+            out.push_str("  <body>\n");
+            if let Some(Value::List(outlines)) = dict.get("outlines") {
+                for outline in outlines {
+                    write_opml_outline(&mut out, outline, source, 2);
+                }
+            }
+            out.push_str("  </body>\n");
+            out.push_str("</opml>");
+
+            Ok(Value::String(out))
+                .map(|v| match v {
+                    Value::String(s) => s,
+                    _ => unreachable!(),
+                })
+        }
+        _ => Err(EvalError::type_mismatch(
+            "dict with {version, head, outlines}",
+            val.to_string(source),
+            line,
+        )),
+    }
+}
+
+/// Write a single OPML outline element (recursive)
+fn write_opml_outline(out: &mut String, val: &Value, source: &str, depth: usize) {
+    let indent = "  ".repeat(depth);
+    if let Value::Dict(dict) = val {
+        out.push_str(&format!("{}<outline", indent));
+
+        // Write attributes (everything except "children")
+        let mut attr_keys: Vec<&String> = dict.keys().filter(|k| *k != "children").collect();
+        attr_keys.sort();
+        // Put "text" first if present (OPML convention)
+        if let Some(pos) = attr_keys.iter().position(|k| *k == "text") {
+            let text_key = attr_keys.remove(pos);
+            attr_keys.insert(0, text_key);
+        }
+        for k in &attr_keys {
+            if let Some(v) = dict.get(*k) {
+                let text = match v {
+                    Value::String(s) => s.clone(),
+                    other => other.to_string(source),
+                };
+                out.push_str(&format!(" {}=\"{}\"", k, xml_escape(&text)));
+            }
+        }
+
+        // Children
+        if let Some(Value::List(children)) = dict.get("children") {
+            if children.is_empty() {
+                out.push_str(" />\n");
+            } else {
+                out.push_str(">\n");
+                for child in children {
+                    write_opml_outline(out, child, source, depth + 1);
+                }
+                out.push_str(&format!("{}</outline>\n", indent));
+            }
+        } else {
+            out.push_str(" />\n");
+        }
     }
 }

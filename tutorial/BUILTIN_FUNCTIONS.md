@@ -10,8 +10,8 @@ Avon comes with a comprehensive standard library of built-in functions, plus con
 - [Debug Functions](#debug-functions) — trace, debug, assert
 - [Dictionary Functions](#dictionary-functions) — get, set, merge, keys, values
 - [Environment Functions](#environment-functions) — env_var, os
-- [File I/O Functions](#file-io-functions) — readfile, glob, import, json_parse
-- [Formatting Functions](#formatting-functions) — format_json, format_csv, format_table
+- [File I/O Functions](#file-io-functions) — readfile, glob, import, json_parse, xml_parse, html_parse, opml_parse, ini_parse, *_parse_string
+- [Formatting Functions](#formatting-functions) — format_json, format_csv, format_xml, format_html, format_opml, format_ini, format_table
 - [HTML Functions](#html-functions) — html_escape, html_tag, html_attr
 - [List Functions](#list-functions) — map, filter, fold, sort, unique
 - [Markdown Functions](#markdown-functions) — md_heading, md_link, md_list
@@ -19,6 +19,7 @@ Avon comes with a comprehensive standard library of built-in functions, plus con
 - [Regex Functions](#regex-functions) — regex_match, regex_replace, scan
 - [String Functions](#string-functions) — concat, upper, lower, split, replace
 - [Type Functions](#type-functions) — typeof, is_string, to_int, etc.
+- [Data Format Conversion](#data-format-conversion) — JSON ↔ YAML ↔ TOML ↔ CSV ↔ XML ↔ HTML ↔ OPML ↔ INI
 
 ---
 
@@ -126,19 +127,31 @@ Functions for file system operations.
 | `abspath` | `String\|Path -> String` | Returns the absolute path. |
 | `basename` | `String\|Path -> String` | Returns the filename portion of a path. |
 | `csv_parse` | `String -> [Dict]\|[[String]]` | Parses a CSV file into a list of dicts (if headers) or list of lists. |
+| `csv_parse_string` | `String -> [Dict]\|[[String]]` | Parses a raw CSV string into a list of dicts (if headers) or list of lists. |
 | `dirname` | `String\|Path -> String` | Returns the directory portion of a path. |
 | `exists` | `String\|Path -> Bool` | Returns true if the file or directory exists. |
 | `fill_template` | `String\|Path -> Dict\|List -> String` | Reads a file and replaces placeholders `{key}` with values. |
 | `glob` | `String -> [String]` | Returns a list of files matching the glob pattern. |
+| `html_parse` | `String -> Dict` | Parses an HTML file into a nested Dict with tag, attrs, children, and text. Uses a real HTML5 parser. |
+| `html_parse_string` | `String -> Dict` | Parses a raw HTML string into a nested Dict. Uses a real HTML5 parser. |
 | `import` | `String\|Path -> a` | Imports and evaluates another Avon file. |
 | `import_git` | `String -> String -> a` | Downloads and evaluates an Avon file from GitHub by commit hash (e.g., `import_git "owner/repo/file.av" "abc123..."` for GitHub safety). |
-| `json_parse` | `String -> Dict\|List\|a` | Parses a JSON string (from a file) into an Avon value (Dict for objects, List for arrays). |
+| `ini_parse` | `String -> Dict` | Parses an INI file into a Dict of section Dicts. Global keys go under "global". |
+| `ini_parse_string` | `String -> Dict` | Parses a raw INI string into a Dict of section Dicts. |
+| `json_parse` | `String -> Dict\|List\|a` | Parses a JSON file into an Avon value (Dict for objects, List for arrays). |
+| `json_parse_string` | `String -> Dict\|List\|a` | Parses a raw JSON string into an Avon value. |
+| `opml_parse` | `String -> Dict` | Parses an OPML file into a Dict with version, head, and outlines. |
+| `opml_parse_string` | `String -> Dict` | Parses a raw OPML string into a Dict with version, head, and outlines. |
 | `readfile` | `String\|Path -> String` | Reads the entire content of a file. |
 | `readlines` | `String\|Path -> [String]` | Reads a file line by line into a list. |
 | `relpath` | `String\|Path -> String\|Path -> String` | Returns the relative path from base to target. |
-| `toml_parse` | `String -> Dict\|List\|a` | Parses a TOML string (from a file) into an Avon value (Dict for tables, List for arrays). |
+| `toml_parse` | `String -> Dict\|List\|a` | Parses a TOML file into an Avon value (Dict for tables, List for arrays). |
+| `toml_parse_string` | `String -> Dict\|List\|a` | Parses a raw TOML string into an Avon value. |
 | `walkdir` | `String\|Path -> [String]` | Recursively lists all files in a directory. |
-| `yaml_parse` | `String -> Dict\|List\|a` | Parses a YAML string (from a file) into an Avon value (Dict for mappings, List for sequences). |
+| `xml_parse` | `String -> Dict` | Parses an XML file into a nested Dict with tag, attrs, children, and text. |
+| `xml_parse_string` | `String -> Dict` | Parses a raw XML string into a nested Dict. |
+| `yaml_parse` | `String -> Dict\|List\|a` | Parses a YAML file into an Avon value (Dict for mappings, List for sequences). |
+| `yaml_parse_string` | `String -> Dict\|List\|a` | Parses a raw YAML string into an Avon value. |
 
 ## Formatting Functions
 
@@ -154,14 +167,18 @@ Functions for formatting values.
 | `format_currency` | `Number -> String -> String` | Formats a number as currency with a symbol. |
 | `format_float` | `Number -> Number -> String` | Formats a float with specific precision. |
 | `format_hex` | `Number -> String` | Formats a number as hexadecimal. |
+| `format_html` | `Dict -> String` | Formats a Dict (with tag/attrs/children/text) as an indented HTML string. Handles void elements (br, img, hr, etc.). |
+| `format_ini` | `Dict -> String` | Formats a Dict of section Dicts as an INI config string. |
 | `format_int` | `Number -> Number -> String` | Formats an integer with minimum width (padding with zeros). |
 | `format_json` | `a -> String` | Serializes a value to a JSON string. |
 | `format_list` | `[a] -> String -> String` | Joins list items with a separator. |
 | `format_octal` | `Number -> String` | Formats a number as octal. |
+| `format_opml` | `Dict -> String` | Formats a Dict as an OPML 2.0 document with XML declaration. |
 | `format_percent` | `Number -> Number -> String` | Formats a number as a percentage. |
 | `format_scientific` | `Number -> Number -> String` | Formats a number in scientific notation. |
 | `format_table` | `[[String]]\|Dict -> String -> String` | Formats data as a table with a separator. |
 | `format_toml` | `a -> String` | Serializes a value to a TOML string. |
+| `format_xml` | `Dict -> String` | Formats a Dict (with tag/attrs/children/text) as an indented XML string. |
 | `format_yaml` | `a -> String` | Serializes a value to a YAML string. |
 | `truncate` | `String -> Number -> String` | Truncates a string to a maximum length, adding "...". |
 
@@ -400,3 +417,144 @@ Functions for type checking and conversion.
 | `to_list` | `String -> [String]` | Converts a string to a list of characters. |
 | `to_string` | `a -> String` | Converts the value to a string. |
 | `typeof` | `a -> String` | Returns the type name of the value. |
+
+## Data Format Conversion
+
+Avon supports **8 structured data formats**, each with a paired parser and formatter for full round-trip conversion. You can parse any format into Avon values, transform the data, and output it in any other format.
+
+### The Universal Value Type
+
+This is the key idea that makes Avon's data conversion powerful: **every parser produces the same Avon value types** (Dict, List, String, Number, Bool), and **every formatter consumes those same types**. There is no "JSON object" or "YAML mapping" — there are only Avon Dicts and Lists.
+
+```
+    ┌──────────┐                           ┌──────────┐
+    │   JSON   │──json_parse──┐            │   JSON   │
+    │   YAML   │──yaml_parse──┤            │   YAML   │
+    │   TOML   │──toml_parse──┤  ┌──────┐  │   TOML   │
+    │   CSV    │──csv_parse───┼─▶│ Dict │──┼─▶format_* │
+    │   XML    │──xml_parse───┤  │ List │  │   CSV    │
+    │   HTML   │──html_parse──┤  └──────┘  │   XML    │
+    │   OPML   │──opml_parse──┤            │   HTML   │
+    │   INI    │──ini_parse───┘            │   OPML   │
+    └──────────┘                           │   INI    │
+         Any file in                       └──────────┘
+                                             Any format out
+    ┌──────────┐
+    │ Raw      │──*_parse_string──▶ Same Dict/List
+    │ Strings  │                   values as above
+    └──────────┘
+```
+
+Once data is parsed, it's just a Dict or List — you can use **every Avon builtin** on it:
+
+```avon
+# Parse JSON → it's just a Dict now
+let config = json_parse "config.json" in
+
+typeof config                          # "Dict"
+keys config                            # ["host", "port", "debug"]
+get config "host"                      # "localhost"
+has_key config "port"                  # true
+config.host                            # "localhost" (dot notation works)
+
+# Use map, filter, fold on parsed lists — same as any Avon list
+let users = json_parse "users.json" in
+map (\u u.name) users                  # extract all names
+filter (\u u.age > 30) users           # keep users over 30
+fold (\acc \u acc + u.age) 0 users     # sum all ages
+```
+
+This means you never need to learn format-specific APIs. Once you know `map`, `filter`, `fold`, `keys`, `values`, `get`, `set`, and dot notation, you can work with data from **any** of the 8 formats.
+
+### Supported Formats
+
+| Format | Parser | Formatter | Typical Use |
+|--------|--------|-----------|-------------|
+| **JSON** | `json_parse` | `format_json` | APIs, configs, data exchange |
+| **YAML** | `yaml_parse` | `format_yaml` | Kubernetes, Docker Compose, CI/CD |
+| **TOML** | `toml_parse` | `format_toml` | Cargo.toml, pyproject.toml, configs |
+| **CSV** | `csv_parse` | `format_csv` | Spreadsheets, data exports, reports |
+| **XML** | `xml_parse` | `format_xml` | Configs, SOAP, RSS, data interchange |
+| **HTML** | `html_parse` | `format_html` | Web scraping, HTML analysis, template generation |
+| **OPML** | `opml_parse` | `format_opml` | RSS subscriptions, podcast directories |
+| **INI** | `ini_parse` | `format_ini` | App configs, database settings, .gitconfig |
+
+### Round-Trip (Parse → Format)
+
+Parse a file and re-format it in the same format:
+
+```avon
+# Parse JSON and format it back
+let data = json_parse "config.json" in
+format_json data
+
+# Parse XML and format it back
+let doc = xml_parse "data.xml" in
+format_xml doc
+
+# Parse OPML and format it back
+let feeds = opml_parse "feeds.opml" in
+format_opml feeds
+
+# Parse HTML and format it back
+let page = html_parse "index.html" in
+format_html page
+
+# Parse INI and format it back
+let cfg = ini_parse "config.ini" in
+format_ini cfg
+```
+
+### Cross-Format Conversion
+
+Parse one format and output another — Avon values are the universal intermediate representation:
+
+```avon
+# JSON to YAML
+json_parse "data.json" -> format_yaml
+
+# YAML to TOML
+yaml_parse "config.yml" -> format_toml
+
+# TOML to JSON
+toml_parse "Cargo.toml" -> format_json
+
+# CSV to JSON
+csv_parse "data.csv" -> format_json
+
+# XML to JSON
+xml_parse "config.xml" -> format_json
+
+# XML to YAML
+xml_parse "data.xml" -> format_yaml
+
+# HTML to JSON
+html_parse "page.html" -> format_json
+
+# INI to JSON
+ini_parse "config.ini" -> format_json
+
+# JSON to INI
+json_parse "config.json" -> format_ini
+```
+
+### With Transformation
+
+Parse data, transform it, then output in any format:
+
+```avon
+# Read CSV, filter rows, output as JSON
+let data = csv_parse "users.csv" in
+let active = filter (\u u.status == "active") data in
+format_json active
+
+# Read JSON config, modify a field, output as YAML
+let config = json_parse "config.json" in
+let updated = set config "port" 9090 in
+format_yaml updated
+
+# Read XML, extract data, output as CSV
+let doc = xml_parse "people.xml" in
+let rows = map (\p {name: p.attrs.name, age: p.attrs.age}) doc.children in
+format_csv rows
+```

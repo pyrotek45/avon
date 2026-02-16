@@ -351,7 +351,13 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              Data:\n\
              {:<16} Join list with separator\n\
              {:<16} Format as 2D table\n\
-             {:<16} Format as JSON\n\n\
+             {:<16} Format as JSON\n\
+             {:<16} Format as YAML\n\
+             {:<16} Format as TOML\n\
+             {:<16} Format as CSV\n\
+             {:<16} Format as XML\n\
+             {:<16} Format as OPML\n\
+             {:<16} Format as INI\n\n\
              Use :doc <function> for detailed documentation.",
             "format_int",
             "format_float",
@@ -367,7 +373,13 @@ pub fn get_category_doc(category: &str) -> Option<String> {
             "format_bool",
             "format_list",
             "format_table",
-            "format_json"
+            "format_json",
+            "format_yaml",
+            "format_toml",
+            "format_csv",
+            "format_xml",
+            "format_opml",
+            "format_ini"
         )),
         "regex" | "pattern" | "patterns" => Some(format!(
             "Regex Functions:\n\
@@ -408,7 +420,10 @@ pub fn get_category_doc(category: &str) -> Option<String> {
         "html" | "markup" => Some(format!(
             "HTML Functions:\n\
              ───────────────\n\
-             Generate HTML markup.\n\n\
+             Parse, generate, and format HTML markup.\n\n\
+             Parsing & Formatting:\n\
+             {:<16} Parse HTML file into Dict (tag/attrs/children/text)\n\
+             {:<16} Format Dict back to HTML string\n\n\
              Escaping:\n\
              {:<16} Escape special HTML characters\n\n\
              Elements:\n\
@@ -417,7 +432,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              Markdown:\n\
              {:<16} Convert markdown to HTML\n\n\
              Use :doc <function> for detailed documentation.",
-            "html_escape", "html_tag", "html_attr", "markdown_to_html"
+            "html_parse", "format_html", "html_escape", "html_tag", "html_attr", "markdown_to_html"
         )),
         "markdown" | "md" => Some(format!(
             "Markdown Functions:\n\
@@ -451,19 +466,53 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              Use :doc <function> for detailed documentation.",
             "trace", "spy", "debug", "tap", "assert", "error"
         )),
-        "parse" | "parsing" | "data" | "json" | "yaml" | "toml" | "csv" => Some(format!(
-            "Data Parsing Functions:\n\
-             ───────────────────────\n\
-             Parse structured data formats.\n\n\
-             Parsing:\n\
-             {:<16} Parse JSON string\n\
-             {:<16} Parse YAML string\n\
-             {:<16} Parse TOML string\n\
-             {:<16} Parse CSV file\n\n\
-             Note: Returns Dict for objects, List for arrays.\n\
+        "parse" | "parsing" | "data" | "json" | "yaml" | "toml" | "csv" | "xml" | "opml" | "ini" => Some(format!(
+            "Data Parsing & Formatting:\n\
+             ──────────────────────────\n\
+             Avon supports 8 structured data formats, each with a\n\
+             parser and formatter for full round-trip conversion.\n\n\
+             File Parsers (file -> Dict/List):\n\
+             {:<24} Parse JSON file\n\
+             {:<24} Parse YAML file\n\
+             {:<24} Parse TOML file\n\
+             {:<24} Parse CSV file\n\
+             {:<24} Parse XML file\n\
+             {:<24} Parse HTML file\n\
+             {:<24} Parse OPML file\n\
+             {:<24} Parse INI file\n\n\
+             String Parsers (string -> Dict/List):\n\
+             {:<24} Parse JSON string\n\
+             {:<24} Parse YAML string\n\
+             {:<24} Parse TOML string\n\
+             {:<24} Parse CSV string\n\
+             {:<24} Parse XML string\n\
+             {:<24} Parse HTML string\n\
+             {:<24} Parse OPML string\n\
+             {:<24} Parse INI string\n\n\
+             Formatters (Dict/List -> String):\n\
+             {:<24} Format as JSON\n\
+             {:<24} Format as YAML\n\
+             {:<24} Format as TOML\n\
+             {:<24} Format as CSV\n\
+             {:<24} Format as XML\n\
+             {:<24} Format as HTML\n\
+             {:<24} Format as OPML\n\
+             {:<24} Format as INI\n\n\
+             Cross-format conversion:\n\
+               json_parse \"data.json\" -> format_yaml   (JSON to YAML)\n\
+               yaml_parse \"config.yml\" -> format_toml  (YAML to TOML)\n\
+               csv_parse \"data.csv\" -> format_json     (CSV to JSON)\n\
+               xml_parse \"doc.xml\" -> format_json      (XML to JSON)\n\
+               html_parse \"page.html\" -> format_json   (HTML to JSON)\n\
+               ini_parse \"config.ini\" -> format_json   (INI to JSON)\n\n\
+             String parsing (no file needed):\n\
+               json_parse_string \"{{\\\"key\\\": 1}}\" -> format_yaml\n\
+               yaml_parse_string \"name: Alice\" -> format_json\n\n\
              Access parsed data with .key or get dict \"key\"\n\n\
              Use :doc <function> for detailed documentation.",
-            "json_parse", "yaml_parse", "toml_parse", "csv_parse"
+            "json_parse", "yaml_parse", "toml_parse", "csv_parse", "xml_parse", "html_parse", "opml_parse", "ini_parse",
+            "json_parse_string", "yaml_parse_string", "toml_parse_string", "csv_parse_string", "xml_parse_string", "html_parse_string", "opml_parse_string", "ini_parse_string",
+            "format_json", "format_yaml", "format_toml", "format_csv", "format_xml", "format_html", "format_opml", "format_ini"
         )),
         "system" | "sys" | "env" | "environment" => Some(format!(
             "System Functions:\n\
@@ -638,6 +687,10 @@ pub fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("format_list", "format_list :: [a] -> String -> String\n  Join list elements into a string with a separator.\n  Similar to 'join' but auto-converts elements to strings.\n  \n  Arguments:\n    1. List to format\n    2. Separator string\n  \n  Example: format_list [\"a\", \"b\", \"c\"] \", \" -> \"a, b, c\"\n           Join with comma-space\n  \n  Example: format_list [1, 2, 3] \" | \" -> \"1 | 2 | 3\"\n           Join numbers (auto-converts)\n  \n  Example: format_list [true, false] \"/\" -> \"true/false\"\n           Join booleans\n  \n  Example: format_list items \"\\n\"\n           One item per line\n  \n  Use case: Display lists, create delimited strings, output formatting\n  Tip: Unlike 'join', this auto-converts non-strings to strings"),
         ("format_table", "format_table :: ([[a]]|Dict) -> String -> String\n  Format data as a simple 2D text table with custom separator.\n  \n  Arguments:\n    1. 2D list (rows) or Dict (key-value pairs)\n    2. Column separator string\n  \n  Example: format_table [[\"Name\", \"Age\"], [\"Alice\", \"30\"]] \" | \"\n           -> \"Name | Age\\nAlice | 30\"\n  \n  Example: format_table {name: \"Alice\", age: 30} \": \"\n           -> \"name: Alice\\nage: 30\"\n  \n  Example: format_table [[\"A\", \"B\"], [\"1\", \"2\"], [\"3\", \"4\"]] \"\\t\"\n           Tab-separated table\n  \n  Use case: Display tabular data, simple reports, debug output\n  Note: For aligned columns, use pad_right on each cell first"),
         ("format_json", "format_json :: a -> String\n  Convert any value to its JSON representation.\n  \n  Arguments:\n    1. Value to convert to JSON\n  \n  Example: format_json [1, 2, 3] -> \"[1, 2, 3]\"\n           List to JSON array\n  \n  Example: format_json {name: \"Alice\", age: 30}\n           -> \"{\\\"name\\\":\\\"Alice\\\",\\\"age\\\":30}\"\n  \n  Example: format_json true -> \"true\"\n           Boolean to JSON\n  \n  Example: format_json \"hello\" -> \"\\\"hello\\\"\"\n           String to JSON (with quotes)\n  \n  Use case: API responses, config files, data export, serialization\n  Note: Output is compact (no pretty-printing)"),
+        ("format_yaml", "format_yaml :: a -> String\n  Convert any value to its YAML representation.\n  \n  Arguments:\n    1. Value to convert to YAML\n  \n  Example: format_yaml {name: \"Alice\", age: 30}\n           -> \"name: Alice\\nage: 30\\n\"\n  \n  Example: format_yaml [1, 2, 3]\n           -> \"- 1\\n- 2\\n- 3\\n\"\n           List to YAML sequence\n  \n  Example: format_yaml {db: {host: \"localhost\", port: 5432}}\n           Nested dict to YAML mapping\n  \n  Example: format_yaml true -> \"true\\n\"\n           Boolean to YAML\n  \n  Cross-format: json_parse \"data.json\" -> format_yaml\n               Convert JSON file to YAML string\n  \n  Use case: Config files, Kubernetes manifests, Docker Compose, CI/CD pipelines\n  Note: Output is standard YAML with proper indentation"),
+        ("format_toml", "format_toml :: a -> String\n  Convert any value to its TOML representation.\n  \n  Arguments:\n    1. Value to convert to TOML\n  \n  Example: format_toml {name: \"myapp\", version: \"1.0\"}\n           -> \"name = \\\"myapp\\\"\\nversion = \\\"1.0\\\"\\n\"\n  \n  Example: format_toml {package: {name: \"app\", version: \"1.0\"}, dependencies: {serde: \"1.0\"}}\n           Nested dict to TOML with sections\n  \n  Example: format_toml {ports: [8080, 8443]}\n           -> \"ports = [8080, 8443]\\n\"\n           List to TOML array\n  \n  Cross-format: yaml_parse \"config.yml\" -> format_toml\n               Convert YAML file to TOML string\n  \n  Use case: Cargo.toml, pyproject.toml, config files\n  Note: TOML requires string keys and has specific type rules"),
+        ("format_xml", "format_xml :: Dict -> String\n  Convert a Dict to an indented XML string.\n  \n  Arguments:\n    1. Dict with XML structure:\n       - tag: Element tag name (String)\n       - attrs: Attributes (Dict, optional)\n       - text: Text content (String, for leaf elements)\n       - children: Child elements (List of Dicts)\n  \n  Example: format_xml {tag: \"root\", children: [{tag: \"item\", text: \"Hello\"}]}\n           -> \"<root>\\n  <item>Hello</item>\\n</root>\"\n  \n  Example: format_xml {tag: \"br\"}\n           -> \"<br />\"\n           Empty elements are self-closing\n  \n  Example: format_xml {tag: \"a\", attrs: {href: \"url\"}, text: \"Link\"}\n           -> \"<a href=\\\"url\\\">Link</a>\"\n           Element with attributes\n  \n  Round-trip: let data = xml_parse \"file.xml\" in\n             format_xml data\n             Parse and re-format XML\n  \n  Use case: Generate XML configs, SOAP messages, data export\n  Note: Output is indented with 2 spaces per level. Attribute keys are sorted."),
+        ("format_opml", "format_opml :: Dict -> String\n  Convert a Dict to an OPML 2.0 document string.\n  \n  Arguments:\n    1. Dict with OPML structure:\n       - version: OPML version (String, default \"2.0\")\n       - head: Dict of metadata (title, dateCreated, etc.)\n       - outlines: List of outline Dicts, each with:\n         - text: Outline display text\n         - Any other attributes (type, xmlUrl, htmlUrl, etc.)\n         - children: Nested outlines (List, optional)\n  \n  Example: format_opml {version: \"2.0\", head: {title: \"Feeds\"}, outlines: [\n             {text: \"News\", children: [\n               {text: \"HN\", type: \"rss\", xmlUrl: \"https://hn.com/rss\"}\n             ]}\n           ]}\n  \n  Example: let feeds = opml_parse \"subs.opml\" in\n           format_opml feeds\n           Round-trip OPML\n  \n  Use case: Export RSS subscriptions, generate feed lists, outline editors\n  Note: Includes XML declaration. The \"text\" attribute is always listed first per OPML convention."),
         ("format_currency", "format_currency :: Number -> String -> String\n  Format a number as currency with a symbol.\n  \n  Arguments:\n    1. Amount (number)\n    2. Currency symbol\n  \n  Example: format_currency 19.99 \"$\" -> \"$19.99\"\n           US dollars\n  \n  Example: format_currency 1234.5 \"€\" -> \"€1234.50\"\n           Euros (pads to 2 decimals)\n  \n  Example: format_currency 99 \"£\" -> \"£99.00\"\n           British pounds\n  \n  Example: map (\\p format_currency p \"$\") prices\n           Format all prices\n  \n  Use case: Invoices, reports, e-commerce, financial data\n  Note: Always shows 2 decimal places"),
         ("format_percent", "format_percent :: Number -> Int -> String\n  Format a decimal number as a percentage.\n  \n  Arguments:\n    1. Decimal value (0.5 = 50%)\n    2. Decimal places to show\n  \n  Example: format_percent 0.856 2 -> \"85.60%\"\n           Two decimal places\n  \n  Example: format_percent 0.5 0 -> \"50%\"\n           No decimals\n  \n  Example: format_percent 1.0 1 -> \"100.0%\"\n           100 percent\n  \n  Example: format_percent 0.333 1 -> \"33.3%\"\n           One-third\n  \n  Use case: Statistics, progress indicators, ratios, analytics\n  Note: Multiplies by 100 and adds % symbol"),
         ("format_bool", "format_bool :: Bool -> String -> String\n  Format a boolean with custom true/false text.\n  \n  Arguments:\n    1. Boolean value\n    2. Format string: \"trueText/falseText\"\n  \n  Example: format_bool true \"yes/no\" -> \"Yes\"\n           Custom yes/no\n  \n  Example: format_bool false \"yes/no\" -> \"No\"\n           Returns capitalized version\n  \n  Example: format_bool true \"enabled/disabled\" -> \"Enabled\"\n           Feature flags\n  \n  Example: format_bool active \"✓/✗\" -> \"✓\" or \"✗\"\n           Unicode symbols\n  \n  Use case: User-friendly boolean display, reports, status indicators\n  Note: First word is for true, second for false, separated by /"),
@@ -666,10 +719,24 @@ pub fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("walkdir", "walkdir :: String|Path -> [String]\n  List ALL files in a directory and all its subdirectories (recursive).\n  Returns full paths to every file found.\n  \n  Arguments:\n    1. Directory path to scan\n  \n  Example: walkdir \"src\" -> [\"src/main.av\", \"src/lib.av\", \"src/utils/helper.av\"]\n           Find all files in src/ and subdirectories\n  \n  Example: walkdir \"examples\" -> filter (\\f ends_with f \".av\")\n           Find all .av files recursively\n  \n  Example: walkdir \".\" -> length\n           Count total files in current directory tree\n  \n  Use case: Find all files, search directories, batch processing\n  Tip: Use with filter to find specific file types"),
 
         // Data Utilities
-        ("json_parse", "json_parse :: String -> (Dict|List|a)\n  Parse a JSON file and return its contents as Avon values.\n  \n  Arguments:\n    1. Path to JSON file\n  \n  Returns:\n    - Dict for JSON objects: {\"key\": \"value\"} -> {key: \"value\"}\n    - List for JSON arrays: [1, 2, 3] -> [1, 2, 3]\n    - String/Number/Bool for primitives\n    - None for null values\n  \n  Example: json_parse \"config.json\" -> {port: 8080, host: \"localhost\"}\n           Parse config file\n  \n  Example: let config = json_parse \"settings.json\" in config.theme\n           Access parsed field\n  \n  Example: json_parse \"data.json\" -> map (\\item item.name)\n           Process array items\n  \n  Example: let users = json_parse \"users.json\" in\n           filter (\\u u.active) users\n           Filter parsed data\n  \n  Use case: Read config files, load data, API response files\n  Note: Reads from FILE path, not JSON string. Use for file parsing only."),
-        ("yaml_parse", "yaml_parse :: String -> (Dict|List|a)\n  Parse a YAML file and return its contents as Avon values.\n  \n  Arguments:\n    1. Path to YAML file\n  \n  Returns:\n    - Dict for YAML mappings\n    - List for YAML sequences\n    - String/Number/Bool for scalars\n  \n  Example: yaml_parse \"config.yml\" -> {database: {host: \"localhost\"}}\n           Parse YAML config\n  \n  Example: yaml_parse \"docker-compose.yml\" -> services\n           Parse Docker Compose\n  \n  Example: let config = yaml_parse \"settings.yaml\" in\n           get config \"environment\"\n           Access nested config\n  \n  Use case: Kubernetes configs, Docker Compose, CI/CD pipelines\n  Note: Reads from FILE path, not YAML string. Use for file parsing only."),
-        ("toml_parse", "toml_parse :: String -> (Dict|List|a)\n  Parse a TOML file and return its contents as Avon values.\n  \n  Arguments:\n    1. Path to TOML file\n  \n  Returns:\n    - Dict for TOML tables\n    - List for TOML arrays\n    - String/Number/Bool for values\n  \n  Example: toml_parse \"Cargo.toml\" -> {package: {name: \"myapp\", version: \"1.0\"}}\n           Parse Cargo.toml\n  \n  Example: toml_parse \"pyproject.toml\" -> project\n           Parse Python project config\n  \n  Example: let cargo = toml_parse \"Cargo.toml\" in\n           cargo.package.name\n           Get package name\n  \n  Use case: Rust Cargo files, Python pyproject, config files\n  Note: Reads from FILE path, not TOML string. Use for file parsing only."),
-        ("csv_parse", "csv_parse :: String -> [Dict|[String]]\n  Parse a CSV file and return its contents as a list.\n  \n  Arguments:\n    1. Path to CSV file\n  \n  Returns:\n    - With headers: List of Dicts [{name: \"Alice\", age: \"30\"}, ...]\n    - Without headers: List of lists [[\"Alice\", \"30\"], ...]\n  \n  Example: csv_parse \"users.csv\" -> [{name: \"Alice\", age: \"30\"}, {name: \"Bob\", age: \"25\"}]\n           Parse CSV with headers\n  \n  Example: csv_parse \"data.csv\" -> map (\\row row.value)\n           Extract column from parsed CSV\n  \n  Example: let data = csv_parse \"sales.csv\" in\n           filter (\\row to_int row.amount > 100) data\n           Filter CSV rows\n  \n  Example: csv_parse \"export.csv\" -> length\n           Count rows in CSV\n  \n  Use case: Data import, spreadsheet processing, reports\n  Note: Reads from FILE path. All values are strings (use to_int/to_float to convert).\n  Note: First row is treated as headers if it looks like headers."),
+        ("json_parse", "json_parse :: String -> (Dict|List|a)\n  Parse a JSON file and return Avon values.\n  \n  Arguments:\n    1. Path to JSON file\n  \n  Returns:\n    - Dict for JSON objects: {\"key\": \"value\"} -> {key: \"value\"}\n    - List for JSON arrays: [1, 2, 3] -> [1, 2, 3]\n    - String/Number/Bool for primitives\n    - None for null values\n  \n  Example: json_parse \"config.json\" -> {port: 8080, host: \"localhost\"}\n           Parse config file\n  \n  Example: let config = json_parse \"settings.json\" in config.theme\n           Access parsed field\n  \n  Example: let users = json_parse \"users.json\" in\n           filter (\\u u.active) users\n           Filter parsed data\n  \n  Use case: Read config files, load data\n  Note: Reads from FILE path. Use json_parse_string to parse a raw string."),
+        ("json_parse_string", "json_parse_string :: String -> (Dict|List|a)\n  Parse a raw JSON string and return Avon values.\n  \n  Arguments:\n    1. Raw JSON string\n  \n  Returns:\n    - Dict for JSON objects, List for arrays, primitives for scalars\n  \n  Example: json_parse_string \"{\\\"name\\\": \\\"Alice\\\", \\\"age\\\": 30}\"\n           -> {name: \"Alice\", age: 30}\n  \n  Example: let data = json_parse_string \"{\\\"x\\\": 1}\" in\n           format_yaml data\n           Parse JSON string, convert to YAML\n  \n  Use case: Parse dynamically built JSON, API responses, embedded data\n  Note: Unlike json_parse, takes a raw string, not a file path."),
+        ("yaml_parse", "yaml_parse :: String -> (Dict|List|a)\n  Parse a YAML file and return Avon values.\n  \n  Arguments:\n    1. Path to YAML file\n  \n  Returns:\n    - Dict for YAML mappings\n    - List for YAML sequences\n    - String/Number/Bool for scalars\n  \n  Example: yaml_parse \"config.yml\" -> {database: {host: \"localhost\"}}\n           Parse YAML config file\n  \n  Example: let config = yaml_parse \"settings.yaml\" in\n           get config \"environment\"\n           Access nested config\n  \n  Use case: Kubernetes configs, Docker Compose, CI/CD pipelines\n  Note: Reads from FILE path. Use yaml_parse_string to parse a raw string."),
+        ("yaml_parse_string", "yaml_parse_string :: String -> (Dict|List|a)\n  Parse a raw YAML string and return Avon values.\n  \n  Arguments:\n    1. Raw YAML string\n  \n  Example: yaml_parse_string \"name: Alice\\nage: 30\"\n           -> {name: \"Alice\", age: 30}\n  \n  Use case: Parse dynamically built YAML, embedded config strings\n  Note: Unlike yaml_parse, takes a raw string, not a file path."),
+        ("toml_parse", "toml_parse :: String -> (Dict|List|a)\n  Parse a TOML file and return Avon values.\n  \n  Arguments:\n    1. Path to TOML file\n  \n  Returns:\n    - Dict for TOML tables\n    - List for TOML arrays\n    - String/Number/Bool for values\n  \n  Example: toml_parse \"Cargo.toml\" -> {package: {name: \"myapp\", version: \"1.0\"}}\n           Parse Cargo.toml\n  \n  Example: let cargo = toml_parse \"Cargo.toml\" in\n           cargo.package.name\n           Get package name\n  \n  Use case: Rust Cargo files, Python pyproject, config files\n  Note: Reads from FILE path. Use toml_parse_string to parse a raw string."),
+        ("toml_parse_string", "toml_parse_string :: String -> (Dict|List|a)\n  Parse a raw TOML string and return Avon values.\n  \n  Arguments:\n    1. Raw TOML string\n  \n  Example: toml_parse_string \"[server]\\nhost = \\\"localhost\\\"\\nport = 8080\"\n           -> {server: {host: \"localhost\", port: 8080}}\n  \n  Use case: Parse dynamically built TOML, embedded config strings\n  Note: Unlike toml_parse, takes a raw string, not a file path."),
+        ("csv_parse", "csv_parse :: String -> [Dict|[String]]\n  Parse a CSV file and return a list of rows.\n  \n  Arguments:\n    1. Path to CSV file\n  \n  Returns:\n    - With headers: List of Dicts [{name: \"Alice\", age: \"30\"}, ...]\n    - Without headers: List of lists [[\"Alice\", \"30\"], ...]\n  \n  Example: csv_parse \"users.csv\" -> [{name: \"Alice\", age: \"30\"}, ...]\n           Parse CSV file with headers\n  \n  Example: let data = csv_parse \"sales.csv\" in\n           filter (\\row to_int row.amount > 100) data\n           Filter CSV rows\n  \n  Use case: Data import, spreadsheet processing, reports\n  Note: Reads from FILE path. Use csv_parse_string to parse a raw string.\n  Note: All values are strings (use to_int/to_float to convert)."),
+        ("csv_parse_string", "csv_parse_string :: String -> [Dict|[String]]\n  Parse a raw CSV string and return a list of rows.\n  \n  Arguments:\n    1. Raw CSV string\n  \n  Example: csv_parse_string \"name,age\\nAlice,30\\nBob,25\"\n           -> [{name: \"Alice\", age: \"30\"}, {name: \"Bob\", age: \"25\"}]\n  \n  Use case: Parse inline tabular data, API responses, embedded CSV\n  Note: Unlike csv_parse, takes a raw string, not a file path."),
+        ("xml_parse", "xml_parse :: String -> Dict\n  Parse an XML file and return a nested Dict.\n  \n  Arguments:\n    1. Path to XML file\n  \n  Returns:\n    Dict with keys:\n    - tag: Element tag name (String)\n    - attrs: Element attributes (Dict, omitted if none)\n    - text: Text content (String, for leaf elements)\n    - children: Child elements (List of Dicts, for non-leaf)\n  \n  Example: xml_parse \"config.xml\"\n           -> {tag: \"config\", children: [{tag: \"db\", attrs: {host: \"localhost\"}}]}\n  \n  Example: let doc = xml_parse \"data.xml\" in\n           map (\\p p.attrs.name) doc.children\n           Extract attribute from each child\n  \n  Round-trip: let data = xml_parse \"file.xml\" in\n             format_xml data\n             Parse and re-format XML\n  \n  Use case: Config files, data interchange, web services, RSS feeds\n  Note: Reads from FILE path. Use xml_parse_string to parse a raw string."),
+        ("xml_parse_string", "xml_parse_string :: String -> Dict\n  Parse a raw XML string and return a nested Dict.\n  \n  Arguments:\n    1. Raw XML string\n  \n  Example: xml_parse_string \"<root><item name=\\\"test\\\">Hello</item></root>\"\n           -> {tag: \"root\", children: [{tag: \"item\", text: \"Hello\", attrs: {name: \"test\"}}]}\n  \n  Use case: Parse inline XML, API responses, embedded markup\n  Note: Unlike xml_parse, takes a raw string, not a file path."),
+        ("opml_parse", "opml_parse :: String -> Dict\n  Parse an OPML file and return a Dict.\n  OPML (Outline Processor Markup Language) is used for RSS subscriptions,\n  hierarchical outlines, and podcast directories.\n  \n  Arguments:\n    1. Path to OPML file\n  \n  Returns:\n    Dict with keys:\n    - version: OPML version string (e.g., \"2.0\")\n    - head: Dict of head metadata (title, dateCreated, etc.)\n    - outlines: List of outline Dicts, each with:\n      - text: Outline display text\n      - type, xmlUrl, htmlUrl, etc. (any OPML attributes)\n      - children: Nested outlines (List, if any)\n  \n  Example: opml_parse \"feeds.opml\"\n           -> {version: \"2.0\", head: {title: \"My Feeds\"}, outlines: [...]}\n  \n  Example: let feeds = opml_parse \"subscriptions.opml\" in\n           map (\\o o.text) feeds.outlines\n           Get top-level feed names\n  \n  Round-trip: let data = opml_parse \"feeds.opml\" in\n             format_opml data\n             Parse and re-format OPML\n  \n  Use case: RSS feed management, podcast directories, outline editors\n  Note: Reads from FILE path. Use opml_parse_string to parse a raw string."),
+        ("opml_parse_string", "opml_parse_string :: String -> Dict\n  Parse a raw OPML string and return a Dict.\n  \n  Arguments:\n    1. Raw OPML string\n  \n  Example: opml_parse_string \"<?xml version=\\\"1.0\\\"?><opml version=\\\"2.0\\\"><head><title>Feeds</title></head><body><outline text=\\\"Blog\\\"/></body></opml>\"\n           -> {version: \"2.0\", head: {title: \"Feeds\"}, outlines: [{text: \"Blog\"}]}\n  \n  Use case: Parse inline OPML data, embedded outlines\n  Note: Unlike opml_parse, takes a raw string, not a file path."),
+        ("ini_parse", "ini_parse :: String -> Dict\n  Parse an INI file and return a Dict of section Dicts.\n  INI files are widely used for simple configuration (php.ini, my.cnf, .gitconfig).\n  \n  Arguments:\n    1. Path to INI file\n  \n  Returns:\n    Dict where each key is a section name, and each value is a Dict of key-value pairs.\n    - Named sections: [section] -> section: {key: \"value\", ...}\n    - Global keys (no section): stored under \"global\" key\n  \n  Example: ini_parse \"config.ini\"\n           -> {global: {}, database: {host: \"localhost\", port: \"3306\"}}\n  \n  Example: let cfg = ini_parse \"app.ini\" in\n           cfg.database.host\n           Access a section key\n  \n  Round-trip: let data = ini_parse \"config.ini\" in\n             format_ini data\n             Parse and re-format INI\n  \n  Use case: Application config, database settings, system configuration\n  Note: Reads from FILE path. Use ini_parse_string to parse a raw string.\n  Note: All values are strings. Global (sectionless) keys go under \"global\"."),
+        ("ini_parse_string", "ini_parse_string :: String -> Dict\n  Parse a raw INI string and return a Dict of section Dicts.\n  \n  Arguments:\n    1. Raw INI string\n  \n  Example: ini_parse_string \"[database]\\nhost=localhost\\nport=3306\"\n           -> {database: {host: \"localhost\", port: \"3306\"}}\n  \n  Use case: Parse dynamically built config, embedded INI data\n  Note: Unlike ini_parse, takes a raw string, not a file path."),
+        ("format_ini", "format_ini :: Dict -> String\n  Convert a Dict of section Dicts to INI format string.\n  \n  Arguments:\n    1. Dict where each key is a section name and each value is a Dict of key-value pairs.\n       The special \"global\" key is written without a section header.\n  \n  Example: format_ini {database: {host: \"localhost\", port: \"3306\"}}\n           -> \"[database]\\nhost=localhost\\nport=3306\\n\"\n  \n  Example: format_ini {global: {version: \"1.0\"}, server: {port: \"8080\"}}\n           -> \"version=1.0\\n\\n[server]\\nport=8080\\n\"\n           Global keys have no [section] header\n  \n  Example: let cfg = ini_parse \"app.ini\" in\n           format_ini cfg\n           Round-trip INI\n  \n  Cross-format: json_parse \"config.json\" -> format_ini\n               Convert JSON to INI\n  \n  Use case: Generate config files, export settings, template configs\n  Note: Sections and keys are sorted alphabetically for deterministic output."),
+        ("html_parse", "html_parse :: String -> Dict\n  Parse an HTML file and return its contents as a nested Dict.\n  Uses a real HTML5 parser that handles messy/malformed HTML gracefully.\n  \n  Arguments:\n    1. Path to HTML file\n  \n  Returns:\n    Dict with keys (same structure as xml_parse):\n    - tag: Element tag name (String)\n    - attrs: Element attributes (Dict, omitted if none)\n    - text: Text content (String, for leaf elements)\n    - children: Child elements (List of Dicts, for non-leaf)\n  \n  Example: html_parse \"page.html\"\n           -> {tag: \"html\", children: [{tag: \"head\", ...}, {tag: \"body\", ...}]}\n  \n  Example: let page = html_parse \"index.html\" in\n           page.tag\n           Get the root element name (\"html\")\n  \n  Round-trip: let data = html_parse \"page.html\" in\n             format_html data\n             Parse and re-format HTML\n  \n  Use case: Web scraping, HTML analysis, template generation\n  Note: Reads from FILE path. Use html_parse_string to parse a raw string.\n  Note: Unlike xml_parse, handles real-world HTML (optional closing tags, void elements, etc.)"),
+        ("html_parse_string", "html_parse_string :: String -> Dict\n  Parse a raw HTML string and return a nested Dict.\n  Uses a real HTML5 parser that handles messy/malformed HTML gracefully.\n  \n  Arguments:\n    1. Raw HTML string\n  \n  Example: html_parse_string \"<div class=\\\"box\\\"><p>Hello</p></div>\"\n           -> {tag: \"html\", children: [{tag: \"head\"}, {tag: \"body\", ...}]}\n  \n  Use case: Parse inline HTML, template fragments, web scraping results\n  Note: Unlike html_parse, takes a raw string, not a file path."),
+        ("format_html", "format_html :: Dict -> String\n  Convert a Dict to an indented HTML string.\n  \n  Arguments:\n    1. Dict with HTML structure:\n       - tag: Element tag name (String)\n       - attrs: Attributes (Dict, optional)\n       - text: Text content (String, for leaf elements)\n       - children: Child elements (List of Dicts)\n  \n  Example: format_html {tag: \"div\", children: [{tag: \"h1\", text: \"Hello\"}]}\n           -> \"<div>\\n  <h1>Hello</h1>\\n</div>\"\n  \n  Example: format_html {tag: \"br\"}\n           -> \"<br>\"\n           Void elements have no closing tag\n  \n  Example: format_html {tag: \"a\", attrs: {href: \"url\"}, text: \"Link\"}\n           -> \"<a href=\\\"url\\\">Link</a>\"\n           Element with attributes\n  \n  Round-trip: let data = html_parse \"page.html\" in\n             format_html data\n             Parse and re-format HTML\n  \n  Use case: Generate HTML pages, templates, web components\n  Note: Output is indented with 2 spaces per level. Attribute keys are sorted.\n  Note: Void elements (br, hr, img, input, meta, link, etc.) correctly omit closing tags."),
         ("import", "import :: String|Path -> Value\n  Import and evaluate another Avon file, returning its result.\n  \n  Arguments:\n    1. Path to Avon file (string or @path)\n  \n  Example: import \"lib.av\" -> value from lib.av\n           Import a library file\n  \n  Example: import @utils/helpers.av -> {helper functions}\n           Import using path literal\n  \n  Example: let utils = import \"utils.av\" in\n           utils.format_date (now)\n           Use imported functions\n  \n  Example: let config = import \"config.av\" in\n           deploy with config values\n           Import config for deployment\n  \n  Use case: Code reuse, libraries, config separation, modular templates\n  Note: Imported file is fully evaluated; its final value is returned"),
         ("import_git", "import_git :: String -> String -> Value\n  Import and evaluate an Avon file directly from GitHub.\n  \n  Arguments:\n    1. Repository path: \"owner/repo/path/to/file.av\"\n    2. Git commit hash (full 40-character SHA-1)\n  \n  Example: import_git \"user/avon-libs/utils.av\" \"a1b2c3d4e5f6...\" \n           Import from GitHub\n  \n  Why commit hash?\n    - Reproducibility: Same code every time\n    - Security: You control exactly what runs\n    - No surprises: Code won't change unexpectedly\n  \n  How to get commit hash:\n    1. On GitHub, click file -> History -> click commit\n    2. Copy 40-char hash from URL or page\n    3. Or run: git log --format=\"%H\" -n 1\n  \n  Example:\n    let http = import_git \"pyrotek45/avon-libs/http.av\" \n                          \"abc123...full40chars...\" in\n    http.get \"https://api.example.com\"\n  \n  Use case: Share libraries, version-pinned dependencies, remote configs\n  Note: Requires internet. Downloads from raw.githubusercontent.com"),
 
@@ -1021,6 +1088,34 @@ pub fn print_builtin_docs() {
     );
     println!(
         "  {:<18} :: {}",
+        "format_yaml", "a -> String  (YAML representation)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_toml", "a -> String  (TOML representation)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_csv", "([Dict]|[[a]]) -> String  (CSV)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_xml", "Dict -> String  (XML document)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_html", "Dict -> String  (HTML document)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_opml", "Dict -> String  (OPML document)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "format_ini", "Dict -> String  (INI config)"
+    );
+    println!(
+        "  {:<18} :: {}",
         "format_currency", "Number -> String -> String  (currency)"
     );
     println!(
@@ -1082,22 +1177,53 @@ pub fn print_builtin_docs() {
     println!();
 
     // Data Utilities
-    println!("Data Utilities:");
-    println!("---------------");
+    println!("Data Utilities (Parsing & Formatting):");
+    println!("--------------------------------------");
+    println!("  Avon supports 8 data formats with paired parsers and formatters:");
+    println!();
+    println!("  Parsers (file -> Avon value):");
     println!("  {:<18} :: {}", "json_parse", "String -> (Dict|List|a)");
-    println!("                     (Reads from file, returns Dict for objects, List for arrays)");
     println!("  {:<18} :: {}", "yaml_parse", "String -> (Dict|List|a)");
-    println!(
-        "                     (Reads from file, returns Dict for mappings, List for sequences)"
-    );
     println!("  {:<18} :: {}", "toml_parse", "String -> (Dict|List|a)");
-    println!("                     (Reads from file, returns Dict for tables, List for arrays)");
     println!("  {:<18} :: {}", "csv_parse", "String -> [Dict|[String]]");
-    println!("                     (Reads from file, returns list of Dicts if headers, else list of lists)");
+    println!("  {:<18} :: {}", "xml_parse", "String -> Dict");
+    println!("  {:<18} :: {}", "html_parse", "String -> Dict");
+    println!("  {:<18} :: {}", "opml_parse", "String -> Dict");
+    println!("  {:<18} :: {}", "ini_parse", "String -> Dict");
+    println!();
+    println!("  String Parsers (raw string -> Avon value):");
+    println!("  {:<18} :: {}", "json_parse_string", "String -> (Dict|List|a)");
+    println!("  {:<18} :: {}", "yaml_parse_string", "String -> (Dict|List|a)");
+    println!("  {:<18} :: {}", "toml_parse_string", "String -> (Dict|List|a)");
+    println!("  {:<18} :: {}", "csv_parse_string", "String -> [Dict|[String]]");
+    println!("  {:<18} :: {}", "xml_parse_string", "String -> Dict");
+    println!("  {:<18} :: {}", "html_parse_string", "String -> Dict");
+    println!("  {:<18} :: {}", "opml_parse_string", "String -> Dict");
+    println!("  {:<18} :: {}", "ini_parse_string", "String -> Dict");
+    println!();
+    println!("  Formatters (Avon value -> string):");
+    println!("  {:<18} :: {}", "format_json", "a -> String");
+    println!("  {:<18} :: {}", "format_yaml", "a -> String");
+    println!("  {:<18} :: {}", "format_toml", "a -> String");
+    println!("  {:<18} :: {}", "format_csv", "([Dict]|[[a]]) -> String");
+    println!("  {:<18} :: {}", "format_xml", "Dict -> String");
+    println!("  {:<18} :: {}", "format_html", "Dict -> String");
+    println!("  {:<18} :: {}", "format_opml", "Dict -> String");
+    println!("  {:<18} :: {}", "format_ini", "Dict -> String");
+    println!();
+    println!("  Other:");
     println!("  {:<18} :: {}", "import", "String|Path -> Value");
     println!();
-    println!("  Note: Parse functions (json_parse, yaml_parse, toml_parse, csv_parse) only read from files.");
-    println!("        They do not parse strings directly. Pass a file path, not file content.");
+    println!("  Cross-format conversion:");
+    println!("    json_parse \"data.json\" -> format_yaml    # JSON to YAML");
+    println!("    yaml_parse \"config.yml\" -> format_toml   # YAML to TOML");
+    println!("    csv_parse \"data.csv\" -> format_json      # CSV to JSON");
+    println!("    xml_parse \"doc.xml\" -> format_json       # XML to JSON");
+    println!("    html_parse \"page.html\" -> format_json    # HTML to JSON");
+    println!("    ini_parse \"config.ini\" -> format_json    # INI to JSON");
+    println!();
+    println!("  Note: File parsers (*_parse) read from file paths.");
+    println!("        String parsers (*_parse_string) parse raw strings directly.");
     println!();
 
     // Type Checking & Introspection

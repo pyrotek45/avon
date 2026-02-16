@@ -219,7 +219,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Functions with All Defaults Still Return Functions
     - No Recursion – Use `fold` Instead
     - Template Braces Can Be Confusing
-    - `json_parse` Only Reads from Files
+    - `json_parse` Only Reads from Files — Use `json_parse_string` for Strings
     - Lists in Templates Expand to Multiple Lines
     - `glob` Returns Paths, Not Contents
     - Import Evaluates the Entire File
@@ -1721,11 +1721,17 @@ merged
 | `dirname path` | String or Path | String | Directory from path (e.g., `"config/app.json"` → `"config"`) |
 | `json_parse file_path` | String | Dict/List | Parse JSON from file |
 | `yaml_parse file_path` | String | Dict/List | Parse YAML from file |
+| `toml_parse file_path` | String | Dict | Parse TOML from file |
+| `csv_parse file_path` | String | List[Dict]/List[List] | Parse CSV from file |
+| `xml_parse file_path` | String | Dict | Parse XML from file (tag, attrs, children, text) |
+| `html_parse file_path` | String | Dict | Parse HTML from file (tag, attrs, children, text). Uses HTML5 parser. |
+| `opml_parse file_path` | String | Dict | Parse OPML from file (version, head, outlines) |
+| `ini_parse file_path` | String | Dict | Parse INI from file (section Dicts, global keys under "global") |
 | `import path` | String | Any | Evaluate Avon file and return result |
 
-#### Key Behavior: json_parse Only Reads from Files
+#### Key Behavior: All Parsers Only Read from Files
 
-`json_parse` (and `yaml_parse`, `toml_parse`, `csv_parse`) only read from file paths, not from strings:
+`json_parse` (and `yaml_parse`, `toml_parse`, `csv_parse`, `xml_parse`, `html_parse`, `opml_parse`, `ini_parse`) only read from file paths, not from strings:
 
 ```avon
 # Pass a file path - json_parse reads and parses it
@@ -1813,6 +1819,75 @@ To handle missing files gracefully:
 let config = if exists "custom.json" then json_parse "custom.json" else {} in
 config
 ```
+
+#### Data Format Conversion
+
+Avon supports 8 structured data formats with paired parsers and formatters:
+
+| Format | File Parser | String Parser | Formatter |
+|--------|-------------|---------------|-----------|
+| JSON | `json_parse` | `json_parse_string` | `format_json` |
+| YAML | `yaml_parse` | `yaml_parse_string` | `format_yaml` |
+| TOML | `toml_parse` | `toml_parse_string` | `format_toml` |
+| CSV | `csv_parse` | `csv_parse_string` | `format_csv` |
+| XML | `xml_parse` | `xml_parse_string` | `format_xml` |
+| HTML | `html_parse` | `html_parse_string` | `format_html` |
+| OPML | `opml_parse` | `opml_parse_string` | `format_opml` |
+| INI | `ini_parse` | `ini_parse_string` | `format_ini` |
+
+**File parsers** (`*_parse`) read from file paths. **String parsers** (`*_parse_string`) parse raw strings directly — useful for inline data, API responses, or dynamically built content:
+
+```avon
+# File parsing — reads from disk
+let config = json_parse "config.json" in config.port
+
+# String parsing — parses a raw string
+let data = json_parse_string "{\"port\": 8080}" in data.port
+```
+
+**The universal value type.** The reason cross-format conversion works is that every parser produces the same Avon value types — Dict, List, String, Number, Bool. There is no "JSON object" or "YAML mapping." Once parsed, data is just a Dict or List, and all Avon builtins work on it:
+
+```avon
+# Parse any format — the result is always Dict or List
+let from_json = json_parse "config.json" in     # Dict
+let from_yaml = yaml_parse "config.yml" in       # Dict
+let from_csv  = csv_parse "users.csv" in         # List of Dicts
+
+# All standard operations work on parsed data:
+typeof from_json                    # "Dict"
+keys from_json                     # list of keys
+get from_json "host"               # value for "host"
+has_key from_json "port"           # true or false
+from_json.host                     # dot notation access
+
+# List operations work on parsed lists:
+map (\u u.name) from_csv           # extract a field from each row
+filter (\u u.age > 30) from_csv    # filter rows
+fold (\acc \u acc + 1) 0 from_csv  # count rows
+```
+
+**Cross-format conversion** is just piping one parser's output into another formatter:
+
+```avon
+# Convert between any formats
+json_parse "data.json" -> format_yaml      # JSON → YAML
+yaml_parse "config.yml" -> format_toml     # YAML → TOML
+csv_parse "data.csv" -> format_json        # CSV → JSON
+xml_parse "feed.xml" -> format_json        # XML → JSON
+html_parse "page.html" -> format_json      # HTML → JSON
+ini_parse "config.ini" -> format_json      # INI → JSON
+```
+
+**Transform, then convert** — parse, use map/filter/fold to reshape, then output in any format:
+
+```avon
+# Read CSV, keep only active users, output as JSON
+let users = csv_parse "users.csv" in
+let active = filter (\u u.status == "active") users in
+format_json active
+```
+
+For complete reference and all supported conversions, see [BUILTIN_FUNCTIONS.md — Data Format Conversion](./BUILTIN_FUNCTIONS.md#data-format-conversion).
 
 ---
 
@@ -5150,16 +5225,28 @@ This works because:
 3. The resulting string is then interpolated into the template
 4. This technique generates template placeholders dynamically from data
 
-### Gotcha 6: `json_parse` Only Reads from Files
+### Gotcha 6: `json_parse` Only Reads from Files — Use `json_parse_string` for Strings
 
-`json_parse` reads JSON from files, not from JSON strings directly:
+`json_parse` (and all `*_parse` functions) read from files, not from strings directly:
 
 ```avon
 json_parse "settings.json"     # ✓ Reads file and parses JSON
 json_parse "{\"name\": \"Alice\"}"  # ✗ Tries to read file "{\"name\": \"Alice\"}" (errors)
 ```
 
-**Solution:** `json_parse` always treats its argument as a file path. If you need to parse a JSON string from memory or another source, use `readfile` first to get the content, then pass the file path to `json_parse`. For parsing JSON strings directly in memory, you would need to write the string to a temporary file first (which is rarely needed).
+**Solution:** Use the companion `*_parse_string` function to parse a raw string directly:
+
+```avon
+json_parse_string "{\"name\": \"Alice\"}"   # ✓ Parses the JSON string
+yaml_parse_string "name: Alice\nage: 30"    # ✓ Parses the YAML string
+toml_parse_string "[server]\nport = 8080"   # ✓ Parses the TOML string
+csv_parse_string "name,age\nAlice,30"       # ✓ Parses the CSV string
+xml_parse_string "<root><item/></root>"     # ✓ Parses the XML string
+html_parse_string "<div>Hello</div>"        # ✓ Parses the HTML string
+ini_parse_string "[db]\nhost=localhost"     # ✓ Parses the INI string
+```
+
+Every file parser has a `*_parse_string` counterpart. This separation is intentional — it keeps the intent explicit: file parsers read files, string parsers parse strings. No ambiguity.
 
 ### Gotcha 7: Lists in Templates Expand to Multiple Lines
 
