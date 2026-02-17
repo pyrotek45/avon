@@ -32,8 +32,9 @@ Functions for aggregating values from lists.
 | `all` | `(a -> Bool) -> [a] -> Bool` | Returns true if the predicate returns true for all items in the list. |
 | `any` | `(a -> Bool) -> [a] -> Bool` | Returns true if the predicate returns true for any item in the list. |
 | `count` | `(a -> Bool) -> [a] -> Number` | Returns the number of items where the predicate returns true. |
-| `max` | `[Number\|String] -> Number\|String` | Returns the maximum value in a list. |
-| `min` | `[Number\|String] -> Number\|String` | Returns the minimum value in a list. |
+| `default` | `a -> a -> a` | Provides a default value if the second argument is `None`. Otherwise returns the second argument. |
+| `max` | `[Number\|String] -> Number\|String` | Returns the maximum value in a list, or `None` if the list is empty. |
+| `min` | `[Number\|String] -> Number\|String` | Returns the minimum value in a list, or `None` if the list is empty. |
 | `product` | `[Number] -> Number` | Returns the product of all numbers in a list. |
 | `sum` | `[Number] -> Number` | Returns the sum of all numbers in a list. |
 
@@ -46,6 +47,16 @@ min [5, 2, 8, 1, 9]                    # 1
 all (\x x > 0) [1, 2, 3, 4]            # true
 any (\x x > 3) [1, 2, 3, 4]            # true
 count (\x x > 2) [1, 2, 3, 4, 5]       # 3
+
+# Using default with data access functions
+head []                        # None
+head [] -> default "empty"     # "empty"
+
+get {a: 1} "b"                # None
+get {a: 1} "b" -> default 0   # 0
+
+find (\x x > 10) [1, 2, 3]    # None
+find (\x x > 10) [1, 2, 3] -> default 999  # 999
 ```
 
 ## Date/Time Functions
@@ -101,11 +112,29 @@ Functions for working with dictionaries.
 | Function | Signature | Description |
 |----------|-----------|-------------|
 | `dict_merge` | `Dict -> Dict -> Dict` | Merges two dictionaries. Keys in the second dict override the first. |
-| `get` | `Dict -> String -> a` | Returns the value for a key, or `None` if not found. |
+| `get` | `Dict -> String -> a\|None` | Returns the value for a key, or `None` if not found. |
 | `has_key` | `Dict -> String -> Bool` | Returns true if the dictionary contains the key. |
 | `keys` | `Dict -> [String]` | Returns a list of keys in the dictionary. |
 | `set` | `Dict -> String -> a -> Dict` | Returns a new dictionary with the key set to the value. |
 | `values` | `Dict -> [a]` | Returns a list of values in the dictionary. |
+
+**Examples:**
+```avon
+let config = {host: "localhost", port: 8080} in
+
+# Get existing key
+get config "host"                   # "localhost"
+
+# Get missing key returns None
+get config "timeout"                # None
+
+# Use default with get
+get config "timeout" -> default 30  # 30
+
+# Check if key exists
+has_key config "port"               # true
+has_key config "timeout"            # false
+```
 
 ## Environment Functions
 

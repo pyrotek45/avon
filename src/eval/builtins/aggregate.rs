@@ -1,16 +1,17 @@
-//! Aggregate functions: sum, product, min, max, all, any, count
+//! Aggregate functions: sum, product, min, max, all, any, count, default
 
 use crate::common::{EvalError, Number, Value};
 use crate::eval::apply_function;
 
 /// Names of aggregate builtins
-pub const NAMES: &[&str] = &["all", "any", "count", "max", "min", "product", "sum"];
+pub const NAMES: &[&str] = &["all", "any", "count", "default", "max", "min", "product", "sum"];
 
 /// Get arity for aggregate functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
         "max" | "min" | "product" | "sum" => Some(1),
         "all" | "any" | "count" => Some(2),
+        "default" => Some(2),
         _ => None,
     }
 }
@@ -313,6 +314,17 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     list.to_string(source),
                     line,
                 ))
+            }
+        }
+        "default" => {
+            // default :: a -> a -> a
+            // If second argument is None, return first argument (fallback).
+            // Otherwise, return second argument.
+            let fallback = &args[0];
+            let value = &args[1];
+            match value {
+                Value::None => Ok(fallback.clone()),
+                _ => Ok(value.clone()),
             }
         }
         _ => Err(EvalError::new(

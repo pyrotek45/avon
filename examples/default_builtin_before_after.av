@@ -1,0 +1,102 @@
+# BEFORE vs AFTER: What default Would Look Like
+
+# ════════════════════════════════════════════════════════════
+# EXAMPLE 1: Simple Dict Lookup
+# ════════════════════════════════════════════════════════════
+
+# BEFORE (Current style - verbose)
+let config = {port: 8080, host: "localhost"} in
+let timeout_val = get config "timeout" in
+if is_none timeout_val then 30 else timeout_val
+
+# AFTER (With default - concise)
+# let config = {port: 8080, host: "localhost"} in
+# get config "timeout" -> default 30
+
+# ════════════════════════════════════════════════════════════
+# EXAMPLE 2: Multi-level Fallback
+# ════════════════════════════════════════════════════════════
+
+# BEFORE (Current style - deeply nested)
+let user = {name: "Alice", role: "admin"} in
+let nickname = get user "nickname" in
+let display_name = if is_none nickname then (
+  let real_name = get user "name" in
+  if is_none real_name then "Anonymous" else real_name
+) else nickname in
+display_name
+
+# AFTER (With default - readable pipeline)
+# let user = {name: "Alice", role: "admin"} in
+# get user "nickname" 
+#   -> default (get user "name")
+#   -> default "Anonymous"
+
+# ════════════════════════════════════════════════════════════
+# EXAMPLE 3: List Search with Fallback
+# ════════════════════════════════════════════════════════════
+
+# BEFORE (Current style)
+let users = [{id: 1, name: "Alice"}, {id: 2, name: "Bob"}] in
+let user_match = find (\u u.id == 999) users in
+if is_none user_match then {id: 0, name: "Unknown"} else user_match
+
+# AFTER (With default - cleaner)
+# let users = [{id: 1, name: "Alice"}, {id: 2, name: "Bob"}] in
+# find (\u u.id == 999) users -> default {id: 0, name: "Unknown"}
+
+# ════════════════════════════════════════════════════════════
+# EXAMPLE 4: Chaining Multiple Accesses
+# ════════════════════════════════════════════════════════════
+
+# BEFORE (Current style - tedious)
+let data = {values: [1, 2, 3]} in
+let values_arr = get data "values" in
+let first_val = if is_none values_arr then [] else values_arr in
+let first_elem = head first_val in
+if is_none first_elem then 0 else first_elem
+
+# AFTER (With default - elegant pipeline)
+# let data = {values: [1, 2, 3]} in
+# get data "values" 
+#   -> default []
+#   -> head
+#   -> default 0
+
+# ════════════════════════════════════════════════════════════
+# EXAMPLE 5: Real-World Config Pattern
+# ════════════════════════════════════════════════════════════
+
+# BEFORE
+let config = {
+  server: {port: 8080},
+  database: {host: "localhost", timeout: 30}
+} in
+let db_config = get config "database" in
+let db_host = if is_none db_config then {} else db_config in
+let hostname = get db_host "host" in
+let final_host = if is_none hostname then "localhost" else hostname in
+final_host
+
+# AFTER
+# let config = {
+#   server: {port: 8080},
+#   database: {host: "localhost", timeout: 30}
+# } in
+# get config "database" 
+#   -> default {}
+#   -> (\db get db "host")
+#   -> default "localhost"
+
+# ════════════════════════════════════════════════════════════
+# SUMMARY: The Pattern Everywhere
+# ════════════════════════════════════════════════════════════
+
+# In your current code, how often do you write:
+#   if is_none x then fallback else x
+#
+# With `default`, you'd write:
+#   x -> default fallback
+#
+# That's one fewer line, 70% less boilerplate,
+# and dramatically improved readability.

@@ -1,0 +1,103 @@
+# Test: None Return Patterns in Avon
+# This file demonstrates which functions return None and which return errors
+
+# ─────────────────────────────────────────────────────────────
+# Data Access Functions: Return None for Missing Data
+# ─────────────────────────────────────────────────────────────
+
+# head on empty list
+let test_head_empty = head [] in
+let _ = trace "head []:" test_head_empty in
+
+# last on empty list
+let test_last_empty = last [] in
+let _ = trace "last []:" test_last_empty in
+
+# head on non-empty list
+let test_head_full = head [1, 2, 3] in
+let _ = trace "head [1,2,3]:" test_head_full in
+
+# nth out of bounds
+let test_nth_oob = nth 10 [1, 2, 3] in
+let _ = trace "nth 10 [1,2,3]:" test_nth_oob in
+
+# nth in bounds
+let test_nth_valid = nth 1 [10, 20, 30] in
+let _ = trace "nth 1 [10,20,30]:" test_nth_valid in
+
+# find with no match
+let test_find_none = find (\x x > 100) [1, 2, 3] in
+let _ = trace "find (>100) [1,2,3]:" test_find_none in
+
+# find with match
+let test_find_match = find (\x x > 2) [1, 2, 3, 4] in
+let _ = trace "find (>2) [1,2,3,4]:" test_find_match in
+
+# find_index with no match
+let test_find_idx_none = find_index (\x x > 100) [1, 2, 3] in
+let _ = trace "find_index (>100) [1,2,3]:" test_find_idx_none in
+
+# find_index with match
+let test_find_idx_match = find_index (\x x > 2) [1, 2, 3, 4] in
+let _ = trace "find_index (>2) [1,2,3,4]:" test_find_idx_match in
+
+# get with missing key
+let test_get_missing = get {a: 1, b: 2} "c" in
+let _ = trace "get {a:1,b:2} 'c':" test_get_missing in
+
+# get with existing key
+let test_get_exists = get {a: 1, b: 2} "a" in
+let _ = trace "get {a:1,b:2} 'a':" test_get_exists in
+
+# min on empty list
+let test_min_empty = min [] in
+let _ = trace "min []:" test_min_empty in
+
+# max on empty list
+let test_max_empty = max [] in
+let _ = trace "max []:" test_max_empty in
+
+# JSON null becomes None
+let test_json_null = json_parse_string "{\"value\": null}" in
+let _ = trace "json_parse_string null:" test_json_null in
+
+# ─────────────────────────────────────────────────────────────
+# Current Workaround: Using if/then/else
+# ─────────────────────────────────────────────────────────────
+
+let port_from_dict = get {timeout: 30} "port" in
+let port_with_default = if is_none port_from_dict then 8080 else port_from_dict in
+let _ = trace "Current workaround (port):" port_with_default in
+
+let timeout_from_dict = get {timeout: 30} "timeout" in
+let timeout_with_default = if is_none timeout_from_dict then 30 else timeout_from_dict in
+let _ = trace "Current workaround (timeout):" timeout_with_default in
+
+# Chain multiple levels
+let user = {name: "Alice"} in
+let nickname = get user "nickname" in
+let fallback_name = get user "name" in
+let final_name = if is_none nickname then fallback_name else nickname in
+let _ = trace "Multi-level fallback:" final_name in
+
+# ─────────────────────────────────────────────────────────────
+# Comparison: What default would look like
+# ─────────────────────────────────────────────────────────────
+
+# These would be equivalent to the above if default existed:
+# get {timeout: 30} "port" -> default 8080
+# get {timeout: 30} "timeout" -> default 30
+# get user "nickname" -> default (get user "name")
+
+# Return a summary
+{
+  head_empty: is_none test_head_empty,
+  last_empty: is_none test_last_empty,
+  nth_oob: is_none test_nth_oob,
+  find_none: is_none test_find_none,
+  find_idx_none: is_none test_find_idx_none,
+  get_missing: is_none test_get_missing,
+  min_empty: is_none test_min_empty,
+  max_empty: is_none test_max_empty,
+  json_null: is_none (get test_json_null "value")
+}

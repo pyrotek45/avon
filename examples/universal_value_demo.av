@@ -1,0 +1,79 @@
+# Universal Value Type Demo
+# ========================
+#
+# This example demonstrates Avon's key design principle:
+# every parser produces the same value types (Dict, List, String, Number, Bool).
+# Once data is parsed from ANY format, you use the SAME operations on it.
+#
+# There is no "JSON object" or "YAML mapping" — just Avon Dicts and Lists.
+
+# --- Step 1: Show that parsed data is just a Dict ---
+# (We'll construct values inline to demonstrate the concept
+#  without requiring external files)
+
+let config = {
+  host: "localhost",
+  port: 8080,
+  debug: true,
+  tags: ["web", "api", "v2"]
+} in
+
+# typeof always returns "Dict" or "List" — never a format-specific type
+let type_check = typeof config in
+
+# --- Step 2: All standard Dict operations work ---
+let all_keys   = keys config in
+let all_values = values config in
+let host_val   = get config "host" in
+let has_port   = has_key config "port" in
+let dot_access = config.host in
+
+# --- Step 3: List operations work on nested lists ---
+let tag_list  = config.tags in
+let upper_tags = map upper tag_list in
+let long_tags  = filter (\t (length t) > 2) tag_list in
+let tag_count  = fold (\acc \t acc + 1) 0 tag_list in
+
+# --- Step 4: Cross-format conversion works because values are universal ---
+# If this were parsed from JSON, YAML, TOML, or any format,
+# the same operations and formatters would work:
+let as_json = format_json config in
+let as_yaml = format_yaml config in
+
+# --- Step 5: Transform then convert ---
+let users = [
+  {name: "Alice", age: 30, role: "admin"},
+  {name: "Bob", age: 25, role: "user"},
+  {name: "Carol", age: 35, role: "admin"}
+] in
+
+let admins = filter (\u u.role == "admin") users in
+let names  = map (\u u.name) admins in
+let oldest = fold (\acc \u if u.age > acc then u.age else acc) 0 admins in
+
+# --- Output ---
+{"=== Universal Value Type Demo ===
+
+Type of config: {type_check}
+
+Keys: {join (keys config) ", "}
+Host (get): {host_val}
+Host (dot): {dot_access}
+Has port: {has_port}
+
+Tags: {join tag_list ", "}
+Uppercased: {join upper_tags ", "}
+Long tags (>2 chars): {join long_tags ", "}
+Tag count: {tag_count}
+
+--- Cross-Format Output ---
+As JSON:
+{as_json}
+As YAML:
+{as_yaml}
+--- Transform Pipeline ---
+Admin names: {join names ", "}
+Oldest admin age: {oldest}
+
+All operations work the same regardless of where the data came from.
+Parse any format → Dict/List → use map/filter/fold/keys/values/get → format to any output."}

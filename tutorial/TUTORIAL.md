@@ -4534,6 +4534,147 @@ resource "aws_instance" "web" {
 
 **Decision rule:** Choose the delimiter that keeps your template readable. More braces in output? Use more braces in the delimiter!
 
+#### Handling Missing Data with `default`
+
+Avon distinguishes between **data absence** (returns `None`) and **errors** (file I/O, etc.). The `default` builtin function provides a clean, composable way to handle missing values.
+
+**Understanding None vs Errors:**
+
+Many functions return `None` when data is absent:
+- `head []` returns `None` (empty list)
+- `get dict "missing_key"` returns `None` (key doesn't exist)
+- `find (\x false) list` returns `None` (no match found)
+- `nth 10 [1,2,3]` returns `None` (index out of bounds)
+- JSON null values parse to `None`
+
+File I/O functions return **errors** for missing files:
+- `readfile "missing.txt"` → Error
+- `json_parse "missing.json"` → Error
+- These are exceptional conditions that halt execution
+
+**The Problem: Verbose None Handling**
+
+Without `default`, you must write verbose conditionals for every missing value:
+
+```avon
+let timeout = get config "timeout" in
+if is_none timeout then 30 else timeout
+```
+
+This pattern repeats throughout your code, making it verbose and hard to read.
+
+**The Solution: `default`**
+
+The `default` function provides a fallback value when the second argument is `None`. It has the signature:
+
+```
+default :: a -> a -> a
+```
+
+Where the first argument is the fallback value, the second is the value to check.
+
+**Simple usage:**
+```avon
+get config "timeout" -> default 30
+# If timeout key exists, returns its value
+# If timeout key is missing, returns 30
+```
+
+**Chaining with other functions:**
+```avon
+# Empty list handling
+head [] -> default "no items"
+nth 10 [1,2,3] -> default 0
+
+# Find with fallback
+find (\x x > 100) items -> default 0
+
+# Nested access with defaults
+get config "database" -> default {} -> (get "host" -> default "localhost")
+```
+
+**Key gotcha: Only None is replaced**
+
+The `default` function ONLY checks for `None`. Falsy values like `false`, `0`, and `""` are NOT replaced:
+
+```avon
+false -> default true       # Returns false (not replaced!)
+0 -> default 10             # Returns 0 (not replaced!)
+"" -> default "default"     # Returns "" (not replaced!)
+none -> default "fallback"  # Returns "fallback" (DOES replace)
+```
+
+This is intentional—these values are valid data, not missing data.
+
+**Real-world example: Configuration with defaults**
+
+```avon
+let config = json_parse "app.json" in
+
+let app_name = get config "name" -> default "MyApp" in
+let port = get config "port" -> default 8080 in
+let debug = get config "debug" -> default false in
+let timeout = get config "timeout" -> default 30 in
+
+@config.yml {"
+name: {app_name}
+port: {port}
+debug: {debug}
+timeout: {timeout}
+"}
+```
+
+This elegantly handles optional configuration keys, using defaults only when keys are missing.
+
+**Multi-level defaults with dict merging**
+
+```avon
+# Load environment-specific config, fall back to defaults
+let defaults = {host: "localhost", port: 8080, timeout: 30} in
+let user_config = json_parse "config.json" in
+let final = dict_merge defaults user_config in
+
+@app.conf {"
+host: {final.host}
+port: {final.port}
+timeout: {final.timeout}
+"}
+```
+
+**Lists with defaults:**
+```avon
+let items = [1, 2, 3] in
+head items -> default 0           # 1
+head [] -> default 0              # 0
+
+let filtered = filter (\x x > 100) items in
+head filtered -> default "none found"   # "none found"
+```
+
+**Best practice pattern:**
+
+When your code interacts with optional data:
+1. Access the data (e.g., `get config "key"`)
+2. Pipe to `default` with a sensible fallback (e.g., `-> default "default_value"`)
+3. Use the result
+
+This makes optional data handling idiomatic and composable:
+
+```avon
+let config = json_parse "app.json" in
+
+let make_service = \name
+  @service-{name}.yaml {"
+    name: {name}
+    replicas: {get config "replicas" -> default 3}
+    port: {get config "port" -> default 8080}
+  "} in
+
+map make_service ["api", "web", "worker"]
+```
+
+**See also:** `examples/default_builtin_before_after.av` for more comprehensive examples of the `default` function and how it simplifies code.
+
 #### Lists and Collections
 
 **Short lists on one line:**

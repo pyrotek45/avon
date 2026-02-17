@@ -1,0 +1,64 @@
+# INI Format Demo
+# Demonstrates ini_parse and format_ini for working with INI config files.
+
+# ─────────────────────────────────────────────
+# 1. Generate INI from a Dict
+# ─────────────────────────────────────────────
+
+let config = {
+  global: {version: "1.0", app_name: "my-service"},
+  database: {
+    host: "localhost",
+    port: "5432",
+    name: "production",
+    user: "admin"
+  },
+  cache: {
+    driver: "redis",
+    host: "127.0.0.1",
+    ttl: "3600"
+  },
+  logging: {
+    level: "info",
+    file: "/var/log/app.log"
+  }
+} in
+
+let ini_output = format_ini config in
+
+# ─────────────────────────────────────────────
+# 2. INI → JSON (cross-format conversion)
+# ─────────────────────────────────────────────
+
+let as_json = format_json config in
+
+# ─────────────────────────────────────────────
+# 3. INI → YAML (cross-format conversion)
+# ─────────────────────────────────────────────
+
+let as_yaml = format_yaml config in
+
+# ─────────────────────────────────────────────
+# 4. Work with INI data using standard builtins
+# ─────────────────────────────────────────────
+
+let sections = keys config in
+let db_host = config.database.host in
+let has_cache = has_key config "cache" in
+
+# ─────────────────────────────────────────────
+# Display
+# ─────────────────────────────────────────────
+
+{"═══ INI Demo ═══
+
+── Generated INI ──
+{ini_output}
+── As JSON ──
+{as_json}
+
+── As YAML ──
+{as_yaml}
+── Sections: {format_json sections}
+── DB Host: {db_host}
+── Has cache? {to_string has_cache}"}

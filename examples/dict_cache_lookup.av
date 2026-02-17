@@ -27,12 +27,12 @@ let db_configs = {
   prod: "prod-db.example.com:5432"
 } in
 
-# Helper to safely get with default from list of pairs
-let get_or_default = \cache \key \default
+# Helper to safely get with fallback from list of pairs
+let get_or_default = \cache \key \fallback
   if has_key cache key then
     get cache key
   else
-    default
+    fallback
 in
 
 # HTTP status lookup

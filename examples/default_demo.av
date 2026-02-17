@@ -1,0 +1,177 @@
+# Demonstration of the default builtin function
+# The default function provides a fallback value when the second argument is None.
+# Signature: default :: a -> a -> a
+# 
+# This example shows various patterns for using default with:
+# - List operations (head, nth, find)
+# - Dictionary access (get)
+# - JSON parsing with optional fields
+# - Real-world configuration scenarios
+
+# ============================================================================
+# 1. SIMPLE DEFAULT USAGE
+# ============================================================================
+
+# When head is called on an empty list, it returns None.
+# Use default to provide a fallback:
+let empty_list_demo = head [] -> default "list was empty" in
+
+# When the list is not empty, head returns the value:
+let non_empty_demo = head [1, 2, 3] -> default 0 in
+
+# ============================================================================
+# 2. DICTIONARY ACCESS WITH DEFAULTS
+# ============================================================================
+
+# get returns None when key is missing
+let config = {host: "localhost", port: 8080} in
+let timeout_val = get config "timeout" -> default 30 in
+let debug_mode = get config "debug" -> default false in
+
+# Access existing keys - default is not used
+let host = get config "host" -> default "unknown" in
+let port = get config "port" -> default 0 in
+
+# ============================================================================
+# 3. FIND WITH DEFAULTS
+# ============================================================================
+
+let numbers = [1, 2, 3, 4, 5] in
+
+# Find returns None when no match is found
+let first_large = find (\x x > 100) numbers -> default 0 in
+let first_small = find (\x x > 0) numbers -> default 0 in
+
+# With nth (accessing by index)
+let tenth_item = nth 10 numbers -> default "no tenth item" in
+let first_item = nth 0 numbers -> default "no items" in
+
+# ============================================================================
+# 4. JSON PARSING WITH OPTIONAL FIELDS
+# ============================================================================
+
+# Example: Create a config file with optional values
+let app_config = {
+  name: "MyApp",
+  version: "1.0.0"
+  # Note: optional fields like timeout, max_retries are missing
+} in
+
+let app_name = get app_config "name" -> default "DefaultApp" in
+let timeout_opt = get app_config "timeout" -> default 30 in
+let max_retries = get app_config "max_retries" -> default 3 in
+let debug_opt = get app_config "debug" -> default false in
+
+# ============================================================================
+# 5. MULTI-LEVEL DEFAULTS
+# ============================================================================
+
+# When working with nested structures
+let db_config = {
+  host: "db.example.com",
+  port: 5432
+  # password and username are optional
+} in
+
+let username = get db_config "username" -> default "postgres" in
+let password = get db_config "password" -> default "changeme" in
+let pool_size = get db_config "pool_size" -> default 10 in
+
+# ============================================================================
+# 6. DEFAULTS WITH LIST FILTERING
+# ============================================================================
+
+let items = [10, 20, 30, 40, 50] in
+
+# Filter returns a new list (may be empty)
+let large_items = filter (\x x > 30) items in
+let first_large_item = head large_items -> default 0 in
+
+# Another example
+let small_items = filter (\x x < 5) items in
+let first_small_item = head small_items -> default "no small items found" in
+
+# ============================================================================
+# 7. IMPORTANT GOTCHA: FALSE AND ZERO ARE NOT NONE
+# ============================================================================
+
+# These do NOT use the default because false/0 are valid values
+let false_value = false -> default true in  # Returns false
+let zero_value = 0 -> default 10 in         # Returns 0
+let empty_string = "" -> default "empty" in # Returns ""
+let none_value = none -> default "missing" in  # Returns "missing"
+
+# ============================================================================
+# 8. REALISTIC PATTERN: CONFIGURATION GENERATOR
+# ============================================================================
+
+# This pattern is common in real-world Avon programs:
+# 1. Load base defaults
+# 2. Load user config (may have missing keys)
+# 3. Use default for each optional key
+# 4. Generate output with final config
+
+let base_defaults = {
+  timeout: 30,
+  retries: 3,
+  debug: false,
+  port: 8080
+} in
+
+let user_config = {
+  port: 9090,
+  debug: true
+  # timeout and retries are missing - will use defaults
+} in
+
+# Merge and use defaults for missing keys
+let final_config = {
+  timeout: get user_config "timeout" -> default (get base_defaults "timeout"),
+  retries: get user_config "retries" -> default (get base_defaults "retries"),
+  debug: get user_config "debug" -> default (get base_defaults "debug"),
+  port: get user_config "port" -> default (get base_defaults "port")
+} in
+
+# ============================================================================
+# 9. GENERATE CONFIGURATION FILES WITH DEFAULTS
+# ============================================================================
+
+# Common scenario: generate multiple config files with optional overrides
+
+let services = ["api", "worker", "scheduler"] in
+
+let make_service_config = \service_name
+  let service_config = {
+    name: service_name
+    # port and replicas are optional - will use defaults
+  } in
+  
+  let port_val = get service_config "port" -> default 8000 in
+  let replicas = get service_config "replicas" -> default 1 in
+  let timeout_svc = get service_config "timeout" -> default 30 in
+  
+  @service-{service_name}.yml {"
+    name: {service_name}
+    port: {port_val}
+    replicas: {replicas}
+    timeout: {timeout_svc}
+  "} in
+
+map make_service_config services
+
+# ============================================================================
+# SUMMARY
+# ============================================================================
+#
+# The default function is useful for:
+# 1. Replacing None values with sensible defaults
+# 2. Eliminating verbose if-is_none checks
+# 3. Making configuration handling cleaner and more readable
+# 4. Working naturally with functions that return None (head, get, find, etc.)
+#
+# Key points:
+# - default only replaces None, not false/0/""
+# - Works in pipes: `value -> default fallback`
+# - Composable with other functions
+# - Makes optional configuration patterns clean and declarative
+#

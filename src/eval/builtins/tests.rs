@@ -35,6 +35,86 @@ fn test_aggregate_extended() {
 }
 
 #[test]
+fn test_default_function() {
+    // Test 1: None triggers default
+    match eval_prog("default \"fallback\" none") {
+        Value::String(s) => assert_eq!(s, "fallback"),
+        v => panic!("expected 'fallback', got {:?}", v),
+    }
+
+    // Test 2: Non-None value is returned as-is
+    match eval_prog("default \"fallback\" \"actual\"") {
+        Value::String(s) => assert_eq!(s, "actual"),
+        v => panic!("expected 'actual', got {:?}", v),
+    }
+
+    // Test 3: Works with numbers
+    match eval_prog("default 100 none") {
+        Value::Number(Number::Int(100)) => {}
+        v => panic!("expected 100, got {:?}", v),
+    }
+
+    match eval_prog("default 100 42") {
+        Value::Number(Number::Int(42)) => {}
+        v => panic!("expected 42, got {:?}", v),
+    }
+
+    // Test 4: false is NOT treated as None
+    match eval_prog("default true false") {
+        Value::Bool(false) => {}
+        v => panic!("expected false, got {:?}", v),
+    }
+
+    // Test 5: 0 is NOT treated as None
+    match eval_prog("default 999 0") {
+        Value::Number(Number::Int(0)) => {}
+        v => panic!("expected 0, got {:?}", v),
+    }
+
+    // Test 6: Empty string is NOT treated as None
+    match eval_prog("default \"fallback\" \"\"") {
+        Value::String(s) => assert_eq!(s, ""),
+        v => panic!("expected empty string, got {:?}", v),
+    }
+
+    // Test 7: Works with head (returns None on empty list)
+    match eval_prog("head [] -> default \"empty\"") {
+        Value::String(s) => assert_eq!(s, "empty"),
+        v => panic!("expected 'empty', got {:?}", v),
+    }
+
+    // Test 8: Works with get (returns None on missing key)
+    match eval_prog("get {a: 1} \"b\" -> default 0") {
+        Value::Number(Number::Int(0)) => {}
+        v => panic!("expected 0, got {:?}", v),
+    }
+
+    // Test 9: Works with find (returns None when no match)
+    match eval_prog("find (\\x x > 100) [1, 2, 3] -> default 999") {
+        Value::Number(Number::Int(999)) => {}
+        v => panic!("expected 999, got {:?}", v),
+    }
+
+    // Test 10: Multi-level chaining
+    match eval_prog("head [] -> default (last [] -> default \"final\")") {
+        Value::String(s) => assert_eq!(s, "final"),
+        v => panic!("expected 'final', got {:?}", v),
+    }
+
+    // Test 11: Works with lists
+    match eval_prog("default [1, 2] none") {
+        Value::List(l) => assert_eq!(l.len(), 2),
+        v => panic!("expected list, got {:?}", v),
+    }
+
+    // Test 12: Works with dicts
+    match eval_prog("default {x: 0} none") {
+        Value::Dict(d) => assert_eq!(d.len(), 1),
+        v => panic!("expected dict, got {:?}", v),
+    }
+}
+
+#[test]
 fn test_list_extended() {
     // windows
     match eval_prog("windows 2 [1, 2, 3]") {

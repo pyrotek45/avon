@@ -1,0 +1,196 @@
+# Cross-Format Conversion Demo
+# Shows how to convert the SAME data between every format pair.
+# Avon values are the universal intermediate representation:
+#   parse any format → Avon Dict/List → format as any other format.
+
+# ─────────────────────────────────────────────
+# 1. Config data → JSON / YAML / TOML
+# ─────────────────────────────────────────────
+
+let server_config = {
+  server: {
+    host: "0.0.0.0",
+    port: 3000,
+    workers: 4
+  },
+  logging: {
+    level: "info",
+    file: "/var/log/app.log"
+  }
+} in
+
+let cfg_json = format_json server_config in
+let cfg_yaml = format_yaml server_config in
+let cfg_toml = format_toml server_config in
+
+# ─────────────────────────────────────────────
+# 2. Tabular data → CSV / JSON / YAML
+# ─────────────────────────────────────────────
+
+let employees = [
+  {name: "Alice", department: "Engineering", salary: "95000"},
+  {name: "Bob", department: "Marketing", salary: "72000"},
+  {name: "Charlie", department: "Engineering", salary: "88000"},
+  {name: "Diana", department: "Design", salary: "81000"}
+] in
+
+let emp_csv  = format_csv  employees in
+let emp_json = format_json employees in
+let emp_yaml = format_yaml employees in
+
+# ─────────────────────────────────────────────
+# 3. XML document → XML / JSON
+# ─────────────────────────────────────────────
+
+let menu = {
+  tag: "menu",
+  attrs: {restaurant: "Chez Avon"},
+  children: [
+    {tag: "item", attrs: {price: "12.99"}, text: "Pasta Carbonara"},
+    {tag: "item", attrs: {price: "9.50"}, text: "Caesar Salad"},
+    {tag: "item", attrs: {price: "15.00", special: "true"}, text: "Grilled Salmon"}
+  ]
+} in
+
+let menu_xml  = format_xml  menu in
+let menu_json = format_json menu in
+
+# ─────────────────────────────────────────────
+# 4. OPML outline → OPML / JSON
+# ─────────────────────────────────────────────
+
+let podcasts = {
+  version: "2.0",
+  head: {
+    title: "My Podcast Subscriptions",
+    dateCreated: "2026-02-15"
+  },
+  outlines: [
+    {text: "Technology", children: [
+      {text: "Changelog", type: "rss", xmlUrl: "https://changelog.com/podcast/feed"},
+      {text: "Rustacean Station", type: "rss", xmlUrl: "https://rustacean-station.org/feed"}
+    ]},
+    {text: "Science", children: [
+      {text: "Radiolab", type: "rss", xmlUrl: "https://radiolab.org/feed"},
+      {text: "Nature Podcast", type: "rss", xmlUrl: "https://nature.com/feed"}
+    ]}
+  ]
+} in
+
+let pod_opml = format_opml podcasts in
+let pod_json = format_json podcasts in
+
+# ─────────────────────────────────────────────
+# 5. INI config → INI / JSON
+# ─────────────────────────────────────────────
+
+let db_config = {
+  global: {app_name: "myservice"},
+  database: {host: "db.example.com", port: "5432", name: "production"},
+  cache: {driver: "redis", host: "cache.example.com", ttl: "3600"}
+} in
+
+let db_ini  = format_ini  db_config in
+let db_json = format_json db_config in
+
+# ─────────────────────────────────────────────
+# 6. HTML document → HTML / JSON
+# ─────────────────────────────────────────────
+
+let nav_bar = {
+  tag: "nav",
+  attrs: {class: "main-nav"},
+  children: [
+    {tag: "a", attrs: {href: "/"}, children: [], text: "Home"},
+    {tag: "a", attrs: {href: "/about"}, children: [], text: "About"},
+    {tag: "a", attrs: {href: "/contact"}, children: [], text: "Contact"}
+  ],
+  text: ""
+} in
+
+let nav_html = format_html nav_bar in
+let nav_json = format_json nav_bar in
+
+# ─────────────────────────────────────────────
+# 7. Transform during conversion
+# ─────────────────────────────────────────────
+
+# Filter employees to Engineering, output as YAML
+let eng_only = filter (\e e.department == "Engineering") employees in
+let eng_yaml = format_yaml eng_only in
+
+# Extract feed URLs from OPML data into a flat list, output as JSON
+let all_feeds = flatmap (\cat
+  map (\feed {category: cat.text, name: feed.text, url: feed.xmlUrl}) cat.children
+) podcasts.outlines in
+let feeds_json = format_json all_feeds in
+let feeds_csv  = format_csv  all_feeds in
+
+# ─────────────────────────────────────────────
+# Display everything
+# ─────────────────────────────────────────────
+
+{"════════════════════════════════════════════
+  Cross-Format Conversion Demo
+════════════════════════════════════════════
+
+── 1. Config Data ──────────────────────────
+
+JSON:
+{cfg_json}
+
+YAML:
+{cfg_yaml}
+TOML:
+{cfg_toml}
+
+── 2. Tabular Data ─────────────────────────
+
+CSV:
+{emp_csv}
+JSON:
+{emp_json}
+
+YAML:
+{emp_yaml}
+
+── 3. XML ↔ JSON ───────────────────────────
+
+XML:
+{menu_xml}
+
+JSON:
+{menu_json}
+
+── 4. OPML ↔ JSON ──────────────────────────
+
+OPML:
+{pod_opml}
+
+JSON:
+{pod_json}
+
+── 5. INI ↔ JSON ───────────────────────────
+
+INI:
+{db_ini}
+JSON:
+{db_json}
+
+── 6. HTML ↔ JSON ──────────────────────────
+
+HTML:
+{nav_html}
+
+JSON:
+{nav_json}
+
+── 7. Transform + Convert ─────────────────
+
+Engineering employees only (YAML):
+{eng_yaml}
+All podcast feeds flattened (JSON):
+{feeds_json}
+
+All podcast feeds flattened (CSV):
+{feeds_csv}"}

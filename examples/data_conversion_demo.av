@@ -1,0 +1,104 @@
+# Data Format Conversion Demo
+# Avon supports 8 data formats with paired parsers and formatters.
+# This demo shows how to convert between JSON, YAML, TOML, CSV, XML, OPML, INI, and HTML.
+
+# ─────────────────────────────────────────────
+# 1. Build data as an Avon Dict
+# ─────────────────────────────────────────────
+
+let app_config = {
+  name: "my-web-app",
+  version: "2.1.0",
+  port: 8080,
+  debug: false,
+  database: {
+    host: "localhost",
+    port: 5432,
+    name: "appdb"
+  }
+} in
+
+# ─────────────────────────────────────────────
+# 2. Format the SAME data as every format
+# ─────────────────────────────────────────────
+
+let as_json = format_json app_config in
+let as_yaml = format_yaml app_config in
+let as_toml = format_toml app_config in
+
+# XML needs {tag, children/text/attrs} structure
+let as_xml = format_xml {
+  tag: "config",
+  children: [
+    {tag: "name", text: "my-web-app"},
+    {tag: "version", text: "2.1.0"},
+    {tag: "port", text: "8080"},
+    {tag: "debug", text: "false"},
+    {tag: "database", attrs: {host: "localhost", port: "5432", name: "appdb"}}
+  ]
+} in
+
+# CSV works best with tabular (list-of-dicts) data
+let users = [
+  {name: "Alice", role: "admin", active: "true"},
+  {name: "Bob", role: "user", active: "true"},
+  {name: "Charlie", role: "user", active: "false"}
+] in
+let as_csv = format_csv users in
+
+# OPML for hierarchical outlines
+let as_opml = format_opml {
+  version: "2.0",
+  head: {title: "App Config Feeds"},
+  outlines: [
+    {text: "Backends", children: [
+      {text: "API Server", type: "rss", xmlUrl: "https://api.example.com/rss"},
+      {text: "Worker", type: "rss", xmlUrl: "https://worker.example.com/rss"}
+    ]},
+    {text: "Frontends", children: [
+      {text: "Dashboard", type: "rss", xmlUrl: "https://dash.example.com/rss"}
+    ]}
+  ]
+} in
+
+# INI for section-based config files
+let as_ini = format_ini {
+  global: {version: "2.1.0"},
+  database: {host: "localhost", port: "5432", name: "appdb"},
+  server: {port: "8080", debug: "false"}
+} in
+
+# HTML uses the same {tag, attrs, children, text} structure as XML
+let as_html = format_html {
+  tag: "div",
+  attrs: {class: "config"},
+  children: [
+    {tag: "h1", attrs: {}, children: [], text: "my-web-app"},
+    {tag: "p", attrs: {}, children: [], text: "Version 2.1.0"},
+    {tag: "p", attrs: {}, children: [], text: "Port: 8080"}
+  ],
+  text: ""
+} in
+
+# ─────────────────────────────────────────────
+# 3. Display all formats
+# ─────────────────────────────────────────────
+
+{"=== JSON ===
+{as_json}
+
+=== YAML ===
+{as_yaml}
+=== TOML ===
+{as_toml}
+=== XML ===
+{as_xml}
+
+=== CSV ===
+{as_csv}
+=== OPML ===
+{as_opml}
+=== INI ===
+{as_ini}
+=== HTML ===
+{as_html}"}

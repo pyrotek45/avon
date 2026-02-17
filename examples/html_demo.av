@@ -1,0 +1,71 @@
+# HTML Format Demo
+# Demonstrates format_html for generating HTML from Avon Dict structures.
+# HTML uses the same {tag, attrs, children, text} Dict structure as XML.
+
+# ─────────────────────────────────────────────
+# 1. Build HTML from a Dict
+# ─────────────────────────────────────────────
+
+let page = {
+  tag: "html",
+  attrs: {},
+  children: [
+    {tag: "head", attrs: {}, children: [
+      {tag: "title", attrs: {}, children: [], text: "My Page"}
+    ], text: ""},
+    {tag: "body", attrs: {}, children: [
+      {tag: "h1", attrs: {class: "title"}, children: [], text: "Welcome"},
+      {tag: "p", attrs: {id: "intro"}, children: [], text: "This is an Avon-generated page."},
+      {tag: "br", attrs: {}, children: [], text: ""},
+      {tag: "img", attrs: {src: "logo.png", alt: "Logo"}, children: [], text: ""},
+      {tag: "ul", attrs: {}, children: [
+        {tag: "li", attrs: {}, children: [], text: "Item 1"},
+        {tag: "li", attrs: {}, children: [], text: "Item 2"},
+        {tag: "li", attrs: {}, children: [], text: "Item 3"}
+      ], text: ""}
+    ], text: ""}
+  ],
+  text: ""
+} in
+
+let html_output = format_html page in
+
+# ─────────────────────────────────────────────
+# 2. HTML → JSON (cross-format conversion)
+# ─────────────────────────────────────────────
+
+let as_json = format_json page in
+
+# ─────────────────────────────────────────────
+# 3. HTML → XML (markup family conversion)
+# ─────────────────────────────────────────────
+
+# HTML and XML share the same Dict structure,
+# so you can format HTML data as XML directly.
+let as_xml = format_xml page in
+
+# ─────────────────────────────────────────────
+# 4. Work with HTML data using standard builtins
+# ─────────────────────────────────────────────
+
+let tag_name = page.tag in
+let body = nth 1 page.children in
+let body_children = body.children in
+let child_count = length body_children in
+
+# ─────────────────────────────────────────────
+# Display
+# ─────────────────────────────────────────────
+
+{"═══ HTML Demo ═══
+
+── Generated HTML ──
+{html_output}
+── As JSON ──
+{as_json}
+
+── As XML ──
+{as_xml}
+
+── Root tag: {tag_name}
+── Body children: {to_string child_count}"}

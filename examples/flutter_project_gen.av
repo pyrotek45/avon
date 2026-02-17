@@ -1,0 +1,618 @@
+# Flutter/Dart Project Structure Generator
+# Demonstrates: parameterized project generation, conditionals, map, list interpolation, multi-file deploy
+# Usage: avon deploy examples/flutter_project_gen.av --root ./my_app --force
+# Custom: avon deploy examples/flutter_project_gen.av --root ./cool_app --force -app_name cool_app -use_riverpod false
+
+\app_name ? "my_app"
+\org ? "com.example"
+\description ? "A new Flutter project"
+\use_riverpod ? "true"
+\use_go_router ? "true"
+\use_dio ? "true"
+
+let riverpod = use_riverpod == "true" in
+let gorouter = use_go_router == "true" in
+let dio = use_dio == "true" in
+
+# ─── Dependencies ──────────────────────────────────────────
+
+let core_deps = [
+    "  cupertino_icons: ^1.0.8",
+    "  google_fonts: ^6.2.1",
+    "  flutter_svg: ^2.0.10"
+] in
+
+let state_deps = if riverpod then [
+    "  flutter_riverpod: ^2.5.1",
+    "  riverpod_annotation: ^2.3.5"
+] else [] in
+
+let router_deps = if gorouter then [
+    "  go_router: ^14.2.0"
+] else [] in
+
+let http_deps = if dio then [
+    "  dio: ^5.5.0"
+] else [] in
+
+let all_deps = core_deps + state_deps + router_deps + http_deps in
+
+let dev_deps = [
+    "  flutter_test:",
+    "    sdk: flutter",
+    "  flutter_lints: ^4.0.0"
+] + (if riverpod then [
+    "  riverpod_generator: ^2.4.0",
+    "  build_runner: ^2.4.11"
+] else []) in
+
+# ─── pubspec.yaml (no Dart braces, use single-brace template) ───
+
+let pubspec = @pubspec.yaml {"
+    name: {app_name}
+    description: {description}
+    publish_to: 'none'
+    version: 1.0.0+1
+
+    environment:
+      sdk: ^3.5.0
+      flutter: '>=3.24.0'
+
+    dependencies:
+      flutter:
+        sdk: flutter
+    {all_deps}
+
+    dev_dependencies:
+    {dev_deps}
+
+    flutter:
+      uses-material-design: true
+      assets:
+        - assets/images/
+        - assets/icons/
+"} in
+
+# ─── analysis_options.yaml ─────────────────────────────────
+
+let analysis_options = @analysis_options.yaml {"
+    include: package:flutter_lints/flutter.yaml
+
+    linter:
+      rules:
+        prefer_const_constructors: true
+        prefer_const_declarations: true
+        avoid_print: true
+        prefer_single_quotes: true
+        sort_constructors_first: true
+        unawaited_futures: true
+"} in
+
+# ─── main.dart (Dart braces → use double-brace template) ──
+
+let main_dart = @lib/main.dart {{"
+    import 'package:flutter/material.dart';
+    {{if riverpod then "import 'package:flutter_riverpod/flutter_riverpod.dart';" else ""}}
+    {{if gorouter then concat "import 'package:" (concat app_name "/router/app_router.dart';") else ""}}
+    import 'package:{{app_name}}/app.dart';
+
+    void main() {
+      WidgetsFlutterBinding.ensureInitialized();
+      runApp(
+        {{if riverpod then "const ProviderScope(child: App())," else "const App(),"}}
+      );
+    }
+"}} in
+
+# ─── app.dart ──────────────────────────────────────────────
+
+let app_dart = @lib/app.dart {{"
+    import 'package:flutter/material.dart';
+    import 'package:google_fonts/google_fonts.dart';
+    {{if gorouter then concat "import 'package:" (concat app_name "/router/app_router.dart';") else concat "import 'package:" (concat app_name "/screens/home_screen.dart';")}}
+    {{if riverpod then "import 'package:flutter_riverpod/flutter_riverpod.dart';" else ""}}
+
+    class App extends {{if riverpod then "ConsumerWidget" else "StatelessWidget"}} {
+      const App({super.key});
+
+      @override
+      Widget build(BuildContext context{{if riverpod then ", WidgetRef ref" else ""}}) {
+        {{if gorouter then "final router = AppRouter.router;" else ""}}
+
+        return MaterialApp{{if gorouter then ".router" else ""}}(
+          title: '{{description}}',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+            useMaterial3: true,
+            textTheme: GoogleFonts.interTextTheme(),
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.deepPurple,
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+            textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+          ),
+          {{if gorouter then "routerConfig: router," else "home: const HomeScreen(),"}}
+        );
+      }
+    }
+"}} in
+
+# ─── Router ────────────────────────────────────────────────
+
+let router_file = if gorouter then [
+    @lib/router/app_router.dart {{"
+        import 'package:go_router/go_router.dart';
+        import 'package:{{app_name}}/screens/home_screen.dart';
+        import 'package:{{app_name}}/screens/settings_screen.dart';
+
+        class AppRouter {
+          static final router = GoRouter(
+            initialLocation: '/',
+            routes: [
+              GoRoute(
+                path: '/',
+                name: 'home',
+                builder: (context, state) => const HomeScreen(),
+              ),
+              GoRoute(
+                path: '/settings',
+                name: 'settings',
+                builder: (context, state) => const SettingsScreen(),
+              ),
+            ],
+          );
+        }
+    "}}
+] else [] in
+
+# ─── Screens ───────────────────────────────────────────────
+
+let home_screen = @lib/screens/home_screen.dart {{"
+    import 'package:flutter/material.dart';
+    {{if riverpod then "import 'package:flutter_riverpod/flutter_riverpod.dart';" else ""}}
+    {{if gorouter then "import 'package:go_router/go_router.dart';" else ""}}
+
+    class HomeScreen extends {{if riverpod then "ConsumerWidget" else "StatelessWidget"}} {
+      const HomeScreen({super.key});
+
+      @override
+      Widget build(BuildContext context{{if riverpod then ", WidgetRef ref" else ""}}) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('{{app_name}}'),
+            actions: [
+              {{if gorouter then "IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () => context.pushNamed('settings'),
+              )," else ""}}
+            ],
+          ),
+          body: const Center(
+            child: Text('Welcome to {{app_name}}!'),
+          ),
+        );
+      }
+    }
+"}} in
+
+let settings_screen = @lib/screens/settings_screen.dart {{"
+    import 'package:flutter/material.dart';
+    {{if riverpod then "import 'package:flutter_riverpod/flutter_riverpod.dart';" else ""}}
+
+    class SettingsScreen extends {{if riverpod then "ConsumerWidget" else "StatelessWidget"}} {
+      const SettingsScreen({super.key});
+
+      @override
+      Widget build(BuildContext context{{if riverpod then ", WidgetRef ref" else ""}}) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Settings')),
+          body: ListView(
+            children: const [
+              ListTile(
+                leading: Icon(Icons.dark_mode),
+                title: Text('Theme'),
+                subtitle: Text('Light / Dark / System'),
+              ),
+              ListTile(
+                leading: Icon(Icons.language),
+                title: Text('Language'),
+                subtitle: Text('English'),
+              ),
+              ListTile(
+                leading: Icon(Icons.info_outline),
+                title: Text('About'),
+                subtitle: Text('Version 1.0.0'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+"}} in
+
+# ─── Models ────────────────────────────────────────────────
+
+let user_model = @lib/models/user.dart {{"
+    class User {
+      final String id;
+      final String name;
+      final String email;
+      final String? avatarUrl;
+
+      const User({
+        required this.id,
+        required this.name,
+        required this.email,
+        this.avatarUrl,
+      });
+
+      factory User.fromJson(Map<String, dynamic> json) {
+        return User(
+          id: json['id'] as String,
+          name: json['name'] as String,
+          email: json['email'] as String,
+          avatarUrl: json['avatarUrl'] as String?,
+        );
+      }
+
+      Map<String, dynamic> toJson() {
+        return {
+          'id': id,
+          'name': name,
+          'email': email,
+          'avatarUrl': avatarUrl,
+        };
+      }
+    }
+"}} in
+
+# ─── Services / API ───────────────────────────────────────
+
+let api_service = if dio then [
+    @lib/services/api_service.dart {{"
+        import 'package:dio/dio.dart';
+
+        class ApiService {
+          static const String baseUrl = 'https://api.example.com';
+
+          late final Dio _dio;
+
+          ApiService() {
+            _dio = Dio(
+              BaseOptions(
+                baseUrl: baseUrl,
+                connectTimeout: const Duration(seconds: 10),
+                receiveTimeout: const Duration(seconds: 10),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                },
+              ),
+            );
+
+            _dio.interceptors.add(LogInterceptor(
+              requestBody: true,
+              responseBody: true,
+            ));
+          }
+
+          Future<Response> get(String path) async {
+            return _dio.get(path);
+          }
+
+          Future<Response> post(String path, {dynamic data}) async {
+            return _dio.post(path, data: data);
+          }
+
+          Future<Response> put(String path, {dynamic data}) async {
+            return _dio.put(path, data: data);
+          }
+
+          Future<Response> delete(String path) async {
+            return _dio.delete(path);
+          }
+        }
+    "}}
+] else [] in
+
+# ─── Theme ─────────────────────────────────────────────────
+
+let app_theme = @lib/theme/app_theme.dart {{"
+    import 'package:flutter/material.dart';
+    import 'package:google_fonts/google_fonts.dart';
+
+    class AppTheme {
+      static const _seedColor = Colors.deepPurple;
+
+      static ThemeData light() {
+        final colorScheme = ColorScheme.fromSeed(seedColor: _seedColor);
+        return ThemeData(
+          colorScheme: colorScheme,
+          useMaterial3: true,
+          textTheme: GoogleFonts.interTextTheme(),
+          appBarTheme: AppBarTheme(
+            centerTitle: true,
+            backgroundColor: colorScheme.surface,
+            foregroundColor: colorScheme.onSurface,
+          ),
+          cardTheme: CardTheme(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: colorScheme.outlineVariant),
+            ),
+          ),
+        );
+      }
+
+      static ThemeData dark() {
+        final colorScheme = ColorScheme.fromSeed(
+          seedColor: _seedColor,
+          brightness: Brightness.dark,
+        );
+        return ThemeData(
+          colorScheme: colorScheme,
+          useMaterial3: true,
+          textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+          appBarTheme: AppBarTheme(
+            centerTitle: true,
+            backgroundColor: colorScheme.surface,
+            foregroundColor: colorScheme.onSurface,
+          ),
+          cardTheme: CardTheme(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: colorScheme.outlineVariant),
+            ),
+          ),
+        );
+      }
+    }
+"}} in
+
+# ─── Widgets ───────────────────────────────────────────────
+
+let loading_widget = @lib/widgets/loading_indicator.dart {{"
+    import 'package:flutter/material.dart';
+
+    class LoadingIndicator extends StatelessWidget {
+      final String? message;
+
+      const LoadingIndicator({super.key, this.message});
+
+      @override
+      Widget build(BuildContext context) {
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              if (message != null) ...[
+                const SizedBox(height: 16),
+                Text(
+                  message!,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ],
+          ),
+        );
+      }
+    }
+"}} in
+
+let error_widget_file = @lib/widgets/error_view.dart {{"
+    import 'package:flutter/material.dart';
+
+    class ErrorView extends StatelessWidget {
+      final String message;
+      final VoidCallback? onRetry;
+
+      const ErrorView({
+        super.key,
+        required this.message,
+        this.onRetry,
+      });
+
+      @override
+      Widget build(BuildContext context) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                if (onRetry != null) ...[
+                  const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      }
+    }
+"}} in
+
+# ─── Constants ─────────────────────────────────────────────
+
+let constants = @lib/utils/constants.dart {{"
+    class AppConstants {
+      static const String appName = '{{app_name}}';
+      static const String appVersion = '1.0.0';
+
+      // API
+      static const String apiBaseUrl = 'https://api.example.com';
+      static const Duration apiTimeout = Duration(seconds: 10);
+
+      // Storage keys
+      static const String themeKey = 'theme_mode';
+      static const String tokenKey = 'auth_token';
+      static const String localeKey = 'locale';
+
+      // Sizing
+      static const double paddingSmall = 8.0;
+      static const double paddingMedium = 16.0;
+      static const double paddingLarge = 24.0;
+      static const double borderRadius = 12.0;
+    }
+"}} in
+
+# ─── Widget test ───────────────────────────────────────────
+
+let widget_test = @test/widget_test.dart {{"
+    import 'package:flutter/material.dart';
+    import 'package:flutter_test/flutter_test.dart';
+    import 'package:{{app_name}}/app.dart';
+
+    void main() {
+      testWidgets('App renders correctly', (WidgetTester tester) async {
+        await tester.pumpWidget(const App());
+        expect(find.byType(MaterialApp), findsOneWidget);
+      });
+    }
+"}} in
+
+# ─── .gitignore ────────────────────────────────────────────
+
+let gitignore = @.gitignore {"
+    # Flutter/Dart
+    .dart_tool/
+    .packages
+    build/
+    .flutter-plugins
+    .flutter-plugins-dependencies
+
+    # IDE
+    .idea/
+    .vscode/
+    *.iml
+    *.swp
+
+    # macOS
+    .DS_Store
+    macos/Flutter/GeneratedPluginRegistrant.swift
+
+    # Android
+    **/android/**/gradle-wrapper.jar
+    **/android/.gradle
+    **/android/captures/
+    **/android/gradlew
+    **/android/gradlew.bat
+    **/android/local.properties
+    **/android/**/GeneratedPluginRegistrant.java
+
+    # iOS
+    **/ios/**/*.mode1v3
+    **/ios/**/*.mode2v3
+    **/ios/**/*.moved-aside
+    **/ios/**/*.pbxuser
+    **/ios/**/*.perspectivev3
+    **/ios/**/DerivedData/
+    **/ios/**/Flutter/App.framework
+    **/ios/**/Flutter/Flutter.framework
+    **/ios/**/Flutter/Flutter.podspec
+    **/ios/**/Flutter/Generated.xcconfig
+    **/ios/**/Flutter/ephemeral
+    **/ios/**/Pods/
+
+    # Coverage
+    coverage/
+
+    # Generated
+    *.g.dart
+    *.freezed.dart
+"} in
+
+# ─── README ────────────────────────────────────────────────
+
+let readme = @README.md {"
+    # {app_name}
+
+    {description}
+
+    ## Getting Started
+
+    ```bash
+    flutter pub get
+    {if riverpod then "dart run build_runner build" else ""}
+    flutter run
+    ```
+
+    ## Project Structure
+
+    ```
+    lib/
+    ├── main.dart              # Entry point
+    ├── app.dart               # MaterialApp configuration
+    {if gorouter then "├── router/                # Route definitions" else ""}
+    ├── screens/               # Full-page screens
+    ├── widgets/               # Reusable widgets
+    ├── models/                # Data models
+    {if dio then "├── services/              # API and business logic" else ""}
+    ├── theme/                 # App theming
+    └── utils/                 # Constants and helpers
+    ```
+
+    ## Features
+
+    - Material Design 3
+    - Light and dark theme support
+    - Google Fonts integration
+    {if riverpod then "- Riverpod state management" else ""}
+    {if gorouter then "- GoRouter navigation" else ""}
+    {if dio then "- Dio HTTP client with interceptors" else ""}
+
+    ## Generated with [Avon](https://github.com/pyrotek45/avon)
+"} in
+
+# ─── Asset placeholders ───────────────────────────────────
+
+let asset_readme = @assets/README.md {"
+    # Assets
+
+    Place your app assets here:
+
+    - `images/` — PNG, JPG, SVG images
+    - `icons/` — App icons and SVG icons
+"} in
+
+# ─── Collect all files ─────────────────────────────────────
+
+[
+    pubspec,
+    analysis_options,
+    main_dart,
+    app_dart,
+    home_screen,
+    settings_screen,
+    user_model,
+    app_theme,
+    loading_widget,
+    error_widget_file,
+    constants,
+    widget_test,
+    gitignore,
+    readme,
+    asset_readme
+] + router_file + api_service

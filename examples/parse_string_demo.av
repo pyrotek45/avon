@@ -1,0 +1,90 @@
+# Parse String Demo
+# Each parser has a companion *_parse_string function for parsing raw strings.
+# Use json_parse for files, json_parse_string for strings. Same for all 8 formats.
+
+# ─────────────────────────────────────────────
+# 1. JSON from a string
+# ─────────────────────────────────────────────
+
+let user = json_parse_string "{\"name\": \"Alice\", \"age\": 30, \"active\": true}" in
+
+# ─────────────────────────────────────────────
+# 2. YAML from a string
+# ─────────────────────────────────────────────
+
+let config = yaml_parse_string "host: localhost\nport: 8080\ndebug: true" in
+
+# ─────────────────────────────────────────────
+# 3. TOML from a string
+# ─────────────────────────────────────────────
+
+let settings = toml_parse_string "[database]\nhost = \"localhost\"\nport = 5432" in
+
+# ─────────────────────────────────────────────
+# 4. CSV from a string
+# ─────────────────────────────────────────────
+
+let employees = csv_parse_string "name,role,salary\nAlice,Engineer,95000\nBob,Designer,85000" in
+
+# ─────────────────────────────────────────────
+# 5. XML from a string
+# ─────────────────────────────────────────────
+
+let menu = xml_parse_string "<menu><item name=\"Save\" key=\"Ctrl+S\"/><item name=\"Quit\" key=\"Ctrl+Q\"/></menu>" in
+
+# ─────────────────────────────────────────────
+# 6. HTML from a string
+# ─────────────────────────────────────────────
+
+let page = html_parse_string "<div class=\"card\"><h2>Title</h2><p>Content here</p></div>" in
+
+# ─────────────────────────────────────────────
+# 7. INI from a string
+# ─────────────────────────────────────────────
+
+let ini_cfg = ini_parse_string "[server]\nhost=0.0.0.0\nport=3000\n[logging]\nlevel=info" in
+
+# ─────────────────────────────────────────────
+# 8. Cross-format: parse string → reformat
+# ─────────────────────────────────────────────
+
+let json_data = json_parse_string "{\"x\": 1, \"y\": 2}" in
+let as_yaml = format_yaml json_data in
+let as_toml = format_toml json_data in
+
+# ─────────────────────────────────────────────
+# Display
+# ─────────────────────────────────────────────
+
+{"═══ Parse String Demo ═══
+
+── JSON string → Dict ──
+  Name: {user.name}
+  Age: {to_string user.age}
+
+── YAML string → Dict ──
+  Host: {config.host}
+  Port: {to_string config.port}
+
+── TOML string → Dict ──
+  DB Host: {settings.database.host}
+  DB Port: {to_string settings.database.port}
+
+── CSV string → List ──
+  Employees: {format_json employees}
+
+── XML string → Dict ──
+  Menu tag: {menu.tag}
+  Items: {format_json menu.children}
+
+── HTML string → Dict ──
+  Root tag: {page.tag}
+
+── INI string → Dict ──
+  Server host: {ini_cfg.server.host}
+  Log level: {ini_cfg.logging.level}
+
+── Cross-format (JSON string → YAML) ──
+{as_yaml}
+── Cross-format (JSON string → TOML) ──
+{as_toml}"}

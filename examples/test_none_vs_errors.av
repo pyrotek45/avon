@@ -1,0 +1,12 @@
+# Test: Contrasting None Returns vs File Errors
+
+# ─────────────────────────────────────────────────────────────
+# Data Access: Returns None (graceful, no crash)
+# ─────────────────────────────────────────────────────────────
+
+let missing_data_result = find (\x x.id == 999) [{id: 1}, {id: 2}] in
+let result_with_default = if is_none missing_data_result then {id: 0, name: "not found"} else missing_data_result in
+
+{"Data Access Pattern (graceful):
+Result: {result_with_default}
+"}
