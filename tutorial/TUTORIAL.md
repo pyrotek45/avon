@@ -4,7 +4,9 @@ Welcome to Avon! A template language for people who have better things to do tha
 
 Avon is designed for developers who are tired of copy-pasting. Whether you're building Kubernetes manifests, setting up CI/CD pipelines, or generating boilerplate code, Avon turns repetitive tasks into elegant, maintainable code. Life's too short to manually update 47 YAML files.
 
-Avon is a general-purpose tool that handles everything from complex infrastructure projects to simple single-file configs. It's a workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 137 built-in utilities to any text format.
+Avon is a general-purpose tool that handles everything from complex infrastructure projects to simple single-file configs. It's a workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 194 built-in utilities to any text format.
+
+> **New to Avon?** Check out the [Getting Started Guide](./GETTING_STARTED.md) — a hands-on, step-by-step introduction with 15 progressive lessons. Come back here when you're ready for the full reference.
 
 > Tip: Throughout this guide, look at the `examples/` directory for real-world use cases. Each example demonstrates practical Avon patterns you can adapt for your own projects.
 
@@ -177,7 +179,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
       - `assert` (validate conditions)
       - `--debug` flag (detailed output)
 
-11. **[Best Practices](#best-practices)**
+12. **[Best Practices](#best-practices)**
     - Write Clear, Composable Code
     - Test Before Deploying
     - Use Named Arguments
@@ -185,14 +187,14 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Keep Templates Readable
     - Return Lists for Multiple Files
 
-12. **[Security Best Practices](#security-best-practices)**
+13. **[Security Best Practices](#security-best-practices)**
     - Input Validation & Sanitization
     - Template Safety Patterns
     - File Deployment Safety
     - Production Checklist
     - Path Security
 
-13. **[Real-World Examples](#real-world-examples)**
+14. **[Real-World Examples](#real-world-examples)**
     - Example 1: Site Generator
     - Example 2: Neovim Configuration
     - Example 3: Emacs Configuration
@@ -202,7 +204,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Example 7: Package.json Generator
     - Example 8: Multi-Brace Template Demo
 
-14. **[Troubleshooting](#troubleshooting)**
+15. **[Troubleshooting](#troubleshooting)**
     - Common Errors
       - "expected '\"' after opening braces"
       - "unexpected EOF"
@@ -213,7 +215,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
       - Interpolation not working
     - Debugging Tips
 
-15. **[Gotchas and Common Pitfalls](#gotchas-and-common-pitfalls)**
+16. **[Gotchas and Common Pitfalls](#gotchas-and-common-pitfalls)**
     - Function Parameters Are CLI Arguments
     - Variables Don't Shadow – They Nest
     - Functions with All Defaults Still Return Functions
@@ -231,7 +233,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - `zip` Truncates to Shorter List
     - And more...
 
-16. **[Tips and Tricks](#tips-and-tricks)**
+17. **[Tips and Tricks](#tips-and-tricks)**
     - Check List Membership with `any`
     - Safe Division with Default Value
     - Type Checking with `typeof` and `is_*`
@@ -239,7 +241,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Working with Characters in Strings
     - And more...
 
-17. **[Piping, Stdin, Stdout, and Embedding Avon](#piping-stdin-stdout-and-embedding-avon)**
+18. **[Piping, Stdin, Stdout, and Embedding Avon](#piping-stdin-stdout-and-embedding-avon)**
     - Piping Avon Source Code into the CLI
     - Piping Data into an Avon Program
     - Capturing Avon Output
@@ -249,7 +251,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Real-World Integration: File Collection Scripts
     - Summary: Stdin/Stdout Modes
 
-18. **[Next Steps](#next-steps)**
+19. **[Next Steps](#next-steps)**
 
 ---
 
@@ -363,7 +365,7 @@ let plugins = ["vim-fugitive", "vim-surround", "vim-commentary", "vim-repeat"] i
 
 When you interpolate a list in a template, each item appears on its own line. This eliminates copy-paste even in a single file.
 
-Language Agnostic: Avon works with any text format—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 137 built-in utilities to any file.
+Language Agnostic: Avon works with any text format—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 194 built-in utilities to any file.
 
 Runtime Type Safety: Avon won't deploy if there's a type error. No static types needed—if a type error occurs, deployment simply doesn't happen. Sleep soundly knowing your configs are valid. (Unlike that bash script you wrote at 2am.)
 
@@ -2320,8 +2322,6 @@ let y = "data" in {{{{{"Result: {{{{{y}}}}} and {{{{quad}}}} and {{{three}}}"}}}
 
 The rule remains consistent: **interpolation uses the same number of braces as the template delimiter**, and all lower brace counts are treated as literals.
 
-See `tutorial/TEMPLATE_SYNTAX.md` for comprehensive documentation of the template system.
-
 ### Complex Interpolations
 
 You can embed any expression in a template:
@@ -2465,7 +2465,7 @@ This generates `config-dev.yml` and `config-prod.yml`.
 
 ## Builtin Functions
 
-Avon comes with a toolkit of **137 built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
+Avon comes with a toolkit of **194 built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
 
 > **Quick Reference:** Use `avon doc` to look up any function instantly in your terminal. See [CLI Usage](#cli-usage) section for detailed documentation command examples.
 > 
@@ -2505,6 +2505,10 @@ avon doc dict      # All dictionary functions
 | `pad_left s width char` | `pad_left "7" 3 "0"` | `"007"` |
 | `pad_right s width char` | `pad_right "hi" 5 " "` | `"hi   "` |
 | `indent s spaces` | `indent "code" 4` | `"    code"` |
+| `base64_encode s` | `base64_encode "Hello"` | `"SGVsbG8="` |
+| `base64_decode s` | `base64_decode "SGVsbG8="` | `"Hello"` |
+| `hash_md5 s` | `hash_md5 "hello"` | `"5d41402a..."` |
+| `hash_sha256 s` | `hash_sha256 "hello"` | `"2cf24dba..."` |
 
 ### Aggregate Functions
 
@@ -3343,7 +3347,7 @@ avon repl
 
 **`doc` - Built-in Documentation:**
 
-The `doc` command is one of Avon's most powerful features for rapid learning. It provides comprehensive, searchable documentation for all 40+ built-in functions without leaving your terminal.
+The `doc` command is one of Avon's most powerful features for rapid learning. It provides comprehensive, searchable documentation for all 194 built-in functions without leaving your terminal.
 
 ```bash
 # Show all available documentation
@@ -5924,11 +5928,11 @@ in with_default 0 result  # => 0
 
 ### Tip: Check if Dict Has a Key
 
-Use `find` on `keys` to check for key existence:
+Use the built-in `has_key` function to check for key existence:
 
 ```avon
-let check = \key \dict (find (\k k == key) (keys dict)) != none
-in check "a" {a: 1, b: 2}  # => true
+has_key {a: 1, b: 2} "a"  # => true
+has_key {a: 1, b: 2} "c"  # => false
 ```
 
 ### Tip: Use `typeof` for Runtime Type Checking

@@ -23,7 +23,8 @@ Avon is designed to be powerful and flexible. I'm excited to see how you use it 
 
 | Resource | Description |
 |----------|-------------|
-| [**Tutorial**](./tutorial/TUTORIAL.md) | Complete guide from basics to advanced patterns. Start here for language essentials, templates, CLI usage, style guide, best practices, error handling, and debugging. |
+| [**Getting Started**](./tutorial/GETTING_STARTED.md) | New to Avon? Start here. A step-by-step guide with 15 hands-on lessons that build on each other. |
+| [**Tutorial**](./tutorial/TUTORIAL.md) | Complete guide from basics to advanced patterns. Covers language essentials, templates, CLI usage, style guide, best practices, error handling, and debugging. |
 | [**Function Reference**](./tutorial/BUILTIN_FUNCTIONS.md) | Reference for all built-in functions with signatures, descriptions, and examples organized by category. |
 | **Command Line** | Run `avon doc` for built-in help on any function |
 | **Examples** | See `examples/` directory for 90+ real-world examples |
@@ -93,7 +94,7 @@ Creates `./output/hello.txt` with the generated content.
 
 ## Built-in Documentation
 
-Avon includes comprehensive built-in documentation for all 137 functions. The `avon doc` command is one of its most powerful features, enabling developers to quickly learn the tool without leaving the terminal.
+Avon includes comprehensive built-in documentation for all 194 functions. The `avon doc` command is one of its most powerful features, enabling developers to quickly learn the tool without leaving the terminal.
 
 **Look up any function:**
 

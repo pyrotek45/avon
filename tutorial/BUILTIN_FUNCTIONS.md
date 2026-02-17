@@ -404,6 +404,10 @@ Functions for string manipulation.
 | `unwords` | `[String] -> String` | Joins words with a single space. |
 | `upper` | `String -> String` | Converts the string to uppercase. |
 | `words` | `String -> [String]` | Splits a string into words (by whitespace). |
+| `base64_encode` | `String -> String` | Encodes a string to Base64. |
+| `base64_decode` | `String -> String` | Decodes a Base64-encoded string. |
+| `hash_md5` | `String -> String` | Returns the MD5 hash of a string as a hex string. |
+| `hash_sha256` | `String -> String` | Returns the SHA-256 hash of a string as a hex string. |
 
 **Examples:**
 ```avon
@@ -422,6 +426,10 @@ char_at "hello" 1                           # "e"
 chars "abc"                                 # ["a", "b", "c"]
 repeat "ab" 3                               # "ababab"
 replace "hello world" "world" "Avon"        # "hello Avon"
+base64_encode "Hello, World!"               # "SGVsbG8sIFdvcmxkIQ=="
+base64_decode "SGVsbG8sIFdvcmxkIQ=="        # "Hello, World!"
+hash_md5 "hello"                            # "5d41402abc4b2a76b9719d911017c592"
+hash_sha256 "hello"                         # "2cf24dba5fb0a30e26e83b2ac5b9e29e..."
 ```
 
 ## Type Functions
