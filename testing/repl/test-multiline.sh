@@ -28,7 +28,7 @@ run_test() {
     
     if echo "$result" | grep -q "$expected_pattern"; then
         echo -e "${GREEN}✓${NC} $name"
-        ((PASSED++)))
+        ((PASSED++))
     else
         echo -e "${RED}✗${NC} $name"
         echo "  Input: $input"

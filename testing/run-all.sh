@@ -1,6 +1,19 @@
 #!/bin/bash
-# Unified test runner for the Avon project
-# This is the single entry point for all testing
+# ╔════════════════════════════════════════════════════════════════════╗
+# ║  AVON TEST SUITE — MAIN ENTRY POINT                              ║
+# ║                                                                    ║
+# ║  This is the single entry point for running all Avon tests.        ║
+# ║  It delegates to category-specific runner scripts:                 ║
+# ║                                                                    ║
+# ║    avon/run-avon-tests.sh        — Language & compiler tests       ║
+# ║    integration/run-integration-tests.sh — CLI, deploy, REPL       ║
+# ║    imports/run-import-tests.sh   — File import & I/O tests         ║
+# ║    lsp/run-lsp-tests.sh         — Language Server Protocol tests   ║
+# ║                                                                    ║
+# ║  Usage:                                                            ║
+# ║    bash testing/run-all.sh              # Full clean build + test  ║
+# ║    bash testing/run-all.sh --no-clean   # Skip rebuild             ║
+# ╚════════════════════════════════════════════════════════════════════╝
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TESTING_DIR="$PROJECT_ROOT/testing"

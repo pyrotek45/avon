@@ -1,10 +1,15 @@
 #!/bin/bash
-# Integration Tests Entry Point
-# Runs end-to-end integration tests combining multiple components
+# Integration Test Runner
+# Runs end-to-end integration tests: CLI, deploy, REPL, backup, examples.
+# Called by: testing/run-all.sh (main entry point)
 
 TESTING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_ROOT="$(cd "$TESTING_DIR/.." && pwd)"
-INTEGRATION_TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INTEGRATION_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPL_DIR="$TESTING_DIR/repl"
+
+# Source common utilities
+source "$TESTING_DIR/common.sh"
 
 # Colors
 GREEN='\033[0;32m'
@@ -41,30 +46,34 @@ run_test() {
     fi
 }
 
-print_section "Running Integration Tests"
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}  Integration Test Runner${NC}"
+echo -e "${BLUE}========================================${NC}"
 
-# 1. Full integration pipeline
-print_section "Full Integration Pipeline"
-run_test "Integration Tests" "$INTEGRATION_TEST_DIR/test_integration.sh"
+# ── CLI Integration ──────────────────────────────────────
+print_section "CLI Integration"
+run_test "CLI Integration"        "$INTEGRATION_DIR/test_cli_integration.sh"
 
-# 2. Example deployment tests
-print_section "Deployment Tests"
-run_test "Example Outputs" "$INTEGRATION_TEST_DIR/test_example_outputs.sh"
+# ── Example Outputs ──────────────────────────────────────
+print_section "Example Outputs"
+run_test "Example Outputs"        "$INTEGRATION_DIR/test_example_outputs.sh"
 
-# 3. Backup and recovery tests
-print_section "Backup & Recovery"
-run_test "Backup Tests" "$INTEGRATION_TEST_DIR/test_backup.sh"
+# ── Deploy & Backup ──────────────────────────────────────
+print_section "Deploy & Backup"
+run_test "Backup Tests"           "$INTEGRATION_DIR/test_backup.sh"
+run_test "Atomic Deployment"      "$INTEGRATION_DIR/test_atomic_deployment.sh"
+run_test "Bulletproof Tests"      "$INTEGRATION_DIR/test_bulletproof.sh"
 
-# 4. Atomic deployment
-print_section "Atomic Deployment"
-run_test "Atomic Deployment" "$INTEGRATION_TEST_DIR/test_atomic_deployment.sh"
+# ── REPL Tests ───────────────────────────────────────────
+print_section "REPL Tests"
+run_test "REPL Multiline"         "$REPL_DIR/test-multiline.sh"
+run_test "REPL Error History"     "$REPL_DIR/test-error-history.sh"
 
-# 5. Bulletproof tests
-print_section "Resilience Tests"
-run_test "Bulletproof Tests" "$INTEGRATION_TEST_DIR/test_bulletproof.sh"
-
-# Summary
-print_section "Integration Tests Summary"
+# ── Summary ──────────────────────────────────────────────
+echo ""
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}  Integration Tests Summary${NC}"
+echo -e "${BLUE}========================================${NC}"
 echo -e "${GREEN}Passed: $TESTS_PASSED${NC}"
 echo -e "${RED}Failed: $TESTS_FAILED${NC}"
 

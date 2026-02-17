@@ -1,10 +1,14 @@
 #!/bin/bash
-# Avon Language Tests Entry Point
-# Runs all tests for the Avon template language compiler
+# Avon Language Test Runner
+# Runs all test scripts for the Avon template language.
+# Called by: testing/run-all.sh (main entry point)
 
 TESTING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_ROOT="$(cd "$TESTING_DIR/.." && pwd)"
 AVON_TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source common utilities
+source "$TESTING_DIR/common.sh"
 
 # Colors
 GREEN='\033[0;32m'
@@ -41,58 +45,57 @@ run_test() {
     fi
 }
 
-print_section "Running Avon Language Tests"
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}  Avon Language Test Runner${NC}"
+echo -e "${BLUE}========================================${NC}"
 
-# 1. Cargo unit tests
-print_section "Unit Tests"
-cd "$PROJECT_ROOT"
-if cargo test --lib 2>&1 | tail -5; then
-    ((TESTS_PASSED++))
-    echo -e "${GREEN}✓ Unit Tests${NC}"
-else
-    ((TESTS_FAILED++))
-    FAILED_TESTS+=("Unit Tests")
-    echo -e "${RED}✗ Unit Tests${NC}"
-fi
+# ── Core Language Tests ──────────────────────────────────
+print_section "Core Language"
+run_test "Grammar"                "$AVON_TEST_DIR/test_grammar.sh"
+run_test "Template Syntax"        "$AVON_TEST_DIR/test_template_syntax.sh"
+run_test "Arithmetic & Overflow"  "$AVON_TEST_DIR/test_arithmetic.sh"
+run_test "Scoping Rules"          "$AVON_TEST_DIR/test_scoping_rules.sh"
+run_test "None Handling"          "$AVON_TEST_DIR/test_none_handling.sh"
+run_test "Claims"                 "$AVON_TEST_DIR/test_claims.sh"
 
-# 2. Integration tests
-print_section "Integration Tests"
-if cargo test --test '*' 2>&1 | tail -5; then
-    ((TESTS_PASSED++))
-    echo -e "${GREEN}✓ Integration Tests${NC}"
-else
-    ((TESTS_FAILED++))
-    FAILED_TESTS+=("Integration Tests")
-    echo -e "${RED}✗ Integration Tests${NC}"
-fi
+# ── Parser & Lexer ───────────────────────────────────────
+print_section "Parser & Lexer"
+run_test "Parser & Lexer"         "$AVON_TEST_DIR/test_parser_lexer.sh"
 
-# 3. Example validation
-print_section "Example Files Validation"
-run_test "Example Files" "$AVON_TEST_DIR/test_all_examples.sh"
+# ── Builtin Functions ────────────────────────────────────
+print_section "Builtin Functions"
+run_test "Builtin Functions"      "$AVON_TEST_DIR/test_builtin_functions.sh"
+run_test "Advanced Builtins"      "$AVON_TEST_DIR/test_advanced_builtins.sh"
+run_test "Extended Coverage"      "$AVON_TEST_DIR/test_extended_coverage.sh"
+run_test "Deep Coverage"          "$AVON_TEST_DIR/test_deep_coverage.sh"
 
-# 4. Language feature tests
-print_section "Language Features"
-run_test "Template Syntax" "$AVON_TEST_DIR/test_template_syntax.sh"
-run_test "Arithmetic & Overflow" "$AVON_TEST_DIR/test_arithmetic.sh"
-run_test "Path Handling" "$AVON_TEST_DIR/test_path_literal_block.sh"
-run_test "Grammar" "$AVON_TEST_DIR/test_grammar.sh"
-run_test "Tutorial Snippets" "$AVON_TEST_DIR/test_tutorial_snippets.sh"
+# ── Error Handling ───────────────────────────────────────
+print_section "Error Handling"
+run_test "Error Handling"         "$AVON_TEST_DIR/test_error_handling.sh"
 
-# 5. Security and sandboxing
-print_section "Security & Sandboxing"
-run_test "Path Traversal Protection" "$AVON_TEST_DIR/test_path_traversal.sh"
+# ── File Paths & Security ────────────────────────────────
+print_section "File Paths & Security"
+run_test "Path Literal Blocking"  "$AVON_TEST_DIR/test_path_literal_block.sh"
+run_test "Path Traversal"         "$AVON_TEST_DIR/test_path_traversal.sh"
 run_test "Security Comprehensive" "$AVON_TEST_DIR/test_security_comprehensive.sh"
+run_test "Root Relative Paths"    "$AVON_TEST_DIR/test_root_relative_paths.sh"
 
-# 6. Specific feature tests
-print_section "Feature Tests"
-run_test "None Handling" "$AVON_TEST_DIR/test_none_handling.sh"
-run_test "Scoping Rules" "$AVON_TEST_DIR/test_scoping_rules.sh"
-run_test "Claims" "$AVON_TEST_DIR/test_claims.sh"
-run_test "REPL" "$AVON_TEST_DIR/test_repl.sh"
-run_test "Parallel Functions" "$AVON_TEST_DIR/test_parallel_functions.sh"
+# ── Example Files ────────────────────────────────────────
+print_section "Example Validation"
+run_test "All Examples"           "$AVON_TEST_DIR/test_all_examples.sh"
+run_test "Tutorial Snippets"      "$AVON_TEST_DIR/test_tutorial_snippets.sh"
+run_test "Markdown"               "$AVON_TEST_DIR/test_markdown.sh"
 
-# Summary
-print_section "Avon Tests Summary"
+# ── REPL & Parallel ─────────────────────────────────────
+print_section "REPL & Parallel"
+run_test "REPL"                   "$AVON_TEST_DIR/test_repl.sh"
+run_test "Parallel Functions"     "$AVON_TEST_DIR/test_parallel_functions.sh"
+
+# ── Summary ──────────────────────────────────────────────
+echo ""
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}  Avon Language Tests Summary${NC}"
+echo -e "${BLUE}========================================${NC}"
 echo -e "${GREEN}Passed: $TESTS_PASSED${NC}"
 echo -e "${RED}Failed: $TESTS_FAILED${NC}"
 
