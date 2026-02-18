@@ -1,0 +1,9 @@
+let nix = \cmd "nix-shell --run '" + cmd + "'" in
+
+{
+  fmt: nix "cargo fmt",
+  lint: nix "cargo clippy -- -D warnings",
+  test: {cmd: nix "cargo test", deps: ["fmt", "lint"]},
+  build: {cmd: nix "cargo build --release", deps: ["test"]},
+  clean: nix "cargo clean"
+}
