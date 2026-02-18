@@ -8,6 +8,8 @@ use crate::parser::parse;
 use super::docs::{get_builtin_doc, get_category_doc, print_builtin_docs, print_help};
 use super::options::{parse_args, CliOptions};
 use super::repl::execute_repl;
+use super::task_runner::{TaskDef, TaskRunner};
+use std::collections::HashMap;
 
 pub fn run_cli(args: Vec<String>) -> i32 {
     if args.len() < 2 {
@@ -60,6 +62,16 @@ pub fn run_cli(args: Vec<String>) -> i32 {
                 }
             }
         }
+        "do" => match parse_args(rest, true) {
+            Ok(opts) => execute_do(opts),
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                eprintln!("  Usage: avon do <task_name> [options]");
+                eprintln!("  Example: avon do build");
+                eprintln!("  Use 'avon help' for more information");
+                1
+            }
+        },
         "repl" => execute_repl(),
         "doc" | "docs" => {
             if rest.is_empty() {
@@ -882,5 +894,132 @@ pub fn execute_run(opts: CliOptions) -> i32 {
         process_source(code, "<input>".to_string(), opts, false)
     } else {
         1
+    }
+}
+
+fn extract_tasks(value: &Value, _source: &str) -> Result<HashMap<String, TaskDef>, String> {
+    match value {
+        Value::Dict(dict) => {
+            let mut tasks = HashMap::new();
+            for (name, val) in dict {
+                match TaskDef::from_value(name.clone(), val) {
+                    Ok(task) => {
+                        tasks.insert(name.clone(), task);
+                    }
+                    Err(e) => {
+                        return Err(format!("Failed to parse task '{}': {}", name, e));
+                    }
+                }
+            }
+            Ok(tasks)
+        }
+        _ => Err("Expected a dictionary of tasks".to_string()),
+    }
+}
+
+pub fn execute_do(opts: CliOptions) -> i32 {
+    // For 'do' command: first arg is task name, second (if any) is the file
+    // parse_args with require_file=true will put task name into opts.file
+    // So we need to adjust: opts.file is actually the task name
+    let task_name = match &opts.file {
+        Some(name) => name.clone(),
+        None => {
+            eprintln!("Error: 'do' command requires a task name");
+            eprintln!("  Usage: avon do <task_name> [file]");
+            eprintln!("  Example: avon do build Avonfile.av");
+            eprintln!("  If file is omitted, looks for Avonfile.av");
+            eprintln!("  Use 'avon help do' for more information");
+            return 1;
+        }
+    };
+
+    // Check if a file was provided in pos_args (second positional after task name)
+    // If not, we'll use the default from get_source
+    let file_override = opts.pos_args.first().cloned();
+    
+    // Build modified options to get source
+    let source_opts = CliOptions {
+        root: opts.root,
+        force: opts.force,
+        append: opts.append,
+        if_not_exists: opts.if_not_exists,
+        backup: opts.backup,
+        debug: opts.debug,
+        read_stdin: opts.read_stdin,
+        git_url: opts.git_url,
+        named_args: opts.named_args,
+        pos_args: opts.pos_args,
+        file: file_override.or_else(|| None),
+        code: opts.code,
+    };
+
+    // Get source file
+    match get_source(&source_opts) {
+        Ok((source, source_name)) => {
+            // Parse and evaluate the source - following existing pattern from process_source
+            if source_opts.debug {
+                eprintln!("[DEBUG] Starting task runner for task: {}", task_name);
+            }
+
+            match tokenize(source.clone()) {
+                Ok(tokens) => {
+                    let ast = parse(tokens);
+
+                    let mut symbols = initial_builtins();
+
+                    // Inject `args` - a list of all positional CLI arguments (excluding task name)
+                    let args_list: Vec<Value> = source_opts
+                        .pos_args
+                        .iter()
+                        .map(|s| Value::String(s.clone()))
+                        .collect();
+                    symbols.insert("args".to_string(), Value::List(args_list));
+
+                    match eval(ast.program, &mut symbols, &source) {
+                        Ok(v) => {
+                            // Extract tasks from evaluated value
+                            match extract_tasks(&v, &source) {
+                                Ok(tasks) => {
+                                    // Create task runner and execute
+                                    match TaskRunner::new(tasks) {
+                                        Ok(mut runner) => {
+                                            match runner.run(&task_name) {
+                                                Ok(_) => {
+                                                    println!("Task '{}' completed successfully", task_name);
+                                                    0
+                                                }
+                                                Err(e) => {
+                                                    eprintln!("Error running task '{}': {}", task_name, e);
+                                                    1
+                                                }
+                                            }
+                                        }
+                                        Err(e) => {
+                                            eprintln!("Error initializing task runner: {}", e);
+                                            1
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("Error: {}", e);
+                                    eprintln!("  Make sure your Avonfile contains task definitions");
+                                    eprintln!("  Example task format: {{build: \"cargo build\", test: \"cargo test\"}}");
+                                    1
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("{}", e.pretty_with_file(&source, Some(&source_name)));
+                            1
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{}", e.pretty_with_file(&source, Some(&source_name)));
+                    1
+                }
+            }
+        }
+        Err(c) => c,
     }
 }

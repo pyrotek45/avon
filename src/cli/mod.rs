@@ -4,6 +4,7 @@ pub mod docs;
 pub mod helpers;
 pub mod options;
 pub mod repl;
+pub mod task_runner;
 
 pub use commands::run_cli;
 #[cfg(test)]
