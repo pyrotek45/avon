@@ -16,6 +16,10 @@ pub struct CliOptions {
     pub pos_args: Vec<String>,
     pub file: Option<String>,
     pub code: Option<String>,
+    // Task runner options (Phase 2)
+    pub dry_run: bool,
+    pub list_tasks: bool,
+    pub task_info: Option<String>,
 }
 
 impl CliOptions {
@@ -33,6 +37,9 @@ impl CliOptions {
             pos_args: Vec::new(),
             file: None,
             code: None,
+            dry_run: false,
+            list_tasks: false,
+            task_info: None,
         }
     }
 }
@@ -86,6 +93,22 @@ pub fn parse_args(args: &[String], require_file: bool) -> Result<CliOptions, Str
             "--stdin" => {
                 opts.read_stdin = true;
                 i += 1;
+            }
+            "--dry-run" => {
+                opts.dry_run = true;
+                i += 1;
+            }
+            "--list" => {
+                opts.list_tasks = true;
+                i += 1;
+            }
+            "--info" => {
+                if i + 1 < args.len() {
+                    opts.task_info = Some(args[i + 1].clone());
+                    i += 2;
+                } else {
+                    return Err("--info requires a task name argument".to_string());
+                }
             }
             "--git" => {
                 if i + 1 < args.len() {

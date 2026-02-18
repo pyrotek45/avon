@@ -272,14 +272,13 @@ impl TaskRunner {
     /// Build execution plan for a task
     pub fn build_execution_plan(&mut self, task_name: &str) -> Result<ExecutionPlan, TaskError> {
         if !self.tasks.contains_key(task_name) {
-            let suggestions = Self::find_similar_names(task_name, &self.tasks);
+            let _suggestions = Self::find_similar_names(task_name, &self.tasks);
             return Err(TaskError::TaskNotFound(task_name.to_string()));
         }
 
         let mut order = Vec::new();
         let mut visited = HashSet::new();
         self.topological_sort(task_name, &mut order, &mut visited)?;
-        order.reverse();
 
         let tasks = self.tasks.values().cloned().collect();
 
