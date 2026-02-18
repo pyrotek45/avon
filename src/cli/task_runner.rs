@@ -160,10 +160,10 @@ impl TaskRunner {
         for (name, task) in tasks {
             for dep in &task.deps {
                 if !tasks.contains_key(dep) {
-                    // Suggest similar task names for typos
-                    let suggestions = TaskRunner::find_similar_names(dep, tasks);
-                    let suggestion_text = if !suggestions.is_empty() {
-                        format!(" Did you mean '{}'?", suggestions[0])
+                    // Suggest similar task names for typos (used in Phase 3)
+                    let _suggestions = TaskRunner::find_similar_names(dep, tasks);
+                    let _suggestion_text = if !_suggestions.is_empty() {
+                        format!(" Did you mean '{}'?", _suggestions[0])
                     } else {
                         String::new()
                     };
