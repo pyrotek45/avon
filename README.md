@@ -29,7 +29,7 @@ Avon is designed to be powerful and flexible. I'm excited to see how you use it 
 | [**Function Reference**](./tutorial/BUILTIN_FUNCTIONS.md) | Reference for all built-in functions with signatures, descriptions, and examples organized by category. |
 | [**Do Mode Guide**](./tutorial/DO_MODE_GUIDE.md) | Built-in task runner guide. Define and run shell tasks with dependencies, env vars, and auto-discovery. |
 | **Command Line** | Run `avon doc` for built-in help on any function, `avon help do` for task runner help |
-| **Examples** | See `examples/` directory for 90+ real-world examples |
+| **Examples** | See `examples/` directory for 160+ real-world examples |
 
 ---
 
@@ -96,7 +96,7 @@ Creates `./output/hello.txt` with the generated content.
 
 ## Built-in Documentation
 
-Avon includes comprehensive built-in documentation for all 194 functions. The `avon doc` command is one of its most powerful features, enabling developers to quickly learn the tool without leaving the terminal.
+Avon includes comprehensive built-in documentation for all 165 functions. The `avon doc` command is one of its most powerful features, enabling developers to quickly learn the tool without leaving the terminal.
 
 **Look up any function:**
 
@@ -254,6 +254,95 @@ One source of truth, infinite variations. Each deployment customized via CLI arg
 
 ---
 
+## Do Mode — Built-in Task Runner
+
+Avon includes a task runner that replaces Make, Just, and npm scripts. Define tasks in an `Avon.av` file and run them with `avon do`.
+
+**Basic tasks:**
+
+```avon
+{
+  build: "cargo build --release",
+  test: {cmd: "cargo test", deps: ["build"]},
+  clean: "cargo clean"
+}
+```
+
+```bash
+avon do build          # runs cargo build --release
+avon do test           # runs build first (dependency), then test
+avon do --list         # show all tasks
+avon do --dry-run test # preview execution plan
+```
+
+### Why Not Just Use Make?
+
+Because Avon task files are **programs**, not static text. You get variables, functions, conditionals, and string manipulation — things Make and Just can't do without external scripts.
+
+**This is Avon's own `Avon.av` — it uses a function to wrap every command in nix-shell:**
+
+```avon
+let nix = \cmd "nix-shell --run '" + cmd + "'" in
+
+{
+  fmt: nix "cargo fmt",
+  lint: nix "cargo clippy -- -D warnings",
+  test: {cmd: nix "cargo test", deps: ["fmt", "lint"]},
+  build: {cmd: nix "cargo build --release", deps: ["test"]},
+  clean: nix "cargo clean"
+}
+```
+
+One function. No repetition. Every command runs inside the Nix environment automatically.
+
+**In Make, you'd have to repeat yourself:**
+
+```makefile
+fmt:
+	nix-shell --run 'cargo fmt'
+lint:
+	nix-shell --run 'cargo clippy -- -D warnings'
+test: fmt lint
+	nix-shell --run 'cargo test'
+build: test
+	nix-shell --run 'cargo build --release'
+clean:
+	nix-shell --run 'cargo clean'
+```
+
+The `nix-shell --run '...'` prefix is duplicated in every single rule. Change it? Edit 5 lines. With Avon, change the `nix` function — one line.
+
+**More examples of what Avon tasks can do that Make can't:**
+
+```avon
+# Environment-driven configuration
+let env = env_var_or "ENV" "dev" in
+let profile = if env == "prod" then "release" else "dev" in
+
+# Reusable command templates
+let cargo = \action "cargo " + action + " --profile " + profile in
+
+{
+  build: {cmd: cargo "build", desc: "Build for " + env},
+  test:  {cmd: cargo "test",  desc: "Test in " + profile + " mode", deps: ["build"]},
+  
+  deploy: {
+    cmd: "echo 'Deploying to " + env + "'",
+    deps: ["test"],
+    env: {DEPLOY_ENV: env}
+  }
+}
+```
+
+```bash
+avon do build                    # builds with dev profile
+ENV=prod avon do deploy          # builds release, runs tests, deploys to prod
+```
+
+Variables, conditionals, and functions — computed at evaluation time, not hardcoded. See the [Do Mode Guide](./tutorial/DO_MODE_GUIDE.md) for the full documentation.
+
+---
+
 ## FileTemplates
 
 Avon has first-class types for file paths and templates. The `@path {"content"}` syntax creates a FileTemplate—the unit Avon uses for deployment.
@@ -374,22 +463,24 @@ Run `avon doc` for the complete function reference.
 
 ## What Makes Avon Different
 
-Avon integrates two systems that are usually separate:
+Avon integrates three systems that are usually separate:
 
 1. **Functional Language** — Variables, functions, lists, conditionals, runtime type checking
 2. **Deployment System** — `@path/to/file.yml {"content"}` syntax writes files directly
+3. **Task Runner** — Define and run shell tasks with dependency resolution, environment variables, and computed commands
 
-One command generates and deploys everything. No intermediate steps or glue scripts needed.
+One tool for generating configs, deploying files, and running build tasks. No intermediate steps or glue scripts needed.
 
 ### Comparison with Alternatives
 
-| Tool | Approach | Multi-file Deploy | Type Checking | Learning Curve |
-|------|----------|-------------------|---------------|----------------|
-| Avon | Language + Deploy | Built-in | Runtime checks | Low |
-| Jsonnet | Pure language | Manual | Limited | Medium |
-| Dhall | Typed language | Manual | Strong types | High |
-| CUE | Data validation | Via scripts | Constraints | Medium |
-| Jinja2 | Template only | Manual | None | Low |
+| Tool | Approach | File Generation | Task Runner | Type Checking | String Logic |
+|------|----------|----------------|-------------|---------------|--------------|
+| **Avon** | Language + Deploy + Tasks | Built-in | Built-in | Runtime checks | Full language |
+| Make | Task runner only | No | Yes | No | Shell only |
+| Just | Task runner only | No | Yes | No | Shell only |
+| Jsonnet | Pure language | JSON only | No | Limited | Limited |
+| Dhall | Typed language | JSON/YAML | No | Strong types | Limited |
+| Jinja2 | Template only | Manual | No | None | Limited |
 
 ---
 
@@ -658,7 +749,7 @@ If none of these succeed, Avon prints an error with usage hints.
 
 ## Examples
 
-The `examples/` directory contains 90+ working examples:
+The `examples/` directory contains 160+ working examples:
 
 **Infrastructure:**
 - Docker Compose, Kubernetes, Terraform
@@ -667,6 +758,10 @@ The `examples/` directory contains 90+ working examples:
 **Configuration:**
 - Nginx configs, environment files
 - Neovim/Emacs configs
+
+**Task Runner:**
+- Build automation, CI/CD pipelines
+- Multi-step workflows with dependencies
 
 **Content:**
 - Static sites, markdown documentation
@@ -794,7 +889,7 @@ Think beyond configuration files. Think beyond the examples shown here. Avon can
 
 ## Quality & Testing
 
-- **650+ tests passing** — Unit tests, integration tests, and working examples
+- **660+ tests passing** — Unit tests, integration tests, and working examples
 - **Clear error messages** — Line numbers, context, and typo suggestions for all errors
 - **Type-safe** — Runtime type checking prevents deployment errors
 - **Single binary** — No dependencies, easy deployment

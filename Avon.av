@@ -5,5 +5,12 @@ let nix = \cmd "nix-shell --run '" + cmd + "'" in
   lint: nix "cargo clippy -- -D warnings",
   test: {cmd: nix "cargo test", deps: ["fmt", "lint"]},
   build: {cmd: nix "cargo build --release", deps: ["test"]},
-  clean: nix "cargo clean"
+  clean: "cargo clean",
+  run_all_test: {
+    cmd: [
+      "echo Running all tests with formatting and linting checks...",
+      "bash ./testing/run-all.sh"
+    ],
+    deps: ["fmt", "lint", "test"]
+  }
 }
