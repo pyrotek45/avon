@@ -47,8 +47,9 @@ pub fn get_arity(name: &str) -> Option<usize> {
         | "glob" | "html_parse" | "html_parse_string" | "import" | "ini_parse"
         | "ini_parse_string" | "json_parse" | "json_parse_string" | "opml_parse"
         | "opml_parse_string" | "readfile" | "readlines" | "toml_parse" | "toml_parse_string"
-        | "walkdir" | "xml_parse" | "xml_parse_string" | "yaml_parse"
-        | "yaml_parse_string" => Some(1),
+        | "walkdir" | "xml_parse" | "xml_parse_string" | "yaml_parse" | "yaml_parse_string" => {
+            Some(1)
+        }
         "fill_template" | "import_git" | "relpath" => Some(2),
         _ => None,
     }
@@ -702,9 +703,8 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
 
 /// Parse a JSON string into an Avon Value.
 fn parse_json_string(data: &str, line: usize) -> Result<Value, EvalError> {
-    let jr: serde_json::Value = serde_json::from_str(data).map_err(|e| {
-        EvalError::new(format!("json parse error: {}", e), None, None, line)
-    })?;
+    let jr: serde_json::Value = serde_json::from_str(data)
+        .map_err(|e| EvalError::new(format!("json parse error: {}", e), None, None, line))?;
     fn conv(j: &serde_json::Value) -> Value {
         match j {
             serde_json::Value::Null => Value::None,
@@ -734,9 +734,8 @@ fn parse_json_string(data: &str, line: usize) -> Result<Value, EvalError> {
 
 /// Parse a YAML string into an Avon Value.
 fn parse_yaml_string(data: &str, line: usize) -> Result<Value, EvalError> {
-    let yr: serde_yaml::Value = serde_yaml::from_str(data).map_err(|e| {
-        EvalError::new(format!("yaml parse error: {}", e), None, None, line)
-    })?;
+    let yr: serde_yaml::Value = serde_yaml::from_str(data)
+        .map_err(|e| EvalError::new(format!("yaml parse error: {}", e), None, None, line))?;
     fn conv(y: &serde_yaml::Value) -> Value {
         match y {
             serde_yaml::Value::Null => Value::None,
@@ -772,9 +771,8 @@ fn parse_yaml_string(data: &str, line: usize) -> Result<Value, EvalError> {
 
 /// Parse a TOML string into an Avon Value.
 fn parse_toml_string(data: &str, line: usize) -> Result<Value, EvalError> {
-    let tr: toml::Value = toml::from_str(data).map_err(|e| {
-        EvalError::new(format!("toml parse error: {}", e), None, None, line)
-    })?;
+    let tr: toml::Value = toml::from_str(data)
+        .map_err(|e| EvalError::new(format!("toml parse error: {}", e), None, None, line))?;
     fn conv(t: &toml::Value) -> Value {
         match t {
             toml::Value::String(s) => Value::String(s.clone()),
@@ -802,9 +800,8 @@ fn parse_csv_string(data: &str, line: usize) -> Result<Value, EvalError> {
     let headers = reader.headers().cloned().unwrap_or_default();
     let has_headers = !headers.is_empty();
     for result in reader.records() {
-        let record = result.map_err(|e| {
-            EvalError::new(format!("csv record error: {}", e), None, None, line)
-        })?;
+        let record = result
+            .map_err(|e| EvalError::new(format!("csv record error: {}", e), None, None, line))?;
         if has_headers {
             let mut row_dict = HashMap::new();
             for (i, field) in record.iter().enumerate() {
@@ -826,9 +823,8 @@ fn parse_csv_string(data: &str, line: usize) -> Result<Value, EvalError> {
 
 /// Parse an XML string into an Avon Value.
 fn parse_xml_string(data: &str, line: usize) -> Result<Value, EvalError> {
-    let doc = roxmltree::Document::parse(data).map_err(|e| {
-        EvalError::new(format!("xml parse error: {}", e), None, None, line)
-    })?;
+    let doc = roxmltree::Document::parse(data)
+        .map_err(|e| EvalError::new(format!("xml parse error: {}", e), None, None, line))?;
     fn conv_node(node: &roxmltree::Node) -> Value {
         if node.is_text() {
             return Value::String(node.text().unwrap_or("").to_string());
@@ -851,8 +847,7 @@ fn parse_xml_string(data: &str, line: usize) -> Result<Value, EvalError> {
         let children: Vec<Value> = node
             .children()
             .filter(|c| {
-                c.is_element()
-                    || (c.is_text() && c.text().map_or(false, |t| !t.trim().is_empty()))
+                c.is_element() || (c.is_text() && c.text().is_some_and(|t| !t.trim().is_empty()))
             })
             .map(|c| conv_node(&c))
             .collect();
@@ -918,9 +913,8 @@ fn parse_html_string(data: &str) -> Result<Value, EvalError> {
 
 /// Parse an OPML string into an Avon Value.
 fn parse_opml_string(data: &str, line: usize) -> Result<Value, EvalError> {
-    let doc = roxmltree::Document::parse(data).map_err(|e| {
-        EvalError::new(format!("opml parse error: {}", e), None, None, line)
-    })?;
+    let doc = roxmltree::Document::parse(data)
+        .map_err(|e| EvalError::new(format!("opml parse error: {}", e), None, None, line))?;
     let root = doc.root_element();
     let mut head_map = HashMap::new();
     if let Some(head) = root.children().find(|c| c.has_tag_name("head")) {
@@ -966,9 +960,8 @@ fn parse_opml_string(data: &str, line: usize) -> Result<Value, EvalError> {
 
 /// Parse an INI string into an Avon Value.
 fn parse_ini_string(data: &str, line: usize) -> Result<Value, EvalError> {
-    let ini = ini::Ini::load_from_str(data).map_err(|e| {
-        EvalError::new(format!("ini parse error: {}", e), None, None, line)
-    })?;
+    let ini = ini::Ini::load_from_str(data)
+        .map_err(|e| EvalError::new(format!("ini parse error: {}", e), None, None, line))?;
     let mut top = HashMap::new();
     for (section, props) in ini.iter() {
         let mut section_map = HashMap::new();

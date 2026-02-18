@@ -1,0 +1,99 @@
+# String Manipulation in Tasks - Showcase
+# Shows how Avon lets you manipulate strings to generate commands dynamically
+#
+# Usage:
+#   avon do show_config examples/tasks_string_manipulation.av
+#   avon do show_config_prod examples/tasks_string_manipulation.av
+#   VERSION=2.3.4 avon do show_config examples/tasks_string_manipulation.av
+#   avon do build_dev examples/tasks_string_manipulation.av
+
+# ============================================================================
+# EXAMPLE 1: String Concatenation with Environment Variables
+# ============================================================================
+
+let version = env_var_or "VERSION" "1.0.0" in
+let registry = "ghcr.io/mycompany" in
+let image_name = registry + "/myapp:" + version in
+
+# ============================================================================
+# EXAMPLE 2: Conditional Strings based on Environment
+# ============================================================================
+
+let env = env_var_or "ENV" "dev" in
+let is_prod = (env == "prod") in
+let profile = if is_prod then "release" else "dev" in
+let log_level = if is_prod then "warn" else "debug" in
+
+# ============================================================================
+# EXAMPLE 3: String Functions for Reusable Command Patterns
+# ============================================================================
+
+let cargo_build = \profile \args "cargo build --profile " + profile + " " + args in
+let show_vars = \v \e "echo 'version=" + v + ", env=" + e + "'" in
+
+# ============================================================================
+# NOW USE ALL OF THESE TO CREATE TASKS
+# ============================================================================
+
+let tasks = {
+    show_config: {
+        cmd: [
+            "echo '=== Configuration ===' ",
+            "echo 'Version: " + version + "'",
+            "echo 'Environment: " + env + "'",
+            "echo 'Docker Image: " + image_name + "'",
+            "echo 'Profile: " + profile + "'",
+            "echo 'Log Level: " + log_level + "'"
+        ],
+        desc: "Show computed configuration (dev)"
+    },
+
+    show_config_prod: {
+        cmd: show_vars version env,
+        desc: "Show configuration values for version " + version,
+        env: {ENV: "production"}
+    },
+
+    build_dev: {
+        cmd: cargo_build "dev" "",
+        desc: "Build in dev profile"
+    },
+
+    build_release: {
+        cmd: cargo_build "release" "--locked",
+        desc: "Build in release profile",
+        deps: ["build_dev"]
+    },
+
+    docker: {
+        cmd: "echo 'Would build Docker image: " + image_name + "'",
+        desc: "Build Docker image: " + image_name,
+        deps: ["build_release"]
+    },
+
+    deploy_prod: {
+        cmd: "echo 'Would deploy " + version + " to production'",
+        desc: "Deploy " + version + " to production",
+        deps: ["docker"]
+    },
+
+    # Generate commands from functions
+    test_unit: {
+        cmd: "echo 'Running unit tests'",
+        desc: "Run unit test suite"
+    },
+
+    test_integration: {
+        cmd: "echo 'Running integration tests'",
+        desc: "Run integration test suite"
+    },
+
+    ci: {
+        cmd: "echo 'CI: All tests passed! Version " + version + " ready to deploy.'",
+        desc: "Full CI pipeline with version " + version,
+        deps: ["build_release", "test_unit", "test_integration"],
+        env: {VERSION: version, PROFILE: profile}
+    }
+} in
+
+tasks

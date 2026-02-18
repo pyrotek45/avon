@@ -91,6 +91,10 @@ print_section "REPL & Parallel"
 run_test "REPL"                   "$AVON_TEST_DIR/test_repl.sh"
 run_test "Parallel Functions"     "$AVON_TEST_DIR/test_parallel_functions.sh"
 
+# ── Do Mode (Task Runner) ───────────────────────────────
+print_section "Do Mode (Task Runner)"
+run_test "Do Mode"                "$AVON_TEST_DIR/test_do_mode.sh"
+
 # ── Summary ──────────────────────────────────────────────
 echo ""
 echo -e "${BLUE}========================================${NC}"

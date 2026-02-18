@@ -2,12 +2,13 @@
 
 > Give your files superpowers
 
-Avon is a functional language for generating and deploying any text file. Add variables, functions, and logic to YAML, JSON, configs, scripts, or any text format. Whether you're managing a single dotfile or generating thousands of Kubernetes manifests, Avon gives you the power to automate what you never thought possible.
+Avon is a functional language for generating, deploying, and automating any text file. Add variables, functions, and logic to YAML, JSON, configs, scripts, or any text format. Whether you're managing a single dotfile, generating thousands of Kubernetes manifests, or running build tasks, Avon gives you the power to automate what you never thought possible.
 
 **What makes Avon powerful:**
 - **Language agnostic** — Transform any text format
 - **Functional programming** — Variables, functions, map/filter/fold, type safety
 - **Built-in deployment** — Files know where they belong
+- **Built-in task runner** — Define and run shell tasks with dependency resolution
 - **Atomic deployment** — All-or-nothing, no partial failures
 - **Git integration** — Share templates, deploy anywhere
 - **Extensible** — Combine primitives in creative ways
@@ -26,7 +27,8 @@ Avon is designed to be powerful and flexible. I'm excited to see how you use it 
 | [**Getting Started**](./tutorial/GETTING_STARTED.md) | New to Avon? Start here. A step-by-step guide with 15 hands-on lessons that build on each other. |
 | [**Tutorial**](./tutorial/TUTORIAL.md) | Complete guide from basics to advanced patterns. Covers language essentials, templates, CLI usage, style guide, best practices, error handling, and debugging. |
 | [**Function Reference**](./tutorial/BUILTIN_FUNCTIONS.md) | Reference for all built-in functions with signatures, descriptions, and examples organized by category. |
-| **Command Line** | Run `avon doc` for built-in help on any function |
+| [**Do Mode Guide**](./tutorial/DO_MODE_GUIDE.md) | Built-in task runner guide. Define and run shell tasks with dependencies, env vars, and auto-discovery. |
+| **Command Line** | Run `avon doc` for built-in help on any function, `avon help do` for task runner help |
 | **Examples** | See `examples/` directory for 90+ real-world examples |
 
 ---
@@ -211,6 +213,7 @@ If evaluation fails (type errors, undefined variables), validation fails (permis
 ```bash
 avon eval program.av              # Preview output (no files written)
 avon deploy program.av --root ./  # Write files to disk
+avon do build                     # Run a task from Avon.av
 avon run 'expr'                   # Evaluate expression directly
 avon repl                         # Interactive exploration
 avon doc [function|category]      # Built-in function reference (see above)
@@ -555,6 +558,9 @@ avon eval program.av
 # Deploy files to disk
 avon deploy program.av --root ./output
 
+# Run a task from Avon.av
+avon do build
+
 # Evaluate expression directly
 avon run 'map (\x x * 2) [1, 2, 3]'
 
@@ -563,6 +569,28 @@ avon repl
 
 # Function documentation
 avon doc
+
+# Task runner help
+avon help do
+```
+
+### Task Runner (Do Mode)
+
+```bash
+# Run a task (auto-discovers Avon.av)
+avon do build
+
+# Run a task from a specific file
+avon do test tasks.av
+
+# List all tasks
+avon do --list
+
+# Preview execution plan
+avon do --dry-run deploy
+
+# Show task details
+avon do --info build
 ```
 
 ### Deployment Options
@@ -601,6 +629,30 @@ avon deploy --git user/repo/config.av --root ./
 # Show debug output
 avon eval program.av --debug
 ```
+
+### How Avon Reads Files
+
+Avon resolves its source file in this priority order:
+
+1. **`--stdin`** — Read source from standard input (eval/deploy only)
+2. **`--git <url>`** — Fetch from GitHub (`user/repo/path/to/file.av`) (eval/deploy only)
+3. **`<file>` argument** — Read the named file from disk
+4. **`Avon.av`** — Auto-discover in the current directory (`do` mode only)
+
+If none of these succeed, Avon prints an error with usage hints.
+
+> **Security:** `--git` and `--stdin` are blocked for `do` mode because running
+> shell commands from a remote or piped source is a security risk. Download and
+> review the file first, then run locally.
+
+**When to use each mode:**
+
+| Mode     | Purpose                                        | File Content               |
+|----------|------------------------------------------------|----------------------------|
+| `eval`   | Preview output — no files written to disk      | Any valid Avon expression  |
+| `deploy` | Write generated FileTemplates to disk          | Must produce FileTemplates |
+| `do`     | Run shell tasks with dependency resolution     | Must evaluate to a dict of task definitions |
+| `run`    | Evaluate a code string directly (no file)      | N/A (code on command line) |
 
 ---
 
@@ -742,8 +794,8 @@ Think beyond configuration files. Think beyond the examples shown here. Avon can
 
 ## Quality & Testing
 
-- **500+ tests passing** — Unit tests, integration tests, and working examples
-- **Clear error messages** — Line numbers and context for all errors
+- **650+ tests passing** — Unit tests, integration tests, and working examples
+- **Clear error messages** — Line numbers, context, and typo suggestions for all errors
 - **Type-safe** — Runtime type checking prevents deployment errors
 - **Single binary** — No dependencies, easy deployment
 - **Production-ready** — Comprehensive error handling
@@ -753,5 +805,8 @@ Think beyond configuration files. Think beyond the examples shown here. Avon can
 ## Resources
 
 - [Tutorial](./tutorial/TUTORIAL.md) — Complete language guide
+- [Getting Started](./tutorial/GETTING_STARTED.md) — Step-by-step lessons
+- [Do Mode Guide](./tutorial/DO_MODE_GUIDE.md) — Task runner guide
 - [Function Reference](./tutorial/BUILTIN_FUNCTIONS.md) — Built-in function documentation
 - `avon doc` — Command-line help
+- `avon help do` — Task runner CLI help

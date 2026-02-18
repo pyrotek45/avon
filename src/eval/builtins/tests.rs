@@ -488,8 +488,14 @@ fn test_format_xml() {
         Value::String(s) => {
             assert!(s.contains("<root>"), "should contain <root>");
             assert!(s.contains("</root>"), "should contain </root>");
-            assert!(s.contains("<item id=\"1\">Hello</item>"), "should contain first item");
-            assert!(s.contains("<item id=\"2\">World</item>"), "should contain second item");
+            assert!(
+                s.contains("<item id=\"1\">Hello</item>"),
+                "should contain first item"
+            );
+            assert!(
+                s.contains("<item id=\"2\">World</item>"),
+                "should contain second item"
+            );
         }
         v => panic!("expected string, got {:?}", v),
     }
@@ -523,12 +529,21 @@ fn test_format_opml() {
     "#;
     match eval_prog(prog) {
         Value::String(s) => {
-            assert!(s.contains("<?xml version=\"1.0\""), "should have xml declaration");
-            assert!(s.contains("<opml version=\"2.0\">"), "should have opml element");
+            assert!(
+                s.contains("<?xml version=\"1.0\""),
+                "should have xml declaration"
+            );
+            assert!(
+                s.contains("<opml version=\"2.0\">"),
+                "should have opml element"
+            );
             assert!(s.contains("<title>My Feeds</title>"), "should have title");
             assert!(s.contains("text=\"Tech\""), "should have Tech outline");
             assert!(s.contains("text=\"HN\""), "should have HN outline");
-            assert!(s.contains("xmlUrl=\"https://hn.com/rss\""), "should have xmlUrl");
+            assert!(
+                s.contains("xmlUrl=\"https://hn.com/rss\""),
+                "should have xmlUrl"
+            );
             assert!(s.contains("</opml>"), "should close opml");
         }
         v => panic!("expected string, got {:?}", v),
@@ -553,10 +568,7 @@ fn test_xml_roundtrip() {
 
     match result {
         Value::String(s) => {
-            assert!(
-                s.contains("<config>"),
-                "roundtrip should preserve root tag"
-            );
+            assert!(s.contains("<config>"), "roundtrip should preserve root tag");
             assert!(
                 s.contains("host=\"localhost\""),
                 "roundtrip should preserve attrs"
@@ -565,10 +577,7 @@ fn test_xml_roundtrip() {
                 s.contains("port=\"5432\""),
                 "roundtrip should preserve attrs"
             );
-            assert!(
-                s.contains("<cache"),
-                "roundtrip should preserve elements"
-            );
+            assert!(s.contains("<cache"), "roundtrip should preserve elements");
             assert!(
                 s.contains("enabled=\"true\""),
                 "roundtrip should preserve attrs"
@@ -698,22 +707,10 @@ fn test_format_ini_dict() {
                 s.contains("[database]"),
                 "should have database section header"
             );
-            assert!(
-                s.contains("host=localhost"),
-                "should have host key"
-            );
-            assert!(
-                s.contains("port=3306"),
-                "should have port key in database"
-            );
-            assert!(
-                s.contains("[server]"),
-                "should have server section header"
-            );
-            assert!(
-                s.contains("debug=true"),
-                "should have debug key"
-            );
+            assert!(s.contains("host=localhost"), "should have host key");
+            assert!(s.contains("port=3306"), "should have port key in database");
+            assert!(s.contains("[server]"), "should have server section header");
+            assert!(s.contains("debug=true"), "should have debug key");
         }
         v => panic!("expected string, got {:?}", v),
     }
@@ -731,22 +728,13 @@ fn test_format_ini_with_global() {
     match eval_prog(prog) {
         Value::String(s) => {
             // Global keys should appear without a [section] header
-            assert!(
-                s.contains("version=1.0"),
-                "should have global version key"
-            );
+            assert!(s.contains("version=1.0"), "should have global version key");
             assert!(
                 !s.contains("[global]"),
                 "global section should NOT have a header"
             );
-            assert!(
-                s.contains("[app]"),
-                "should have app section header"
-            );
-            assert!(
-                s.contains("name=myapp"),
-                "should have name key"
-            );
+            assert!(s.contains("[app]"), "should have app section header");
+            assert!(s.contains("name=myapp"), "should have name key");
         }
         v => panic!("expected string, got {:?}", v),
     }
@@ -776,18 +764,12 @@ fn test_ini_roundtrip() {
                 s.contains("host=localhost"),
                 "roundtrip should preserve host"
             );
-            assert!(
-                s.contains("port=3306"),
-                "roundtrip should preserve port"
-            );
+            assert!(s.contains("port=3306"), "roundtrip should preserve port");
             assert!(
                 s.contains("[server]"),
                 "roundtrip should preserve server section"
             );
-            assert!(
-                s.contains("debug=true"),
-                "roundtrip should preserve debug"
-            );
+            assert!(s.contains("debug=true"), "roundtrip should preserve debug");
         }
         v => panic!("expected string, got {:?}", v),
     }
@@ -799,18 +781,19 @@ fn test_cross_ini_to_json() {
 
     let path = "test_i2j.ini";
     let mut file = std::fs::File::create(path).expect("create file");
-    file.write_all(b"[database]\nhost=localhost\nport=3306\n").expect("write file");
+    file.write_all(b"[database]\nhost=localhost\nport=3306\n")
+        .expect("write file");
 
-    let prog = format!(
-        "let data = ini_parse \"{}\" in format_json data",
-        path
-    );
+    let prog = format!("let data = ini_parse \"{}\" in format_json data", path);
     let result = eval_prog(&prog);
     std::fs::remove_file(path).expect("remove file");
 
     match result {
         Value::String(s) => {
-            assert!(s.contains("\"database\""), "JSON should contain database key");
+            assert!(
+                s.contains("\"database\""),
+                "JSON should contain database key"
+            );
             assert!(s.contains("\"host\""), "JSON should contain host key");
             assert!(s.contains("\"localhost\""), "JSON should contain localhost");
             assert!(s.contains("\"port\""), "JSON should contain port key");
@@ -826,15 +809,10 @@ fn test_cross_json_to_ini() {
 
     let path = "test_j2i.json";
     let mut file = std::fs::File::create(path).expect("create file");
-    file.write_all(
-        b"{\"database\": {\"host\": \"localhost\", \"port\": \"5432\"}}",
-    )
-    .expect("write file");
+    file.write_all(b"{\"database\": {\"host\": \"localhost\", \"port\": \"5432\"}}")
+        .expect("write file");
 
-    let prog = format!(
-        "let data = json_parse \"{}\" in format_ini data",
-        path
-    );
+    let prog = format!("let data = json_parse \"{}\" in format_ini data", path);
     let result = eval_prog(&prog);
     std::fs::remove_file(path).expect("remove file");
 
@@ -854,20 +832,16 @@ fn test_parsed_ini_works_with_get_has_key() {
 
     let path = "test_ini_ops.ini";
     let mut file = std::fs::File::create(path).expect("create file");
-    file.write_all(b"[database]\nhost=localhost\nport=3306\n").expect("write file");
+    file.write_all(b"[database]\nhost=localhost\nport=3306\n")
+        .expect("write file");
 
     // Test get on parsed INI
-    let prog = format!(
-        "let cfg = ini_parse \"{}\" in get cfg \"database\"",
-        path
-    );
+    let prog = format!("let cfg = ini_parse \"{}\" in get cfg \"database\"", path);
     match eval_prog(&prog) {
-        Value::Dict(db) => {
-            match db.get("host").unwrap() {
-                Value::String(s) => assert_eq!(s, "localhost"),
-                v => panic!("expected host string, got {:?}", v),
-            }
-        }
+        Value::Dict(db) => match db.get("host").unwrap() {
+            Value::String(s) => assert_eq!(s, "localhost"),
+            v => panic!("expected host string, got {:?}", v),
+        },
         v => panic!("expected dict, got {:?}", v),
     }
 
@@ -882,26 +856,26 @@ fn test_parsed_ini_works_with_get_has_key() {
     }
 
     // Test keys
-    let prog = format!(
-        "let cfg = ini_parse \"{}\" in keys cfg",
-        path
-    );
+    let prog = format!("let cfg = ini_parse \"{}\" in keys cfg", path);
     match eval_prog(&prog) {
         Value::List(ks) => {
-            let key_strs: Vec<String> = ks.iter().map(|v| match v {
-                Value::String(s) => s.clone(),
-                _ => String::new(),
-            }).collect();
-            assert!(key_strs.contains(&"database".to_string()), "keys should include database");
+            let key_strs: Vec<String> = ks
+                .iter()
+                .map(|v| match v {
+                    Value::String(s) => s.clone(),
+                    _ => String::new(),
+                })
+                .collect();
+            assert!(
+                key_strs.contains(&"database".to_string()),
+                "keys should include database"
+            );
         }
         v => panic!("expected list, got {:?}", v),
     }
 
     // Test dot notation
-    let prog = format!(
-        "let cfg = ini_parse \"{}\" in cfg.database.host",
-        path
-    );
+    let prog = format!("let cfg = ini_parse \"{}\" in cfg.database.host", path);
     match eval_prog(&prog) {
         Value::String(s) => assert_eq!(s, "localhost", "dot notation should access nested value"),
         v => panic!("expected string, got {:?}", v),
@@ -956,13 +930,12 @@ fn test_html_parsing_with_attrs() {
 
     let path = "test_html_attrs.html";
     let mut file = std::fs::File::create(path).expect("create file");
-    file.write_all(b"<html><body><a href=\"https://example.com\" id=\"link1\">Click</a></body></html>")
-        .expect("write file");
+    file.write_all(
+        b"<html><body><a href=\"https://example.com\" id=\"link1\">Click</a></body></html>",
+    )
+    .expect("write file");
 
-    let prog = format!(
-        "let doc = html_parse \"{}\" in doc.children",
-        path
-    );
+    let prog = format!("let doc = html_parse \"{}\" in doc.children", path);
     let result = eval_prog(&prog);
 
     std::fs::remove_file(path).expect("remove file");
@@ -991,22 +964,13 @@ fn test_format_html_simple() {
     "#;
     match eval_prog(prog) {
         Value::String(s) => {
-            assert!(
-                s.contains("<div"),
-                "should contain opening div tag"
-            );
+            assert!(s.contains("<div"), "should contain opening div tag");
             assert!(
                 s.contains("class=\"container\""),
                 "should contain class attribute"
             );
-            assert!(
-                s.contains("<p>Hello</p>"),
-                "should contain p tag with text"
-            );
-            assert!(
-                s.contains("</div>"),
-                "should contain closing div tag"
-            );
+            assert!(s.contains("<p>Hello</p>"), "should contain p tag with text");
+            assert!(s.contains("</div>"), "should contain closing div tag");
         }
         v => panic!("expected string, got {:?}", v),
     }
@@ -1029,30 +993,15 @@ fn test_format_html_void_elements() {
     "#;
     match eval_prog(prog) {
         Value::String(s) => {
-            assert!(
-                s.contains("<br>"),
-                "should render br as void element"
-            );
-            assert!(
-                !s.contains("</br>"),
-                "br should NOT have closing tag"
-            );
-            assert!(
-                s.contains("<img"),
-                "should contain img tag"
-            );
+            assert!(s.contains("<br>"), "should render br as void element");
+            assert!(!s.contains("</br>"), "br should NOT have closing tag");
+            assert!(s.contains("<img"), "should contain img tag");
             assert!(
                 s.contains("src=\"photo.jpg\""),
                 "should contain src attribute"
             );
-            assert!(
-                !s.contains("</img>"),
-                "img should NOT have closing tag"
-            );
-            assert!(
-                s.contains("<hr>"),
-                "should render hr as void element"
-            );
+            assert!(!s.contains("</img>"), "img should NOT have closing tag");
+            assert!(s.contains("<hr>"), "should render hr as void element");
         }
         v => panic!("expected string, got {:?}", v),
     }
@@ -1063,24 +1012,19 @@ fn test_html_roundtrip() {
     use std::io::Write;
 
     let path = "test_roundtrip.html";
-    let html_content = b"<html><head><title>Test</title></head><body><p class=\"main\">Hello</p></body></html>";
+    let html_content =
+        b"<html><head><title>Test</title></head><body><p class=\"main\">Hello</p></body></html>";
     let mut file = std::fs::File::create(path).expect("create file");
     file.write_all(html_content).expect("write file");
 
-    let prog = format!(
-        "let data = html_parse \"{}\" in format_html data",
-        path
-    );
+    let prog = format!("let data = html_parse \"{}\" in format_html data", path);
     let result = eval_prog(&prog);
 
     std::fs::remove_file(path).expect("remove file");
 
     match result {
         Value::String(s) => {
-            assert!(
-                s.contains("<html"),
-                "roundtrip should preserve html tag"
-            );
+            assert!(s.contains("<html"), "roundtrip should preserve html tag");
             assert!(
                 s.contains("<title>Test</title>"),
                 "roundtrip should preserve title"
@@ -1093,10 +1037,7 @@ fn test_html_roundtrip() {
                 s.contains("Hello"),
                 "roundtrip should preserve text content"
             );
-            assert!(
-                s.contains("</body>"),
-                "roundtrip should have closing body"
-            );
+            assert!(s.contains("</body>"), "roundtrip should have closing body");
         }
         v => panic!("expected string, got {:?}", v),
     }
@@ -1111,10 +1052,7 @@ fn test_cross_html_to_json() {
     file.write_all(b"<html><body><p class=\"intro\">Hello</p></body></html>")
         .expect("write file");
 
-    let prog = format!(
-        "let data = html_parse \"{}\" in format_json data",
-        path
-    );
+    let prog = format!("let data = html_parse \"{}\" in format_json data", path);
     let result = eval_prog(&prog);
     std::fs::remove_file(path).expect("remove file");
 
@@ -1122,7 +1060,10 @@ fn test_cross_html_to_json() {
         Value::String(s) => {
             assert!(s.contains("\"tag\""), "JSON should contain tag key");
             assert!(s.contains("\"html\""), "JSON should contain html tag value");
-            assert!(s.contains("\"children\""), "JSON should contain children key");
+            assert!(
+                s.contains("\"children\""),
+                "JSON should contain children key"
+            );
             assert!(s.contains("\"intro\""), "JSON should contain class value");
         }
         v => panic!("expected string, got {:?}", v),
@@ -1231,8 +1172,10 @@ fn test_toml_parsing() {
 
     let path = "test_toml_parse.toml";
     let mut file = std::fs::File::create(path).expect("create file");
-    file.write_all(b"name = \"myapp\"\nversion = \"1.0\"\n\n[database]\nhost = \"localhost\"\nport = 5432\n")
-        .expect("write file");
+    file.write_all(
+        b"name = \"myapp\"\nversion = \"1.0\"\n\n[database]\nhost = \"localhost\"\nport = 5432\n",
+    )
+    .expect("write file");
 
     let prog = format!("toml_parse \"{}\"", path);
     let result = eval_prog(&prog);
@@ -1274,7 +1217,10 @@ fn test_format_json_dict() {
     match eval_prog(prog) {
         Value::String(s) => {
             assert!(s.contains("\"name\""), "JSON should have quoted keys");
-            assert!(s.contains("\"Alice\""), "JSON should have quoted string values");
+            assert!(
+                s.contains("\"Alice\""),
+                "JSON should have quoted string values"
+            );
             assert!(s.contains("30"), "JSON should have number values");
         }
         v => panic!("expected string, got {:?}", v),
@@ -1443,10 +1389,7 @@ fn test_toml_roundtrip() {
                 s.contains("host = \"0.0.0.0\""),
                 "roundtrip should preserve server host"
             );
-            assert!(
-                s.contains("port = 8080"),
-                "roundtrip should preserve port"
-            );
+            assert!(s.contains("port = 8080"), "roundtrip should preserve port");
         }
         v => panic!("expected string, got {:?}", v),
     }
@@ -1498,10 +1441,7 @@ fn test_cross_json_to_yaml() {
     file.write_all(b"{\"host\": \"localhost\", \"port\": 5432}")
         .expect("write file");
 
-    let prog = format!(
-        "let data = json_parse \"{}\" in format_yaml data",
-        path
-    );
+    let prog = format!("let data = json_parse \"{}\" in format_yaml data", path);
     let result = eval_prog(&prog);
     std::fs::remove_file(path).expect("remove file");
 
@@ -1526,10 +1466,7 @@ fn test_cross_yaml_to_toml() {
     file.write_all(b"name: myapp\nversion: '2.0'\n")
         .expect("write file");
 
-    let prog = format!(
-        "let data = yaml_parse \"{}\" in format_toml data",
-        path
-    );
+    let prog = format!("let data = yaml_parse \"{}\" in format_toml data", path);
     let result = eval_prog(&prog);
     std::fs::remove_file(path).expect("remove file");
 
@@ -1559,19 +1496,13 @@ fn test_cross_toml_to_json() {
     file.write_all(b"title = \"Demo\"\ncount = 42\n")
         .expect("write file");
 
-    let prog = format!(
-        "let data = toml_parse \"{}\" in format_json data",
-        path
-    );
+    let prog = format!("let data = toml_parse \"{}\" in format_json data", path);
     let result = eval_prog(&prog);
     std::fs::remove_file(path).expect("remove file");
 
     match result {
         Value::String(s) => {
-            assert!(
-                s.contains("\"title\""),
-                "JSON should have quoted title key"
-            );
+            assert!(s.contains("\"title\""), "JSON should have quoted title key");
             assert!(s.contains("\"Demo\""), "JSON should have Demo value");
             assert!(s.contains("42"), "JSON should have count value");
         }
@@ -1588,10 +1519,7 @@ fn test_cross_csv_to_json() {
     file.write_all(b"name,score\nAlice,95\nBob,87\n")
         .expect("write file");
 
-    let prog = format!(
-        "let data = csv_parse \"{}\" in format_json data",
-        path
-    );
+    let prog = format!("let data = csv_parse \"{}\" in format_json data", path);
     let result = eval_prog(&prog);
     std::fs::remove_file(path).expect("remove file");
 
@@ -1616,19 +1544,13 @@ fn test_cross_xml_to_json() {
     file.write_all(b"<config><db host=\"localhost\" port=\"5432\"/></config>")
         .expect("write file");
 
-    let prog = format!(
-        "let data = xml_parse \"{}\" in format_json data",
-        path
-    );
+    let prog = format!("let data = xml_parse \"{}\" in format_json data", path);
     let result = eval_prog(&prog);
     std::fs::remove_file(path).expect("remove file");
 
     match result {
         Value::String(s) => {
-            assert!(
-                s.contains("\"tag\""),
-                "JSON should represent XML tag key"
-            );
+            assert!(s.contains("\"tag\""), "JSON should represent XML tag key");
             assert!(
                 s.contains("\"config\""),
                 "JSON should contain config tag name"
@@ -1655,10 +1577,7 @@ fn test_cross_xml_to_yaml() {
     file.write_all(b"<root><item>Hello</item></root>")
         .expect("write file");
 
-    let prog = format!(
-        "let data = xml_parse \"{}\" in format_yaml data",
-        path
-    );
+    let prog = format!("let data = xml_parse \"{}\" in format_yaml data", path);
     let result = eval_prog(&prog);
     std::fs::remove_file(path).expect("remove file");
 
@@ -1684,10 +1603,7 @@ fn test_cross_json_to_csv() {
     )
     .expect("write file");
 
-    let prog = format!(
-        "let data = json_parse \"{}\" in format_csv data",
-        path
-    );
+    let prog = format!("let data = json_parse \"{}\" in format_csv data", path);
     let result = eval_prog(&prog);
     std::fs::remove_file(path).expect("remove file");
 
@@ -1846,18 +1762,13 @@ fn test_parsed_yaml_works_with_get_has_key() {
         .expect("write file");
 
     // Test get
-    let prog_get = format!(
-        "let data = yaml_parse \"{}\" in get data \"server\"",
-        path
-    );
+    let prog_get = format!("let data = yaml_parse \"{}\" in get data \"server\"", path);
     let result_get = eval_prog(&prog_get);
     match result_get {
-        Value::Dict(d) => {
-            match d.get("host").unwrap() {
-                Value::String(s) => assert_eq!(s, "localhost"),
-                v => panic!("expected 'localhost', got {:?}", v),
-            }
-        }
+        Value::Dict(d) => match d.get("host").unwrap() {
+            Value::String(s) => assert_eq!(s, "localhost"),
+            v => panic!("expected 'localhost', got {:?}", v),
+        },
         v => panic!("expected dict from get, got {:?}", v),
     }
 
@@ -1885,10 +1796,7 @@ fn test_parsed_toml_works_with_dot_access() {
         .expect("write file");
 
     // Dot notation access on parsed TOML
-    let prog = format!(
-        "let data = toml_parse \"{}\" in data.package.name",
-        path
-    );
+    let prog = format!("let data = toml_parse \"{}\" in data.package.name", path);
     let result = eval_prog(&prog);
     std::fs::remove_file(path).expect("remove file");
 
@@ -2043,7 +1951,10 @@ fn test_csv_filter_to_json() {
         Value::String(s) => {
             assert!(s.contains("\"Alice\""), "JSON should contain Alice");
             assert!(s.contains("\"Charlie\""), "JSON should contain Charlie");
-            assert!(!s.contains("\"Bob\""), "JSON should NOT contain Bob (filtered out)");
+            assert!(
+                !s.contains("\"Bob\""),
+                "JSON should NOT contain Bob (filtered out)"
+            );
         }
         v => panic!("expected string, got {:?}", v),
     }
@@ -2126,10 +2037,7 @@ fn test_opml_to_json_flat_feeds() {
             assert!(s.contains("\"HN\""), "should have HN name");
             assert!(s.contains("\"Science\""), "should have Science category");
             assert!(s.contains("\"Nature\""), "should have Nature name");
-            assert!(
-                s.contains("https://hn.com/rss"),
-                "should have HN feed URL"
-            );
+            assert!(s.contains("https://hn.com/rss"), "should have HN feed URL");
         }
         v => panic!("expected string, got {:?}", v),
     }
@@ -2301,12 +2209,10 @@ fn test_xml_parse_string() {
 fn test_html_parse_string() {
     let prog = r#"html_parse_string "<div class=\"box\"><p>Hello</p></div>""#;
     match eval_prog(prog) {
-        Value::Dict(d) => {
-            match d.get("tag").unwrap() {
-                Value::String(s) => assert_eq!(s, "html"),
-                v => panic!("expected tag string, got {:?}", v),
-            }
-        }
+        Value::Dict(d) => match d.get("tag").unwrap() {
+            Value::String(s) => assert_eq!(s, "html"),
+            v => panic!("expected tag string, got {:?}", v),
+        },
         v => panic!("expected dict, got {:?}", v),
     }
 }
@@ -2397,46 +2303,31 @@ fn test_parsed_values_have_correct_types() {
         .expect("write file");
 
     // Verify typeof works on parsed data
-    let prog = format!(
-        "let d = json_parse \"{}\" in typeof d",
-        path
-    );
+    let prog = format!("let d = json_parse \"{}\" in typeof d", path);
     match eval_prog(&prog) {
         Value::String(s) => assert_eq!(s, "Dict", "parsed JSON object should be Dict"),
         v => panic!("expected 'Dict', got {:?}", v),
     }
 
-    let prog = format!(
-        "let d = json_parse \"{}\" in typeof d.str",
-        path
-    );
+    let prog = format!("let d = json_parse \"{}\" in typeof d.str", path);
     match eval_prog(&prog) {
         Value::String(s) => assert_eq!(s, "String", "parsed JSON string should be String"),
         v => panic!("expected 'String', got {:?}", v),
     }
 
-    let prog = format!(
-        "let d = json_parse \"{}\" in typeof d.num",
-        path
-    );
+    let prog = format!("let d = json_parse \"{}\" in typeof d.num", path);
     match eval_prog(&prog) {
         Value::String(s) => assert_eq!(s, "Number", "parsed JSON number should be Number"),
         v => panic!("expected 'Number', got {:?}", v),
     }
 
-    let prog = format!(
-        "let d = json_parse \"{}\" in typeof d.flag",
-        path
-    );
+    let prog = format!("let d = json_parse \"{}\" in typeof d.flag", path);
     match eval_prog(&prog) {
         Value::String(s) => assert_eq!(s, "Bool", "parsed JSON bool should be Bool"),
         v => panic!("expected 'Bool', got {:?}", v),
     }
 
-    let prog = format!(
-        "let d = json_parse \"{}\" in typeof d.list",
-        path
-    );
+    let prog = format!("let d = json_parse \"{}\" in typeof d.list", path);
     match eval_prog(&prog) {
         Value::String(s) => assert_eq!(s, "List", "parsed JSON array should be List"),
         v => panic!("expected 'List', got {:?}", v),

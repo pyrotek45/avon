@@ -45,7 +45,8 @@ testing/run-all.sh                         ← MAIN ENTRY POINT
   │     ├── test_tutorial_snippets.sh        Tutorial code validation
   │     ├── test_markdown.sh                 Markdown processing
   │     ├── test_repl.sh                     REPL basics
-  │     └── test_parallel_functions.sh       Parallel map/filter/fold
+  │     ├── test_parallel_functions.sh       Parallel map/filter/fold
+  │     └── test_do_mode.sh                  Do mode task runner (66 tests)
   │
   ├── integration/run-integration-tests.sh ← RUNNER: Integration tests
   │     ├── test_cli_integration.sh          CLI commands (27 tests)
@@ -53,6 +54,8 @@ testing/run-all.sh                         ← MAIN ENTRY POINT
   │     ├── test_backup.sh                   Backup & recovery
   │     ├── test_atomic_deployment.sh        Atomic deploy
   │     ├── test_bulletproof.sh              Resilience tests
+  │     ├── test_do_mode.sh                  Do mode integration (32 tests)
+  │     ├── test_do_mode_docs.sh             Do mode doc verification (41 tests)
   │     ├── repl/test-multiline.sh           REPL multiline (69 tests)
   │     └── repl/test-error-history.sh       REPL error history
   │
@@ -128,6 +131,7 @@ Tests for the Avon language implementation — parsing, evaluation, builtins, te
 | `test_markdown.sh` | — | Markdown-to-HTML conversion |
 | `test_repl.sh` | — | Basic REPL functionality |
 | `test_parallel_functions.sh` | — | `pmap`, `pfilter`, `pfold` |
+| `test_do_mode.sh` | 66 | Do mode: task dict eval, example files, execution, flags, errors, auto-discovery, security, diamond deps, env vars, CLI help |
 
 ### Integration Tests (`integration/`)
 
@@ -140,6 +144,8 @@ End-to-end tests for the CLI, deploy system, and REPL:
 | `test_backup.sh` | — | `--backup` flag for deploy |
 | `test_atomic_deployment.sh` | — | Atomic file deployment |
 | `test_bulletproof.sh` | — | Resilience under edge cases |
+| `test_do_mode.sh` | 32 | Do mode: simple/structured tasks, deps, dry-run, list, info, env vars, errors, typos, cycles |
+| `test_do_mode_docs.sh` | 41 | Do mode: doc verification — security blocks, file resolution, auto-discovery, CLI help accuracy |
 
 ### REPL Tests (`repl/`)
 

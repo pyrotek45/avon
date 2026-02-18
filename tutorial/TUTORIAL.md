@@ -142,6 +142,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
      - `eval` (evaluate and print)
      - `deploy` (generate files)
      - `run` (evaluate code string)
+     - `do` (built-in task runner)
      - `repl` (interactive shell)
      - `doc` (builtin documentation)
      - `version` (version info)
@@ -3338,6 +3339,80 @@ avon run 'map (\x x * 2) [1, 2, 3]'
 - Useful for quick one-off calculations
 - Prints the result (does not deploy files)
 - Code must be quoted to prevent shell interpretation
+
+**`do` - Built-in Task Runner:**
+```bash
+avon do build                          # Run 'build' task from Avon.av
+avon do test tasks.av                  # Run 'test' task from tasks.av
+avon do --list                         # List all available tasks
+avon do --info build                   # Show details about a task
+avon do --dry-run deploy               # Preview execution plan
+```
+- Treats an `.av` file as a dictionary of shell tasks and executes one
+- Tasks can have dependencies, descriptions, and environment variables
+- Avon resolves the full dependency graph so each task runs exactly once in order
+- Think of it as a lightweight alternative to Make, Just, or npm scripts
+
+**Task file format:**
+
+A task file is a standard Avon dictionary. Each key is a task name, each value is either a command string or a structured definition:
+
+```avon
+{
+  clean: "rm -rf build",
+  build: {
+    cmd: "cargo build --release",
+    desc: "Build in release mode",
+    deps: ["clean"],
+    env: {RUST_LOG: "info"}
+  },
+  test: {cmd: "cargo test", deps: ["build"]}
+}
+```
+
+**Structured task fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `cmd` | string | yes | Shell command to execute |
+| `desc` | string | no | Human-readable description |
+| `deps` | list | no | Tasks that must run first |
+| `env` | dict | no | Environment variables for this task |
+
+**Auto-discovery:** If no file is specified, Avon looks for `Avon.av` in the current directory. This lets you run `avon do build` without remembering file paths.
+
+**Environment variables:** Use `$VAR` or `${VAR}` in commands. Avon expands them from the task's `env` dict first, then falls back to system environment variables.
+
+**Dependency resolution:** When you run a task with dependencies, Avon uses topological sort to determine the correct execution order. Each task runs exactly once, even in diamond dependency graphs:
+
+```avon
+{
+  base: "echo base",
+  left: {cmd: "echo left", deps: ["base"]},
+  right: {cmd: "echo right", deps: ["base"]},
+  top: {cmd: "echo top", deps: ["left", "right"]}
+}
+```
+
+Running `avon do top` executes: base → left → right → top (base runs only once).
+
+**Error handling:**
+- **Task not found** — Avon suggests similar task names (typo detection)
+- **Cyclic dependencies** — Detected and reported before any task runs
+- **Undefined dependencies** — Named in the error, with typo suggestions
+- **Failed tasks** — Execution stops immediately; downstream tasks are skipped
+- **Missing `cmd` field** — Clear error if a structured task lacks `cmd`
+
+**Security:** The `--git` and `--stdin` flags are blocked for `do` mode. Running shell commands from a remote URL or piped input is a remote code execution risk. Download and review the file first:
+
+```bash
+avon eval --git user/repo/tasks.av > tasks.av   # Download
+cat tasks.av                                      # Review
+avon do build tasks.av                            # Run locally
+```
+
+> **Full guide:** See `tutorial/DO_MODE_GUIDE.md` for the complete reference,
+> or run `avon help do` from the command line.
 
 **`repl` - Interactive REPL:**
 ```bash

@@ -1,0 +1,46 @@
+# Avon Task Runner - Environment Variables Example
+# Demonstrates the env var interpolation feature in task definitions
+#
+# Usage:
+#   avon do greet tasks_env_vars.av
+#   avon do deploy tasks_env_vars.av
+#   avon do show_system tasks_env_vars.av
+#   avon do --list tasks_env_vars.av
+
+{
+  greet: {
+    cmd: "echo Hello, $NAME! Welcome to $PROJECT.",
+    desc: "Greet using task-level env vars",
+    env: {NAME: "Developer", PROJECT: "Avon"}
+  },
+
+  version_tag: {
+    cmd: "echo ${APP}-v${VERSION}-${BUILD}",
+    desc: "Build a version tag string using braces syntax",
+    env: {APP: "avon", VERSION: "1.0.0", BUILD: "release"}
+  },
+
+  show_system: {
+    cmd: "echo Your home directory is $HOME",
+    desc: "Demonstrate system env var fallback"
+  },
+
+  override_demo: {
+    cmd: "echo USER is $USER",
+    desc: "Task env overrides system env",
+    env: {USER: "avon_user"}
+  },
+
+  setup: {
+    cmd: "echo Setting up $ENV environment on $SERVER",
+    desc: "Setup deployment environment",
+    env: {ENV: "production", SERVER: "app.example.com"}
+  },
+
+  deploy: {
+    cmd: "echo Deploying $APP version $VERSION to $ENV",
+    desc: "Deploy the application",
+    deps: ["setup"],
+    env: {APP: "my-service", VERSION: "2.1.0", ENV: "production"}
+  }
+}

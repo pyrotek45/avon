@@ -1,0 +1,42 @@
+# Avon Task Runner - Error Handling Demo
+# Demonstrates clear error messages with typo suggestions
+#
+# Try these to see helpful error messages:
+#   avon do bild tasks_error_demo.av      -> suggests "build"
+#   avon do tset tasks_error_demo.av      -> suggests "test"
+#   avon do depoy tasks_error_demo.av     -> suggests "deploy"
+#   avon do zzzzz tasks_error_demo.av     -> no suggestion (too distant)
+#
+# Also try:
+#   avon do --dry-run deploy tasks_error_demo.av
+#   avon do --info deploy tasks_error_demo.av
+
+{
+  clean: {
+    cmd: "echo Cleaning build artifacts...",
+    desc: "Remove build artifacts"
+  },
+
+  build: {
+    cmd: "echo Building project...",
+    desc: "Compile the project",
+    deps: ["clean"]
+  },
+
+  test: {
+    cmd: "echo Running tests...",
+    desc: "Run the test suite",
+    deps: ["build"]
+  },
+
+  lint: {
+    cmd: "echo Linting code...",
+    desc: "Check code style and quality"
+  },
+
+  deploy: {
+    cmd: "echo Deploying to production...",
+    desc: "Deploy to production server",
+    deps: ["test", "lint"]
+  }
+}

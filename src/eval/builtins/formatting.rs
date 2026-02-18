@@ -33,9 +33,7 @@ pub fn get_arity(name: &str) -> Option<usize> {
     match name {
         "format_binary" | "format_bytes" | "format_csv" | "format_hex" | "format_html"
         | "format_ini" | "format_json" | "format_octal" | "format_opml" | "format_toml"
-        | "format_xml" | "format_yaml" => {
-            Some(1)
-        }
+        | "format_xml" | "format_yaml" => Some(1),
         "center" | "format_bool" | "format_currency" | "format_float" | "format_int"
         | "format_list" | "format_percent" | "format_scientific" | "format_table" | "truncate" => {
             Some(2)
@@ -713,10 +711,8 @@ fn value_to_ini(val: &Value, source: &str, line: usize) -> Result<String, EvalEr
                 first = false;
             }
             // Write named sections
-            let mut section_names: Vec<&String> = sections
-                .keys()
-                .filter(|k| k.as_str() != "global")
-                .collect();
+            let mut section_names: Vec<&String> =
+                sections.keys().filter(|k| k.as_str() != "global").collect();
             section_names.sort();
             for name in section_names {
                 if let Some(Value::Dict(props)) = sections.get(name) {
@@ -815,8 +811,8 @@ fn xml_escape(s: &str) -> String {
 
 /// HTML void elements that must not have a closing tag
 const HTML_VOID_ELEMENTS: &[&str] = &[
-    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param",
-    "source", "track", "wbr",
+    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source",
+    "track", "wbr",
 ];
 
 /// Escape special HTML characters
@@ -936,11 +932,10 @@ fn value_to_opml(val: &Value, source: &str, line: usize) -> Result<String, EvalE
             out.push_str("  </body>\n");
             out.push_str("</opml>");
 
-            Ok(Value::String(out))
-                .map(|v| match v {
-                    Value::String(s) => s,
-                    _ => unreachable!(),
-                })
+            Ok(Value::String(out)).map(|v| match v {
+                Value::String(s) => s,
+                _ => unreachable!(),
+            })
         }
         _ => Err(EvalError::type_mismatch(
             "dict with {version, head, outlines}",

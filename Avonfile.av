@@ -1,6 +1,0 @@
-{
-  fmt: "echo 'Formatting...'",
-  lint: "echo 'Linting...'",
-  test: {cmd: "echo 'Testing...'", deps: ["fmt", "lint"]},
-  build: {cmd: "echo 'Building...'", deps: ["test"]}
-}

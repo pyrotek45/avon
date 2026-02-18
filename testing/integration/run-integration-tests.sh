@@ -64,6 +64,11 @@ run_test "Backup Tests"           "$INTEGRATION_DIR/test_backup.sh"
 run_test "Atomic Deployment"      "$INTEGRATION_DIR/test_atomic_deployment.sh"
 run_test "Bulletproof Tests"      "$INTEGRATION_DIR/test_bulletproof.sh"
 
+# ── Do Mode (Task Runner) ───────────────────────────────
+print_section "Do Mode (Task Runner)"
+run_test "Do Mode Tests"          "$INTEGRATION_DIR/test_do_mode.sh"
+run_test "Do Mode Doc Verification" "$INTEGRATION_DIR/test_do_mode_docs.sh"
+
 # ── REPL Tests ───────────────────────────────────────────
 print_section "REPL Tests"
 run_test "REPL Multiline"         "$REPL_DIR/test-multiline.sh"

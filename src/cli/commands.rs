@@ -5,10 +5,12 @@ use crate::eval::{apply_function, collect_file_templates, eval, fetch_git_raw, i
 use crate::lexer::tokenize;
 use crate::parser::parse;
 
-use super::docs::{get_builtin_doc, get_category_doc, print_builtin_docs, print_help};
+use super::docs::{
+    get_builtin_doc, get_category_doc, print_builtin_docs, print_do_help, print_help,
+};
 use super::options::{parse_args, CliOptions};
 use super::repl::execute_repl;
-use super::task_runner::{TaskDef, TaskRunner};
+use super::task_runner::{TaskDef, TaskError, TaskRunner};
 use std::collections::HashMap;
 
 pub fn run_cli(args: Vec<String>) -> i32 {
@@ -62,16 +64,26 @@ pub fn run_cli(args: Vec<String>) -> i32 {
                 }
             }
         }
-        "do" => match parse_args(rest, true) {
-            Ok(opts) => execute_do(opts),
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                eprintln!("  Usage: avon do <task_name> [options]");
-                eprintln!("  Example: avon do build");
-                eprintln!("  Use 'avon help' for more information");
-                1
+        "do" => {
+            // Try with require_file=true first (normal: avon do <task> [file])
+            // Fall back to require_file=false for flags like --list/--info that don't need a task name
+            match parse_args(rest, true) {
+                Ok(opts) => execute_do(opts),
+                Err(_) => {
+                    // Retry without requiring file — supports "avon do --list" with auto-discovery
+                    match parse_args(rest, false) {
+                        Ok(opts) if opts.list_tasks || opts.task_info.is_some() => execute_do(opts),
+                        _ => {
+                            eprintln!("Error: 'do' command requires a task name");
+                            eprintln!("  Usage: avon do <task_name> [file]");
+                            eprintln!("  Example: avon do build");
+                            eprintln!("  Use 'avon help' for more information");
+                            1
+                        }
+                    }
+                }
             }
-        },
+        }
         "repl" => execute_repl(),
         "doc" | "docs" => {
             if rest.is_empty() {
@@ -119,7 +131,11 @@ pub fn run_cli(args: Vec<String>) -> i32 {
             0
         }
         "help" | "--help" | "-h" => {
-            print_help();
+            if rest.first().map(|s| s.as_str()) == Some("do") {
+                print_do_help();
+            } else {
+                print_help();
+            }
             0
         }
         // Legacy / Convenience
@@ -257,8 +273,8 @@ pub fn get_source(opts: &CliOptions) -> Result<(String, String), i32> {
                 })
         }
     } else {
-        // Try to auto-discover Avonfile.av
-        let default_file = "Avonfile.av";
+        // Try to auto-discover Avon.av
+        let default_file = "Avon.av";
         if std::path::Path::new(default_file).exists() {
             std::fs::read_to_string(default_file)
                 .map(|s| (s, default_file.to_string()))
@@ -272,7 +288,7 @@ pub fn get_source(opts: &CliOptions) -> Result<(String, String), i32> {
             eprintln!("  Usage: avon <command> <file> [options]");
             eprintln!("  Example: avon eval config.av");
             eprintln!("  Example: avon deploy config.av --root ./output");
-            eprintln!("  Tip: Or place an Avonfile.av in the current directory for auto-discovery");
+            eprintln!("  Tip: Or place an Avon.av in the current directory for auto-discovery");
             eprintln!("  Use 'avon help' for more information");
             Err(1)
         }
@@ -910,7 +926,7 @@ pub fn execute_run(opts: CliOptions) -> i32 {
     }
 }
 
-fn extract_tasks(value: &Value, _source: &str) -> Result<HashMap<String, TaskDef>, String> {
+fn extract_tasks(value: &Value, _source: &str) -> Result<HashMap<String, TaskDef>, TaskError> {
     match value {
         Value::Dict(dict) => {
             let mut tasks = HashMap::new();
@@ -920,17 +936,39 @@ fn extract_tasks(value: &Value, _source: &str) -> Result<HashMap<String, TaskDef
                         tasks.insert(name.clone(), task);
                     }
                     Err(e) => {
-                        return Err(format!("Failed to parse task '{}': {}", name, e));
+                        return Err(TaskError::ParseError {
+                            reason: format!("Failed to parse task '{}': {}", name, e),
+                        });
                     }
                 }
             }
             Ok(tasks)
         }
-        _ => Err("Expected a dictionary of tasks".to_string()),
+        _ => Err(TaskError::ParseError {
+            reason: "Expected a dictionary of tasks".to_string(),
+        }),
     }
 }
 
 pub fn execute_do(opts: CliOptions) -> i32 {
+    // Security: block --git for do mode — running remote shell commands is dangerous
+    if opts.git_url.is_some() {
+        eprintln!("Error: --git is not allowed with 'do' mode");
+        eprintln!("  Running shell commands from a remote source is a security risk.");
+        eprintln!("  Download the file first, review it, then run locally:");
+        eprintln!("    avon eval --git user/repo/tasks.av > tasks.av");
+        eprintln!("    avon do build tasks.av");
+        return 1;
+    }
+
+    // Security: block --stdin for do mode — same reasoning
+    if opts.read_stdin {
+        eprintln!("Error: --stdin is not allowed with 'do' mode");
+        eprintln!("  Running shell commands from piped input is a security risk.");
+        eprintln!("  Write the input to a file first, review it, then run locally.");
+        return 1;
+    }
+
     // Handle --list flag: show all tasks
     if opts.list_tasks {
         return execute_do_list(&opts);
@@ -954,8 +992,8 @@ fn execute_do_run(opts: &CliOptions) -> i32 {
         None => {
             eprintln!("Error: 'do' command requires a task name");
             eprintln!("  Usage: avon do <task_name> [file]");
-            eprintln!("  Example: avon do build Avonfile.av");
-            eprintln!("  If file is omitted, looks for Avonfile.av");
+            eprintln!("  Example: avon do build Avon.av");
+            eprintln!("  If file is omitted, looks for Avon.av");
             eprintln!("  Use 'avon help do' for more information");
             return 1;
         }
@@ -964,7 +1002,7 @@ fn execute_do_run(opts: &CliOptions) -> i32 {
     // Check if a file was provided in pos_args (second positional after task name)
     // If not, we'll use the default from get_source
     let file_override = opts.pos_args.first().cloned();
-    
+
     // Build modified options to get source
     let source_opts = CliOptions {
         root: opts.root.clone(),
@@ -977,7 +1015,7 @@ fn execute_do_run(opts: &CliOptions) -> i32 {
         git_url: opts.git_url.clone(),
         named_args: opts.named_args.clone(),
         pos_args: opts.pos_args.clone(),
-        file: file_override.or_else(|| None),
+        file: file_override,
         code: opts.code.clone(),
         dry_run: opts.dry_run,
         list_tasks: opts.list_tasks,
@@ -1022,7 +1060,10 @@ fn execute_do_run(opts: &CliOptions) -> i32 {
                                                         0
                                                     }
                                                     Err(e) => {
-                                                        eprintln!("Error planning task '{}': {}", task_name, e);
+                                                        eprintln!(
+                                                            "Error planning task '{}': {}",
+                                                            task_name, e
+                                                        );
                                                         1
                                                     }
                                                 }
@@ -1030,11 +1071,17 @@ fn execute_do_run(opts: &CliOptions) -> i32 {
                                                 // Normal execution
                                                 match runner.run(&task_name) {
                                                     Ok(_) => {
-                                                        println!("Task '{}' completed successfully", task_name);
+                                                        println!(
+                                                            "Task '{}' completed successfully",
+                                                            task_name
+                                                        );
                                                         0
                                                     }
                                                     Err(e) => {
-                                                        eprintln!("Error running task '{}': {}", task_name, e);
+                                                        eprintln!(
+                                                            "Error running task '{}': {}",
+                                                            task_name, e
+                                                        );
                                                         1
                                                     }
                                                 }
@@ -1048,7 +1095,7 @@ fn execute_do_run(opts: &CliOptions) -> i32 {
                                 }
                                 Err(e) => {
                                     eprintln!("Error: {}", e);
-                                    eprintln!("  Make sure your Avonfile contains task definitions");
+                                    eprintln!("  Make sure your Avon.av contains task definitions");
                                     eprintln!("  Example task format: {{build: \"cargo build\", test: \"cargo test\"}}");
                                     1
                                 }
@@ -1074,7 +1121,7 @@ fn execute_do_list(opts: &CliOptions) -> i32 {
     // For --list: optional file argument comes from opts.file
     // (the "list" positional arg is treated as task_name in normal flow)
     let file_override = opts.pos_args.first().cloned().or_else(|| opts.file.clone());
-    
+
     let source_opts = CliOptions {
         root: opts.root.clone(),
         force: opts.force,
@@ -1094,63 +1141,57 @@ fn execute_do_list(opts: &CliOptions) -> i32 {
     };
 
     match get_source(&source_opts) {
-        Ok((source, source_name)) => {
-            match tokenize(source.clone()) {
-                Ok(tokens) => {
-                    let ast = parse(tokens);
-                    let mut symbols = initial_builtins();
+        Ok((source, source_name)) => match tokenize(source.clone()) {
+            Ok(tokens) => {
+                let ast = parse(tokens);
+                let mut symbols = initial_builtins();
 
-                    match eval(ast.program, &mut symbols, &source) {
-                        Ok(v) => {
-                            match extract_tasks(&v, &source) {
-                                Ok(tasks) => {
-                                    match TaskRunner::new(tasks) {
-                                        Ok(runner) => {
-                                            let task_list = runner.list_tasks();
-                                            if task_list.is_empty() {
-                                                println!("No tasks found");
-                                                return 0;
-                                            }
+                match eval(ast.program, &mut symbols, &source) {
+                    Ok(v) => match extract_tasks(&v, &source) {
+                        Ok(tasks) => match TaskRunner::new(tasks) {
+                            Ok(runner) => {
+                                let task_list = runner.list_tasks();
+                                if task_list.is_empty() {
+                                    println!("No tasks found");
+                                    return 0;
+                                }
 
-                                            println!("Available Tasks:");
-                                            println!("================");
-                                            for task in task_list {
-                                                println!("{}", task.name);
-                                                if let Some(desc) = &task.desc {
-                                                    println!("  Description: {}", desc);
-                                                }
-                                                println!("  Command: {}", task.cmd);
-                                                if !task.deps.is_empty() {
-                                                    println!("  Dependencies: {}", task.deps.join(", "));
-                                                }
-                                                println!();
-                                            }
-                                            0
-                                        }
-                                        Err(e) => {
-                                            eprintln!("Error initializing task runner: {}", e);
-                                            1
-                                        }
+                                println!("Available Tasks:");
+                                println!("================");
+                                for task in task_list {
+                                    println!("{}", task.name);
+                                    if let Some(desc) = &task.desc {
+                                        println!("  Description: {}", desc);
                                     }
+                                    println!("  Command: {}", task.cmd);
+                                    if !task.deps.is_empty() {
+                                        println!("  Dependencies: {}", task.deps.join(", "));
+                                    }
+                                    println!();
                                 }
-                                Err(e) => {
-                                    eprintln!("Error: {}", e);
-                                    1
-                                }
+                                0
                             }
-                        }
+                            Err(e) => {
+                                eprintln!("Error initializing task runner: {}", e);
+                                1
+                            }
+                        },
                         Err(e) => {
-                            eprintln!("{}", e.pretty_with_file(&source, Some(&source_name)));
+                            eprintln!("Error: {}", e);
                             1
                         }
+                    },
+                    Err(e) => {
+                        eprintln!("{}", e.pretty_with_file(&source, Some(&source_name)));
+                        1
                     }
                 }
-                Err(e) => {
-                    eprintln!("{}", e.pretty_with_file(&source, Some(&source_name)));
-                    1
-                }
             }
-        }
+            Err(e) => {
+                eprintln!("{}", e.pretty_with_file(&source, Some(&source_name)));
+                1
+            }
+        },
         Err(c) => c,
     }
 }
@@ -1159,7 +1200,7 @@ fn execute_do_info(opts: &CliOptions, task_name: &str) -> i32 {
     // For --info: file argument comes from opts.file (the task name passed to --info)
     // and optional file argument from pos_args
     let file_override = opts.pos_args.first().cloned().or_else(|| opts.file.clone());
-    
+
     let source_opts = CliOptions {
         root: opts.root.clone(),
         force: opts.force,
@@ -1199,7 +1240,10 @@ fn execute_do_info(opts: &CliOptions, task_name: &str) -> i32 {
                                                         println!("Description: {}", desc);
                                                     }
                                                     if !task.deps.is_empty() {
-                                                        println!("Dependencies: {}", task.deps.join(", "));
+                                                        println!(
+                                                            "Dependencies: {}",
+                                                            task.deps.join(", ")
+                                                        );
                                                     }
                                                     if !task.env.is_empty() {
                                                         println!("Environment Variables:");
@@ -1210,12 +1254,19 @@ fn execute_do_info(opts: &CliOptions, task_name: &str) -> i32 {
                                                     0
                                                 }
                                                 None => {
-                                                    eprintln!("Error: Task '{}' not found", task_name);
+                                                    eprintln!(
+                                                        "Error: Task '{}' not found",
+                                                        task_name
+                                                    );
                                                     // Suggest similar tasks
                                                     let all_tasks = runner.get_all_tasks();
-                                                    let task_names: Vec<_> = all_tasks.keys().cloned().collect();
+                                                    let task_names: Vec<_> =
+                                                        all_tasks.keys().cloned().collect();
                                                     if !task_names.is_empty() {
-                                                        eprintln!("Available tasks: {}", task_names.join(", "));
+                                                        eprintln!(
+                                                            "Available tasks: {}",
+                                                            task_names.join(", ")
+                                                        );
                                                     }
                                                     1
                                                 }

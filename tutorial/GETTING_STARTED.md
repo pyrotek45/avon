@@ -24,7 +24,8 @@ A hands-on guide to learning Avon step by step. Each lesson builds on the previo
 14. [Lesson 14: Importing & Sharing](#lesson-14-importing--sharing) — Reuse code from files and GitHub
 15. [Lesson 15: Built-in Functions](#lesson-15-built-in-functions) — Exploring the standard library
 16. [Lesson 16: Putting It All Together](#lesson-16-putting-it-all-together) — A real-world project
-17. [Where to Go Next](#where-to-go-next)
+17. [Lesson 17: Task Runner (Do Mode)](#lesson-17-task-runner-do-mode) — Run shell tasks
+18. [Where to Go Next](#where-to-go-next)
 
 ---
 
@@ -1315,6 +1316,70 @@ This single program combines nearly everything we learned:
 
 ---
 
+## Lesson 17: Task Runner (Do Mode)
+
+Avon has a built-in task runner. Instead of using Make, Just, or npm scripts,
+you can define shell tasks in an Avon file and run them with `avon do`.
+
+### Your First Task File
+
+Create a file called `Avon.av`:
+
+```avon
+{
+  greet: "echo Hello from Avon!",
+  build: "echo building...",
+  test: "echo testing..."
+}
+```
+
+```bash
+avon do greet
+# Output:
+# Running: greet
+# Hello from Avon!
+# Task 'greet' completed successfully
+```
+
+### Tasks with Dependencies
+
+Tasks can depend on other tasks. Avon runs them in the correct order:
+
+```avon
+{
+  clean: "echo cleaning",
+  build: {cmd: "echo building", deps: ["clean"]},
+  test: {cmd: "echo testing", deps: ["build"]}
+}
+```
+
+```bash
+avon do test
+# Runs: clean → build → test (in order)
+```
+
+### Listing and Previewing
+
+```bash
+avon do --list                # Show all tasks
+avon do --dry-run test        # Preview execution plan
+avon do --info build          # Show task details
+```
+
+### Auto-Discovery
+
+If you don't pass a file, Avon looks for `Avon.av` in the current directory:
+
+```bash
+avon do build                 # same as: avon do build Avon.av
+```
+
+> **Learn more:** See the [Do Mode Guide](./DO_MODE_GUIDE.md) for dependencies,
+> environment variables, error messages, and real-world examples.
+> Run `avon help do` for CLI reference.
+
+---
+
 ## Where to Go Next
 
 You now know the fundamentals of Avon. Here's where to continue:
@@ -1324,8 +1389,10 @@ You now know the fundamentals of Avon. Here's where to continue:
 | Resource | Description |
 |----------|-------------|
 | [Full Tutorial](./TUTORIAL.md) | Comprehensive 6000+ line reference covering every feature |
+| [Do Mode Guide](./DO_MODE_GUIDE.md) | Built-in task runner — run shell tasks with dependency resolution |
 | [Built-in Functions Reference](./BUILTIN_FUNCTIONS.md) | All 194 functions with signatures and examples |
 | `avon doc <function>` | Look up any function from the command line |
+| `avon help do` | Task runner CLI help |
 
 ### Example Files
 
@@ -1386,8 +1453,10 @@ if cond then a else b    Conditional
 avon run 'expr'          Evaluate inline expression
 avon eval file.av        Preview file output
 avon deploy file.av      Write files to disk
+avon do build            Run a task from Avon.av
 avon repl                Interactive shell
 avon doc <name>          Look up function docs
+avon help do             Task runner help
 ```
 
 ---

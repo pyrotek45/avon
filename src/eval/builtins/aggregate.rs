@@ -4,7 +4,9 @@ use crate::common::{EvalError, Number, Value};
 use crate::eval::apply_function;
 
 /// Names of aggregate builtins
-pub const NAMES: &[&str] = &["all", "any", "count", "default", "max", "min", "product", "sum"];
+pub const NAMES: &[&str] = &[
+    "all", "any", "count", "default", "max", "min", "product", "sum",
+];
 
 /// Get arity for aggregate functions
 pub fn get_arity(name: &str) -> Option<usize> {

@@ -1,0 +1,73 @@
+# Parameterized Task Runner Example
+# Usage: avon do ci examples/tasks_advanced.av
+#        ENV=prod VERSION=1.2.3 avon do deploy examples/tasks_advanced.av
+# Shows: Avon's advantage - full language power in task definitions
+
+# STEP 1: Get values from environment or use defaults
+let env = env_var_or "ENV" "dev" in
+let version = env_var_or "VERSION" "0.1.0" in
+
+# STEP 2: Compute values based on other variables
+# This is the KEY: profile is not from environment, it's DERIVED from env
+let profile = if env == "prod" then "release" else "debug" in
+
+# STEP 3: Define helper functions
+# These show Avon language power - you can compute command strings!
+let docker_tag = \v "myapp:" + v in
+let cargo_cmd = \target \mode "cargo " + target + " --profile " + mode in
+
+# STEP 4: Build the tasks dictionary
+# Notice how each task can use the variables and functions defined above
+let tasks = {
+    format: {
+        cmd: "cargo fmt --check",
+        desc: "Check code formatting"
+    },
+    
+    lint: {
+        cmd: "cargo clippy --all-targets -- -D warnings",
+        desc: "Run clippy lints",
+        deps: ["format"]
+    },
+    
+    build: {
+        cmd: cargo_cmd "build" profile,
+        desc: "Build for " + env + " (profile: " + profile + ")",
+        deps: ["format", "lint"]
+    },
+    
+    test: {
+        cmd: "cargo test --all",
+        desc: "Run tests",
+        deps: ["build"]
+    },
+    
+    docker: {
+        cmd: "docker build -t " + (docker_tag version) + " .",
+        desc: "Build Docker image " + (docker_tag version),
+        deps: ["build"]
+    },
+    
+    push: {
+        cmd: "docker push " + (docker_tag version),
+        desc: "Push " + (docker_tag version) + " to registry",
+        deps: ["docker"]
+    },
+    
+    deploy: {
+        cmd: "sh scripts/deploy.sh " + version + " " + env,
+        desc: "Deploy version " + version + " to " + env,
+        deps: ["test", "docker"]
+    },
+    
+    ci: {
+        cmd: "echo 'CI: All checks passed!'",
+        desc: "Run full CI pipeline",
+        deps: ["format", "lint", "test", "docker"]
+    },
+    
+    clean: "cargo clean"
+} in
+
+# Return the tasks dictionary
+tasks

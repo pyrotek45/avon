@@ -124,10 +124,14 @@ run_test_suite() {
 
 # 1. Run Cargo tests (unit and integration tests)
 print_header "Cargo Tests"
-if cd "$PROJECT_ROOT" && cargo test --all 2>&1 | tail -20; then
-    print_success "Cargo unit and integration tests"
+if [ -f "$TESTING_DIR/run-cargo-tests.sh" ]; then
+    run_test_suite "Cargo Tests" "$TESTING_DIR/run-cargo-tests.sh"
 else
-    print_error "Cargo unit and integration tests"
+    if cd "$PROJECT_ROOT" && cargo test --all 2>&1 | tail -20; then
+        print_success "Cargo unit and integration tests"
+    else
+        print_error "Cargo unit and integration tests"
+    fi
 fi
 
 # 2. Run clippy

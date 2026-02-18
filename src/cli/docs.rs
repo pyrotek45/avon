@@ -469,7 +469,8 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              Use :doc <function> for detailed documentation.",
             "trace", "spy", "debug", "tap", "assert", "error"
         )),
-        "parse" | "parsing" | "data" | "json" | "yaml" | "toml" | "csv" | "xml" | "opml" | "ini" => Some(format!(
+        "parse" | "parsing" | "data" | "json" | "yaml" | "toml" | "csv" | "xml" | "opml"
+        | "ini" => Some(format!(
             "Data Parsing & Formatting:\n\
              ──────────────────────────\n\
              Avon supports 8 structured data formats, each with a\n\
@@ -513,9 +514,30 @@ pub fn get_category_doc(category: &str) -> Option<String> {
                yaml_parse_string \"name: Alice\" -> format_json\n\n\
              Access parsed data with .key or get dict \"key\"\n\n\
              Use :doc <function> for detailed documentation.",
-            "json_parse", "yaml_parse", "toml_parse", "csv_parse", "xml_parse", "html_parse", "opml_parse", "ini_parse",
-            "json_parse_string", "yaml_parse_string", "toml_parse_string", "csv_parse_string", "xml_parse_string", "html_parse_string", "opml_parse_string", "ini_parse_string",
-            "format_json", "format_yaml", "format_toml", "format_csv", "format_xml", "format_html", "format_opml", "format_ini"
+            "json_parse",
+            "yaml_parse",
+            "toml_parse",
+            "csv_parse",
+            "xml_parse",
+            "html_parse",
+            "opml_parse",
+            "ini_parse",
+            "json_parse_string",
+            "yaml_parse_string",
+            "toml_parse_string",
+            "csv_parse_string",
+            "xml_parse_string",
+            "html_parse_string",
+            "opml_parse_string",
+            "ini_parse_string",
+            "format_json",
+            "format_yaml",
+            "format_toml",
+            "format_csv",
+            "format_xml",
+            "format_html",
+            "format_opml",
+            "format_ini"
         )),
         "system" | "sys" | "env" | "environment" => Some(format!(
             "System Functions:\n\
@@ -1203,10 +1225,22 @@ pub fn print_builtin_docs() {
     println!("  {:<18} :: {}", "ini_parse", "String -> Dict");
     println!();
     println!("  String Parsers (raw string -> Avon value):");
-    println!("  {:<18} :: {}", "json_parse_string", "String -> (Dict|List|a)");
-    println!("  {:<18} :: {}", "yaml_parse_string", "String -> (Dict|List|a)");
-    println!("  {:<18} :: {}", "toml_parse_string", "String -> (Dict|List|a)");
-    println!("  {:<18} :: {}", "csv_parse_string", "String -> [Dict|[String]]");
+    println!(
+        "  {:<18} :: {}",
+        "json_parse_string", "String -> (Dict|List|a)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "yaml_parse_string", "String -> (Dict|List|a)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "toml_parse_string", "String -> (Dict|List|a)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "csv_parse_string", "String -> [Dict|[String]]"
+    );
     println!("  {:<18} :: {}", "xml_parse_string", "String -> Dict");
     println!("  {:<18} :: {}", "html_parse_string", "String -> Dict");
     println!("  {:<18} :: {}", "opml_parse_string", "String -> Dict");
@@ -1324,95 +1358,151 @@ pub fn print_builtin_docs() {
 }
 
 pub fn print_help() {
-    let help = r#"avon — evaluate and generate file templates
+    let help = r#"avon — evaluate, generate, and run
 
 Usage: avon <command> [args]
 
 Commands:
   eval <file>        Evaluate a file and print the result (no files written)
   deploy <file>      Deploy generated templates to disk
+  do <task> [file]   Run a task from a task file (built-in task runner)
   run <code>         Evaluate code string directly
   repl               Start interactive REPL (Read-Eval-Print Loop)
   doc [name]         Show builtin function reference
   version            Show version information
   help               Show this help message
+  help <command>     Show detailed help for a specific command
+
+How Avon Reads Files:
+  Avon resolves its source file in this order:
+    1. --stdin       Read from standard input (eval/deploy only)
+    2. --git <url>   Fetch from GitHub (eval/deploy only)
+    3. <file>        Read the file path given as an argument
+    4. Avon.av   Auto-discover in the current directory (do mode only)
+  If none of these succeed, Avon prints an error with usage hints.
+
+  Security: 'do' mode only reads local files. --git and --stdin are blocked
+  because running shell commands from a remote or piped source is dangerous.
+
+Modes at a Glance:
+  eval      Evaluate an .av file and print the result. No files are written.
+  deploy    Evaluate an .av file and write any FileTemplates to disk.
+  do        Treat the .av file as a dictionary of shell tasks and run one.
+            The file must evaluate to a dict of task definitions.
+  run       Evaluate a code string directly (no file needed).
 
 Documentation:
   avon doc                   List all builtin functions
   avon doc <function>        Show help for a specific function (e.g., avon doc map)
-  
-  In the REPL, use :doc with categories to browse functions by type:
-    :doc string    Text manipulation (concat, upper, lower, split, join...)
-    :doc list      List operations (map, filter, fold, head, tail, zip...)
-    :doc math      Math functions (sqrt, pow, floor, ceil, abs, sum...)
-    :doc dict      Dictionary operations (keys, values, get, set, merge...)
-    :doc file      File system (read_file, write_file, glob, abspath...)
-    :doc type      Type checking (is_string, is_number, is_list...)
-    :doc format    Formatting (format_hex, format_json, format_table...)
-    :doc date      Date/time (now, format_date, parse_date...)
-    :doc regex     Regular expressions (regex_match, regex_replace...)
 
 Note: You can omit 'eval' - 'avon <file>' is equivalent to 'avon eval <file>'
       Example: 'avon config.av' works the same as 'avon eval config.av'
 
 Options:
   --root <dir>       Prepend <dir> to generated file paths (deploy only)
-                     Default: If not specified, files are written relative to current working directory
-                     Recommended: Always use --root to avoid writing to system directories
-  
   --force            Overwrite existing files without warning (deploy only)
-                     Use with caution: This will overwrite files without backup
-  
   --append           Append to existing files instead of overwriting (deploy only)
-                     Useful for logs or accumulating data
-  
   --if-not-exists    Only write file if it doesn't exist (deploy only)
-                     Useful for initialization files
-  
   --backup           Create backup (.bak) of existing files before overwriting (deploy only)
-                     Safest option: Preserves old files while allowing updates
-  
-  --git <url>        Use git raw URL as source file (for eval/deploy)
-                     Format: user/repo/path/to/file.av
-  
+  --git <url>        Use git raw URL as source file (for eval/deploy only)
   --debug            Enable detailed debug output (lexer/parser/eval)
-                     Useful for troubleshooting syntax or evaluation issues
-  
+  --dry-run          Preview execution plan without running (do only)
+  --list             List all available tasks (do only)
+  --info <task>      Show detailed info for a task (do only)
   -param value       Pass named arguments to main function
-                     Example: -env prod -version 1.0
-
-Safety:
-  By default, Avon will NOT overwrite existing files. It skips them and warns you.
-  Use --force, --append, or --backup to explicitly allow file modifications.
-  Always use --root to confine deployment to a specific directory.
 
 Examples:
-  # Evaluate a file (see what it produces) - these are equivalent:
-  avon eval config.av
-  avon config.av
-  
-  # Deploy to a specific directory
-  avon deploy config.av --root ./output
-  
-  # Deploy with backup (safest)
-  avon deploy config.av --root ./output --backup
-  
-  # Deploy with arguments
-  avon deploy config.av --root ./output -env prod -version 1.0
-  
-  # Evaluate code directly
-  avon run 'map (\x x*2) [1,2,3]'
-  
-  # Fetch and deploy from GitHub
-  avon deploy --git user/repo/file.av --root ./out
-  
-  # Start interactive REPL
-  avon repl
-  
-  # Debug a problematic file
-  avon eval config.av --debug
+  avon eval config.av                         # Preview output
+  avon deploy config.av --root ./output       # Write files to disk
+  avon do build                               # Run 'build' task from Avon.av
+  avon do test tasks.av                       # Run 'test' task from tasks.av
+  avon do --list                              # List all tasks in Avon.av
+  avon do --dry-run deploy                    # Preview task execution plan
+  avon run 'map (\x x*2) [1,2,3]'            # Evaluate code directly
+  avon repl                                   # Start interactive REPL
 
 For more information, see: https://github.com/pyrotek45/avon
+"#;
+    println!("{}", help);
+}
+
+pub fn print_do_help() {
+    let help = r#"avon do — Built-in Task Runner
+
+Usage:
+  avon do <task> [file]        Run a task
+  avon do --list [file]        List all available tasks
+  avon do --info <task> [file] Show detailed info about a task
+  avon do --dry-run <task> [file]  Preview execution plan
+
+Description:
+  The 'do' command treats an .av file as a dictionary of shell tasks and
+  executes one of them. Tasks can have dependencies, descriptions, and
+  environment variables. Avon resolves the full dependency graph using
+  topological sort so each task runs exactly once in the correct order.
+
+  Think of it as a lightweight alternative to Make, Just, or npm scripts —
+  powered by Avon's native data format.
+
+File Resolution:
+  Avon finds the task file using this priority:
+    1. Explicit file argument:   avon do build tasks.av
+    2. Auto-discovery:           avon do build  (looks for Avon.av
+                                 in the current directory)
+  If no file is given and no Avon.av exists, Avon prints an error.
+
+Security:
+  The --git and --stdin flags are blocked for 'do' mode. Running shell
+  commands from a remote URL or piped input is a security risk (remote
+  code execution). Download and review the file first:
+    avon eval --git user/repo/tasks.av > tasks.av
+    cat tasks.av          # review the file
+    avon do build tasks.av
+
+Task File Format:
+  A task file is an Avon dictionary where each key is a task name and
+  each value is either a command string or a structured definition.
+
+  Simple tasks:
+    {build: "cargo build", test: "cargo test"}
+
+  Structured tasks:
+    {
+      build: {
+        cmd: "cargo build --release",
+        desc: "Build in release mode",
+        deps: ["lint", "test"],
+        env: {RUST_LOG: "info"}
+      }
+    }
+
+  Fields for structured tasks:
+    cmd   (string, required)   Shell command to execute
+    deps  (list, optional)     Tasks that must run first
+    desc  (string, optional)   Human-readable description
+    env   (dict, optional)     Environment variables to set
+
+Environment Variables:
+  Use $VAR or ${VAR} in commands. Avon expands them in this order:
+    1. Task-level env dict (highest priority)
+    2. System environment variables (fallback)
+  Unknown variables are passed through to the shell as-is.
+
+Options:
+  --dry-run          Show the execution plan without running anything
+  --list             List all tasks with descriptions and commands
+  --info <task>      Show details for a specific task
+  --debug            Show debug output during evaluation
+
+Examples:
+  avon do build                    Run 'build' from Avon.av
+  avon do test tasks.av            Run 'test' from tasks.av
+  avon do --list                   List tasks in Avon.av
+  avon do --list tasks.av          List tasks in tasks.av
+  avon do --info build             Show build task details
+  avon do --dry-run deploy         Preview deploy execution plan
+
+See also: tutorial/DO_MODE_GUIDE.md for the complete guide
 "#;
     println!("{}", help);
 }

@@ -1,0 +1,80 @@
+# Avon Task Runner - CI/CD Pipeline Example
+# Demonstrates a realistic multi-stage pipeline with dependencies
+#
+# Usage:
+#   avon do deploy tasks_pipeline.av           -> runs the full pipeline
+#   avon do --dry-run deploy tasks_pipeline.av -> see execution plan
+#   avon do --list tasks_pipeline.av           -> see all available tasks
+#   avon do --info deploy tasks_pipeline.av    -> see deploy task details
+#   avon do test tasks_pipeline.av             -> run just up to testing
+
+{
+  install_deps: {
+    cmd: "echo Installing dependencies...",
+    desc: "Install project dependencies"
+  },
+
+  fmt: {
+    cmd: "echo Checking formatting...",
+    desc: "Verify code formatting",
+    deps: ["install_deps"]
+  },
+
+  lint: {
+    cmd: "echo Running linter with $LINT_LEVEL level...",
+    desc: "Run static analysis",
+    deps: ["install_deps"],
+    env: {LINT_LEVEL: "strict"}
+  },
+
+  build: {
+    cmd: "echo Building for $TARGET...",
+    desc: "Compile the project",
+    deps: ["fmt", "lint"],
+    env: {TARGET: "x86_64-linux"}
+  },
+
+  unit_test: {
+    cmd: "echo Running unit tests...",
+    desc: "Execute unit test suite",
+    deps: ["build"]
+  },
+
+  integration_test: {
+    cmd: "echo Running integration tests against $TEST_DB...",
+    desc: "Execute integration test suite",
+    deps: ["build"],
+    env: {TEST_DB: "postgres://localhost/test"}
+  },
+
+  package: {
+    cmd: "echo Packaging ${APP}-${VERSION}.tar.gz...",
+    desc: "Create release archive",
+    deps: ["unit_test", "integration_test"],
+    env: {APP: "myapp", VERSION: "1.0.0"}
+  },
+
+  deploy: {
+    cmd: "echo Deploying to $DEPLOY_TARGET...",
+    desc: "Deploy to production",
+    deps: ["package"],
+    env: {DEPLOY_TARGET: "production-cluster"}
+  },
+
+  clean: {
+    cmd: "echo Cleaning all artifacts...",
+    desc: "Remove all build artifacts"
+  },
+
+  docs: {
+    cmd: "echo Generating documentation...",
+    desc: "Build project documentation",
+    deps: ["install_deps"]
+  },
+
+  test: {
+    cmd: "echo All tests passed!",
+    desc: "Run all tests",
+    deps: ["unit_test", "integration_test"]
+  }
+}

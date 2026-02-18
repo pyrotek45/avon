@@ -106,10 +106,7 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                                 Some(dt) => dt,
                                 None => {
                                     return Err(EvalError::new(
-                                        format!(
-                                            "ambiguous or invalid local time: '{}'",
-                                            date_str
-                                        ),
+                                        format!("ambiguous or invalid local time: '{}'", date_str),
                                         None,
                                         None,
                                         line,
@@ -154,10 +151,7 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                         Some(dt) => dt,
                         None => {
                             return Err(EvalError::new(
-                                format!(
-                                    "ambiguous or invalid local time: '{}'",
-                                    date_str
-                                ),
+                                format!("ambiguous or invalid local time: '{}'", date_str),
                                 None,
                                 None,
                                 line,
@@ -177,10 +171,7 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                                 Some(dt) => dt,
                                 None => {
                                     return Err(EvalError::new(
-                                        format!(
-                                            "ambiguous or invalid local time: '{}'",
-                                            date_str
-                                        ),
+                                        format!("ambiguous or invalid local time: '{}'", date_str),
                                         None,
                                         None,
                                         line,

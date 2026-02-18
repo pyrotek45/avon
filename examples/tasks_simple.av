@@ -1,0 +1,43 @@
+# Simple Task Runner Example
+# Usage: avon do tasks_simple.av [task-name]
+# Shows: Basic flat and structured task definitions
+
+# Flat format - simplest, good for trivial tasks
+let simple_tasks = {
+    hello: "echo 'Hello from task!'",
+    greet: "echo 'Greetings!'",
+    goodbye: "echo 'Goodbye!'"
+} in
+
+# Structured format - recommended, supports descriptions and dependencies
+let my_tasks = {
+    build: {
+        cmd: "echo '[TASK] Building project...'",
+        desc: "Build the project"
+    },
+    
+    test: {
+        cmd: "echo '[TASK] Running tests...'",
+        desc: "Run unit tests",
+        deps: ["build"]  # Run build first
+    },
+    
+    lint: {
+        cmd: "echo '[TASK] Linting code...'",
+        desc: "Check code style"
+    },
+    
+    ci: {
+        cmd: "echo '[TASK] CI passed! All checks complete.'",
+        desc: "Run all checks (build, lint, test)",
+        deps: ["build", "lint", "test"]
+    },
+    
+    clean: {
+        cmd: "echo '[TASK] Cleaned build artifacts'",
+        desc: "Clean build directory"
+    }
+} in
+
+# Return the tasks dict so avon do can extract it
+my_tasks
