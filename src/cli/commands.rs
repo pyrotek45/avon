@@ -951,22 +951,33 @@ fn extract_tasks(value: &Value, _source: &str) -> Result<HashMap<String, TaskDef
 }
 
 pub fn execute_do(opts: CliOptions) -> i32 {
-    // Security: block --git for do mode — running remote shell commands is dangerous
-    if opts.git_url.is_some() {
-        eprintln!("Error: --git is not allowed with 'do' mode");
-        eprintln!("  Running shell commands from a remote source is a security risk.");
-        eprintln!("  Download the file first, review it, then run locally:");
-        eprintln!("    avon eval --git user/repo/tasks.av > tasks.av");
-        eprintln!("    avon do build tasks.av");
-        return 1;
+    // Safety check: --git and --stdin run remote/piped shell commands
+    // Allow with --force (skip prompt) or interactive confirmation
+    if opts.git_url.is_some() && !opts.force {
+        eprintln!(
+            "Warning: 'do' with --git will run shell commands from a remote source."
+        );
+        eprintln!("  Source: {}", opts.git_url.as_ref().unwrap());
+        eprintln!("  Use --force to skip this prompt.");
+        eprint!("  Continue? [y/N] ");
+        let mut input = String::new();
+        if std::io::stdin().read_line(&mut input).is_err() || !input.trim().eq_ignore_ascii_case("y")
+        {
+            eprintln!("Aborted.");
+            return 1;
+        }
     }
 
-    // Security: block --stdin for do mode — same reasoning
-    if opts.read_stdin {
-        eprintln!("Error: --stdin is not allowed with 'do' mode");
-        eprintln!("  Running shell commands from piped input is a security risk.");
-        eprintln!("  Write the input to a file first, review it, then run locally.");
-        return 1;
+    if opts.read_stdin && !opts.force {
+        eprintln!("Warning: 'do' with --stdin will run shell commands from piped input.");
+        eprintln!("  Use --force to skip this prompt.");
+        eprint!("  Continue? [y/N] ");
+        let mut input = String::new();
+        if std::io::stdin().read_line(&mut input).is_err() || !input.trim().eq_ignore_ascii_case("y")
+        {
+            eprintln!("Aborted.");
+            return 1;
+        }
     }
 
     // Handle --list flag: show all tasks
@@ -1167,6 +1178,19 @@ fn execute_do_list(opts: &CliOptions) -> i32 {
                                     if !task.deps.is_empty() {
                                         println!("  Dependencies: {}", task.deps.join(", "));
                                     }
+                                    if let Some(ref dir) = task.dir {
+                                        println!("  Directory: {}", dir);
+                                    }
+                                    if !task.downloads.is_empty() {
+                                        println!(
+                                            "  Downloads: {}",
+                                            task.downloads
+                                                .iter()
+                                                .map(|d| format!("{} → {}", d.url, d.to))
+                                                .collect::<Vec<_>>()
+                                                .join(", ")
+                                        );
+                                    }
                                     println!();
                                 }
                                 0
@@ -1250,6 +1274,27 @@ fn execute_do_info(opts: &CliOptions, task_name: &str) -> i32 {
                                                         for (key, val) in &task.env {
                                                             println!("  {}: {}", key, val);
                                                         }
+                                                    }
+                                                    if let Some(ref dir) = task.dir {
+                                                        println!("Directory: {}", dir);
+                                                    }
+                                                    if !task.downloads.is_empty() {
+                                                        println!("Downloads:");
+                                                        for dl in &task.downloads {
+                                                            println!(
+                                                                "  {} → {}",
+                                                                dl.url, dl.to
+                                                            );
+                                                        }
+                                                    }
+                                                    if task.quiet {
+                                                        println!("Quiet: true");
+                                                    }
+                                                    if task.ignore_errors {
+                                                        println!("Ignore Errors: true");
+                                                    }
+                                                    if task.stdin.is_some() {
+                                                        println!("Stdin: (piped)");
                                                     }
                                                     0
                                                 }

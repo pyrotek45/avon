@@ -1375,14 +1375,14 @@ Commands:
 
 How Avon Reads Files:
   Avon resolves its source file in this order:
-    1. --stdin       Read from standard input (eval/deploy only)
-    2. --git <url>   Fetch from GitHub (eval/deploy only)
+    1. --stdin       Read from standard input
+    2. --git <url>   Fetch from GitHub
     3. <file>        Read the file path given as an argument
     4. Avon.av   Auto-discover in the current directory (do mode only)
   If none of these succeed, Avon prints an error with usage hints.
 
-  Security: 'do' mode only reads local files. --git and --stdin are blocked
-  because running shell commands from a remote or piped source is dangerous.
+  Safety: In 'do' mode, --git and --stdin prompt for confirmation before
+  running remote/piped shell commands. Use --force to skip the prompt.
 
 Modes at a Glance:
   eval      Evaluate an .av file and print the result. No files are written.
@@ -1400,11 +1400,11 @@ Note: You can omit 'eval' - 'avon <file>' is equivalent to 'avon eval <file>'
 
 Options:
   --root <dir>       Prepend <dir> to generated file paths (deploy only)
-  --force            Overwrite existing files without warning (deploy only)
+  --force            Overwrite existing files (deploy) / skip confirmation (do --git)
   --append           Append to existing files instead of overwriting (deploy only)
   --if-not-exists    Only write file if it doesn't exist (deploy only)
   --backup           Create backup (.bak) of existing files before overwriting (deploy only)
-  --git <url>        Use git raw URL as source file (for eval/deploy only)
+  --git <url>        Use git raw URL as source file
   --debug            Enable detailed debug output (lexer/parser/eval)
   --dry-run          Preview execution plan without running (do only)
   --list             List all available tasks (do only)
@@ -1434,6 +1434,8 @@ Usage:
   avon do --list [file]        List all available tasks
   avon do --info <task> [file] Show detailed info about a task
   avon do --dry-run <task> [file]  Preview execution plan
+  avon do <task> --git user/repo/file.av  Run from a remote file
+  avon do <task> --git <url> --force      Skip confirmation prompt
 
 Description:
   The 'do' command treats an .av file as a dictionary of shell tasks and
@@ -1451,13 +1453,13 @@ File Resolution:
                                  in the current directory)
   If no file is given and no Avon.av exists, Avon prints an error.
 
-Security:
-  The --git and --stdin flags are blocked for 'do' mode. Running shell
-  commands from a remote URL or piped input is a security risk (remote
-  code execution). Download and review the file first:
-    avon eval --git user/repo/tasks.av > tasks.av
-    cat tasks.av          # review the file
-    avon do build tasks.av
+Safety:
+  Using --git or --stdin with 'do' mode will prompt for confirmation
+  before running, since the shell commands come from a remote source.
+  Use --force to skip the prompt.
+
+    avon do build --git user/repo/tasks.av          # prompts y/N
+    avon do build --git user/repo/tasks.av --force  # runs immediately
 
 Task File Format:
   A task file is an Avon dictionary where each key is a task name and
@@ -1477,10 +1479,16 @@ Task File Format:
     }
 
   Fields for structured tasks:
-    cmd   (string, required)   Shell command to execute
-    deps  (list, optional)     Tasks that must run first
-    desc  (string, optional)   Human-readable description
-    env   (dict, optional)     Environment variables to set
+    cmd           (string|list, required)  Shell command(s) to execute
+    deps          (list, optional)         Tasks that must run first
+    desc          (string, optional)       Human-readable description
+    env           (dict, optional)         Environment variables to set
+    dir           (string, optional)       Working directory for the command
+    download      (dict|list, optional)    Files to download before running
+                                           Format: {url: "...", to: "..."}
+    quiet         (bool, optional)         Suppress "Running: ..." output
+    ignore_errors (bool, optional)         Continue even if cmd fails
+    stdin         (string, optional)       String to pipe into command's stdin
 
 Environment Variables:
   Use $VAR or ${VAR} in commands. Avon expands them in this order:
@@ -1501,6 +1509,8 @@ Examples:
   avon do --list tasks.av          List tasks in tasks.av
   avon do --info build             Show build task details
   avon do --dry-run deploy         Preview deploy execution plan
+  avon do build --git user/repo/Avon.av        Run remote task (prompts)
+  avon do build --git user/repo/Avon.av --force  Skip prompt
 
 See also: tutorial/DO_MODE_GUIDE.md for the complete guide
 "#;

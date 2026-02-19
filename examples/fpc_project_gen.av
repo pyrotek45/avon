@@ -1,0 +1,278 @@
+# FPC (Free Pascal Compiler) Project Generator
+# Generates a complete Pascal project with Avon build system, unit tests, and CI
+#
+# Usage:
+#   avon deploy examples/fpc_project_gen.av --root ./myproject --force
+#   avon deploy examples/fpc_project_gen.av --root ./game --force -name game -project_type gui
+#
+# After generation:
+#   cd myproject && avon do build
+
+\name ? "myproject"
+\project_type ? "console"
+\description ? "A Free Pascal project"
+\version ? "1.0.0"
+\author ? "Author"
+\license ? "MIT"
+\fpc_version ? "3.2.2"
+\use_classes ? "true"
+\use_testing ? "true"
+
+let is_gui = project_type == "gui" in
+let is_lib = project_type == "library" in
+let has_classes = use_classes == "true" in
+let has_testing = use_testing == "true" in
+
+let prog_keyword = if is_lib then "library" else "program" in
+let gui_uses = if is_gui then ", Forms, Interfaces" else "" in
+let class_uses = if has_classes then ", SysUtils, Classes" else "" in
+let unit_uses = if has_classes then ", " + name + "Core" else "" in
+
+# ─── Build flags ───────────────────────────────────────────
+let build_flags = if is_gui then "-dUseCThreads -Mobjfpc -Sh" else "-Mobjfpc -Sh" in
+let test_unit_path = if has_classes then " -Fusrc" else "" in
+
+# ─── Main body content ────────────────────────────────────
+let main_body = if is_gui then
+  "begin\n  RequireDerivedFormResource := True;\n  Application.Scaled := True;\n  Application.Initialize;\n  Application.Run;\nend."
+else if is_lib then
+  "exports\n  // Add exported functions here\n\nbegin\nend."
+else
+  "begin\n  WriteLn('');\n  WriteLn('    ___                        ');\n  WriteLn('   /   |_   ______  ____       ');\n  WriteLn('  / /| | | / / __ \\/ __ \\      ');\n  WriteLn(' / ___ | |/ / /_/ / / / /      ');\n  WriteLn('/_/  |_|___/\\____/_/ /_/       ');\n  WriteLn('');\n  WriteLn('  Hello, World!');\n  WriteLn('  Built with Avon + Free Pascal');\n  WriteLn('');\n  WriteLn('  Project : " + name + "');\n  WriteLn('  Version : " + version + "');\n  WriteLn('');\n  WriteLn('  Tip: try `avon do --list`');\n  WriteLn('');\nend."
+in
+
+# ─── Test body content ────────────────────────────────────
+let test_suites = if has_classes then
+  "procedure TestAppConfig;\nvar\n  Config: TAppConfig;\nbegin\n  WriteLn('Suite: TAppConfig');\n  Config := TAppConfig.Create('" + name + "', '" + version + "');\n  try\n    Check('Name is set', Config.Name = '" + name + "');\n    Check('Version is set', Config.Version = '" + version + "');\n    Check('Debug defaults to false', Config.Debug = False);\n    Config.Debug := True;\n    Check('Debug can be set', Config.Debug = True);\n    Check('ToString contains name', Pos('" + name + "', Config.ToString) > 0);\n  finally\n    Config.Free;\n  end;\nend;"
+else
+  "procedure TestBasic;\nbegin\n  WriteLn('Suite: Basic');\n  Check('True is true', True);\n  Check('1 + 1 = 2', 1 + 1 = 2);\n  Check('String concat', 'hello' + ' ' + 'world' = 'hello world');\nend;"
+in
+let test_call = if has_classes then "  TestAppConfig;" else "  TestBasic;" in
+
+# ─── Avon.av content ──────────────────────────────────────
+let q = "\"" in
+
+let test_task = if has_testing then
+  "\n  test: {\n    cmd: " + q + "fpc -Mobjfpc -Sh" + test_unit_path + " -FEbin tests/test_runner.pas && ./bin/test_runner" + q + ",\n    desc: " + q + "Compile and run tests" + q + "\n  },\n"
+else "" in
+
+let ci_deps = if has_testing then "[" + q + "build" + q + ", " + q + "test" + q + "]" else "[" + q + "build" + q + "]" in
+
+# ─── Files ─────────────────────────────────────────────────
+
+let main_program = @src/{name}.pas {"
+{prog_keyword} {name};
+
+uses
+  CThreads{gui_uses}{class_uses}{unit_uses};
+
+{main_body}
+"} in
+
+let core_unit = if has_classes then @src/{name}Core.pas {"
+unit {name}Core;
+
+interface
+
+uses
+  SysUtils, Classes;
+
+type
+  TAppConfig = class
+  private
+    FName: string;
+    FVersion: string;
+    FDebug: Boolean;
+  public
+    constructor Create(const AName, AVersion: string);
+    property Name: string read FName;
+    property Version: string read FVersion;
+    property Debug: Boolean read FDebug write FDebug;
+    function ToString: string; override;
+  end;
+
+implementation
+
+constructor TAppConfig.Create(const AName, AVersion: string);
+begin
+  inherited Create;
+  FName := AName;
+  FVersion := AVersion;
+  FDebug := False;
+end;
+
+function TAppConfig.ToString: string;
+begin
+  Result := Format('%s v%s (debug=%s)', [FName, FVersion, BoolToStr(FDebug, True)]);
+end;
+
+end.
+"} else "skip" in
+
+let test_runner = if has_testing then @tests/test_runner.pas {"
+program test_runner;
+
+uses
+  SysUtils{unit_uses};
+
+var
+  Passed, Failed: Integer;
+
+procedure Check(const TestName: string; Condition: Boolean);
+begin
+  if Condition then
+  begin
+    WriteLn('  PASS: ', TestName);
+    Inc(Passed);
+  end
+  else
+  begin
+    WriteLn('  FAIL: ', TestName);
+    Inc(Failed);
+  end;
+end;
+
+{test_suites}
+
+begin
+  Passed := 0;
+  Failed := 0;
+  WriteLn('Running tests for {name}...');
+  WriteLn('');
+
+{test_call}
+
+  WriteLn('');
+  WriteLn('Results: ', Passed, ' passed, ', Failed, ' failed');
+  if Failed > 0 then
+    Halt(1)
+  else
+    Halt(0);
+end.
+"} else "skip" in
+
+let build_cmd = "fpc " + build_flags + " -FEbin -Fusrc src/" + name + ".pas" in
+let release_cmd = "fpc " + build_flags + " -O2 -Xs -FEbin -Fusrc src/" + name + ".pas" in
+let check_cmd = "fpc -Mobjfpc -Sh -s -Fusrc -FEbin src/" + name + ".pas" in
+
+let avon_content =
+  "# " + name + " — Build System\n" +
+  "# Usage: avon do build | test | clean | run | release\n\n" +
+  "{\n" +
+  "  build: {\n" +
+  "    cmd: " + q + build_cmd + q + ",\n" +
+  "    desc: " + q + "Compile " + name + " (debug)" + q + "\n" +
+  "  },\n\n" +
+  "  release: {\n" +
+  "    cmd: " + q + release_cmd + q + ",\n" +
+  "    desc: " + q + "Compile " + name + " (optimized release)" + q + ",\n" +
+  "    deps: [" + q + "clean" + q + "]\n" +
+  "  },\n\n" +
+  "  run: {\n" +
+  "    cmd: " + q + "./bin/" + name + q + ",\n" +
+  "    desc: " + q + "Run the compiled binary" + q + ",\n" +
+  "    deps: [" + q + "build" + q + "]\n" +
+  "  },\n" +
+  test_task +
+  "\n  clean: {\n" +
+  "    cmd: [\n" +
+  "      " + q + "rm -rf bin/*.o bin/*.ppu bin/" + name + " bin/test_runner" + q + ",\n" +
+  "      " + q + "rm -f src/*.o src/*.ppu tests/*.o tests/*.ppu" + q + ",\n" +
+  "      " + q + "echo Clean complete" + q + "\n" +
+  "    ],\n" +
+  "    desc: " + q + "Remove all build artifacts" + q + "\n" +
+  "  },\n\n" +
+  "  check: {\n" +
+  "    cmd: " + q + check_cmd + q + ",\n" +
+  "    desc: " + q + "Syntax check only (no linking)" + q + ",\n" +
+  "    quiet: true\n" +
+  "  },\n\n" +
+  "  ci: {\n" +
+  "    cmd: " + q + "echo All checks passed!" + q + ",\n" +
+  "    desc: " + q + "Full CI pipeline" + q + ",\n" +
+  "    deps: " + ci_deps + "\n" +
+  "  }\n" +
+  "}\n"
+in
+
+let avon_file = @Avon.av {{{"
+{{{avon_content}}}
+"}}} in
+
+let gitignore = @.gitignore {"
+# FPC build artifacts
+*.o
+*.ppu
+*.rst
+*.compiled
+*.bak
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Build output
+/bin/*
+!/bin/.gitkeep
+
+# IDE files
+*.lps
+*.lpi~
+backup/
+"} in
+
+let readme = @README.md {"
+# {name}
+
+{description}
+
+## Requirements
+
+- [Free Pascal Compiler](https://www.freepascal.org/) >= {fpc_version}
+- [Avon](https://github.com/pyrotek45/avon) (build system)
+
+## Quick Start
+
+```sh
+# Build and run
+avon do run
+
+# Just build
+avon do build
+
+# Release build (optimized)
+avon do release
+
+# Run tests
+avon do test
+
+# Clean build artifacts
+avon do clean
+
+# See all tasks
+avon do --list
+```
+
+## Project Structure
+
+```
+{name}/
+  Avon.av              Build system (avon do --list)
+  src/
+    {name}.pas         Main program
+  tests/
+    test_runner.pas    Unit tests
+  bin/                 Compiled output (gitignored)
+```
+
+## License
+
+{license}
+"} in
+
+let bin_keep = @bin/.gitkeep {""} in
+
+# ─── Collect all file templates (filter out "skip") ───────
+
+let all_files = [main_program, core_unit, test_runner, avon_file, gitignore, readme, bin_keep] in
+filter (\f (typeof f) == "FileTemplate") all_files

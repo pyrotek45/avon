@@ -1,7 +1,15 @@
 use crate::common::Value;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::io::Write;
 use std::process::Command;
+
+/// A single download specification: fetch a URL to a local path
+#[derive(Debug, Clone)]
+pub struct DownloadSpec {
+    pub url: String,
+    pub to: String,
+}
 
 /// Represents a single task definition
 #[derive(Debug, Clone)]
@@ -11,6 +19,16 @@ pub struct TaskDef {
     pub deps: Vec<String>,
     pub desc: Option<String>,
     pub env: HashMap<String, String>,
+    /// Working directory — `cd` here before running `cmd`
+    pub dir: Option<String>,
+    /// Files to download (URL → path) before running `cmd`
+    pub downloads: Vec<DownloadSpec>,
+    /// If true, suppress "Running: ..." output
+    pub quiet: bool,
+    /// If true, continue even if `cmd` exits non-zero
+    pub ignore_errors: bool,
+    /// String to pipe into the command's stdin
+    pub stdin: Option<String>,
 }
 
 impl TaskDef {
@@ -24,6 +42,11 @@ impl TaskDef {
             deps,
             desc: None,
             env: HashMap::new(),
+            dir: None,
+            downloads: Vec::new(),
+            quiet: false,
+            ignore_errors: false,
+            stdin: None,
         }
     }
 
@@ -37,6 +60,11 @@ impl TaskDef {
                 deps: Vec::new(),
                 desc: None,
                 env: HashMap::new(),
+                dir: None,
+                downloads: Vec::new(),
+                quiet: false,
+                ignore_errors: false,
+                stdin: None,
             }),
             // Structured format: { cmd: "...", deps: [...], desc: "..." }
             Value::Dict(dict) => {
@@ -117,12 +145,115 @@ impl TaskDef {
                     }
                 }
 
+                // Extract dir field (optional) — working directory
+                let dir = dict.get("dir").and_then(|v| match v {
+                    Value::String(s) => Some(s.clone()),
+                    _ => None,
+                });
+
+                // Extract download field (optional)
+                // Accepts a single dict {url, to} or a list of dicts
+                let mut downloads = Vec::new();
+                match dict.get("download") {
+                    Some(Value::Dict(dl_dict)) => {
+                        if let (Some(Value::String(url)), Some(Value::String(to))) =
+                            (dl_dict.get("url"), dl_dict.get("to"))
+                        {
+                            downloads.push(DownloadSpec {
+                                url: url.clone(),
+                                to: to.clone(),
+                            });
+                        } else {
+                            return Err(TaskError::InvalidTaskDef {
+                                task: name,
+                                reason: "download must have 'url' and 'to' string fields"
+                                    .to_string(),
+                            });
+                        }
+                    }
+                    Some(Value::List(dl_list)) => {
+                        for item in dl_list {
+                            match item {
+                                Value::Dict(dl_dict) => {
+                                    if let (
+                                        Some(Value::String(url)),
+                                        Some(Value::String(to)),
+                                    ) = (dl_dict.get("url"), dl_dict.get("to"))
+                                    {
+                                        downloads.push(DownloadSpec {
+                                            url: url.clone(),
+                                            to: to.clone(),
+                                        });
+                                    } else {
+                                        return Err(TaskError::InvalidTaskDef {
+                                            task: name,
+                                            reason:
+                                                "each download entry must have 'url' and 'to' string fields"
+                                                    .to_string(),
+                                        });
+                                    }
+                                }
+                                _ => {
+                                    return Err(TaskError::InvalidTaskDef {
+                                        task: name,
+                                        reason: "download list entries must be dicts with 'url' and 'to'"
+                                            .to_string(),
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    Some(_) => {
+                        return Err(TaskError::InvalidTaskDef {
+                            task: name,
+                            reason: "download must be a dict {url, to} or list of dicts"
+                                .to_string(),
+                        });
+                    }
+                    None => {} // no downloads
+                }
+
+                // Extract quiet field (optional, default false)
+                let quiet = match dict.get("quiet") {
+                    Some(Value::Bool(b)) => *b,
+                    Some(_) => {
+                        return Err(TaskError::InvalidTaskDef {
+                            task: name,
+                            reason: "quiet must be a boolean".to_string(),
+                        });
+                    }
+                    None => false,
+                };
+
+                // Extract ignore_errors field (optional, default false)
+                let ignore_errors = match dict.get("ignore_errors") {
+                    Some(Value::Bool(b)) => *b,
+                    Some(_) => {
+                        return Err(TaskError::InvalidTaskDef {
+                            task: name,
+                            reason: "ignore_errors must be a boolean".to_string(),
+                        });
+                    }
+                    None => false,
+                };
+
+                // Extract stdin field (optional) — string to pipe into command
+                let stdin = dict.get("stdin").and_then(|v| match v {
+                    Value::String(s) => Some(s.clone()),
+                    _ => None,
+                });
+
                 Ok(TaskDef {
                     name,
                     cmd,
                     deps,
                     desc,
                     env,
+                    dir,
+                    downloads,
+                    quiet,
+                    ignore_errors,
+                    stdin,
                 })
             }
             _ => Err(TaskError::InvalidTaskDef {
@@ -344,27 +475,75 @@ impl TaskRunner {
             }
 
             if let Some(task) = self.tasks.get(&task_to_run).cloned() {
-                println!("Running: {}", task.name);
-                if let Some(desc) = &task.desc {
-                    println!("  {}", desc);
+                if !task.quiet {
+                    println!("Running: {}", task.name);
+                    if let Some(desc) = &task.desc {
+                        println!("  {}", desc);
+                    }
                 }
 
-                // Expand environment variables in command string
+                // Phase 1: Process downloads before running the command
+                for dl in &task.downloads {
+                    if !task.quiet {
+                        println!("  Downloading: {} → {}", dl.url, dl.to);
+                    }
+                    Self::download_file(&dl.url, &dl.to).map_err(|e| {
+                        TaskError::ExecutionFailed {
+                            task: task.name.clone(),
+                            exit_code: -1,
+                            output: format!(
+                                "Download failed: {} → {}: {}",
+                                dl.url, dl.to, e
+                            ),
+                        }
+                    })?;
+                }
+
+                // Phase 2: Execute the command
                 let expanded_cmd = Self::expand_env_vars(&task.cmd, &task.env);
 
-                let status = Command::new("sh")
-                    .arg("-c")
-                    .arg(&expanded_cmd)
-                    .envs(&task.env)
-                    .status()
-                    .map_err(|e| TaskError::ExecutionFailed {
+                let mut cmd = Command::new("sh");
+                cmd.arg("-c").arg(&expanded_cmd).envs(&task.env);
+
+                // Set working directory if specified
+                if let Some(ref dir) = task.dir {
+                    cmd.current_dir(dir);
+                }
+
+                // Handle stdin piping
+                if task.stdin.is_some() {
+                    cmd.stdin(std::process::Stdio::piped());
+                }
+
+                let result = if let Some(ref stdin_data) = task.stdin {
+                    // Spawn, write to stdin, then wait
+                    let mut child = cmd.spawn().map_err(|e| TaskError::ExecutionFailed {
                         task: task.name.clone(),
                         exit_code: -1,
                         output: format!("Failed to execute: {}", e),
                     })?;
 
-                if !status.success() {
-                    let exit_code = status.code().unwrap_or(-1);
+                    if let Some(ref mut pipe) = child.stdin {
+                        let _ = pipe.write_all(stdin_data.as_bytes());
+                    }
+                    // Close stdin so child can finish
+                    drop(child.stdin.take());
+
+                    child.wait().map_err(|e| TaskError::ExecutionFailed {
+                        task: task.name.clone(),
+                        exit_code: -1,
+                        output: format!("Failed to wait on process: {}", e),
+                    })?
+                } else {
+                    cmd.status().map_err(|e| TaskError::ExecutionFailed {
+                        task: task.name.clone(),
+                        exit_code: -1,
+                        output: format!("Failed to execute: {}", e),
+                    })?
+                };
+
+                if !result.success() && !task.ignore_errors {
+                    let exit_code = result.code().unwrap_or(-1);
                     return Err(TaskError::ExecutionFailed {
                         task: task.name.clone(),
                         exit_code,
@@ -436,6 +615,29 @@ impl TaskRunner {
         }
 
         result
+    }
+
+    /// Download a file from a URL to a local path
+    fn download_file(url: &str, to: &str) -> Result<(), String> {
+        // Create parent directories if needed
+        if let Some(parent) = std::path::Path::new(to).parent() {
+            if !parent.exists() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create directory {}: {}", parent.display(), e))?;
+            }
+        }
+
+        let response = ureq::get(url)
+            .call()
+            .map_err(|e| format!("HTTP request failed: {}", e))?;
+
+        let mut reader = response.into_body().into_reader();
+        let mut file = std::fs::File::create(to)
+            .map_err(|e| format!("Failed to create file {}: {}", to, e))?;
+        std::io::copy(&mut reader, &mut file)
+            .map_err(|e| format!("Failed to write file {}: {}", to, e))?;
+
+        Ok(())
     }
 
     /// Run a task without executing (dry-run)
@@ -1207,5 +1409,288 @@ mod tests {
 
         assert_eq!(task.cmd, "cargo build && cargo run");
         assert_eq!(task.env.get("PROFILE"), Some(&"release".to_string()));
+    }
+
+    // ── New key tests ────────────────────────────────────
+
+    #[test]
+    fn test_taskdef_dir_field() {
+        let mut dict = HashMap::new();
+        dict.insert("cmd".to_string(), Value::String("ls".to_string()));
+        dict.insert("dir".to_string(), Value::String("/tmp".to_string()));
+
+        let value = Value::Dict(dict);
+        let task = TaskDef::from_value("list_tmp".to_string(), &value).unwrap();
+
+        assert_eq!(task.dir, Some("/tmp".to_string()));
+    }
+
+    #[test]
+    fn test_taskdef_quiet_field() {
+        let mut dict = HashMap::new();
+        dict.insert("cmd".to_string(), Value::String("echo hi".to_string()));
+        dict.insert("quiet".to_string(), Value::Bool(true));
+
+        let value = Value::Dict(dict);
+        let task = TaskDef::from_value("silent".to_string(), &value).unwrap();
+
+        assert!(task.quiet);
+    }
+
+    #[test]
+    fn test_taskdef_quiet_default_false() {
+        let mut dict = HashMap::new();
+        dict.insert("cmd".to_string(), Value::String("echo hi".to_string()));
+
+        let value = Value::Dict(dict);
+        let task = TaskDef::from_value("loud".to_string(), &value).unwrap();
+
+        assert!(!task.quiet);
+    }
+
+    #[test]
+    fn test_taskdef_quiet_bad_type() {
+        let mut dict = HashMap::new();
+        dict.insert("cmd".to_string(), Value::String("echo".to_string()));
+        dict.insert(
+            "quiet".to_string(),
+            Value::String("yes".to_string()),
+        );
+
+        let value = Value::Dict(dict);
+        let result = TaskDef::from_value("bad".to_string(), &value);
+        assert!(result.is_err());
+        assert!(format!("{}", result.unwrap_err()).contains("boolean"));
+    }
+
+    #[test]
+    fn test_taskdef_ignore_errors_field() {
+        let mut dict = HashMap::new();
+        dict.insert("cmd".to_string(), Value::String("exit 1".to_string()));
+        dict.insert("ignore_errors".to_string(), Value::Bool(true));
+
+        let value = Value::Dict(dict);
+        let task = TaskDef::from_value("might_fail".to_string(), &value).unwrap();
+
+        assert!(task.ignore_errors);
+    }
+
+    #[test]
+    fn test_taskdef_ignore_errors_default_false() {
+        let mut dict = HashMap::new();
+        dict.insert("cmd".to_string(), Value::String("echo ok".to_string()));
+
+        let value = Value::Dict(dict);
+        let task = TaskDef::from_value("strict".to_string(), &value).unwrap();
+
+        assert!(!task.ignore_errors);
+    }
+
+    #[test]
+    fn test_taskdef_stdin_field() {
+        let mut dict = HashMap::new();
+        dict.insert("cmd".to_string(), Value::String("cat".to_string()));
+        dict.insert(
+            "stdin".to_string(),
+            Value::String("hello world".to_string()),
+        );
+
+        let value = Value::Dict(dict);
+        let task = TaskDef::from_value("pipe_in".to_string(), &value).unwrap();
+
+        assert_eq!(task.stdin, Some("hello world".to_string()));
+    }
+
+    #[test]
+    fn test_taskdef_download_single() {
+        let mut dl_dict = HashMap::new();
+        dl_dict.insert(
+            "url".to_string(),
+            Value::String("https://example.com/file.txt".to_string()),
+        );
+        dl_dict.insert(
+            "to".to_string(),
+            Value::String("vendor/file.txt".to_string()),
+        );
+
+        let mut dict = HashMap::new();
+        dict.insert("cmd".to_string(), Value::String("echo done".to_string()));
+        dict.insert("download".to_string(), Value::Dict(dl_dict));
+
+        let value = Value::Dict(dict);
+        let task = TaskDef::from_value("fetch".to_string(), &value).unwrap();
+
+        assert_eq!(task.downloads.len(), 1);
+        assert_eq!(task.downloads[0].url, "https://example.com/file.txt");
+        assert_eq!(task.downloads[0].to, "vendor/file.txt");
+    }
+
+    #[test]
+    fn test_taskdef_download_list() {
+        let mut dl1 = HashMap::new();
+        dl1.insert(
+            "url".to_string(),
+            Value::String("https://a.com/1.txt".to_string()),
+        );
+        dl1.insert("to".to_string(), Value::String("a.txt".to_string()));
+
+        let mut dl2 = HashMap::new();
+        dl2.insert(
+            "url".to_string(),
+            Value::String("https://b.com/2.txt".to_string()),
+        );
+        dl2.insert("to".to_string(), Value::String("b.txt".to_string()));
+
+        let mut dict = HashMap::new();
+        dict.insert("cmd".to_string(), Value::String("echo done".to_string()));
+        dict.insert(
+            "download".to_string(),
+            Value::List(vec![Value::Dict(dl1), Value::Dict(dl2)]),
+        );
+
+        let value = Value::Dict(dict);
+        let task = TaskDef::from_value("fetch_many".to_string(), &value).unwrap();
+
+        assert_eq!(task.downloads.len(), 2);
+        assert_eq!(task.downloads[0].to, "a.txt");
+        assert_eq!(task.downloads[1].to, "b.txt");
+    }
+
+    #[test]
+    fn test_taskdef_download_missing_url() {
+        let mut dl_dict = HashMap::new();
+        dl_dict.insert("to".to_string(), Value::String("file.txt".to_string()));
+
+        let mut dict = HashMap::new();
+        dict.insert("cmd".to_string(), Value::String("echo".to_string()));
+        dict.insert("download".to_string(), Value::Dict(dl_dict));
+
+        let value = Value::Dict(dict);
+        let result = TaskDef::from_value("bad".to_string(), &value);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_taskdef_download_bad_type() {
+        let mut dict = HashMap::new();
+        dict.insert("cmd".to_string(), Value::String("echo".to_string()));
+        dict.insert(
+            "download".to_string(),
+            Value::String("http://bad".to_string()),
+        );
+
+        let value = Value::Dict(dict);
+        let result = TaskDef::from_value("bad".to_string(), &value);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_taskdef_all_new_keys_together() {
+        let mut dl_dict = HashMap::new();
+        dl_dict.insert(
+            "url".to_string(),
+            Value::String("https://example.com/data.json".to_string()),
+        );
+        dl_dict.insert(
+            "to".to_string(),
+            Value::String("data.json".to_string()),
+        );
+
+        let mut dict = HashMap::new();
+        dict.insert("cmd".to_string(), Value::String("cat data.json".to_string()));
+        dict.insert("dir".to_string(), Value::String("/tmp".to_string()));
+        dict.insert("quiet".to_string(), Value::Bool(true));
+        dict.insert("ignore_errors".to_string(), Value::Bool(true));
+        dict.insert(
+            "stdin".to_string(),
+            Value::String("input data".to_string()),
+        );
+        dict.insert("download".to_string(), Value::Dict(dl_dict));
+        dict.insert(
+            "desc".to_string(),
+            Value::String("Full featured task".to_string()),
+        );
+
+        let value = Value::Dict(dict);
+        let task = TaskDef::from_value("full".to_string(), &value).unwrap();
+
+        assert_eq!(task.dir, Some("/tmp".to_string()));
+        assert!(task.quiet);
+        assert!(task.ignore_errors);
+        assert_eq!(task.stdin, Some("input data".to_string()));
+        assert_eq!(task.downloads.len(), 1);
+        assert_eq!(task.desc, Some("Full featured task".to_string()));
+    }
+
+    #[test]
+    fn test_dir_execution() {
+        let tasks = vec![{
+            let mut t = TaskDef::new("list_tmp", "pwd", vec![]);
+            t.dir = Some("/tmp".to_string());
+            t
+        }];
+
+        let mut tasks_map = HashMap::new();
+        for task in tasks {
+            tasks_map.insert(task.name.clone(), task);
+        }
+
+        let mut runner = TaskRunner::new(tasks_map).unwrap();
+        let result = runner.run("list_tmp");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_ignore_errors_execution() {
+        let tasks = vec![{
+            let mut t = TaskDef::new("fail_ok", "exit 1", vec![]);
+            t.ignore_errors = true;
+            t
+        }];
+
+        let mut tasks_map = HashMap::new();
+        for task in tasks {
+            tasks_map.insert(task.name.clone(), task);
+        }
+
+        let mut runner = TaskRunner::new(tasks_map).unwrap();
+        let result = runner.run("fail_ok");
+        assert!(result.is_ok(), "ignore_errors should allow exit code 1");
+    }
+
+    #[test]
+    fn test_stdin_execution() {
+        let tasks = vec![{
+            let mut t = TaskDef::new("pipe_test", "cat", vec![]);
+            t.stdin = Some("hello from stdin".to_string());
+            t
+        }];
+
+        let mut tasks_map = HashMap::new();
+        for task in tasks {
+            tasks_map.insert(task.name.clone(), task);
+        }
+
+        let mut runner = TaskRunner::new(tasks_map).unwrap();
+        let result = runner.run("pipe_test");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_quiet_does_not_crash() {
+        let tasks = vec![{
+            let mut t = TaskDef::new("silent", "echo quiet", vec![]);
+            t.quiet = true;
+            t
+        }];
+
+        let mut tasks_map = HashMap::new();
+        for task in tasks {
+            tasks_map.insert(task.name.clone(), task);
+        }
+
+        let mut runner = TaskRunner::new(tasks_map).unwrap();
+        let result = runner.run("silent");
+        assert!(result.is_ok());
     }
 }
