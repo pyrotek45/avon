@@ -1,0 +1,83 @@
+# Download Feature: Swiss Army Tool Example
+# This example demonstrates Avon as a complete solution that downloads,
+# processes, transforms, and generates multiple output formats.
+#
+# Usage: avon do <task_name> examples/download_swiss_army.av
+# Try: avon do all examples/download_swiss_army.av
+# Try: SCENARIO=api avon do all examples/download_swiss_army.av
+
+let scenario = env_var_or "SCENARIO" "web" in
+let is_ci = ((env_var_or "CI" "false") == "true") in
+
+let scenarios = {
+    web: {
+        source_url: "https://raw.githubusercontent.com/pyrotek45/avon/main/README.md",
+        name: "Web Project",
+        output_formats: ["json", "yaml"]
+    },
+    api: {
+        source_url: "https://raw.githubusercontent.com/pyrotek45/avon/main/tutorial/TUTORIAL.md",
+        name: "API Project",
+        output_formats: ["json", "yaml"]
+    },
+    cli: {
+        source_url: "https://raw.githubusercontent.com/pyrotek45/avon/main/tutorial/DO_MODE_GUIDE.md",
+        name: "CLI Project",
+        output_formats: ["yaml"]
+    }
+} in
+
+let project = if scenario == "api" then scenarios.api else if scenario == "cli" then scenarios.cli else scenarios.web in
+
+let tasks = {
+    fetch: {
+        cmd: "echo 'Downloading template for " + project.name + "'",
+        desc: "Download project template from GitHub",
+        download: {
+            url: project.source_url,
+            to: "source/template.txt"
+        }
+    },
+    
+    analyze: {
+        cmd: "echo 'Analyzing " + scenario + " template...' && wc -l source/template.txt && echo 'Analysis complete'",
+        desc: "Analyze downloaded template",
+        deps: ["fetch"]
+    },
+    
+    generate_json: {
+        cmd: "echo '{\"project\": \"" + project.name + "\", \"generated\": true}' > output/" + scenario + ".json",
+        desc: "Generate JSON output",
+        deps: ["analyze"]
+    },
+    
+    generate_yaml: {
+        cmd: "echo 'project: " + project.name + "' > output/" + scenario + ".yaml",
+        desc: "Generate YAML output",
+        deps: ["analyze"]
+    },
+    
+    package: {
+        cmd: "echo 'Packaging outputs...' && ls -lh output/ && echo 'Package complete'",
+        desc: "Package all generated outputs",
+        deps: ["generate_json", "generate_yaml"]
+    },
+    
+    deploy: if is_ci then {
+        cmd: "echo 'Deploying " + project.name + "...' && echo 'Deployment successful'",
+        desc: "Deploy to production (CI only)",
+        deps: ["package"]
+    } else {
+        cmd: "echo 'Skipping deployment (not in CI)'",
+        deps: ["package"]
+    },
+    
+    all: {
+        cmd: "echo 'Complete workflow for " + scenario + " finished!'",
+        desc: "Execute complete workflow: fetch → analyze → generate → package → deploy",
+        deps: ["deploy"],
+        env: {SCENARIO: scenario}
+    }
+} in
+
+tasks

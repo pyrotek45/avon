@@ -54,27 +54,4 @@
     env: {APP: "myapp", VERSION: "1.0.0"}
   },
 
-  deploy: {
-    cmd: "echo Deploying to $DEPLOY_TARGET...",
-    desc: "Deploy to production",
-    deps: ["package"],
-    env: {DEPLOY_TARGET: "production-cluster"}
-  },
-
-  clean: {
-    cmd: "echo Cleaning all artifacts...",
-    desc: "Remove all build artifacts"
-  },
-
-  docs: {
-    cmd: "echo Generating documentation...",
-    desc: "Build project documentation",
-    deps: ["install_deps"]
-  },
-
-  test: {
-    cmd: "echo All tests passed!",
-    desc: "Run all tests",
-    deps: ["unit_test", "integration_test"]
-  }
 }

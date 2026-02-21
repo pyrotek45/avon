@@ -4,7 +4,7 @@ Welcome to Avon! A template language for people who have better things to do tha
 
 Avon is designed for developers who are tired of copy-pasting. Whether you're building Kubernetes manifests, setting up CI/CD pipelines, or generating boilerplate code, Avon turns repetitive tasks into elegant, maintainable code. Life's too short to manually update 47 YAML files.
 
-Avon is a general-purpose tool that handles everything from complex infrastructure projects to simple single-file configs. It's a workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and 194 built-in utilities to any text format.
+Avon is a general-purpose tool that handles everything from complex infrastructure projects to simple single-file configs. It's a workflow layer that makes any file more maintainable and shareable. Avon brings variables, functions, and over 150 built-in utilities to any text format.
 
 > **New to Avon?** Check out the [Getting Started Guide](./GETTING_STARTED.md) — a hands-on, step-by-step introduction with 15 progressive lessons. Come back here when you're ready for the full reference.
 
@@ -167,7 +167,28 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
    - Real-World Examples
    - Single File in Git, Many Deployments
 
-11. **[Error handling and debugging](#error-handling-and-debugging)**
+11. **[Do Mode — Built-in Task Runner](#do-mode--built-in-task-runner)**
+    - Quick Start
+    - Simple Tasks
+    - Structured Tasks
+    - All Task Fields
+    - Multiple Commands (cmd as a list)
+    - Working Directory (dir)
+    - Quiet Mode (quiet)
+    - Ignore Errors (ignore_errors)
+    - Piping Stdin (stdin)
+    - Environment Variables (env)
+    - Dependencies (deps)
+    - Download Feature
+    - CLI Flags for Do Mode (`--list`, `--info`, `--dry-run`)
+    - Auto-Discovery
+    - Using `--git` with Do Mode
+    - Using `--stdin` with Do Mode
+    - Dynamic Task Generation
+    - Error Handling
+    - Do Mode Gotchas
+
+12. **[Error handling and debugging](#error-handling-and-debugging)**
     - Runtime Type Safety
       - How type checking works
       - Error message format
@@ -180,7 +201,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
       - `assert` (validate conditions)
       - `--debug` flag (detailed output)
 
-12. **[Best Practices](#best-practices)**
+13. **[Best Practices](#best-practices)**
     - Write Clear, Composable Code
     - Test Before Deploying
     - Use Named Arguments
@@ -188,14 +209,14 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Keep Templates Readable
     - Return Lists for Multiple Files
 
-13. **[Security Best Practices](#security-best-practices)**
+14. **[Security Best Practices](#security-best-practices)**
     - Input Validation & Sanitization
     - Template Safety Patterns
     - File Deployment Safety
     - Production Checklist
     - Path Security
 
-14. **[Real-World Examples](#real-world-examples)**
+15. **[Real-World Examples](#real-world-examples)**
     - Example 1: Site Generator
     - Example 2: Neovim Configuration
     - Example 3: Emacs Configuration
@@ -205,7 +226,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Example 7: Package.json Generator
     - Example 8: Multi-Brace Template Demo
 
-15. **[Troubleshooting](#troubleshooting)**
+16. **[Troubleshooting](#troubleshooting)**
     - Common Errors
       - "expected '\"' after opening braces"
       - "unexpected EOF"
@@ -216,7 +237,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
       - Interpolation not working
     - Debugging Tips
 
-16. **[Gotchas and Common Pitfalls](#gotchas-and-common-pitfalls)**
+17. **[Gotchas and Common Pitfalls](#gotchas-and-common-pitfalls)**
     - Function Parameters Are CLI Arguments
     - Variables Don't Shadow – They Nest
     - Functions with All Defaults Still Return Functions
@@ -232,9 +253,10 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Range with Start > End Returns Empty List
     - Power Operator `**` is Right-Associative
     - `zip` Truncates to Shorter List
+    - Task Names Must Use Underscores, Not Dashes
     - And more...
 
-17. **[Tips and Tricks](#tips-and-tricks)**
+18. **[Tips and Tricks](#tips-and-tricks)**
     - Check List Membership with `any`
     - Safe Division with Default Value
     - Type Checking with `typeof` and `is_*`
@@ -242,7 +264,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Working with Characters in Strings
     - And more...
 
-18. **[Piping, Stdin, Stdout, and Embedding Avon](#piping-stdin-stdout-and-embedding-avon)**
+19. **[Piping, Stdin, Stdout, and Embedding Avon](#piping-stdin-stdout-and-embedding-avon)**
     - Piping Avon Source Code into the CLI
     - Piping Data into an Avon Program
     - Capturing Avon Output
@@ -252,7 +274,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Real-World Integration: File Collection Scripts
     - Summary: Stdin/Stdout Modes
 
-19. **[Next Steps](#next-steps)**
+20. **[Next Steps](#next-steps)**
 
 ---
 
@@ -366,7 +388,7 @@ let plugins = ["vim-fugitive", "vim-surround", "vim-commentary", "vim-repeat"] i
 
 When you interpolate a list in a template, each item appears on its own line. This eliminates copy-paste even in a single file.
 
-Language Agnostic: Avon works with any text format—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and 194 built-in utilities to any file.
+Language Agnostic: Avon works with any text format—YAML, JSON, shell scripts, code, configs, documentation, or dotfiles. It brings variables, functions, and over 150 built-in utilities to any file.
 
 Runtime Type Safety: Avon won't deploy if there's a type error. No static types needed—if a type error occurs, deployment simply doesn't happen. Sleep soundly knowing your configs are valid. (Unlike that bash script you wrote at 2am.)
 
@@ -2399,6 +2421,271 @@ avon deploy examples/gen_files.av --root ./project --force
 
 Creates all three files.
 
+### Using `publish()` with Stored Templates
+
+Both `@path {...}` and `publish()` support dynamic path interpolation with variables and templates. The key difference is that `publish()` lets you work with templates stored in variables, loaded from files, or returned from functions.
+
+**Use `publish()` when content is not inline:**
+
+```avon
+# Content from a variable
+let template = @template.txt in
+publish "output.txt" template
+
+# Content from a function
+let load_template = \name
+  readfile (name + ".template")
+in
+publish "output.yml" (load_template "config")
+
+# Generate multiple files from stored templates
+let web_template = @templates/web.yml in
+let api_template = @templates/api.yml in
+[
+  publish "config/web.yml" web_template,
+  publish "config/api.yml" api_template
+]
+
+# Using publish with map
+let templates = @templates/services in
+["web", "api", "worker"] ->
+map (\svc publish ("docker/{svc}.yml") templates)
+```
+
+**When to use `publish()` instead of `@path {...}`:**
+
+- Content is stored in a variable (string, template, or path)
+- Content comes from a function result or file operation
+- Working with templates defined elsewhere in your program
+- Building FileTemplates programmatically
+
+**Comparison:**
+
+```avon
+# Inline template - use @path {...}
+@config.yml {"
+  port: 8080
+  debug: true
+"}
+
+# Stored template - use publish()
+let template = @config.template.yml in
+publish "config.yml" template
+
+# Computed content - use publish()
+let make_config = \env
+  publish ("config-{env}.yml") (readfile ("templates/{env}.yml"))
+in
+make_config "prod"
+```
+
+
+### Download Feature in Task Runner
+
+The `do` mode (task runner) supports downloading files from the internet before executing tasks. This is useful for workflows that depend on external data, templates, or configurations.
+
+**Basic syntax:**
+
+A task can include a `download` field that specifies one or more files to download before the command runs:
+
+```avon
+{
+  process_data: {
+    cmd: "process.sh data.json",
+    desc: "Download and process remote data",
+    download: {
+      url: "https://api.example.com/data.json",
+      to: "data.json"
+    }
+  }
+}
+```
+
+**Single vs multiple downloads:**
+
+```avon
+# Single download - use a dict
+{
+  task: {
+    cmd: "echo done",
+    download: {
+      url: "https://example.com/file.txt",
+      to: "file.txt"
+    }
+  }
+}
+
+# Multiple downloads - use a list
+{
+  task: {
+    cmd: "echo done",
+    download: [
+      {url: "https://example.com/file1.txt", to: "file1.txt"},
+      {url: "https://example.com/file2.txt", to: "file2.txt"}
+    ]
+  }
+}
+```
+
+**Download options:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `url` | string | yes | HTTP(S) URL to download from |
+| `to` | string | yes | Local file path to save to (directories created as needed) |
+| `quiet` | bool | no | Suppress "Downloading:" output messages |
+| `ignore_errors` | bool | no | Continue task execution even if download fails |
+
+**Example: quiet mode**
+
+```avon
+{
+  setup: {
+    cmd: "echo done",
+    download: {
+      url: "https://example.com/template.yml",
+      to: "template.yml"
+    },
+    quiet: true  # Suppress download output
+  }
+}
+```
+
+**Example: error handling**
+
+```avon
+{
+  process: {
+    cmd: "process.sh || echo 'Processing failed'",
+    download: {
+      url: "https://example.com/data.json",
+      to: "data.json"
+    },
+    ignore_errors: true  # If download fails, run command anyway
+  }
+}
+```
+
+**Real-world patterns:**
+
+**Pattern 1: Data pipeline (fetch → validate → transform → report)**
+
+```avon
+{
+  fetch: {
+    cmd: "echo 'Data fetched'",
+    download: {
+      url: "https://api.example.com/dataset.csv",
+      to: "raw/dataset.csv"
+    }
+  },
+  
+  validate: {
+    cmd: "python validate.py raw/dataset.csv",
+    deps: ["fetch"]
+  },
+  
+  transform: {
+    cmd: "python transform.py raw/dataset.csv > processed/data.json",
+    deps: ["validate"]
+  },
+  
+  report: {
+    cmd: "python generate_report.py processed/data.json",
+    deps: ["transform"],
+    desc: "Generate final report"
+  }
+}
+```
+
+Run the pipeline: `avon do report tasks.av`
+
+**Pattern 2: Configuration management (download templates, then customize)**
+
+```avon
+let env = env_var_or "ENV" "dev" in
+
+{
+  setup: {
+    cmd: "echo 'Environment: " + env + "'",
+    download: {
+      url: "https://github.com/org/configs/main/base/" + env + ".yml",
+      to: "config/base.yml"
+    }
+  },
+  
+  customize: {
+    cmd: "cat config/base.yml | sed 's/PLACEHOLDER/CUSTOM/' > config/final.yml",
+    deps: ["setup"],
+    desc: "Customize base config"
+  },
+  
+  deploy: {
+    cmd: "cp config/final.yml /etc/myapp/config.yml",
+    deps: ["customize"]
+  }
+}
+```
+
+Run for different environments:
+```bash
+avon do deploy tasks.av                # Uses dev
+ENV=prod avon do deploy tasks.av       # Uses prod
+```
+
+**Pattern 3: Multi-file download with dependencies**
+
+```avon
+{
+  fetch_templates: {
+    cmd: "echo 'Templates fetched'",
+    download: [
+      {
+        url: "https://raw.githubusercontent.com/org/repo/main/templates/web.yml",
+        to: "templates/web.yml"
+      },
+      {
+        url: "https://raw.githubusercontent.com/org/repo/main/templates/api.yml",
+        to: "templates/api.yml"
+      },
+      {
+        url: "https://raw.githubusercontent.com/org/repo/main/templates/db.yml",
+        to: "templates/db.yml"
+      }
+    ]
+  },
+  
+  generate_docker_compose: {
+    cmd: "python generate.py templates/ > docker-compose.yml",
+    deps: ["fetch_templates"]
+  },
+  
+  deploy: {
+    cmd: "docker-compose -f docker-compose.yml up -d",
+    deps: ["generate_docker_compose"]
+  }
+}
+```
+
+**When to use downloads:**
+
+- Fetch remote data files before processing
+- Download configuration templates from a central repository
+- Fetch dependencies or resources as part of a build
+- Create data pipelines (fetch → transform → analyze)
+- Download base configs that are then customized
+- Maintain one source of truth on a server, deploy to many machines
+
+**Security notes:**
+
+- Downloads happen before task execution
+- Failed downloads (with `ignore_errors: false`) prevent task execution
+- Use HTTPS URLs for security
+- Validate downloaded content if it's from untrusted sources
+
+See `examples/download_basic.av`, `examples/download_pipeline.av`, and `examples/download_swiss_army.av` for complete working examples.
+
+
 ### Dynamic File Paths
 
 Use variables in file paths:
@@ -2466,7 +2753,7 @@ This generates `config-dev.yml` and `config-prod.yml`.
 
 ## Builtin Functions
 
-Avon comes with a toolkit of **194 built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
+Avon comes with a toolkit of **over 150 built-in functions** for common tasks. All builtins are curried, so you can partially apply them.
 
 > **Quick Reference:** Use `avon doc` to look up any function instantly in your terminal. See [CLI Usage](#cli-usage) section for detailed documentation command examples.
 > 
@@ -3374,27 +3661,19 @@ A task file is a standard Avon dictionary. Each key is a task name, each value i
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `cmd` | string | yes | Shell command to execute |
-| `desc` | string | no | Human-readable description |
+| `cmd` | string or list | yes | Shell command(s) to execute. If a list, commands are joined with `&&` |
+| `desc` | string | no | Human-readable description (shown by `--list` and `--info`) |
 | `deps` | list | no | Tasks that must run first |
 | `env` | dict | no | Environment variables for this task |
+| `dir` | string | no | Working directory for the command |
+| `download` | dict or list | no | Files to download before running (see [Do Mode](#do-mode---built-in-task-runner)) |
+| `quiet` | bool | no | Suppress the "Running: ..." header output |
+| `ignore_errors` | bool | no | Continue even if the command fails |
+| `stdin` | string | no | String to pipe into the command's stdin |
+
+> **Full reference:** See the dedicated [Do Mode](#do-mode---built-in-task-runner) section below for complete coverage of all fields, patterns, and gotchas, or see `tutorial/DO_MODE_GUIDE.md` for the standalone guide. You can also run `avon help do` from the command line.
 
 **Auto-discovery:** If no file is specified, Avon looks for `Avon.av` in the current directory. This lets you run `avon do build` without remembering file paths.
-
-**Environment variables:** Use `$VAR` or `${VAR}` in commands. Avon expands them from the task's `env` dict first, then falls back to system environment variables.
-
-**Dependency resolution:** When you run a task with dependencies, Avon uses topological sort to determine the correct execution order. Each task runs exactly once, even in diamond dependency graphs:
-
-```avon
-{
-  base: "echo base",
-  left: {cmd: "echo left", deps: ["base"]},
-  right: {cmd: "echo right", deps: ["base"]},
-  top: {cmd: "echo top", deps: ["left", "right"]}
-}
-```
-
-Running `avon do top` executes: base → left → right → top (base runs only once).
 
 **Error handling:**
 - **Task not found** — Avon suggests similar task names (typo detection)
@@ -3403,16 +3682,27 @@ Running `avon do top` executes: base → left → right → top (base runs only 
 - **Failed tasks** — Execution stops immediately; downstream tasks are skipped
 - **Missing `cmd` field** — Clear error if a structured task lacks `cmd`
 
-**Security:** The `--git` and `--stdin` flags are blocked for `do` mode. Running shell commands from a remote URL or piped input is a remote code execution risk. Download and review the file first:
+**Security:** The `--git` and `--stdin` flags work with `do` mode but require confirmation because running shell commands from a remote URL or piped input is a remote code execution risk. Avon displays a warning and asks you to confirm before proceeding:
+
+```
+Warning: 'do' with --git will run shell commands from a remote source.
+This could execute arbitrary code on your system.
+Continue? [y/N]
+```
+
+Use `--force` to skip the confirmation prompt (e.g., in CI environments):
+
+```bash
+avon do build --git user/repo/tasks.av --force   # Skip confirmation
+```
+
+Alternatively, download and review first:
 
 ```bash
 avon eval --git user/repo/tasks.av > tasks.av   # Download
 cat tasks.av                                      # Review
 avon do build tasks.av                            # Run locally
 ```
-
-> **Full guide:** See `tutorial/DO_MODE_GUIDE.md` for the complete reference,
-> or run `avon help do` from the command line.
 
 **`repl` - Interactive REPL:**
 ```bash
@@ -3422,7 +3712,7 @@ avon repl
 
 **`doc` - Built-in Documentation:**
 
-The `doc` command is one of Avon's most powerful features for rapid learning. It provides comprehensive, searchable documentation for all 194 built-in functions without leaving your terminal.
+The `doc` command is one of Avon's most powerful features for rapid learning. It provides comprehensive, searchable documentation for all built-in functions without leaving your terminal.
 
 ```bash
 # Show all available documentation
@@ -4278,6 +4568,532 @@ avon deploy --git user/repo/config.av --root /etc/myapp -env prod -user service
 ```
 
 You keep a single, versioned Avon program as the source of truth, and use a combination of **default parameters** and **CLI arguments** to adapt it to each machine or environment. This makes sharing dotfiles and configs incredibly easy—just share one file in git, and everyone can deploy their customized version.
+
+---
+
+## Do Mode — Built-in Task Runner
+
+Avon includes a built-in task runner accessed via the `do` command. It turns any `.av` file into a lightweight alternative to Make, Just, or npm scripts. Task files are regular Avon programs that evaluate to a dictionary, so you get variables, functions, conditionals, and string manipulation for free.
+
+> **Standalone guide:** For even more detail, see `tutorial/DO_MODE_GUIDE.md` or run `avon help do`.
+
+### Quick Start
+
+Create a file called `Avon.av` (auto-discovered by default):
+
+```avon
+{
+  build: "cargo build --release",
+  test: "cargo test",
+  clean: "rm -rf target"
+}
+```
+
+Run a task:
+
+```bash
+avon do build         # Run 'build' task from Avon.av
+avon do test          # Run 'test' task
+avon do --list        # List all available tasks
+```
+
+Output:
+
+```
+Running: build
+   Compiling myproject v0.1.0
+    Finished release [optimized] target(s)
+Task 'build' completed successfully
+```
+
+### Simple Tasks
+
+The simplest task is a name mapped to a shell command string:
+
+```avon
+{
+  greet: "echo 'Hello, world!'",
+  build: "cargo build",
+  test: "cargo test"
+}
+```
+
+### Structured Tasks
+
+For more control, use a dictionary with task fields:
+
+```avon
+{
+  clean: "rm -rf build",
+  build: {
+    cmd: "cargo build --release",
+    desc: "Build in release mode",
+    deps: ["clean"],
+    env: {RUST_LOG: "info"}
+  },
+  test: {cmd: "cargo test", deps: ["build"]}
+}
+```
+
+### All Task Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `cmd` | string or list | yes | Shell command(s) to execute. If a list, commands are joined with `&&` |
+| `desc` | string | no | Human-readable description (shown by `--list` and `--info`) |
+| `deps` | list | no | Tasks that must run first (topologically sorted) |
+| `env` | dict | no | Environment variables for this task |
+| `dir` | string | no | Working directory for the command |
+| `download` | dict or list | no | Files to download before running |
+| `quiet` | bool | no | Suppress the "Running: ..." header output |
+| `ignore_errors` | bool | no | Continue even if the command fails (exit code ≠ 0) |
+| `stdin` | string | no | String to pipe into the command's stdin |
+
+### Multiple Commands (cmd as a list)
+
+When `cmd` is a list, commands are joined with `&&` and executed sequentially, stopping on the first failure:
+
+```avon
+{
+  setup: {
+    cmd: [
+      "echo step1",
+      "echo step2",
+      "echo step3"
+    ],
+    desc: "Multi-step setup"
+  }
+}
+```
+
+```bash
+avon do setup
+```
+
+Output:
+
+```
+Running: setup
+  Multi-step setup
+step1
+step2
+step3
+Task 'setup' completed successfully
+```
+
+### Working Directory (dir)
+
+The `dir` field changes the working directory before running the command:
+
+```avon
+{
+  check_tmp: {
+    cmd: "pwd",
+    dir: "/tmp"
+  }
+}
+```
+
+```bash
+avon do check_tmp
+```
+
+Output:
+
+```
+Running: check_tmp
+/tmp
+Task 'check_tmp' completed successfully
+```
+
+### Quiet Mode (quiet)
+
+The `quiet` field suppresses the "Running: ..." header:
+
+```avon
+{
+  silent: {
+    cmd: "echo hello",
+    quiet: true
+  }
+}
+```
+
+```bash
+avon do silent
+```
+
+Output (no "Running: silent" header):
+
+```
+hello
+Task 'silent' completed successfully
+```
+
+### Ignore Errors (ignore_errors)
+
+The `ignore_errors` field lets a task succeed even if the command returns a non-zero exit code:
+
+```avon
+{
+  optional_cleanup: {
+    cmd: "rm -f maybe_missing_file.tmp",
+    ignore_errors: true
+  },
+  build: {
+    cmd: "cargo build",
+    deps: ["optional_cleanup"]
+  }
+}
+```
+
+Without `ignore_errors`, a failed command stops the entire dependency chain.
+
+### Piping Stdin (stdin)
+
+The `stdin` field pipes a string into the command's standard input:
+
+```avon
+{
+  process: {
+    cmd: "cat",
+    stdin: "hello from stdin"
+  }
+}
+```
+
+```bash
+avon do process
+```
+
+Output:
+
+```
+Running: process
+hello from stdin
+Task 'process' completed successfully
+```
+
+### Environment Variables (env)
+
+The `env` field sets environment variables for the command. Use `$VAR` or `${VAR}` in commands — Avon expands them from the task's `env` dict first, then falls back to system environment variables:
+
+```avon
+{
+  build: {
+    cmd: "echo building with $MODE",
+    env: {MODE: "release"}
+  }
+}
+```
+
+```bash
+avon do build
+```
+
+Output:
+
+```
+Running: build
+building with release
+Task 'build' completed successfully
+```
+
+### Dependencies (deps)
+
+Tasks can depend on other tasks. Avon uses topological sort to determine the correct execution order. Each task runs exactly once, even in diamond dependency graphs:
+
+```avon
+{
+  base: "echo base",
+  left: {cmd: "echo left", deps: ["base"]},
+  right: {cmd: "echo right", deps: ["base"]},
+  top: {cmd: "echo top", deps: ["left", "right"]}
+}
+```
+
+```bash
+avon do top
+```
+
+Output:
+
+```
+Running: base
+base
+Running: left
+left
+Running: right
+right
+Running: top
+top
+Task 'top' completed successfully
+```
+
+Note that `base` runs only once, even though both `left` and `right` depend on it.
+
+### Download Feature
+
+Tasks can download files from the internet before executing their command. The `download` field accepts a dict `{url, to}` or a list of dicts:
+
+**Single download:**
+
+```avon
+{
+  fetch_data: {
+    cmd: "cat data.json",
+    download: {
+      url: "https://api.example.com/data.json",
+      to: "data.json"
+    }
+  }
+}
+```
+
+**Multiple downloads:**
+
+```avon
+{
+  fetch_all: {
+    cmd: "echo 'All files downloaded'",
+    download: [
+      {url: "https://example.com/file1.txt", to: "file1.txt"},
+      {url: "https://example.com/file2.txt", to: "file2.txt"}
+    ]
+  }
+}
+```
+
+Downloads also support `quiet` and `ignore_errors` options within the download dict:
+
+```avon
+{
+  setup: {
+    cmd: "echo 'Ready'",
+    download: {
+      url: "https://example.com/optional.txt",
+      to: "optional.txt",
+      quiet: true,
+      ignore_errors: true
+    }
+  }
+}
+```
+
+### CLI Flags for Do Mode
+
+**`--list` — Show all tasks:**
+
+```bash
+avon do --list
+```
+
+Output:
+
+```
+Available Tasks:
+================
+build
+  Description: Build the project
+  Command: echo '[TASK] Building project...'
+
+test
+  Description: Run unit tests
+  Command: echo '[TASK] Running tests...'
+  Dependencies: build
+```
+
+**`--info` — Show details for a specific task:**
+
+```bash
+avon do --info build
+```
+
+Output:
+
+```
+Task: build
+Command: echo building
+Description: Build the project
+Dependencies: lint
+Environment Variables:
+  MODE: release
+```
+
+**`--dry-run` — Preview the execution plan without running anything:**
+
+```bash
+avon do --dry-run build
+```
+
+Output:
+
+```
+Execution Plan:
+================
+1. lint (cmd: cargo clippy)
+2. build (cmd: echo building)
+   deps: lint
+```
+
+### Auto-Discovery
+
+If no file is specified, Avon looks for `Avon.av` in the current directory:
+
+```bash
+avon do build           # same as: avon do build Avon.av
+avon do --list          # same as: avon do --list Avon.av
+```
+
+You can also specify a different file:
+
+```bash
+avon do test tasks.av   # Run 'test' from tasks.av
+```
+
+### Using --git with Do Mode
+
+You can run tasks from remote GitHub repositories using `--git`. Because this involves executing shell commands from a remote source, Avon requires confirmation:
+
+```
+Warning: 'do' with --git will run shell commands from a remote source.
+This could execute arbitrary code on your system.
+Continue? [y/N]
+```
+
+Use `--force` to skip the confirmation (e.g., in CI/CD pipelines):
+
+```bash
+avon do build --git user/repo/tasks.av --force
+avon do --list --git user/repo/tasks.av --force
+```
+
+Alternatively, download and review the file first:
+
+```bash
+avon eval --git user/repo/tasks.av > tasks.av   # Download
+cat tasks.av                                      # Review
+avon do build tasks.av                            # Run locally
+```
+
+### Using --stdin with Do Mode
+
+You can pipe task definitions into `avon do` via `--stdin`. Like `--git`, this requires confirmation (or `--force`):
+
+```bash
+echo '{ hello: "echo hello world" }' | avon do hello --stdin --force
+```
+
+Output:
+
+```
+Running: hello
+hello world
+Task 'hello' completed successfully
+```
+
+### Dynamic Task Generation
+
+Since task files are Avon programs, you can use variables, functions, conditionals, and string manipulation to generate tasks dynamically:
+
+**Parameterized tasks:**
+
+```avon
+let env = env_var_or "ENV" "dev" in
+let is_debug = (env == "dev") in
+let flags = if is_debug then "--debug" else "--release" in
+
+{
+  build: {
+    cmd: "cargo build " + flags,
+    desc: "Build for " + env,
+    env: {RUST_LOG: if is_debug then "debug" else "warn"}
+  }
+}
+```
+
+```bash
+avon do build                # Build for dev (debug)
+ENV=prod avon do build       # Build for prod (release)
+```
+
+**Using functions to generate commands:**
+
+```avon
+let make_test = \name "cargo test --test " + name + " -- --nocapture" in
+
+{
+  test_unit: {cmd: make_test "unit", desc: "Run unit tests"},
+  test_integration: {cmd: make_test "integration", desc: "Run integration tests"},
+  test_all: {cmd: "echo done", deps: ["test_unit", "test_integration"]}
+}
+```
+
+### Error Handling
+
+Avon provides clear error messages for common mistakes:
+
+**Task not found (with typo suggestion):**
+
+```bash
+avon do bild    # Typo
+```
+
+```
+Error: Task 'bild' not found. Did you mean 'build'?
+```
+
+**Cyclic dependencies:**
+
+```
+Error: Cyclic dependency detected: b
+```
+
+**Missing `cmd` field:**
+
+```
+Error: Task 'info' has invalid format: missing required 'cmd' field
+```
+
+**Failed task (without ignore_errors):**
+
+```
+Error: Task 'build' failed with exit code 1
+```
+
+### Do Mode Gotchas
+
+**Task names must use underscores, not dashes:**
+
+Avon dict keys don't support dashes. Use underscores instead:
+
+```avon
+# ✗ Won't parse:
+{ my-task: "echo test" }
+
+# ✓ Works:
+{ my_task: "echo test" }
+```
+
+**`cmd` is required for structured tasks:**
+
+A dict-style task without `cmd` produces an error:
+
+```avon
+# ✗ Error: missing required 'cmd' field
+{ info: {desc: "Just a description"} }
+
+# ✓ Works:
+{ info: {cmd: "echo info", desc: "Show info"} }
+```
+
+**`--dry-run` shows unexpanded variables:**
+
+The `--dry-run` flag shows commands before environment variable expansion. You'll see `$VAR` in the plan, but actual execution substitutes the values.
+
+**`--git` always fetches from the default branch:**
+
+The `--git` flag doesn't support pinning to a specific branch, tag, or commit. It always fetches from the repository's default branch (usually `main`).
 
 ---
 
@@ -5963,6 +6779,31 @@ contains "apple" ["apple", "banana"]  # => true
 Note the argument order difference:
 - Strings: `contains haystack needle`
 - Lists: `contains element list`
+
+### Gotcha 29: Task Names Must Use Underscores, Not Dashes
+
+Avon dict keys don't support dashes (they're parsed as subtraction). Use underscores:
+
+```avon
+# ✗ Parse error — "my-task" is interpreted as "my" minus "task":
+{ my-task: "echo test" }
+
+# ✓ Works:
+{ my_task: "echo test" }
+```
+
+This applies to all dictionary keys, not just task names.
+
+### Gotcha 30: `--git` Always Fetches the Default Branch
+
+The `--git` flag doesn't support pinning to a specific branch, tag, or commit. It always fetches from the repository's default branch (usually `main`):
+
+```bash
+# Fetches from main — no way to specify @branch or @commit
+avon eval --git user/repo/file.av
+```
+
+If you need a specific version, download the file manually or use a release artifact.
 
 ---
 

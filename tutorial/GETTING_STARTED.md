@@ -632,8 +632,8 @@ avon run 'let items = ["apple", "banana", "cherry"] in {"Items: {join items ", "
 ### Try It Yourself
 
 ```bash
-avon run 'let lang = "Avon" in let year = 2024 in {"{lang} was created in {year}. It has {194} built-in functions."}'
-# Output: Avon was created in 2024. It has 194 built-in functions.
+avon run 'let lang = "Avon" in let year = 2024 in {"{lang} was created in {year}. It has over {150} built-in functions."}'
+# Output: Avon was created in 2024. It has over 150 built-in functions.
 ```
 
 ---
@@ -1146,7 +1146,7 @@ avon deploy --git "pyrotek45/config/helix.av" --root ./my-helix-config --force
 
 ## Lesson 15: Built-in Functions
 
-Avon has 194 built-in functions. Here are the most commonly used ones.
+Avon has over 150 built-in functions. Here are the most commonly used ones.
 
 ### Discovering Functions
 
@@ -1390,7 +1390,7 @@ You now know the fundamentals of Avon. Here's where to continue:
 |----------|-------------|
 | [Full Tutorial](./TUTORIAL.md) | Comprehensive 6000+ line reference covering every feature |
 | [Do Mode Guide](./DO_MODE_GUIDE.md) | Built-in task runner — run shell tasks with dependency resolution |
-| [Built-in Functions Reference](./BUILTIN_FUNCTIONS.md) | All 194 functions with signatures and examples |
+| [Built-in Functions Reference](./BUILTIN_FUNCTIONS.md) | All built-in functions with signatures and examples |
 | `avon doc <function>` | Look up any function from the command line |
 | `avon help do` | Task runner CLI help |
 

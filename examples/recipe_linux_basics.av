@@ -1,0 +1,129 @@
+{
+  check_apt: {
+    cmd: "which apt > /dev/null",
+    desc: "Check that apt is available"
+  },
+
+  install_curl: {
+    cmd: "sudo apt update && sudo apt install -y curl",
+    desc: "Install curl",
+    deps: ["check_apt"]
+  },
+
+  install_git: {
+    cmd: "sudo apt install -y git",
+    desc: "Install git",
+    deps: ["check_apt"]
+  },
+
+  install_build_essential: {
+    cmd: "sudo apt install -y build-essential",
+    desc: "Install C/C++ compiler",
+    deps: ["check_apt"]
+  },
+
+  install_node: {
+    cmd: "curl -sL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt install -y nodejs",
+    desc: "Install Node.js v20",
+    deps: ["install_curl"]
+  },
+
+  install_python: {
+    cmd: "sudo apt install -y python3 python3-pip python3-venv",
+    desc: "Install Python 3",
+    deps: ["check_apt"]
+  },
+
+  install_rust: {
+    cmd: "sh rustup-init.sh -y && rm rustup-init.sh",
+    desc: "Install Rust",
+    deps: ["install_curl"],
+    download: {
+      url: "https://sh.rustup.rs",
+      to: "rustup-init.sh"
+    }
+  },
+
+  install_docker: {
+    cmd: "sudo sh get-docker.sh && rm get-docker.sh",
+    desc: "Install Docker",
+    deps: ["install_curl"],
+    download: {
+      url: "https://get.docker.com",
+      to: "get-docker.sh"
+    }
+  },
+
+  install_vim: {
+    cmd: "sudo apt install -y vim",
+    desc: "Install Vim",
+    deps: ["check_apt"]
+  },
+
+  install_tmux: {
+    cmd: "sudo apt install -y tmux",
+    desc: "Install tmux",
+    deps: ["check_apt"]
+  },
+
+  verify_curl: {
+    cmd: "curl --version | head -1",
+    desc: "Verify curl"
+  },
+
+  verify_git: {
+    cmd: "git --version",
+    desc: "Verify git"
+  },
+
+  verify_node: {
+    cmd: "node --version && npm --version",
+    desc: "Verify Node.js"
+  },
+
+  verify_python: {
+    cmd: "python3 --version && pip3 --version",
+    desc: "Verify Python"
+  },
+
+  verify_rust: {
+    cmd: "rustc --version && cargo --version",
+    desc: "Verify Rust"
+  },
+
+  verify_docker: {
+    cmd: "docker --version",
+    desc: "Verify Docker"
+  },
+
+  web_dev: {
+    cmd: "echo 'Web dev stack installed'",
+    deps: ["install_node", "install_python", "install_git"],
+    desc: "Install web dev stack"
+  },
+
+  rust_dev: {
+    cmd: "echo 'Rust dev environment installed'",
+    deps: ["install_rust", "install_git", "install_build_essential", "install_vim"],
+    desc: "Install Rust dev environment"
+  },
+
+  devops: {
+    cmd: "echo 'DevOps tools installed'",
+    deps: ["install_docker", "install_curl", "install_git", "install_python"],
+    desc: "Install DevOps tools"
+  },
+
+  all: {
+    cmd: "echo 'All software installed successfully!'",
+    deps: ["install_curl", "install_git", "install_build_essential", "install_node", "install_python", "install_rust", "install_docker", "install_vim", "install_tmux"],
+    desc: "Install everything"
+  },
+
+  verify_all: {
+    cmd: "echo 'All verifications complete!'",
+    deps: ["verify_curl", "verify_git", "verify_node", "verify_python", "verify_rust", "verify_docker"],
+    quiet: true,
+    desc: "Verify all installations"
+  }
+}

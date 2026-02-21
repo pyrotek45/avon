@@ -28,6 +28,8 @@ Avon is designed to be powerful and flexible. I'm excited to see how you use it 
 | [**Tutorial**](./tutorial/TUTORIAL.md) | Complete guide from basics to advanced patterns. Covers language essentials, templates, CLI usage, style guide, best practices, error handling, and debugging. |
 | [**Function Reference**](./tutorial/BUILTIN_FUNCTIONS.md) | Reference for all built-in functions with signatures, descriptions, and examples organized by category. |
 | [**Do Mode Guide**](./tutorial/DO_MODE_GUIDE.md) | Built-in task runner guide. Define and run shell tasks with dependencies, env vars, and auto-discovery. |
+| [**Do Mode + GitHub**](./docs/DO_MODE_GITHUB_RECIPES.md) | Remote task execution patterns. Run tasks from GitHub with the `--git` flag. Analysis of recipe mode vs task mode and 5 real-world usage patterns. |
+| [**Best Practices: publish() + format_***](./docs/BEST_PRACTICES_PUBLISH_FORMAT.md) | Guide for data-driven file generation. When to use `@path {...}` vs `publish()`, pattern comparisons, and real-world examples. |
 | **Command Line** | Run `avon doc` for built-in help on any function, `avon help do` for task runner help |
 | **Examples** | See `examples/` directory for 160+ real-world examples |
 
@@ -96,7 +98,7 @@ Creates `./output/hello.txt` with the generated content.
 
 ## Built-in Documentation
 
-Avon includes comprehensive built-in documentation for all 165 functions. The `avon doc` command is one of its most powerful features, enabling developers to quickly learn the tool without leaving the terminal.
+Avon includes comprehensive built-in documentation for all of its functions. The `avon doc` command is one of its most powerful features, enabling developers to quickly learn the tool without leaving the terminal.
 
 **Look up any function:**
 
@@ -388,6 +390,240 @@ map (\env make_config env 8080) ["dev", "staging", "prod"]
 ```
 
 FileTemplates are first-class values that can be stored in variables, returned from functions, collected in lists, and transformed with map/filter/fold.
+
+---
+
+### `publish()` — Flexible FileTemplate Creation
+
+The `publish()` function provides an alternative way to create FileTemplates that's particularly useful when working with stored templates or dynamic data structures.
+
+Both `@path {...}` and `publish()` support dynamic path interpolation. The key difference is that `publish()` accepts templates and paths as *stored values* (from variables, function returns, etc.), while `@path {...}` requires the template to be written inline.
+
+**Basic usage:**
+
+```avon
+# Simple case
+publish "hello.txt" "Hello, World!"
+
+# With template interpolation
+let env = "prod" in
+publish ("config-{env}.yml") {"
+  environment: {env}
+  port: 443
+"}
+
+# Content from a variable (stored template)
+let template = @template.txt in
+publish "output.txt" template
+
+# From function results
+let load_template = \name
+  readfile (name + ".template")
+in
+publish "output.txt" (load_template "mytemplate")
+```
+
+**Powerful combination: `publish()` with `format_*` functions**
+
+Generate multiple configuration formats from a single data structure:
+
+```avon
+# Generate config in Avon, JSON, and YAML from the same data
+let config = {
+  name: "MyApp",
+  port: 8080,
+  debug: false,
+  database: {host: "localhost", port: 5432}
+}
+in
+[
+  publish "config.avon" (format_avon config),
+  publish "config.json" (format_json config),
+  publish "config.yaml" (format_yaml config)
+]
+
+# Generate AVONFILE task definitions from data
+let tasks = {
+  build: {cmd: "cargo build --release"},
+  test: {cmd: "cargo test --all"},
+  clean: {cmd: "cargo clean"}
+}
+in
+publish "AVONFILE" (format_avon tasks)
+
+# Generate Docker Compose from structured data
+let docker_services = {
+  version: "3.8",
+  services: {
+    web: {image: "nginx:latest"},
+    api: {image: "myapp:latest"}
+  }
+}
+in
+publish "docker-compose.yml" (format_yaml docker_services)
+```
+
+This pattern is particularly powerful for **code generation** and **cross-format configuration**:
+- Generate multiple formats (JSON, YAML, TOML, Avon) from a single data structure
+- Create task files (`AVONFILE`) programmatically
+- Build Docker Compose or Kubernetes manifests from data
+- Generate OpenAPI/Swagger specs from structured definitions
+
+**When to use `publish()` instead of `@path {...}`:**
+
+| Scenario | Use |
+|----------|-----|
+| Content is stored in a variable | `publish()` |
+| Content comes from a function result | `publish()` |
+| Content is a template from a different file | `publish()` |
+| Content is from `format_avon()`, `format_json()`, etc. | `publish()` |
+| Building FileTemplates in map/filter operations | `publish()` |
+| Content is hardcoded in the expression | `@path {...}` (simpler) |
+
+**Example: Generate files from stored templates**
+
+```avon
+# Store templates in variables
+let web_template = @templates/web.yml in
+let api_template = @templates/api.yml in
+
+# Use publish to generate multiple files
+[
+  publish "config/web.yml" web_template,
+  publish "config/api.yml" api_template
+]
+
+# Or programmatically with a function
+let make_config = \name \template
+  publish ("config/{name}.yml") template
+in
+[
+  make_config "web" web_template,
+  make_config "api" api_template
+]
+```
+
+See `examples/publish_demo.av` and `examples/publish_with_formats.av` for more examples, and run `avon doc publish` for full documentation.
+
+---
+
+### Download Feature — Fetch Resources Before Tasks
+
+Avon's task runner (do mode) can download files from the internet before executing tasks. This makes it perfect for workflows that depend on external resources, data pipelines, and distributed configurations.
+
+**Basic download in a task:**
+
+```avon
+{
+  process_data: {
+    cmd: "process.sh data.json",
+    desc: "Download and process remote data",
+    download: {
+      url: "https://api.example.com/data.json",
+      to: "data.json"
+    }
+  }
+}
+```
+
+**Multiple downloads:**
+
+```avon
+{
+  setup: {
+    cmd: "echo 'Templates downloaded'",
+    desc: "Download multiple templates from GitHub",
+    download: [
+      {
+        url: "https://raw.githubusercontent.com/org/repo/main/template1.yml",
+        to: "configs/template1.yml"
+      },
+      {
+        url: "https://raw.githubusercontent.com/org/repo/main/template2.yml",
+        to: "configs/template2.yml"
+      }
+    ]
+  }
+}
+```
+
+**Download with error handling:**
+
+```avon
+{
+  process: {
+    cmd: "process.sh",
+    download: {
+      url: "https://example.com/data.json",
+      to: "data.json"
+    },
+    ignore_errors: true  # Continue even if download fails
+  }
+}
+```
+
+**Download with quiet mode:**
+
+```avon
+{
+  setup: {
+    cmd: "echo done",
+    download: {
+      url: "https://example.com/file.txt",
+      to: "file.txt"
+    },
+    quiet: true  # Suppress "Downloading:" messages
+  }
+}
+```
+
+**Real-world workflow: Data pipeline**
+
+```avon
+{
+  fetch_data: {
+    cmd: "echo 'Data fetched'",
+    download: {
+      url: "https://api.example.com/dataset.csv",
+      to: "raw/dataset.csv"
+    }
+  },
+  
+  validate: {
+    cmd: "validator raw/dataset.csv",
+    deps: ["fetch_data"]
+  },
+  
+  transform: {
+    cmd: "transform.sh raw/dataset.csv > processed/data.json",
+    deps: ["validate"]
+  },
+  
+  report: {
+    cmd: "python generate_report.py processed/data.json",
+    deps: ["transform"]
+  }
+}
+```
+
+**Why downloads matter:**
+
+- **One source of truth** — Keep master data/configs on a server, deploy to any machine
+- **Dynamic workflows** — Workflows fetch what they need, no manual pre-staging
+- **Data pipelines** — Download → validate → transform → report in one task chain
+- **Configuration templates** — Download base configs from GitHub, customize locally
+- **Build artifacts** — Fetch dependencies, templates, or data files as part of the build
+
+**Download feature options:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `url` | string | yes | HTTP(S) URL to download from |
+| `to` | string | yes | Local file path to save to (creates directories as needed) |
+| `quiet` | bool | no | Suppress "Downloading:" output messages |
+| `ignore_errors` | bool | no | Continue task even if download fails |
+
+See `examples/download_basic.av`, `examples/download_pipeline.av`, `examples/download_config_gen.av`, and `examples/download_swiss_army.av` for more examples.
 
 ---
 
@@ -726,15 +962,15 @@ avon eval program.av --debug
 Avon resolves its source file in this priority order:
 
 1. **`--stdin`** — Read source from standard input (eval/deploy only)
-2. **`--git <url>`** — Fetch from GitHub (`user/repo/path/to/file.av`) (eval/deploy only)
+2. **`--git <url>`** — Fetch from GitHub (`user/repo/path/to/file.av`)
 3. **`<file>` argument** — Read the named file from disk
 4. **`Avon.av`** — Auto-discover in the current directory (`do` mode only)
 
 If none of these succeed, Avon prints an error with usage hints.
 
-> **Security:** `--git` and `--stdin` are blocked for `do` mode because running
-> shell commands from a remote or piped source is a security risk. Download and
-> review the file first, then run locally.
+> **Security:** `--git` and `--stdin` work with `do` mode but require confirmation
+> because running shell commands from a remote or piped source is a security risk.
+> Use `--force` to skip the prompt (e.g., in CI), or download and review the file first.
 
 **When to use each mode:**
 

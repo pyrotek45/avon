@@ -1,0 +1,119 @@
+# Do Mode: Remote Software Installation Recipe
+#
+# Demonstrates idempotent software installation with:
+# - Pre-flight checks (verify prerequisites)
+# - Idempotent installation (safe to run multiple times)
+# - Verification steps (ensure installation succeeded)
+#
+# Usage:
+#   avon do all_rust --git user/avon-recipes/rust.av --force
+#   avon do install_dev_tools --git user/avon-recipes/rust.av --force
+
+{
+  check_curl: {
+    cmd: "command -v curl > /dev/null || (echo 'ERROR: curl not found' && exit 1)",
+    desc: "Verify curl is installed"
+  },
+
+  check_not_installed: {
+    cmd: "test ! -f ~/.cargo/bin/rustc || (echo 'INFO: Rust already installed' && exit 0)",
+    desc: "Check if Rust is already installed"
+  },
+
+  verify_prerequisites: {
+    cmd: "echo '✅ All prerequisites met, ready to install'",
+    deps: ["check_curl", "check_not_installed"],
+    desc: "Verify all prerequisites"
+  },
+
+  install_rust: {
+    cmd: [
+      "echo '🚀 Installing Rust...'",
+      "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
+      "echo '✅ Installation complete'"
+    ],
+    deps: ["verify_prerequisites"],
+    desc: "Download and run Rust installer"
+  },
+
+  configure_shell: {
+    cmd: [
+      "echo '🔧 Configuring shell...'",
+      "if [ -f ~/.bash_profile ]; then source ~/.bash_profile; fi",
+      "if [ -f ~/.bashrc ]; then source ~/.bashrc; fi",
+      "if [ -f ~/.zshrc ]; then source ~/.zshrc; fi"
+    ],
+    deps: ["install_rust"],
+    desc: "Load environment variables"
+  },
+
+  verify_rust: {
+    cmd: [
+      "echo '🔍 Verifying Rust...'",
+      "rustc --version",
+      "cargo --version",
+      "rustup --version",
+      "echo '✅ Verified successfully'"
+    ],
+    desc: "Verify installation succeeded"
+  },
+
+  verify_toolchain: {
+    cmd: [
+      "echo 'Checking toolchain...'",
+      "rustup toolchain list",
+      "rustup target list | grep installed"
+    ],
+    deps: ["verify_rust"],
+    desc: "Check installed toolchains"
+  },
+
+  all_rust: {
+    cmd: [
+      "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'",
+      "echo 'Rust Installation Pipeline'",
+      "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'"
+    ],
+    deps: ["verify_toolchain"],
+    desc: "Complete Rust installation pipeline"
+  },
+
+  uninstall_rust: {
+    cmd: [
+      "echo '⚠️  Uninstalling Rust...'",
+      "rustup self uninstall -y",
+      "echo '✅ Uninstalled'"
+    ],
+    desc: "Uninstall Rust"
+  },
+
+  install_web_assembly: {
+    cmd: [
+      "echo '📦 Installing WebAssembly...'",
+      "rustup target add wasm32-unknown-unknown",
+      "echo '✅ Added'"
+    ],
+    deps: ["verify_rust"],
+    desc: "Add WebAssembly support"
+  },
+
+  install_nightly: {
+    cmd: [
+      "echo '📦 Installing nightly...'",
+      "rustup toolchain install nightly",
+      "echo '✅ Installed'"
+    ],
+    deps: ["verify_rust"],
+    desc: "Install nightly toolchain"
+  },
+
+  install_dev_tools: {
+    cmd: [
+      "echo '📦 Installing dev tools...'",
+      "rustup component add clippy rustfmt",
+      "echo '✅ Installed'"
+    ],
+    deps: ["verify_rust"],
+    desc: "Install clippy and rustfmt"
+  }
+}

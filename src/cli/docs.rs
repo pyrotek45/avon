@@ -354,6 +354,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              Data:\n\
              {:<16} Join list with separator\n\
              {:<16} Format as 2D table\n\
+             {:<16} Format as Avon\n\
              {:<16} Format as JSON\n\
              {:<16} Format as YAML\n\
              {:<16} Format as TOML\n\
@@ -376,6 +377,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
             "format_bool",
             "format_list",
             "format_table",
+            "format_avon",
             "format_json",
             "format_yaml",
             "format_toml",
@@ -494,6 +496,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              {:<24} Parse OPML string\n\
              {:<24} Parse INI string\n\n\
              Formatters (Dict/List -> String):\n\
+             {:<24} Format as Avon\n\
              {:<24} Format as JSON\n\
              {:<24} Format as YAML\n\
              {:<24} Format as TOML\n\
@@ -530,6 +533,7 @@ pub fn get_category_doc(category: &str) -> Option<String> {
             "html_parse_string",
             "opml_parse_string",
             "ini_parse_string",
+            "format_avon",
             "format_json",
             "format_yaml",
             "format_toml",
@@ -719,6 +723,7 @@ pub fn get_builtin_doc(func_name: &str) -> Option<String> {
         ("format_list", "format_list :: [a] -> String -> String\n  Join list elements into a string with a separator.\n  Similar to 'join' but auto-converts elements to strings.\n  \n  Arguments:\n    1. List to format\n    2. Separator string\n  \n  Example: format_list [\"a\", \"b\", \"c\"] \", \" -> \"a, b, c\"\n           Join with comma-space\n  \n  Example: format_list [1, 2, 3] \" | \" -> \"1 | 2 | 3\"\n           Join numbers (auto-converts)\n  \n  Example: format_list [true, false] \"/\" -> \"true/false\"\n           Join booleans\n  \n  Example: format_list items \"\\n\"\n           One item per line\n  \n  Use case: Display lists, create delimited strings, output formatting\n  Tip: Unlike 'join', this auto-converts non-strings to strings"),
         ("format_table", "format_table :: ([[a]]|Dict) -> String -> String\n  Format data as a simple 2D text table with custom separator.\n  \n  Arguments:\n    1. 2D list (rows) or Dict (key-value pairs)\n    2. Column separator string\n  \n  Example: format_table [[\"Name\", \"Age\"], [\"Alice\", \"30\"]] \" | \"\n           -> \"Name | Age\\nAlice | 30\"\n  \n  Example: format_table {name: \"Alice\", age: 30} \": \"\n           -> \"name: Alice\\nage: 30\"\n  \n  Example: format_table [[\"A\", \"B\"], [\"1\", \"2\"], [\"3\", \"4\"]] \"\\t\"\n           Tab-separated table\n  \n  Use case: Display tabular data, simple reports, debug output\n  Note: For aligned columns, use pad_right on each cell first"),
         ("format_json", "format_json :: a -> String\n  Convert any value to its JSON representation.\n  \n  Arguments:\n    1. Value to convert to JSON\n  \n  Example: format_json [1, 2, 3] -> \"[1, 2, 3]\"\n           List to JSON array\n  \n  Example: format_json {name: \"Alice\", age: 30}\n           -> \"{\\\"name\\\":\\\"Alice\\\",\\\"age\\\":30}\"\n  \n  Example: format_json true -> \"true\"\n           Boolean to JSON\n  \n  Example: format_json \"hello\" -> \"\\\"hello\\\"\"\n           String to JSON (with quotes)\n  \n  Use case: API responses, config files, data export, serialization\n  Note: Output is compact (no pretty-printing)"),
+        ("format_avon", "format_avon :: a -> String\n  Convert any value to its Avon text representation.\n  Produces valid Avon syntax that can be parsed back.\n  \n  Arguments:\n    1. Value to convert to Avon\n  \n  Example: format_avon {name: \"Alice\", age: 30}\n           -> \"{\\n  name: \\\"Alice\\\",\\n  age: 30\\n}\"\n  \n  Example: format_avon [1, 2, 3] -> \"[1, 2, 3]\"\n           List to Avon list\n  \n  Example: format_avon true -> \"true\"\n           Boolean to Avon\n  \n  Example: let tasks = {build: {cmd: \"make\"}, test: {cmd: \"test\"}} in\n           publish \"AVONFILE\" (format_avon tasks)\n           Generate Avon task file from dict\n  \n  Example: let config = {port: 8080, debug: true} in\n           [publish \"config.avon\" (format_avon config),\n            publish \"config.json\" (format_json config),\n            publish \"config.yaml\" (format_yaml config)]\n           Generate multiple config formats from same data\n  \n  Use case: Generate AVONFILE task definitions, serialize configs, code generation\n  Tip: Combine with publish() to generate .av files from data structures\n  Tip: Use with other format_* functions for cross-format config generation\n  Note: Output is pretty-printed with 2-space indentation"),
         ("format_yaml", "format_yaml :: a -> String\n  Convert any value to its YAML representation.\n  \n  Arguments:\n    1. Value to convert to YAML\n  \n  Example: format_yaml {name: \"Alice\", age: 30}\n           -> \"name: Alice\\nage: 30\\n\"\n  \n  Example: format_yaml [1, 2, 3]\n           -> \"- 1\\n- 2\\n- 3\\n\"\n           List to YAML sequence\n  \n  Example: format_yaml {db: {host: \"localhost\", port: 5432}}\n           Nested dict to YAML mapping\n  \n  Example: format_yaml true -> \"true\\n\"\n           Boolean to YAML\n  \n  Cross-format: json_parse \"data.json\" -> format_yaml\n               Convert JSON file to YAML string\n  \n  Use case: Config files, Kubernetes manifests, Docker Compose, CI/CD pipelines\n  Note: Output is standard YAML with proper indentation"),
         ("format_toml", "format_toml :: a -> String\n  Convert any value to its TOML representation.\n  \n  Arguments:\n    1. Value to convert to TOML\n  \n  Example: format_toml {name: \"myapp\", version: \"1.0\"}\n           -> \"name = \\\"myapp\\\"\\nversion = \\\"1.0\\\"\\n\"\n  \n  Example: format_toml {package: {name: \"app\", version: \"1.0\"}, dependencies: {serde: \"1.0\"}}\n           Nested dict to TOML with sections\n  \n  Example: format_toml {ports: [8080, 8443]}\n           -> \"ports = [8080, 8443]\\n\"\n           List to TOML array\n  \n  Cross-format: yaml_parse \"config.yml\" -> format_toml\n               Convert YAML file to TOML string\n  \n  Use case: Cargo.toml, pyproject.toml, config files\n  Note: TOML requires string keys and has specific type rules"),
         ("format_xml", "format_xml :: Dict -> String\n  Convert a Dict to an indented XML string.\n  \n  Arguments:\n    1. Dict with XML structure:\n       - tag: Element tag name (String)\n       - attrs: Attributes (Dict, optional)\n       - text: Text content (String, for leaf elements)\n       - children: Child elements (List of Dicts)\n  \n  Example: format_xml {tag: \"root\", children: [{tag: \"item\", text: \"Hello\"}]}\n           -> \"<root>\\n  <item>Hello</item>\\n</root>\"\n  \n  Example: format_xml {tag: \"br\"}\n           -> \"<br />\"\n           Empty elements are self-closing\n  \n  Example: format_xml {tag: \"a\", attrs: {href: \"url\"}, text: \"Link\"}\n           -> \"<a href=\\\"url\\\">Link</a>\"\n           Element with attributes\n  \n  Round-trip: let data = xml_parse \"file.xml\" in\n             format_xml data\n             Parse and re-format XML\n  \n  Use case: Generate XML configs, SOAP messages, data export\n  Note: Output is indented with 2 spaces per level. Attribute keys are sorted."),
@@ -744,6 +749,7 @@ pub fn get_builtin_doc(func_name: &str) -> Option<String> {
         // File Operations
         ("readfile", "readfile :: String|Path -> String\n  Read the entire contents of a file as a single string.\n  \n  Arguments:\n    1. File path (string or @path)\n  \n  Example: readfile \"config.json\" -> \"{\\\"port\\\": 8080}\"\n           Read a JSON file\n  \n  Example: readfile @templates/header.html -> \"<header>...</header>\"\n           Read using path literal\n  \n  Example: let content = readfile \"README.md\" in\n           upper content\n           Read and convert to uppercase\n  \n  Use case: Load configuration files, read templates, process file contents\n  Note: Strings can be absolute (safe for reading). Path literals (@...) must be relative."),
         ("readlines", "readlines :: String|Path -> [String]\n  Read a file and return each line as a separate string in a list.\n  \n  Arguments:\n    1. File path (string or @path)\n  \n  Example: readlines \"todos.txt\" -> [\"Buy milk\", \"Write code\", \"Deploy\"]\n           Read each line\n  \n  Example: readlines \"data.csv\" -> [\"name,age\", \"Alice,30\", \"Bob,25\"]\n           Read CSV file (then use csv_parse to parse it properly)\n  \n  Example: readlines \"log.txt\" -> length -> to_string\n           Count number of lines\n  \n  Tip: Use with map/filter to process lines:\n       readlines \"file.txt\" -> filter (\\line starts_with line \"ERROR\")"),
+        ("publish", "publish :: (String|Path) -> (String|Template|Path) -> FileTemplate\n  Create a FileTemplate from a path and content.\n  FileTemplates combine a file path with content and can be deployed to disk.\n  \n  Both @path {...} and publish() support dynamic paths. The key difference is that\n  publish() accepts templates and paths as stored values from variables, function results, etc.\n  \n  Arguments:\n    1. File path (string or @path)\n    2. File content (string, {{template}}, or @path)\n  \n  Returns:\n    A FileTemplate value that can be deployed with 'avon deploy'\n  \n  Example: publish \"hello.txt\" \"Hello, World!\"\n           Simple case\n  \n  Example: let template = @template.txt in\n           publish \"output.txt\" template\n           Use stored template as content\n  \n  Example: let load_template = \\name\n             readfile (name + \".template\")\n           in\n           publish \"config.yml\" (load_template \"myconfig\")\n           Use function result as content\n  \n  Example: let web_tmpl = @templates/web.yml in\n           let api_tmpl = @templates/api.yml in\n           [publish \"config/web.yml\" web_tmpl,\n            publish \"config/api.yml\" api_tmpl]\n           Generate multiple files from stored templates\n  \n  Use case: Work with templates stored in variables, from files, or function results\n  Note: Use @path {...} for inline templates. Use publish() for templates in variables.\n  Tip: Great for loading templates once and using them in map operations"),
         ("fill_template", "fill_template :: String|Path -> (Dict|[[String, String]]) -> String\n  Read a file and replace {{placeholder}} syntax with actual values.\n  \n  Arguments:\n    1. Template file path\n    2. Dictionary or list of [key, value] pairs with values to fill in\n  \n  Template file (email.txt):\n    Hello {{name}}!\n    Your order #{{order_id}} is ready.\n  \n  Example: fill_template \"email.txt\" {name: \"Alice\", order_id: \"12345\"}\n           -> \"Hello Alice!\\nYour order #12345 is ready.\"\n  \n  Example: fill_template @templates/config.yml {env: \"prod\", port: \"8080\"}\n           Use path literal and fill variables\n  \n  Use case: Generate personalized emails, configs, reports\n  Tip: Placeholders must match dictionary keys exactly"),
         ("exists", "exists :: String|Path -> Bool\n  Check if a file or directory exists on disk.\n  \n  Arguments:\n    1. File or directory path\n  \n  Example: exists \"config.json\" -> true\n           File exists\n  \n  Example: exists \"missing.txt\" -> false\n           File doesn't exist\n  \n  Example: if exists \"config.json\"\n           then readfile \"config.json\"\n           else \"{}\"\n           Conditional file reading\n  \n  Use case: Check before reading, conditional logic, validation"),
         ("basename", "basename :: String|Path -> String\n  Extract just the filename (last part) from a file path.\n  \n  Arguments:\n    1. File path (string or @path)\n  \n  Example: basename @config/app.yml -> \"app.yml\"\n           Get just the filename\n  \n  Example: basename \"/usr/local/bin/avon\" -> \"avon\"\n           Get filename from absolute path\n  \n  Example: basename \"src/main.av\" -> \"main.av\"\n           Get filename from relative path\n  \n  Example: map basename file_paths\n           Get all filenames from list of paths\n  \n  Use case: Extract filenames, display names, process file lists"),
@@ -1121,6 +1127,10 @@ pub fn print_builtin_docs() {
     );
     println!(
         "  {:<18} :: {}",
+        "format_avon", "a -> String  (Avon representation)"
+    );
+    println!(
+        "  {:<18} :: {}",
         "format_yaml", "a -> String  (YAML representation)"
     );
     println!(
@@ -1200,6 +1210,11 @@ pub fn print_builtin_docs() {
         "fill_template", "String|Path -> (Dict|[[String, String]]) -> String"
     );
     println!("                     (reads file and fills {{placeholders}} with values)");
+    println!(
+        "  {:<18} :: {}",
+        "publish", "(String|Path) -> (String|Template) -> FileTemplate"
+    );
+    println!("                     (create FileTemplate from path and content)");
     println!("  {:<18} :: {}", "exists", "String|Path -> Bool");
     println!("  {:<18} :: {}", "basename", "String|Path -> String");
     println!("  {:<18} :: {}", "dirname", "String|Path -> String");
@@ -1247,6 +1262,7 @@ pub fn print_builtin_docs() {
     println!("  {:<18} :: {}", "ini_parse_string", "String -> Dict");
     println!();
     println!("  Formatters (Avon value -> string):");
+    println!("  {:<18} :: {}", "format_avon", "a -> String");
     println!("  {:<18} :: {}", "format_json", "a -> String");
     println!("  {:<18} :: {}", "format_yaml", "a -> String");
     println!("  {:<18} :: {}", "format_toml", "a -> String");

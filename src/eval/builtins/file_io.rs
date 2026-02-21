@@ -28,6 +28,7 @@ pub const NAMES: &[&str] = &[
     "json_parse_string",
     "opml_parse",
     "opml_parse_string",
+    "publish",
     "readfile",
     "readlines",
     "relpath",
@@ -50,7 +51,7 @@ pub fn get_arity(name: &str) -> Option<usize> {
         | "walkdir" | "xml_parse" | "xml_parse_string" | "yaml_parse" | "yaml_parse_string" => {
             Some(1)
         }
-        "fill_template" | "import_git" | "relpath" => Some(2),
+        "fill_template" | "import_git" | "publish" | "relpath" => Some(2),
         _ => None,
     }
 }
@@ -687,6 +688,49 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     line,
                 ))
             }
+        }
+        "publish" => {
+            // publish :: (String|Path, String|Template|Path) -> FileTemplate
+            // Create a FileTemplate from a path (string or path literal) and content (string, template, or path)
+            let path_val = &args[0];
+            let content_val = &args[1];
+
+            // Convert path to chunks and extract symbol table
+            let (path_chunks, path_symbols) = match path_val {
+                Value::String(s) => (vec![crate::common::Chunk::String(s.clone())], HashMap::new()),
+                Value::Path(chunks, symbols) => (chunks.clone(), symbols.clone()),
+                other => {
+                    return Err(EvalError::type_mismatch(
+                        "string or path",
+                        other.to_string(source),
+                        line,
+                    ))
+                }
+            };
+
+            // Convert content to chunks and extract symbol table
+            let (content_chunks, content_symbols) = match content_val {
+                Value::String(s) => (vec![crate::common::Chunk::String(s.clone())], HashMap::new()),
+                Value::Template(chunks, symbols) => (chunks.clone(), symbols.clone()),
+                Value::Path(chunks, symbols) => (chunks.clone(), symbols.clone()),
+                other => {
+                    return Err(EvalError::type_mismatch(
+                        "string, path, or template",
+                        other.to_string(source),
+                        line,
+                    ))
+                }
+            };
+
+            // Merge symbol tables from both path and template
+            let mut combined_symbols = path_symbols;
+            combined_symbols.extend(content_symbols);
+
+            // Create the FileTemplate with the combined symbol tables
+            Ok(Value::FileTemplate {
+                path: (path_chunks, combined_symbols.clone()),
+                template: (content_chunks, combined_symbols),
+            })
         }
         _ => Err(EvalError::new(
             format!("unknown file_io function: {}", name),

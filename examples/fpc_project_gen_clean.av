@@ -1,0 +1,40 @@
+# FPC (Free Pascal Compiler) Project Generator - CLEAN VERSION
+# Generates an AVONFILE using format_avon and publish()
+#
+# This demonstrates best practices:
+# 1. Define project structure as data (a dict)
+# 2. Use format_avon to convert to Avon syntax
+# 3. Use publish to create the AVONFILE
+#
+# Usage:
+#   avon eval examples/fpc_project_gen_clean.av --name myproject
+
+\name ? "myproject"
+\version ? "1.0.0"
+
+# Define the build tasks as a clean data structure
+let tasks = {
+  build: {
+    cmd: "fpc -Mtp -Cs32768 -v0 -n src/{name}.pas -o bin/{name}",
+    deps: []
+  },
+  
+  debug: {
+    cmd: "fpc -Mtp -Cs32768 -g -v0 src/{name}.pas -o bin/{name}",
+    deps: []
+  },
+  
+  run: {
+    cmd: "bin/{name}",
+    deps: ["build"]
+  },
+  
+  clean: {
+    cmd: "rm -rf bin/ *.o *.ppu *.a *.lib",
+    deps: []
+  }
+}
+in
+
+# Convert the tasks dict to Avon syntax and publish as AVONFILE
+publish "AVONFILE" (format_avon tasks)

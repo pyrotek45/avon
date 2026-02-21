@@ -1,0 +1,7 @@
+# Demonstration of the publish() function
+# publish creates FileTemplates from dynamic paths and content
+# Signature: publish :: (String|Path) -> (String|Template|Path) -> FileTemplate
+
+# === Example 1: Basic publish with string literals ===
+publish "hello.txt" "Hello, World!"
+

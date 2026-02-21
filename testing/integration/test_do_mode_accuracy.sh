@@ -307,21 +307,21 @@ EOF" \
     "true"
 
 echo ""
-echo "--- CLAIM: --git is blocked for do mode ---"
+echo "--- CLAIM: --git requires confirmation for do mode ---"
 test_claim \
-    "--git blocked: clear error message" \
+    "--git confirmation: shows warning" \
     "mkdir -p $TMPDIR/git_block" \
-    "$AVON do build --git pyrotek45/avon/Avon.av" \
-    "git.*not.*allowed" \
+    "echo 'N' | $AVON do build --git pyrotek45/avon/Avon.av" \
+    "Warning.*--git.*remote source|Aborted" \
     "true"
 
 echo ""
-echo "--- CLAIM: --stdin is blocked for do mode ---"
+echo "--- CLAIM: --stdin requires confirmation for do mode ---"
 test_claim \
-    "--stdin blocked: clear error message" \
+    "--stdin confirmation: shows warning" \
     "mkdir -p $TMPDIR/stdin_block" \
     "echo 'fake' | $AVON do build --stdin" \
-    "stdin.*not.*allowed" \
+    "Warning.*--stdin.*piped input|Aborted" \
     "true"
 
 echo ""

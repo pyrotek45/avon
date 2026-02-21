@@ -1,0 +1,54 @@
+# Download Feature: Configuration Generation
+# This example shows how to download templates and generate environment-specific configs.
+#
+# Usage: avon do <task_name> examples/download_config_gen.av
+# Try: avon do build examples/download_config_gen.av
+# Try: ENV=prod avon do deploy examples/download_config_gen.av
+
+let env = env_var_or "ENV" "dev" in
+let is_prod = (env == "prod") in
+let config = {
+    env: env,
+    template_url: "https://raw.githubusercontent.com/pyrotek45/avon/main/README.md",
+    config_dir: "configs",
+    build_flags: if is_prod then "--release --locked" else "--dev"
+} in
+
+let tasks = {
+    download_template: {
+        cmd: "echo 'Template downloaded for env=" + env + "'",
+        desc: "Download configuration template from GitHub",
+        download: {
+            url: config.template_url,
+            to: config.config_dir + "/template.txt"
+        }
+    },
+    
+    generate_config: {
+        cmd: [
+            "echo 'Generating " + env + " configuration...'",
+            "mkdir -p " + config.config_dir,
+            "echo '# Generated Configuration for " + env + "' > " + config.config_dir + "/config." + env + ".txt"
+        ],
+        desc: "Generate " + env + "-specific configuration",
+        deps: ["download_template"]
+    },
+    
+    build: {
+        cmd: "echo 'Building with flags: " + config.build_flags + "' && echo 'Build for " + env + " complete'",
+        desc: "Build project using environment-specific configuration",
+        deps: ["generate_config"],
+        env: {ENV: env}
+    },
+    
+    deploy: if is_prod then {
+        cmd: "echo 'Deploying to production...' && echo 'Deployment complete'",
+        desc: "Deploy to production",
+        deps: ["build"]
+    } else {
+        cmd: "echo 'Skipping deployment (not in prod environment)'",
+        deps: ["build"]
+    }
+} in
+
+tasks

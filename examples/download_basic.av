@@ -1,0 +1,56 @@
+# Download Feature: Basic Example
+# This example shows how to download a file from the internet before running a task.
+# The download feature is part of Avon's task runner ("do" mode).
+#
+# Usage: avon do <task_name> examples/download_basic.av
+# Try: avon do download_readme examples/download_basic.av
+
+let tasks = {
+    download_readme: {
+        cmd: "echo 'Downloaded README successfully!' && wc -l README.md",
+        desc: "Download the Avon README from GitHub",
+        download: {
+            url: "https://raw.githubusercontent.com/pyrotek45/avon/main/README.md",
+            to: "README.md"
+        }
+    },
+    
+    download_docs: {
+        cmd: "echo 'Downloaded docs successfully!' && ls -lh docs/",
+        desc: "Download multiple documentation files",
+        download: [
+            {
+                url: "https://raw.githubusercontent.com/pyrotek45/avon/main/tutorial/TUTORIAL.md",
+                to: "docs/TUTORIAL.md"
+            },
+            {
+                url: "https://raw.githubusercontent.com/pyrotek45/avon/main/tutorial/DO_MODE_GUIDE.md",
+                to: "docs/DO_MODE_GUIDE.md"
+            }
+        ]
+    },
+    
+    download_quiet: {
+        cmd: "echo 'Files downloaded silently' && wc -l *.md",
+        desc: "Download files without verbose output",
+        download: [
+            {
+                url: "https://raw.githubusercontent.com/pyrotek45/avon/main/README.md",
+                to: "readme.md"
+            }
+        ],
+        quiet: true
+    },
+    
+    download_with_fallback: {
+        cmd: "echo 'Download complete' && ls -lh README.md || echo 'Using fallback'",
+        desc: "Download with error handling (task continues even if download fails)",
+        download: {
+            url: "https://raw.githubusercontent.com/pyrotek45/avon/main/README.md",
+            to: "README.md"
+        },
+        ignore_errors: true
+    }
+} in
+
+tasks

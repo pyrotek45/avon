@@ -385,26 +385,48 @@ fi
 echo ""
 
 # ─────────────────────────────────────────────────────────
-# PART 7: Security - --git and --stdin blocked
+# PART 7: Security - --git and --stdin require confirmation
 # ─────────────────────────────────────────────────────────
 echo "--- Security ---"
 
-# --git blocked
-run_error_test "git blocked for do mode" $AVON do build --git user/repo/tasks.av
-run_test_contains "git blocked: error message" \
-    "Error: --git is not allowed with 'do' mode" \
-    $AVON do build --git user/repo/tasks.av
-run_test_contains "git blocked: mentions security" \
-    "security risk" \
-    $AVON do build --git user/repo/tasks.av
-
-# --stdin blocked
-result=$(echo '{build: "echo pwned"}' | $AVON do build --stdin 2>&1) || true
-if echo "$result" | grep -qF "Error: --stdin is not allowed with 'do' mode"; then
-    echo "✓ stdin blocked: error message"
+# --git requires confirmation (auto-declines when stdin is /dev/null)
+result=$(echo 'N' | $AVON do build --git user/repo/tasks.av 2>&1) || true
+if [ $? -ne 0 ] || echo "$result" | grep -qF "Aborted"; then
+    echo "✓ git requires confirmation for do mode"
     ((PASSED++))
 else
-    echo "✗ stdin blocked: error message"
+    echo "✗ git requires confirmation for do mode"
+    echo "  Got: $(echo "$result" | head -3)"
+    ((FAILED++))
+fi
+
+result=$(echo 'N' | $AVON do build --git user/repo/tasks.av 2>&1) || true
+if echo "$result" | grep -qF "Warning"; then
+    echo "✓ git confirmation: shows warning"
+    ((PASSED++))
+else
+    echo "✗ git confirmation: shows warning"
+    echo "  Got: $(echo "$result" | head -3)"
+    ((FAILED++))
+fi
+
+result=$(echo 'N' | $AVON do build --git user/repo/tasks.av 2>&1) || true
+if echo "$result" | grep -qF "remote source"; then
+    echo "✓ git confirmation: mentions remote source"
+    ((PASSED++))
+else
+    echo "✗ git confirmation: mentions remote source"
+    echo "  Got: $(echo "$result" | head -3)"
+    ((FAILED++))
+fi
+
+# --stdin requires confirmation (auto-declines when prompt can't read)
+result=$(echo '{build: "echo pwned"}' | $AVON do build --stdin 2>&1) || true
+if echo "$result" | grep -qF "Aborted" || echo "$result" | grep -qF "Warning"; then
+    echo "✓ stdin confirmation: shows warning or aborts"
+    ((PASSED++))
+else
+    echo "✗ stdin confirmation: shows warning or aborts"
     echo "  Got: $(echo "$result" | head -3)"
     ((FAILED++))
 fi
@@ -475,8 +497,8 @@ echo ""
 echo "--- CLI Help ---"
 
 run_test_contains "help: mentions do" "do" $AVON help
-run_test_contains "help: git is eval/deploy only" "eval/deploy only" $AVON help
-run_test_contains "help do: Security section" "Security" $AVON help do
+run_test_contains "help: git/stdin prompt in do mode" "prompt for confirmation" $AVON help
+run_test_contains "help do: Safety section" "Safety" $AVON help do
 run_test_contains "help do: shows usage" "avon do" $AVON help do
 
 # ── Cleanup ──────────────────────────────────────────────

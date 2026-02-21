@@ -1,0 +1,157 @@
+# Do Mode: Advanced Deployment Pipeline
+#
+# Demonstrates multi-stage deployment pipeline with:
+# - Environment-based configuration (staging vs production)
+# - Multi-stage workflow (build → test → deploy)
+# - Health checks and validation
+#
+# Usage:
+#   avon do deploy_staging
+#   avon do deploy_production
+#   avon do status
+
+{
+  validate_manifest: {
+    cmd: [
+      "echo '📋 Validating manifest...'",
+      "test -f deployment.yaml || (echo 'ERROR: deployment.yaml not found' && exit 1)",
+      "echo '✅ Valid'"
+    ],
+    desc: "Verify deployment manifest"
+  },
+
+  check_docker: {
+    cmd: [
+      "echo '🔐 Checking Docker...'",
+      "docker info > /dev/null 2>&1 || (echo 'ERROR: docker not available' && exit 1)",
+      "echo '✅ Docker ready'"
+    ],
+    desc: "Verify Docker is available"
+  },
+
+  check_kubernetes: {
+    cmd: [
+      "echo '🔐 Checking Kubernetes...'",
+      "kubectl version > /dev/null 2>&1 || (echo 'ERROR: kubectl not available' && exit 1)",
+      "echo '✅ Kubernetes ready'"
+    ],
+    desc: "Verify kubectl is available"
+  },
+
+  pre_flight: {
+    cmd: [
+      "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'",
+      "echo 'Pre-flight checks complete'",
+      "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'"
+    ],
+    deps: ["validate_manifest", "check_docker", "check_kubernetes"],
+    desc: "All pre-flight checks"
+  },
+
+  build_image: {
+    cmd: [
+      "echo '🔨 Building Docker image...'",
+      "docker build -t " + ":latest .",
+      "echo '✅ Built'"
+    ],
+    deps: ["pre_flight"],
+    desc: "Build Docker image"
+  },
+
+  push_image: {
+    cmd: [
+      "echo '📤 Pushing image...'",
+      "docker push " + ":latest",
+      "echo '✅ Pushed'"
+    ],
+    deps: ["build_image"],
+    desc: "Push Docker image to registry"
+  },
+
+  deploy_staging: {
+    cmd: [
+      "echo '🚀 Deploying to STAGING...'",
+      "echo '  Domain: " + "'",
+      "echo '  Replicas: " + "'",
+      "kubectl apply -f deployment.yaml --namespace=staging",
+      "kubectl rollout status deployment/app -n staging",
+      "echo '✅ Deployed'"
+    ],
+    deps: ["push_image"],
+    desc: "Deploy to staging"
+  },
+
+  test_staging: {
+    cmd: [
+      "echo '🏥 Testing staging...'",
+      "sleep 5",
+      "curl -f https://" + "/health || (echo 'Health check failed' && exit 1)",
+      "echo '✅ Healthy'"
+    ],
+    deps: ["deploy_staging"],
+    desc: "Verify staging is healthy"
+  },
+
+  deploy_production: {
+    cmd: [
+      "echo '🚀 Deploying to PRODUCTION...'",
+      "echo '  Domain: " + "'",
+      "echo '  Replicas: " + "'",
+      "kubectl apply -f deployment.yaml --namespace=production",
+      "kubectl rollout status deployment/app -n production",
+      "echo '✅ Deployed'"
+    ],
+    deps: ["test_staging"],
+    desc: "Deploy to production"
+  },
+
+  test_production: {
+    cmd: [
+      "echo '🏥 Testing production...'",
+      "sleep 5",
+      "curl -f https://" + "/health || (echo 'Health check failed' && exit 1)",
+      "echo '✅ Healthy'"
+    ],
+    deps: ["deploy_production"],
+    desc: "Verify production is healthy"
+  },
+
+  deploy_all: {
+    cmd: [
+      "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'",
+      "echo 'Deployment Complete'",
+      "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'",
+      "echo 'Environment: " + "'",
+      "echo 'Domain: " + "'",
+      "echo '✅ All checks passed'"
+    ],
+    deps: ["test_production"],
+    desc: "Complete deployment pipeline"
+  },
+
+  rollback: {
+    cmd: [
+      "echo '⏮️  Rolling back...'",
+      "kubectl rollout undo deployment/app --namespace=",
+      "echo '✅ Rolled back'"
+    ],
+    desc: "Rollback to previous version"
+  },
+
+  status: {
+    cmd: [
+      "echo '📊 Deployment Status'",
+      "kubectl get deployments --namespace=",
+      "echo ''",
+      "kubectl get pods --namespace=",
+      "echo ''",
+      "kubectl get services --namespace="
+    ],
+    desc: "Show current status"
+  },
+
+  logs: {
+    cmd: "kubectl logs -l app=myapp --namespace=" + " -f",
+    desc: "Stream application logs"
+  }
+}

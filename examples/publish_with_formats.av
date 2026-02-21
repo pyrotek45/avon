@@ -1,0 +1,20 @@
+# Demonstration of publish() with format_* functions
+# Example: Generate config in multiple formats from a data structure
+
+let config = {
+  name: "MyApp",
+  version: "1.0.0",
+  port: 8080,
+  debug: false,
+  database: {
+    host: "localhost",
+    port: 5432
+  }
+}
+in
+[
+  publish "config.avon" (format_avon config),
+  publish "config.json" (format_json config),
+  publish "config.yaml" (format_yaml config),
+  publish "config.toml" (format_toml config)
+]

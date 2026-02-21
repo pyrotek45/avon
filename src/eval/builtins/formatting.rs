@@ -5,6 +5,7 @@ use crate::common::{EvalError, Number, Value};
 /// Names of formatting builtins
 pub const NAMES: &[&str] = &[
     "center",
+    "format_avon",
     "format_binary",
     "format_bool",
     "format_bytes",
@@ -31,7 +32,7 @@ pub const NAMES: &[&str] = &[
 /// Get arity for formatting functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
-        "format_binary" | "format_bytes" | "format_csv" | "format_hex" | "format_html"
+        "format_avon" | "format_binary" | "format_bytes" | "format_csv" | "format_hex" | "format_html"
         | "format_ini" | "format_json" | "format_octal" | "format_opml" | "format_toml"
         | "format_xml" | "format_yaml" => Some(1),
         "center" | "format_bool" | "format_currency" | "format_float" | "format_int"
@@ -279,6 +280,11 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
                     line,
                 ))
             }
+        }
+        "format_avon" => {
+            let val = &args[0];
+            let avon_str = value_to_avon(val, source, 0);
+            Ok(Value::String(avon_str))
         }
         "format_json" => {
             let val = &args[0];
@@ -621,6 +627,97 @@ fn format_json_value(val: &Value, source: &str, _line: usize) -> Result<String, 
                 .replace('"', "\\\"")
         ),
     })
+}
+
+/// Convert an Avon Value to its Avon text representation.
+///
+/// Produces valid Avon syntax that can be parsed back:
+///   - Strings  → "quoted" (with escaping)
+///   - Numbers  → bare (42, 3.14)
+///   - Bools    → true / false
+///   - Lists    → [item, item, ...]
+///   - Dicts    → { key: value, ... }  (pretty-printed with indentation)
+///   - None     → none
+fn value_to_avon(val: &Value, source: &str, indent: usize) -> String {
+    let pad = "  ".repeat(indent);
+    let inner = "  ".repeat(indent + 1);
+
+    match val {
+        Value::String(s) => {
+            let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
+            format!("\"{}\"", escaped)
+        }
+        Value::Number(Number::Int(i)) => format!("{}", i),
+        Value::Number(Number::Float(f)) => {
+            // Ensure floats always have a decimal point
+            let s = format!("{}", f);
+            if s.contains('.') || s.contains('e') || s.contains('E') {
+                s
+            } else {
+                format!("{}.0", s)
+            }
+        }
+        Value::Bool(b) => format!("{}", b),
+        Value::None => "none".to_string(),
+        Value::List(items) => {
+            if items.is_empty() {
+                return "[]".to_string();
+            }
+            // Check if all items are simple (non-dict, non-list) for inline formatting
+            let all_simple = items.iter().all(|v| !matches!(v, Value::Dict(_) | Value::List(_)));
+            if all_simple && items.len() <= 8 {
+                let parts: Vec<String> = items
+                    .iter()
+                    .map(|v| value_to_avon(v, source, 0))
+                    .collect();
+                format!("[{}]", parts.join(", "))
+            } else {
+                let mut out = String::from("[\n");
+                for (i, v) in items.iter().enumerate() {
+                    out.push_str(&inner);
+                    out.push_str(&value_to_avon(v, source, indent + 1));
+                    if i < items.len() - 1 {
+                        out.push(',');
+                    }
+                    out.push('\n');
+                }
+                out.push_str(&pad);
+                out.push(']');
+                out
+            }
+        }
+        Value::Dict(dict) => {
+            if dict.is_empty() {
+                return "{}".to_string();
+            }
+            let mut out = String::from("{\n");
+            let entries: Vec<(&String, &Value)> = dict.iter().collect();
+            for (i, (k, v)) in entries.iter().enumerate() {
+                out.push_str(&inner);
+                // Keys: use bare identifiers when possible, quoted otherwise
+                if k.chars().all(|c| c.is_alphanumeric() || c == '_') && !k.is_empty() {
+                    out.push_str(k);
+                } else {
+                    out.push_str(&format!("\"{}\"", k.replace('"', "\\\"")));
+                }
+                out.push_str(": ");
+                out.push_str(&value_to_avon(v, source, indent + 1));
+                if i < entries.len() - 1 {
+                    out.push(',');
+                }
+                out.push('\n');
+            }
+            out.push_str(&pad);
+            out.push('}');
+            out
+        }
+        // Anything else (functions, templates, etc.) → string representation
+        other => {
+            let s = other.to_string(source);
+            let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
+            format!("\"{}\"", escaped)
+        }
+    }
 }
 
 // Helper to convert Value to serde_yaml::Value

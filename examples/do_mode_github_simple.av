@@ -1,0 +1,80 @@
+# Do Mode + GitHub: Simple Remote Task Execution
+# 
+# This file demonstrates the simplest use case for running tasks from a remote GitHub file.
+# Rename this to Avon.av in your repo and commit it to GitHub.
+# 
+# Usage:
+#   # Run from local file (no confirmation needed)
+#   avon do build
+#
+#   # To run from GitHub (replace user/repo with actual):
+#   avon do build --git user/repo/Avon.av
+#   avon do build --git user/repo/Avon.av --force  # skip confirmation
+#
+# Safety: Without --force, avon will prompt before running tasks from --git or --stdin
+#
+# Real-world example:
+#   avon do build --git myorg/ci-tasks/Avon.av
+#   avon do test --git myorg/ci-tasks/Avon.av
+#   avon do ci --git myorg/ci-tasks/Avon.av --force
+
+{
+  build: {
+    cmd: [
+      "echo '🔨 Building project...'",
+      "cargo build --release"
+    ],
+    desc: "Compile project in release mode"
+  },
+
+  test: {
+    cmd: [
+      "echo '🧪 Running tests...'",
+      "cargo test -- --nocapture"
+    ],
+    desc: "Run all unit tests",
+    deps: ["build"]
+  },
+
+  lint: {
+    cmd: [
+      "echo '✅ Checking code style...'",
+      "cargo clippy -- -D warnings"
+    ],
+    desc: "Run clippy linter (Rust best practices)"
+  },
+
+  format_check: {
+    cmd: [
+      "echo '📐 Checking code formatting...'",
+      "cargo fmt -- --check"
+    ],
+    desc: "Verify code follows formatting standards"
+  },
+
+  ci: {
+    cmd: [
+      "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'",
+      "echo 'Running Complete CI Pipeline'",
+      "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'"
+    ],
+    deps: ["format_check", "lint", "test"],
+    desc: "Complete CI pipeline: format → lint → test → build"
+  },
+
+  clean: {
+    cmd: [
+      "echo '🧹 Cleaning build artifacts...'",
+      "cargo clean"
+    ],
+    desc: "Remove all compiled artifacts"
+  },
+
+  docs: {
+    cmd: [
+      "echo '📚 Building documentation...'",
+      "cargo doc --no-deps --open"
+    ],
+    desc: "Generate and open API documentation"
+  }
+}

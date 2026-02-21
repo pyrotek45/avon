@@ -102,52 +102,73 @@ cat > "$TMPDIR/cycle.av" << 'EOF'
 }
 EOF
 
-# ── SECURITY: --git is blocked ───────────────────────────
-echo "--- Security: --git blocked ---"
-run_test_contains "git blocked: error message" \
-    "Error: --git is not allowed with 'do' mode" \
-    $AVON do build --git user/repo/tasks.av
+# ── SECURITY: --git requires confirmation ────────────────
+echo "--- Security: --git requires confirmation ---"
 
-run_test_contains "git blocked: security reason" \
-    "security risk" \
-    $AVON do build --git user/repo/tasks.av
-
-run_test_contains "git blocked: safe alternative" \
-    "avon eval --git user/repo/tasks.av > tasks.av" \
-    $AVON do build --git user/repo/tasks.av
-
-run_exit_code_test "git blocked: exit code 1" 1 \
-    $AVON do build --git user/repo/tasks.av
-
-# ── SECURITY: --stdin is blocked ─────────────────────────
-echo ""
-echo "--- Security: --stdin blocked ---"
-result=$(echo '{build: "echo pwned"}' | $AVON do build --stdin 2>&1) || true
-if echo "$result" | grep -qF "Error: --stdin is not allowed with 'do' mode"; then
-    echo "✓ stdin blocked: error message"
+# --git with do mode shows warning and requires confirmation
+# Pipe 'N' to avoid hanging on the interactive prompt
+result=$(echo 'N' | $AVON do build --git user/repo/tasks.av 2>&1) || true
+if echo "$result" | grep -qF "Warning"; then
+    echo "✓ git confirmation: shows warning"
     ((PASSED++))
 else
-    echo "✗ stdin blocked: error message"
-    echo "  Expected: Error: --stdin is not allowed with 'do' mode"
+    echo "✗ git confirmation: shows warning"
     echo "  Got: $(echo "$result" | head -3)"
     ((FAILED++))
 fi
 
-if echo "$result" | grep -qF "security risk"; then
-    echo "✓ stdin blocked: security reason"
+result=$(echo 'N' | $AVON do build --git user/repo/tasks.av 2>&1) || true
+if echo "$result" | grep -qF "remote source"; then
+    echo "✓ git confirmation: mentions remote source"
     ((PASSED++))
 else
-    echo "✗ stdin blocked: security reason"
+    echo "✗ git confirmation: mentions remote source"
+    echo "  Got: $(echo "$result" | head -3)"
+    ((FAILED++))
+fi
+
+result=$(echo 'N' | $AVON do build --git user/repo/tasks.av 2>&1) || true
+if echo "$result" | grep -qF -- "--force"; then
+    echo "✓ git confirmation: mentions --force to skip"
+    ((PASSED++))
+else
+    echo "✗ git confirmation: mentions --force to skip"
+    echo "  Got: $(echo "$result" | head -3)"
+    ((FAILED++))
+fi
+
+echo 'N' | $AVON do build --git user/repo/tasks.av > /dev/null 2>&1
+git_exit=$?
+if [ $git_exit -ne 0 ]; then
+    echo "✓ git confirmation declined: exit code non-zero ($git_exit)"
+    ((PASSED++))
+else
+    echo "✗ git confirmation declined: should have failed (exit=0)"
+    ((FAILED++))
+fi
+
+# ── SECURITY: --stdin requires confirmation ──────────────
+echo ""
+echo "--- Security: --stdin requires confirmation ---"
+# --stdin with do mode shows warning; when stdin is consumed by the code,
+# the prompt auto-declines
+result=$(echo '{build: "echo pwned"}' | $AVON do build --stdin 2>&1) || true
+if echo "$result" | grep -qF "Warning" || echo "$result" | grep -qF "Aborted"; then
+    echo "✓ stdin confirmation: shows warning or aborts"
+    ((PASSED++))
+else
+    echo "✗ stdin confirmation: shows warning or aborts"
+    echo "  Got: $(echo "$result" | head -3)"
     ((FAILED++))
 fi
 
 echo '{build: "echo pwned"}' | $AVON do build --stdin > /dev/null 2>&1
 stdin_exit=$?
 if [ $stdin_exit -ne 0 ]; then
-    echo "✓ stdin blocked: exit code non-zero ($stdin_exit)"
+    echo "✓ stdin confirmation declined: exit code non-zero ($stdin_exit)"
     ((PASSED++))
 else
-    echo "✗ stdin blocked: should have failed (exit=0)"
+    echo "✗ stdin confirmation declined: should have failed (exit=0)"
     ((FAILED++))
 fi
 
@@ -321,19 +342,19 @@ run_test_contains "help mentions do command" \
     "do" \
     $AVON help
 
-run_test_contains "help says --git is eval/deploy only" \
-    "eval/deploy only" \
+run_test_contains "help says --git/--stdin prompt for confirmation" \
+    "prompt for confirmation" \
     $AVON help
 
-run_test_contains "help do shows Security section" \
-    "Security" \
+run_test_contains "help do shows Safety section" \
+    "Safety" \
     $AVON help do
 
-run_test_contains "help do mentions --git blocked" \
+run_test_contains "help do mentions --git" \
     "--git" \
     $AVON help do
 
-run_test_contains "help do mentions --stdin blocked" \
+run_test_contains "help do mentions --stdin" \
     "--stdin" \
     $AVON help do
 

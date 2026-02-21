@@ -12,7 +12,7 @@ let _ = trace "after adding 10" ((x * 2) + 10) in
 
 # Example 3: Using debug for dict structure inspection
 let config = {host: "localhost", port: "8080"} in
-let _ = debug config in
+let _ = debug "config" config in
 
 # Example 4: Tracing through map operations
 let add_one = \x (trace "map_item" (x + 1)) in
@@ -27,7 +27,7 @@ in
 let checked_data = type_check [10, 20, 30] in
 
 # Example 6: Tracing filter operations  
-let is_even = \x (x > 0) in
+let is_even = \x (x % 2 == 0) in
 let numbers_for_filter = [1, 2, 3, 4, 5, 6] in
 let filtered = filter is_even numbers_for_filter in
 
@@ -52,7 +52,7 @@ Example 4: Tracing map - added 1 to each: {format_list mapped ", "}
 
 Example 5: Type checking - verified list data: {format_list checked_data ", "}
 
-Example 6: Filter even (>0) numbers: {format_list filtered ", "}
+Example 6: Filter even numbers: {format_list filtered ", "}
 
 Example 7: Fold with accumulation - final sum: {final_sum}
 (Check stderr for: [TRACE] fold_step showing each accumulation)

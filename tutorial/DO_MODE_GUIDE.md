@@ -370,12 +370,17 @@ avon do greet myfile.av
 
 For more control, use a dictionary with these fields:
 
-| Field  | Type              | Required | Description                    |
-|--------|-------------------|----------|--------------------------------|
-| `cmd`  | string or list    | yes      | Shell command(s) to execute    |
-| `deps` | list of strings   | no       | Tasks that must run first      |
-| `desc` | string            | no       | Human-readable description     |
-| `env`  | dict of strings   | no       | Environment variables to set   |
+| Field           | Type              | Required | Description                    |
+|-----------------|-------------------|----------|--------------------------------|
+| `cmd`           | string or list    | yes      | Shell command(s) to execute    |
+| `deps`          | list of strings   | no       | Tasks that must run first      |
+| `desc`          | string            | no       | Human-readable description     |
+| `env`           | dict of strings   | no       | Environment variables to set   |
+| `dir`           | string            | no       | Working directory for the command |
+| `download`      | dict or list      | no       | Files to download before running |
+| `quiet`         | bool              | no       | Suppress the "Running: ..." header |
+| `ignore_errors` | bool              | no       | Continue even if the command fails |
+| `stdin`         | string            | no       | String to pipe into the command's stdin |
 
 **Note:** `cmd` can be a single string or a list of strings. When a list is provided,
 commands are joined with `&&` and execute sequentially, stopping on the first failure.
@@ -891,10 +896,15 @@ this priority order:
 
 If none of these succeed, Avon prints an error with usage hints.
 
-> **Security:** The `--git` and `--stdin` flags are **blocked** for `do` mode.
-> Running shell commands from a remote URL or piped input is a security risk
-> (remote code execution). If you want to use a remote task file, download
-> and review it first:
+> **Security:** The `--git` and `--stdin` flags work with `do` mode but require
+> confirmation because running shell commands from a remote URL or piped input
+> is a remote code execution risk. Avon displays a warning and asks you to
+> confirm before proceeding. Use `--force` to skip the confirmation prompt
+> (e.g., in CI environments):
+> ```sh
+> avon do build --git user/repo/tasks.av --force   # Skip confirmation
+> ```
+> Alternatively, download and review first:
 > ```sh
 > avon eval --git user/repo/tasks.av > tasks.av
 > cat tasks.av          # review the file
@@ -1043,21 +1053,27 @@ Error: Parse error: Expected a dictionary of tasks
   Example task format: {build: "cargo build", test: "cargo test"}
 ```
 
-### `--git` and `--stdin` Are Blocked
+### `--git` and `--stdin` Require Confirmation
 
-For security, `do` mode only accepts local files. Attempting to use
-`--git` or `--stdin` produces an error:
+For security, `do` mode requires confirmation when using `--git` or `--stdin`.
+Running shell commands from a remote or piped source is a security risk, so
+Avon displays a warning:
 
 ```
-Error: --git is not allowed with 'do' mode
-  Running shell commands from a remote source is a security risk.
-  Download the file first, review it, then run locally:
-    avon eval --git user/repo/tasks.av > tasks.av
-    avon do build tasks.av
+Warning: 'do' with --git will run shell commands from a remote source.
+This could execute arbitrary code on your system.
+Continue? [y/N]
 ```
 
-This prevents remote code execution attacks. The `eval` and `deploy` modes
-still support `--git` and `--stdin` since they don't execute shell commands.
+Use `--force` to skip the confirmation (useful in CI/CD pipelines):
+
+```sh
+avon do build --git user/repo/tasks.av --force
+echo '{ hello: "echo hello" }' | avon do hello --stdin --force
+```
+
+The `eval` and `deploy` modes don't require confirmation for `--git` and `--stdin`
+since they don't execute shell commands.
 
 ---
 

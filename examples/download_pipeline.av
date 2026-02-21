@@ -1,0 +1,49 @@
+# Download Feature: Data Processing Pipeline
+# This example shows how to use downloads as part of a real data processing workflow.
+# Downloads fetch external data, then multiple tasks process it in sequence.
+#
+# Usage: avon do <task_name> examples/download_pipeline.av
+# Try: avon do pipeline examples/download_pipeline.av
+
+let config = {
+    data_url: "https://raw.githubusercontent.com/pyrotek45/avon/main/README.md",
+    cache_dir: "cache",
+    output_dir: "output"
+} in
+
+let tasks = {
+    fetch_data: {
+        cmd: "echo 'Data fetched successfully'",
+        desc: "Download source data from GitHub",
+        download: {
+            url: config.data_url,
+            to: config.cache_dir + "/source.md"
+        }
+    },
+    
+    validate: {
+        cmd: "echo 'Validating data...' && wc -l " + config.cache_dir + "/source.md && echo 'Validation passed'",
+        desc: "Validate downloaded file exists and has content",
+        deps: ["fetch_data"]
+    },
+    
+    transform: {
+        cmd: "echo 'Transforming data...' && head -50 " + config.cache_dir + "/source.md > " + config.output_dir + "/summary.md && echo 'Transform complete'",
+        desc: "Extract first 50 lines from source",
+        deps: ["validate"]
+    },
+    
+    report: {
+        cmd: "echo '=== Data Processing Report ===' && echo 'Source: " + config.data_url + "' && echo 'Output dir: " + config.output_dir + "' && ls -lh " + config.output_dir,
+        desc: "Generate processing report",
+        deps: ["transform"]
+    },
+    
+    pipeline: {
+        cmd: "echo 'Pipeline complete!'",
+        desc: "Complete data processing pipeline",
+        deps: ["report"]
+    }
+} in
+
+tasks

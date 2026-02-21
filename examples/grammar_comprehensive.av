@@ -3,11 +3,11 @@
 # If this file hangs or fails, the issue should be fixed in Avon, not the test simplified
 # The goal is to ensure Avon can handle complex, realistic code patterns
 
-# NOTE: Avon should implement:
-# - Recursion depth limits to prevent stack overflow
-# - Evaluation timeouts for infinite loops
-# - Better error messages for problematic patterns
-# These are features that should be in Avon by default
+# NOTE: Avon implements:
+# - Recursion depth limits to prevent stack overflow (MAX_DEPTH = 200)
+# - Depth limits for template rendering and evaluation
+# - Step counters to catch infinite loops
+# - Clear error messages for problematic patterns
 
 # ============================================================================
 # SECTION 1: LITERALS AND BASIC TYPES
@@ -242,13 +242,12 @@ let test_pipe_to_lambda = 5 -> \x x * 2 in
 
 let test_map_simple = map (\x x * 2) [1, 2, 3] in
 
-# Commenting out complex HOF tests that cause hangs in current Avon
-# let test_map_with_if = map (\x if (x > 0) then x else (-x)) [-1, 2, -3] in
-# let test_map_nested = map (\x map (\y y + 1) x) [[1, 2], [3, 4]] in
-# let test_filter_simple = filter (\x (x > 2)) [1, 2, 3, 4, 5] in
-# let test_filter_with_eq = filter (\x (x == 3)) [1, 2, 3, 4, 5] in
-# let test_fold_simple = fold (\acc \x acc + x) 0 [1, 2, 3] in
-# let test_fold_multiply = fold (\acc \x acc * x) 1 [1, 2, 3, 4] in
+let test_map_with_if = map (\x if (x > 0) then x else (-x)) [-1, 2, -3] in
+let test_map_nested = map (\x map (\y y + 1) x) [[1, 2], [3, 4]] in
+let test_filter_simple = filter (\x (x > 2)) [1, 2, 3, 4, 5] in
+let test_filter_with_eq = filter (\x (x == 3)) [1, 2, 3, 4, 5] in
+let test_fold_simple = fold (\acc \x acc + x) 0 [1, 2, 3] in
+let test_fold_multiply = fold (\acc \x acc * x) 1 [1, 2, 3, 4] in
 
 # ============================================================================
 # SECTION 17: OPERATOR PRECEDENCE
@@ -263,15 +262,14 @@ let test_prec_logical = true && false || true in
 let test_prec_complex_logical = true && false || true && true in
 
 # ============================================================================
-# SECTION 18: COMPLEX NESTED EXPRESSIONS (Disabled - cause hangs)
+# SECTION 18: COMPLEX NESTED EXPRESSIONS
 # ============================================================================
 
-# These cause infinite loops in current Avon - disabled for stress test
-# let test_complex_1 = let data = [1, 2, 3, 4, 5] in map (\x x * 2) data in
-# let test_complex_2 = let process = \xs map (\x (if (x > 2) then (x * 2) else x)) xs in process [1, 2, 3, 4, 5] in
-# let test_complex_3 = let config = {host: "localhost", port: 8080} in [config.host, config.port] in
-# let test_complex_4 = let double = \x x * 2 in let nums = [1, 2, 3] in map double nums in
-# let test_complex_5 = let add = \a \b a + b in let nums = [1, 2, 3, 4] in fold add 0 nums in
+let test_complex_1 = let data = [1, 2, 3, 4, 5] in map (\x x * 2) data in
+let test_complex_2 = let process = \xs map (\x (if (x > 2) then (x * 2) else x)) xs in process [1, 2, 3, 4, 5] in
+let test_complex_3 = let config = {host: "localhost", port: 8080} in [config.host, config.port] in
+let test_complex_4 = let double = \x x * 2 in let nums = [1, 2, 3] in map double nums in
+let test_complex_5 = let add = \a \b a + b in let nums = [1, 2, 3, 4] in fold add 0 nums in
 
 # ============================================================================
 # SECTION 19: EDGE CASES
