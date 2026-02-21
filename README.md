@@ -28,8 +28,6 @@ Avon is designed to be powerful and flexible. I'm excited to see how you use it 
 | [**Tutorial**](./tutorial/TUTORIAL.md) | Complete guide from basics to advanced patterns. Covers language essentials, templates, CLI usage, style guide, best practices, error handling, and debugging. |
 | [**Function Reference**](./tutorial/BUILTIN_FUNCTIONS.md) | Reference for all built-in functions with signatures, descriptions, and examples organized by category. |
 | [**Do Mode Guide**](./tutorial/DO_MODE_GUIDE.md) | Built-in task runner guide. Define and run shell tasks with dependencies, env vars, and auto-discovery. |
-| [**Do Mode + GitHub**](./docs/DO_MODE_GITHUB_RECIPES.md) | Remote task execution patterns. Run tasks from GitHub with the `--git` flag. Analysis of recipe mode vs task mode and 5 real-world usage patterns. |
-| [**Best Practices: publish() + format_***](./docs/BEST_PRACTICES_PUBLISH_FORMAT.md) | Guide for data-driven file generation. When to use `@path {...}` vs `publish()`, pattern comparisons, and real-world examples. |
 | **Command Line** | Run `avon doc` for built-in help on any function, `avon help do` for task runner help |
 | **Examples** | See `examples/` directory for 160+ real-world examples |
 
