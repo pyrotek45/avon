@@ -697,7 +697,10 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
 
             // Convert path to chunks and extract symbol table
             let (path_chunks, path_symbols) = match path_val {
-                Value::String(s) => (vec![crate::common::Chunk::String(s.clone())], HashMap::new()),
+                Value::String(s) => (
+                    vec![crate::common::Chunk::String(s.clone())],
+                    HashMap::new(),
+                ),
                 Value::Path(chunks, symbols) => (chunks.clone(), symbols.clone()),
                 other => {
                     return Err(EvalError::type_mismatch(
@@ -710,7 +713,10 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
 
             // Convert content to chunks and extract symbol table
             let (content_chunks, content_symbols) = match content_val {
-                Value::String(s) => (vec![crate::common::Chunk::String(s.clone())], HashMap::new()),
+                Value::String(s) => (
+                    vec![crate::common::Chunk::String(s.clone())],
+                    HashMap::new(),
+                ),
                 Value::Template(chunks, symbols) => (chunks.clone(), symbols.clone()),
                 Value::Path(chunks, symbols) => (chunks.clone(), symbols.clone()),
                 other => {

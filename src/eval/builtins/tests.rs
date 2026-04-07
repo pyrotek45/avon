@@ -1,4 +1,4 @@
-use crate::common::{Number, Value, Chunk};
+use crate::common::{Chunk, Number, Value};
 use crate::eval::{eval, initial_builtins};
 use crate::lexer::tokenize;
 use crate::parser::parse;
@@ -2406,7 +2406,11 @@ fn test_format_avon_dict() {
     let prog = r#"format_avon {name: "Alice"}"#;
     match eval_prog(prog) {
         Value::String(s) => {
-            assert!(s.contains("name: \"Alice\""), "should have key: value, got: {}", s);
+            assert!(
+                s.contains("name: \"Alice\""),
+                "should have key: value, got: {}",
+                s
+            );
             assert!(s.starts_with('{'), "should start with {{");
             assert!(s.ends_with('}'), "should end with }}");
         }
@@ -2420,8 +2424,16 @@ fn test_format_avon_nested_dict() {
     match eval_prog(prog) {
         Value::String(s) => {
             assert!(s.contains("build:"), "should have outer key, got: {}", s);
-            assert!(s.contains("cmd: \"make\""), "should have nested key, got: {}", s);
-            assert!(s.contains("desc: \"Build it\""), "should have nested desc, got: {}", s);
+            assert!(
+                s.contains("cmd: \"make\""),
+                "should have nested key, got: {}",
+                s
+            );
+            assert!(
+                s.contains("desc: \"Build it\""),
+                "should have nested desc, got: {}",
+                s
+            );
         }
         v => panic!("expected string, got {:?}", v),
     }
@@ -2432,7 +2444,11 @@ fn test_format_avon_dict_with_list() {
     let prog = r#"format_avon {deps: ["build", "test"]}"#;
     match eval_prog(prog) {
         Value::String(s) => {
-            assert!(s.contains(r#"deps: ["build", "test"]"#), "should have inline list, got: {}", s);
+            assert!(
+                s.contains(r#"deps: ["build", "test"]"#),
+                "should have inline list, got: {}",
+                s
+            );
         }
         v => panic!("expected string, got {:?}", v),
     }
@@ -2443,8 +2459,16 @@ fn test_format_avon_dict_with_bool() {
     let prog = r#"format_avon {quiet: true, ignore_errors: false}"#;
     match eval_prog(prog) {
         Value::String(s) => {
-            assert!(s.contains("quiet: true"), "should have bool true, got: {}", s);
-            assert!(s.contains("ignore_errors: false"), "should have bool false, got: {}", s);
+            assert!(
+                s.contains("quiet: true"),
+                "should have bool true, got: {}",
+                s
+            );
+            assert!(
+                s.contains("ignore_errors: false"),
+                "should have bool false, got: {}",
+                s
+            );
         }
         v => panic!("expected string, got {:?}", v),
     }
@@ -2491,7 +2515,10 @@ fn test_publish_basic_string_path_and_content() {
     // Test: publish with literal strings for path and content
     let prog = r#"publish "hello.txt" "Hello, World!""#;
     match eval_prog(prog) {
-        Value::FileTemplate { path: (path_chunks, _), template: (content_chunks, _) } => {
+        Value::FileTemplate {
+            path: (path_chunks, _),
+            template: (content_chunks, _),
+        } => {
             // Path should be ["hello.txt"]
             assert_eq!(path_chunks.len(), 1);
             match &path_chunks[0] {
@@ -2514,7 +2541,10 @@ fn test_publish_with_path_value() {
     // Test: publish with path literal and string content
     let prog = r#"publish @config.yml "port: 8080""#;
     match eval_prog(prog) {
-        Value::FileTemplate { path: (path_chunks, _), template: (content_chunks, _) } => {
+        Value::FileTemplate {
+            path: (path_chunks, _),
+            template: (content_chunks, _),
+        } => {
             // Path should contain config.yml
             assert!(!path_chunks.is_empty());
             // Content should be correct
@@ -2533,7 +2563,10 @@ fn test_publish_with_template() {
     // Test: publish with template that has interpolation
     let prog = r#"let name = "Alice" in publish "greeting.txt" {"Hello, {name}!"}"#;
     match eval_prog(prog) {
-        Value::FileTemplate { path: (path_chunks, _), template: (content_chunks, _) } => {
+        Value::FileTemplate {
+            path: (path_chunks, _),
+            template: (content_chunks, _),
+        } => {
             // Path should be "greeting.txt"
             assert_eq!(path_chunks.len(), 1);
             match &path_chunks[0] {
@@ -2609,7 +2642,10 @@ fn test_publish_with_multiline_template() {
     // Test: publish with multiline template content
     let prog = "publish \"README.md\" {\"# Project\\nThis is a readme\\nMore content\"}";
     match eval_prog(prog) {
-        Value::FileTemplate { template: (content_chunks, _), .. } => {
+        Value::FileTemplate {
+            template: (content_chunks, _),
+            ..
+        } => {
             assert!(!content_chunks.is_empty());
         }
         v => panic!("expected FileTemplate, got {:?}", v),
@@ -2631,10 +2667,10 @@ fn test_publish_replaces_manual_syntax() {
     // Test: verify publish produces same type as @path {{}} syntax
     let prog1 = r#"@test.txt {"hello"}"#;
     let result1 = eval_prog(prog1);
-    
+
     let prog2 = r#"publish "test.txt" "hello""#;
     let result2 = eval_prog(prog2);
-    
+
     // Both should be FileTemplates
     match (result1, result2) {
         (Value::FileTemplate { .. }, Value::FileTemplate { .. }) => {} // OK
@@ -2647,7 +2683,7 @@ fn test_publish_with_path_variable_as_content() {
     // Test: publish can accept a path value as content argument
     let prog = r#"let content = @template.txt in
 publish "output.txt" content"#;
-    
+
     let result = eval_prog(prog);
     match result {
         Value::FileTemplate { path, template } => {
@@ -2657,7 +2693,7 @@ publish "output.txt" content"#;
                 Chunk::String(s) => assert_eq!(s, "output.txt"),
                 other => panic!("expected string chunk, got {:?}", other),
             }
-            
+
             // Template should be (["template.txt"], {})
             assert_eq!(template.0.len(), 1, "template should have 1 chunk");
             match &template.0[0] {
@@ -2668,4 +2704,3 @@ publish "output.txt" content"#;
         other => panic!("expected FileTemplate, got {:?}", other),
     }
 }
-

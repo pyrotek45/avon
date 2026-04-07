@@ -954,14 +954,13 @@ pub fn execute_do(opts: CliOptions) -> i32 {
     // Safety check: --git and --stdin run remote/piped shell commands
     // Allow with --force (skip prompt) or interactive confirmation
     if opts.git_url.is_some() && !opts.force {
-        eprintln!(
-            "Warning: 'do' with --git will run shell commands from a remote source."
-        );
+        eprintln!("Warning: 'do' with --git will run shell commands from a remote source.");
         eprintln!("  Source: {}", opts.git_url.as_ref().unwrap());
         eprintln!("  Use --force to skip this prompt.");
         eprint!("  Continue? [y/N] ");
         let mut input = String::new();
-        if std::io::stdin().read_line(&mut input).is_err() || !input.trim().eq_ignore_ascii_case("y")
+        if std::io::stdin().read_line(&mut input).is_err()
+            || !input.trim().eq_ignore_ascii_case("y")
         {
             eprintln!("Aborted.");
             return 1;
@@ -973,7 +972,8 @@ pub fn execute_do(opts: CliOptions) -> i32 {
         eprintln!("  Use --force to skip this prompt.");
         eprint!("  Continue? [y/N] ");
         let mut input = String::new();
-        if std::io::stdin().read_line(&mut input).is_err() || !input.trim().eq_ignore_ascii_case("y")
+        if std::io::stdin().read_line(&mut input).is_err()
+            || !input.trim().eq_ignore_ascii_case("y")
         {
             eprintln!("Aborted.");
             return 1;
@@ -1281,10 +1281,7 @@ fn execute_do_info(opts: &CliOptions, task_name: &str) -> i32 {
                                                     if !task.downloads.is_empty() {
                                                         println!("Downloads:");
                                                         for dl in &task.downloads {
-                                                            println!(
-                                                                "  {} → {}",
-                                                                dl.url, dl.to
-                                                            );
+                                                            println!("  {} → {}", dl.url, dl.to);
                                                         }
                                                     }
                                                     if task.quiet {

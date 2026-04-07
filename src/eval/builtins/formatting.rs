@@ -32,9 +32,9 @@ pub const NAMES: &[&str] = &[
 /// Get arity for formatting functions
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
-        "format_avon" | "format_binary" | "format_bytes" | "format_csv" | "format_hex" | "format_html"
-        | "format_ini" | "format_json" | "format_octal" | "format_opml" | "format_toml"
-        | "format_xml" | "format_yaml" => Some(1),
+        "format_avon" | "format_binary" | "format_bytes" | "format_csv" | "format_hex"
+        | "format_html" | "format_ini" | "format_json" | "format_octal" | "format_opml"
+        | "format_toml" | "format_xml" | "format_yaml" => Some(1),
         "center" | "format_bool" | "format_currency" | "format_float" | "format_int"
         | "format_list" | "format_percent" | "format_scientific" | "format_table" | "truncate" => {
             Some(2)
@@ -664,12 +664,12 @@ fn value_to_avon(val: &Value, source: &str, indent: usize) -> String {
                 return "[]".to_string();
             }
             // Check if all items are simple (non-dict, non-list) for inline formatting
-            let all_simple = items.iter().all(|v| !matches!(v, Value::Dict(_) | Value::List(_)));
+            let all_simple = items
+                .iter()
+                .all(|v| !matches!(v, Value::Dict(_) | Value::List(_)));
             if all_simple && items.len() <= 8 {
-                let parts: Vec<String> = items
-                    .iter()
-                    .map(|v| value_to_avon(v, source, 0))
-                    .collect();
+                let parts: Vec<String> =
+                    items.iter().map(|v| value_to_avon(v, source, 0)).collect();
                 format!("[{}]", parts.join(", "))
             } else {
                 let mut out = String::from("[\n");

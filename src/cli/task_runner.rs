@@ -175,10 +175,8 @@ impl TaskDef {
                         for item in dl_list {
                             match item {
                                 Value::Dict(dl_dict) => {
-                                    if let (
-                                        Some(Value::String(url)),
-                                        Some(Value::String(to)),
-                                    ) = (dl_dict.get("url"), dl_dict.get("to"))
+                                    if let (Some(Value::String(url)), Some(Value::String(to))) =
+                                        (dl_dict.get("url"), dl_dict.get("to"))
                                     {
                                         downloads.push(DownloadSpec {
                                             url: url.clone(),
@@ -491,10 +489,7 @@ impl TaskRunner {
                         TaskError::ExecutionFailed {
                             task: task.name.clone(),
                             exit_code: -1,
-                            output: format!(
-                                "Download failed: {} → {}: {}",
-                                dl.url, dl.to, e
-                            ),
+                            output: format!("Download failed: {} → {}: {}", dl.url, dl.to, e),
                         }
                     })?;
                 }
@@ -622,8 +617,9 @@ impl TaskRunner {
         // Create parent directories if needed
         if let Some(parent) = std::path::Path::new(to).parent() {
             if !parent.exists() {
-                std::fs::create_dir_all(parent)
-                    .map_err(|e| format!("Failed to create directory {}: {}", parent.display(), e))?;
+                std::fs::create_dir_all(parent).map_err(|e| {
+                    format!("Failed to create directory {}: {}", parent.display(), e)
+                })?;
             }
         }
 
@@ -1452,10 +1448,7 @@ mod tests {
     fn test_taskdef_quiet_bad_type() {
         let mut dict = HashMap::new();
         dict.insert("cmd".to_string(), Value::String("echo".to_string()));
-        dict.insert(
-            "quiet".to_string(),
-            Value::String("yes".to_string()),
-        );
+        dict.insert("quiet".to_string(), Value::String("yes".to_string()));
 
         let value = Value::Dict(dict);
         let result = TaskDef::from_value("bad".to_string(), &value);
@@ -1591,20 +1584,17 @@ mod tests {
             "url".to_string(),
             Value::String("https://example.com/data.json".to_string()),
         );
-        dl_dict.insert(
-            "to".to_string(),
-            Value::String("data.json".to_string()),
-        );
+        dl_dict.insert("to".to_string(), Value::String("data.json".to_string()));
 
         let mut dict = HashMap::new();
-        dict.insert("cmd".to_string(), Value::String("cat data.json".to_string()));
+        dict.insert(
+            "cmd".to_string(),
+            Value::String("cat data.json".to_string()),
+        );
         dict.insert("dir".to_string(), Value::String("/tmp".to_string()));
         dict.insert("quiet".to_string(), Value::Bool(true));
         dict.insert("ignore_errors".to_string(), Value::Bool(true));
-        dict.insert(
-            "stdin".to_string(),
-            Value::String("input data".to_string()),
-        );
+        dict.insert("stdin".to_string(), Value::String("input data".to_string()));
         dict.insert("download".to_string(), Value::Dict(dl_dict));
         dict.insert(
             "desc".to_string(),
