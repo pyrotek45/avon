@@ -69,6 +69,10 @@ print_section "Do Mode (Task Runner)"
 run_test "Do Mode Tests"          "$INTEGRATION_DIR/test_do_mode.sh"
 run_test "Do Mode Doc Verification" "$INTEGRATION_DIR/test_do_mode_docs.sh"
 
+# ── Code Structure ───────────────────────────────────────
+print_section "Code Structure"
+run_test "Code Structure"         "$INTEGRATION_DIR/test_code_structure.sh"
+
 # ── REPL Tests ───────────────────────────────────────────
 print_section "REPL Tests"
 run_test "REPL Multiline"         "$REPL_DIR/test-multiline.sh"

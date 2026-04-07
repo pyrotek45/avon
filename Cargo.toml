@@ -1,6 +1,6 @@
 [package]
 name = "avon"
-version = "0.5.0-alpha.2"
+version = "0.5.0-alpha.3"
 edition = "2021"
 authors = ["Avon Contributors"]
 description = "A modern template language for generating code, configs, and infrastructure"
