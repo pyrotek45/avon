@@ -3756,10 +3756,9 @@ mod tests {
         let mut f = fs::File::create(&module_path).expect("create temp file");
         write!(f, "let double = \\x x * 2 in {{double: double}}").expect("write");
 
-        let prog = format!(
-            "let m = import \"{}\" in typeof m",
-            module_path.to_string_lossy()
-        );
+        // Use forward slashes so Avon's lexer doesn't interpret \t, \n etc. as escapes
+        let path_str = module_path.to_string_lossy().replace('\\', "/");
+        let prog = format!("let m = import \"{}\" in typeof m", path_str);
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -3777,7 +3776,9 @@ mod tests {
         let mut f = fs::File::create(&module_path).expect("create temp file");
         write!(f, "42").expect("write");
 
-        let prog = format!("import \"{}\"", module_path.to_string_lossy());
+        // Use forward slashes so Avon's lexer doesn't interpret \t, \n etc. as escapes
+        let path_str = module_path.to_string_lossy().replace('\\', "/");
+        let prog = format!("import \"{}\"", path_str);
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -3795,10 +3796,9 @@ mod tests {
         let mut f = fs::File::create(&module_path).expect("create temp file");
         write!(f, "let double = \\x x * 2 in let triple = \\x x * 3 in {{double: double, triple: triple}}").expect("write");
 
-        let prog = format!(
-            "let math = import \"{}\" in math.double 5",
-            module_path.to_string_lossy()
-        );
+        // Use forward slashes so Avon's lexer doesn't interpret \t, \n etc. as escapes
+        let path_str = module_path.to_string_lossy().replace('\\', "/");
+        let prog = format!("let math = import \"{}\" in math.double 5", path_str);
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
         let mut symbols = initial_builtins();
@@ -3820,9 +3820,11 @@ mod tests {
         )
         .expect("write");
 
+        // Use forward slashes so Avon's lexer doesn't interpret \t, \n etc. as escapes
+        let path_str = module_path.to_string_lossy().replace('\\', "/");
         let prog = format!(
             "let m = import \"{}\" in let a = m.add 10 5 in let b = m.sub 10 5 in concat (concat (typeof a) \",\") (typeof b)",
-            module_path.to_string_lossy()
+            path_str
         );
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);
@@ -3846,10 +3848,13 @@ mod tests {
         let mut f2 = fs::File::create(&module2_path).expect("create temp file 2");
         write!(f2, "let func = \\x x * 3 in {{func: func}}").expect("write");
 
+        // Use forward slashes so Avon's lexer doesn't interpret \t, \n etc. as escapes
+        let path1_str = module1_path.to_string_lossy().replace('\\', "/");
+        let path2_str = module2_path.to_string_lossy().replace('\\', "/");
         let prog = format!(
             "let m1 = import \"{}\" in let m2 = import \"{}\" in let r1 = m1.func 5 in let r2 = m2.func 5 in r1 + r2",
-            module1_path.to_string_lossy(),
-            module2_path.to_string_lossy()
+            path1_str,
+            path2_str
         );
         let tokens = tokenize(prog.clone()).expect("tokenize");
         let ast = parse(tokens);

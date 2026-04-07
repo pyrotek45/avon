@@ -987,13 +987,18 @@ mod tests {
     #[test]
     fn test_expand_env_vars_system_fallback() {
         let env = HashMap::new();
-        // HOME should exist on all Unix systems
-        let result = TaskRunner::expand_env_vars("home: $HOME", &env);
+        // PATH exists on all platforms (Unix and Windows)
+        let result = TaskRunner::expand_env_vars("path: $PATH", &env);
         assert!(
-            !result.contains("$HOME"),
-            "should expand $HOME from system env"
+            !result.contains("$PATH"),
+            "should expand $PATH from system env"
         );
-        assert!(result.starts_with("home: /"), "should start with home: /");
+        assert!(result.starts_with("path: "), "should start with 'path: '");
+        // The expanded value should be non-empty
+        assert!(
+            result.len() > "path: ".len(),
+            "PATH should expand to a non-empty value"
+        );
     }
 
     #[test]
@@ -1614,9 +1619,12 @@ mod tests {
 
     #[test]
     fn test_dir_execution() {
+        let temp = std::env::temp_dir();
+        let temp_str = temp.to_string_lossy().to_string();
+        // Use a cross-platform command: "echo ok" works on both Unix and Windows
         let tasks = vec![{
-            let mut t = TaskDef::new("list_tmp", "pwd", vec![]);
-            t.dir = Some("/tmp".to_string());
+            let mut t = TaskDef::new("list_tmp", "echo ok", vec![]);
+            t.dir = Some(temp_str);
             t
         }];
 
