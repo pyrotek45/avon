@@ -34,7 +34,7 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "avon"
-version = "0.5.0-alpha.3"
+version = "0.5.0-alpha"
 dependencies = [
  "base64",
  "chrono",
