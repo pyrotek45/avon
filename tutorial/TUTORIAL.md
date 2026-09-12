@@ -6277,6 +6277,7 @@ let complement = complementary accent in
   --foreground: {{base_fg}};
 }
 "}}
+```
 
 See `examples/ricing_complete_theme.av` for a comprehensive multi-app theme generator.
 
@@ -6284,7 +6285,7 @@ See `examples/ricing_complete_theme.av` for a comprehensive multi-app theme gene
 
 #### Single Source of Truth for Colors
 
-Define colors once, use everywhere:
+Define colors once, use everywhere
 
 ```avon
 # colors.av - define your entire color scheme

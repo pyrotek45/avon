@@ -1,5 +1,5 @@
-// Color theme generator using color functions
-// Generates a complete color theme with complementary, analogous, and triadic colors
+# Color theme generator using color functions
+# Generates a complete color theme with complementary, analogous, and triadic colors
 
 let base_color = "#2e3440" in
 let primary = base_color in
@@ -9,18 +9,29 @@ let harmony_palette = palette_triadic primary in
 let light_theme = palette_monochromatic (lighten primary 0.3) 5 in
 let dark_theme = palette_monochromatic (darken primary 0.3) 5 in
 
-@theme.json {
-  {
-    "name": "Generated Theme",
-    "primary": primary,
-    "secondary": secondary,
-    "accents": accent_palette,
-    "harmony": harmony_palette,
-    "light_palette": light_theme,
-    "dark_palette": dark_theme,
-    "accessibility": {
-      "primary_white_contrast": contrast_ratio primary "#FFFFFF",
-      "secondary_white_contrast": contrast_ratio secondary "#FFFFFF"
-    }
-  }
-}
+@theme.txt {"
+COLOR THEME GENERATOR
+=====================
+
+Generated Theme: {primary}
+
+Primary Colors:
+  Primary: {primary}
+  Secondary: {secondary}
+
+Accent Palette (Analogous):
+  Colors: {accent_palette}
+
+Harmony Palette (Triadic):
+  Colors: {harmony_palette}
+
+Light Theme Palette:
+  {light_theme}
+
+Dark Theme Palette:
+  {dark_theme}
+
+Accessibility Analysis:
+  Primary vs White Contrast: {contrast_ratio primary "#FFFFFF"}
+  Secondary vs White Contrast: {contrast_ratio secondary "#FFFFFF"}
+"}

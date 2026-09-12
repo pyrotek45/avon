@@ -1,34 +1,24 @@
-// System dashboard with gauges and bars
-// Displays system metrics using progressbar and gauge functions
+# System dashboard with gauges and bars
+# Displays system metrics using progressbar and gauge functions
 
-let system_metrics = {
-  cpu_percent: 73,
-  memory_percent: 52,
-  disk_percent: 38,
-  network_percent: 85,
-  battery_percent: 92
-} in
+let cpu_pct = 73 in
+let memory_pct = 52 in
+let disk_pct = 38 in
+let network_pct = 85 in
+let battery_pct = 92 in
 
-let create_metric_display = \name \value
-  name + ": " + progressbar value 100 + " " + to_string value + "%" in
+let cpu_bar = progressbar cpu_pct 100 in
+let mem_bar = progressbar memory_pct 100 in
+let disk_bar = progressbar disk_pct 100 in
+let net_gauge = gauge network_pct 100 in
+let bat_gauge = gauge battery_pct 100 in
 
-let create_gauge_display = \name \value
-  name + ": " + gauge value 100 in
+@dashboard.txt {"
+=== System Dashboard ===
 
-let cpu_display = create_metric_display "CPU" (get system_metrics "cpu_percent") in
-let mem_display = create_metric_display "MEM" (get system_metrics "memory_percent") in
-let disk_display = create_metric_display "DISK" (get system_metrics "disk_percent") in
-let net_display = create_gauge_display "NET" (get system_metrics "network_percent") in
-let bat_display = create_gauge_display "BAT" (get system_metrics "battery_percent") in
-
-let dashboard = [
-  cpu_display,
-  mem_display,
-  disk_display,
-  net_display,
-  bat_display
-] in
-
-@dashboard.txt {
-  "=== System Dashboard ===\n" + join "\n" dashboard + "\n"
-}
+CPU: {cpu_bar} {cpu_pct}%
+Memory: {mem_bar} {memory_pct}%
+Disk: {disk_bar} {disk_pct}%
+Network: {net_gauge}
+Battery: {bat_gauge}
+"}

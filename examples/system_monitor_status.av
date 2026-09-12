@@ -1,5 +1,5 @@
-// System monitor status bar generator
-// Generates custom status bar components with formatting and gauges
+# System monitor status bar generator
+# Generates custom status bar components with formatting and gauges
 
 let cpu_usage = 65 in
 let memory_usage = 78 in

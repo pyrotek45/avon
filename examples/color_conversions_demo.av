@@ -1,0 +1,31 @@
+# Color space conversion demonstration
+# Shows hex to RGB to HSL conversions
+
+let red_hex = "#FF0000" in
+let blue_hex = "#0000FF" in
+
+let red_rgb = hex_to_rgb red_hex in
+let blue_rgb = hex_to_rgb blue_hex in
+
+let red_hsl = hex_to_hsl red_hex in
+let blue_hsl = hex_to_hsl blue_hex in
+
+@color_conversions.txt {"
+COLOR SPACE CONVERSIONS
+=======================
+
+Red Color:
+  Hex: {red_hex}
+  RGB: R {red_rgb.r} G {red_rgb.g} B {red_rgb.b}
+  HSL: H {red_hsl.h} S {red_hsl.s} L {red_hsl.l}
+
+Blue Color:
+  Hex: {blue_hex}
+  RGB: R {blue_rgb.r} G {blue_rgb.g} B {blue_rgb.b}
+  HSL: H {blue_hsl.h} S {blue_hsl.s} L {blue_hsl.l}
+
+Transformations:
+  Red Inverted: {invert_color red_hex}
+  Red Grayscale: {grayscale red_hex}
+  Blue Complementary: {complementary blue_hex}
+"}
