@@ -6157,7 +6157,8 @@ colors:
     magenta: '#f5c2e7'
     cyan:    '#94e2d5'
     white:   {light_fg}
-"
+"}
+```
 
 See `examples/ricing_alacritty_theme.av` for a complete example with computed color palettes.
 
