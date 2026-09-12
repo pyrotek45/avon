@@ -6,16 +6,19 @@ let memory_usage = 78 in
 let disk_usage = 45 in
 let temp_celsius = 62 in
 
-let format_metric = \name \value \max_val 
-  (name + ": " + progressbar value max_val) in
+# Format individual status items
+let cpu_bar = progressbar cpu_usage 100 in
+let mem_bar = progressbar memory_usage 100 in
+let disk_bar = progressbar disk_usage 100 in
+let temp_str = format_temp temp_celsius in
 
-let status_components = [
-  format_metric "CPU " cpu_usage 100,
-  format_metric "MEM " memory_usage 100,
-  format_metric "DISK" disk_usage 100,
-  ("TEMP: " + format_temp temp_celsius)
-] in
+# Build the status bar by concatenating components
+let status_bar_text = 
+  "CPU: " + cpu_bar + " | " +
+  "MEM: " + mem_bar + " | " +
+  "DISK: " + disk_bar + " | " +
+  "TEMP: " + temp_str in
 
-@status_bar.txt {
-  join " | " status_components
-}
+@status_bar.txt {"
+{status_bar_text}
+"}
