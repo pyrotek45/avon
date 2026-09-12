@@ -116,7 +116,7 @@ pub fn run_cli(args: Vec<String>) -> i32 {
                 eprintln!("Unknown function or category: {}", name);
                 eprintln!();
                 eprintln!("Available categories:");
-                eprintln!("  string, list, dict, math, type, logic, io, template");
+                eprintln!("  string, list, dict, math, type, logic, io, template, color, ricing");
                 eprintln!();
                 eprintln!("Example usage:");
                 eprintln!("  avon doc map        # Show documentation for 'map'");

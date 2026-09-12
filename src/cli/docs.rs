@@ -555,6 +555,72 @@ pub fn get_category_doc(category: &str) -> Option<String> {
              Use :doc <function> for detailed documentation.",
             "os", "env_var", "env_var_or"
         )),
+        "color" | "colors" => Some(format!(
+            "Color Functions:\n\
+             ──────────────\n\
+             Color manipulation, conversion, and palette generation.\n\n\
+             Conversions:\n\
+             {:<16} Convert hex to RGB dict {{r, g, b}}\n\
+             {:<16} Convert RGB to hex string\n\
+             {:<16} Convert hex to HSL dict {{h, s, l}}\n\
+             {:<16} Convert HSL to hex string\n\n\
+             Adjustments:\n\
+             {:<16} Lighten hex color (0-1 factor)\n\
+             {:<16} Darken hex color (0-1 factor)\n\
+             {:<16} Saturate hex color (0-1 factor)\n\
+             {:<16} Invert hex color\n\
+             {:<16} Convert to grayscale\n\
+             {:<16} Get complementary color\n\
+             {:<16} Blend two colors (0-1 ratio)\n\n\
+             Palettes:\n\
+             {:<16} Generate monochromatic palette\n\
+             {:<16} Generate analogous palette\n\
+             {:<16} Generate triadic palette\n\n\
+             Accessibility:\n\
+             {:<16} Calculate WCAG contrast ratio (0-21)\n\n\
+             Use :doc <function> for detailed documentation.",
+            "hex_to_rgb",
+            "rgb_to_hex",
+            "hex_to_hsl",
+            "hsl_to_hex",
+            "lighten",
+            "darken",
+            "saturate",
+            "invert_color",
+            "grayscale",
+            "complementary",
+            "blend_colors",
+            "palette_monochromatic",
+            "palette_analogous",
+            "palette_triadic",
+            "contrast_ratio"
+        )),
+        "ricing" | "rice" | "linux" => Some(format!(
+            "Linux Ricing Functions:\n\
+             ──────────────────────\n\
+             System utilities for formatting and display.\n\n\
+             Formatting:\n\
+             {:<16} Convert bytes to human-readable size\n\
+             {:<16} Format temperature with °C suffix\n\
+             {:<16} Format uptime from seconds\n\n\
+             Display:\n\
+             {:<16} Generate progress bar (0-1 progress)\n\
+             {:<16} Generate circular gauge (0-1 value)\n\n\
+             Permissions:\n\
+             {:<16} Convert symbolic to numeric (755 format)\n\
+             {:<16} Convert numeric to symbolic (rwx format)\n\n\
+             Scripts:\n\
+             {:<16} Generate shebang line\n\n\
+             Use :doc <function> for detailed documentation.",
+            "format_filesize",
+            "format_temp",
+            "format_uptime",
+            "progressbar",
+            "gauge",
+            "chmod_numeric",
+            "chmod_symbolic",
+            "shebang"
+        )),
         _ => None,
     }
 }
