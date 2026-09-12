@@ -6352,8 +6352,6 @@ config
 3. **Use conditional logic**: `if os == "linux" then ... else ...` for cross-platform configs
 4. **Combine with file I/O**: Import existing configs, enhance them with generated colors
 5. **Version control your ricing scripts**: Store `.av` files in git, not individual configs
-6. **Use the `--preview` flag**: Test without deploying: `avon deploy config.av --preview`
-7. **Organize examples in folders**: Keep ricing examples separate: `examples/ricing_*`
 
 ### Example Workflows
 
