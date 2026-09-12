@@ -2925,10 +2925,10 @@ fn test_contrast_ratio() {
     match eval_prog("contrast_ratio \"#FFFFFF\" \"#000000\"") {
         Value::Number(Number::Float(f)) => {
             // Max contrast is 21:1
-            assert!(f >= 20.0 && f <= 21.1);
+            assert!((20.0..=21.1).contains(&f));
         }
         Value::Number(Number::Int(i)) => {
-            assert!(i >= 20 && i <= 21);
+            assert!((20..=21).contains(&i));
         }
         v => panic!("expected Number, got {:?}", v),
     }
