@@ -1,0 +1,34 @@
+// System dashboard with gauges and bars
+// Displays system metrics using progressbar and gauge functions
+
+let system_metrics = {
+  cpu_percent: 73,
+  memory_percent: 52,
+  disk_percent: 38,
+  network_percent: 85,
+  battery_percent: 92
+} in
+
+let create_metric_display = \name \value
+  name + ": " + progressbar value 100 + " " + to_string value + "%" in
+
+let create_gauge_display = \name \value
+  name + ": " + gauge value 100 in
+
+let cpu_display = create_metric_display "CPU" (get system_metrics "cpu_percent") in
+let mem_display = create_metric_display "MEM" (get system_metrics "memory_percent") in
+let disk_display = create_metric_display "DISK" (get system_metrics "disk_percent") in
+let net_display = create_gauge_display "NET" (get system_metrics "network_percent") in
+let bat_display = create_gauge_display "BAT" (get system_metrics "battery_percent") in
+
+let dashboard = [
+  cpu_display,
+  mem_display,
+  disk_display,
+  net_display,
+  bat_display
+] in
+
+@dashboard.txt {
+  "=== System Dashboard ===\n" + join "\n" dashboard + "\n"
+}

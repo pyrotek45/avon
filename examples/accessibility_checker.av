@@ -1,0 +1,41 @@
+// WCAG accessibility checker for color combinations
+// Generates a report of color contrast ratios
+
+let colors = ["#FFFFFF", "#F0F0F0", "#808080", "#404040", "#000000"] in
+
+let check_contrast = \bg \fg
+  {
+    background: bg,
+    foreground: fg,
+    contrast_ratio: contrast_ratio bg fg
+  } in
+
+let contrast_pairs = 
+  let all_combos = []
+  in fold (\acc \bg
+    let pairs = map (\fg check_contrast bg fg) colors
+    in acc + pairs
+  ) all_combos colors in
+
+let wcag_ratings = map (\pair
+  let ratio = get pair "contrast_ratio"
+  in set pair "wcag_level" (
+    if ratio >= 7 then "AAA"
+    else if ratio >= 4.5 then "AA"
+    else if ratio >= 3 then "Large AA"
+    else "Fail"
+  )
+) contrast_pairs in
+
+@accessibility_report.json {
+  {
+    "colors_tested": colors,
+    "total_pairs": length wcag_ratings,
+    "contrast_ratios": wcag_ratings,
+    "summary": {
+      "aaa_compliant": length (filter (\p (get p "wcag_level") == "AAA") wcag_ratings),
+      "aa_compliant": length (filter (\p (get p "wcag_level") == "AA") wcag_ratings),
+      "large_aa_compliant": length (filter (\p (get p "wcag_level") == "Large AA") wcag_ratings)
+    }
+  }
+}

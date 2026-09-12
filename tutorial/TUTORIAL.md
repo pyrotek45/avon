@@ -6157,8 +6157,7 @@ colors:
     magenta: '#f5c2e7'
     cyan:    '#94e2d5'
     white:   {light_fg}
-}
-"}
+"
 
 See `examples/ricing_alacritty_theme.av` for a complete example with computed color palettes.
 
@@ -6195,8 +6194,7 @@ label = TEMP: {format_temp temp_celsius}
 [module/uptime]
 type = custom/script
 exec = echo {format_uptime uptime_seconds "medium"}
-}
-"}
+"
 
 Formatting functions available:
 - `format_filesize n` — Convert bytes to human-readable (B, KiB, MiB, GiB, etc.)
@@ -6265,12 +6263,12 @@ let base_fg = "#cdd6f4" in
 let accent = "#89b4fa" in
 
 # Derive related colors
-let accent_dark = darken accent 20 in
-let accent_light = lighten accent 20 in
-let complement = complementary (hex_to_hsl accent) in
+let accent_dark = darken accent 0.2 in
+let accent_light = lighten accent 0.2 in
+let complement = complementary accent in
 
 # Generate GTK theme
-@gtk-colors.css {{"
+@gtk-colors.css {{" 
 :root {
   --primary: {{accent}};
   --primary-dark: {{accent_dark}};

@@ -1,0 +1,21 @@
+// System monitor status bar generator
+// Generates custom status bar components with formatting and gauges
+
+let cpu_usage = 65 in
+let memory_usage = 78 in
+let disk_usage = 45 in
+let temp_celsius = 62 in
+
+let format_metric = \name \value \max_val 
+  (name + ": " + progressbar value max_val) in
+
+let status_components = [
+  format_metric "CPU " cpu_usage 100,
+  format_metric "MEM " memory_usage 100,
+  format_metric "DISK" disk_usage 100,
+  ("TEMP: " + format_temp temp_celsius)
+] in
+
+@status_bar.txt {
+  join " | " status_components
+}

@@ -1,0 +1,37 @@
+// File permission and shebang generator
+// Creates scripts with proper permissions and shebangs
+
+let bash_script = (shebang "bash") + "\n" + 
+  "# Bash script with proper permissions\n" +
+  "echo 'Hello from bash'" in
+
+let python_script = (shebang "python") + "\n" +
+  "# Python script with proper permissions\n" +
+  "print('Hello from python')" in
+
+let ruby_script = (shebang "ruby") + "\n" +
+  "# Ruby script with proper permissions\n" +
+  "puts 'Hello from ruby'" in
+
+let scripts = {
+  bash: {
+    content: bash_script,
+    perms: chmod_numeric "rwxr-xr-x"
+  },
+  python: {
+    content: python_script,
+    perms: chmod_numeric "rwxr-xr-x"
+  },
+  ruby: {
+    content: ruby_script,
+    perms: chmod_numeric "rwxr-xr-x"
+  }
+} in
+
+@scripts_info.json {
+  {
+    "scripts": scripts,
+    "default_executable_perms": chmod_symbolic 755,
+    "default_readable_perms": chmod_symbolic 644
+  }
+}

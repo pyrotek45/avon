@@ -2727,3 +2727,332 @@ publish "output.txt" content"#;
         other => panic!("expected FileTemplate, got {:?}", other),
     }
 }
+
+// ===== Color Function Tests =====
+
+#[test]
+fn test_hex_to_rgb() {
+    // Test: convert hex to RGB dict
+    match eval_prog("hex_to_rgb \"#FF5733\"") {
+        Value::Dict(d) => {
+            assert!(d.contains_key("r"));
+            assert!(d.contains_key("g"));
+            assert!(d.contains_key("b"));
+            match (&d["r"], &d["g"], &d["b"]) {
+                (
+                    Value::Number(Number::Int(255)),
+                    Value::Number(Number::Int(87)),
+                    Value::Number(Number::Int(51)),
+                ) => {}
+                other => panic!("expected RGB (255, 87, 51), got {:?}", other),
+            }
+        }
+        v => panic!("expected Dict, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_rgb_to_hex() {
+    // Test: convert RGB to hex
+    match eval_prog("rgb_to_hex 255 87 51") {
+        Value::String(s) => assert_eq!(s.to_uppercase(), "#FF5733"),
+        v => panic!("expected hex string, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_hex_to_hsl() {
+    // Test: convert hex to HSL dict
+    match eval_prog("hex_to_hsl \"#FF0000\"") {
+        Value::Dict(d) => {
+            assert!(d.contains_key("h"));
+            assert!(d.contains_key("s"));
+            assert!(d.contains_key("l"));
+        }
+        v => panic!("expected Dict, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_lighten_color() {
+    // Test: lighten a color
+    match eval_prog("lighten \"#808080\" 0.1") {
+        Value::String(s) => {
+            // Should return a hex string
+            assert!(s.starts_with("#"));
+            assert_eq!(s.len(), 7);
+        }
+        v => panic!("expected hex string, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_darken_color() {
+    // Test: darken a color
+    match eval_prog("darken \"#808080\" 0.1") {
+        Value::String(s) => {
+            assert!(s.starts_with("#"));
+            assert_eq!(s.len(), 7);
+        }
+        v => panic!("expected hex string, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_saturate_color() {
+    // Test: saturate a color
+    match eval_prog("saturate \"#808080\" 0.2") {
+        Value::String(s) => {
+            assert!(s.starts_with("#"));
+            assert_eq!(s.len(), 7);
+        }
+        v => panic!("expected hex string, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_complementary_color() {
+    // Test: get complementary color
+    match eval_prog("complementary \"#FF0000\"") {
+        Value::String(s) => {
+            assert!(s.starts_with("#"));
+            assert_eq!(s.len(), 7);
+        }
+        v => panic!("expected hex string, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_palette_monochromatic() {
+    // Test: generate monochromatic palette
+    match eval_prog("palette_monochromatic \"#2e3440\" 5") {
+        Value::List(items) => {
+            assert_eq!(items.len(), 5);
+            for item in items {
+                match item {
+                    Value::String(s) => {
+                        assert!(s.starts_with("#"));
+                        assert_eq!(s.len(), 7);
+                    }
+                    _ => panic!("expected hex strings in palette"),
+                }
+            }
+        }
+        v => panic!("expected List, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_palette_analogous() {
+    // Test: generate analogous palette
+    match eval_prog("palette_analogous \"#FF0000\"") {
+        Value::List(items) => {
+            assert_eq!(items.len(), 3);
+            for item in items {
+                match item {
+                    Value::String(s) => {
+                        assert!(s.starts_with("#"));
+                        assert_eq!(s.len(), 7);
+                    }
+                    _ => panic!("expected hex strings in palette"),
+                }
+            }
+        }
+        v => panic!("expected List, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_palette_triadic() {
+    // Test: generate triadic palette
+    match eval_prog("palette_triadic \"#FF0000\"") {
+        Value::List(items) => {
+            assert_eq!(items.len(), 3);
+            for item in items {
+                match item {
+                    Value::String(s) => {
+                        assert!(s.starts_with("#"));
+                        assert_eq!(s.len(), 7);
+                    }
+                    _ => panic!("expected hex strings in palette"),
+                }
+            }
+        }
+        v => panic!("expected List, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_blend_colors() {
+    // Test: blend two colors
+    match eval_prog("blend_colors \"#FF0000\" \"#0000FF\" 0.5") {
+        Value::String(s) => {
+            assert!(s.starts_with("#"));
+            assert_eq!(s.len(), 7);
+        }
+        v => panic!("expected hex string, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_invert_color() {
+    // Test: invert a color
+    match eval_prog("invert_color \"#FF0000\"") {
+        Value::String(s) => {
+            // Red inverted should be cyan-ish
+            assert!(s.starts_with("#"));
+            assert_eq!(s.len(), 7);
+        }
+        v => panic!("expected hex string, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_grayscale_color() {
+    // Test: convert color to grayscale
+    match eval_prog("grayscale \"#FF5733\"") {
+        Value::String(s) => {
+            assert!(s.starts_with("#"));
+            assert_eq!(s.len(), 7);
+        }
+        v => panic!("expected hex string, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_contrast_ratio() {
+    // Test: calculate WCAG contrast ratio
+    match eval_prog("contrast_ratio \"#FFFFFF\" \"#000000\"") {
+        Value::Number(Number::Float(f)) => {
+            // Max contrast is 21:1
+            assert!(f >= 20.0 && f <= 21.1);
+        }
+        Value::Number(Number::Int(i)) => {
+            assert!(i >= 20 && i <= 21);
+        }
+        v => panic!("expected Number, got {:?}", v),
+    }
+}
+
+// ===== Ricing Function Tests =====
+
+#[test]
+fn test_format_filesize() {
+    // Test: format byte size to human readable
+    match eval_prog("format_filesize 1024") {
+        Value::String(s) => {
+            assert!(s.contains("KB") || s.contains("K"));
+        }
+        v => panic!("expected String, got {:?}", v),
+    }
+
+    match eval_prog("format_filesize 1048576") {
+        Value::String(s) => {
+            assert!(s.contains("MB") || s.contains("M"));
+        }
+        v => panic!("expected String, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_format_temp() {
+    // Test: format temperature value
+    match eval_prog("format_temp 72") {
+        Value::String(s) => {
+            assert!(s.contains("72"));
+        }
+        v => panic!("expected String, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_format_uptime() {
+    // Test: format seconds to uptime string
+    match eval_prog("format_uptime 3661 \"short\"") {
+        Value::String(s) => {
+            // 3661 seconds = 1 hour 1 minute 1 second
+            assert!(!s.is_empty());
+        }
+        v => panic!("expected String, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_progressbar() {
+    // Test: generate progress bar
+    match eval_prog("progressbar 75 100") {
+        Value::String(s) => {
+            // Should contain bar characters
+            assert!(!s.is_empty());
+        }
+        v => panic!("expected String, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_gauge() {
+    // Test: generate gauge display
+    match eval_prog("gauge 50 100") {
+        Value::String(s) => {
+            assert!(!s.is_empty());
+        }
+        v => panic!("expected String, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_chmod_numeric() {
+    // Test: convert chmod string to numeric
+    match eval_prog("chmod_numeric \"rwxr-xr-x\"") {
+        Value::Number(Number::Int(755)) => {}
+        v => panic!("expected 755, got {:?}", v),
+    }
+
+    match eval_prog("chmod_numeric \"rw-r--r--\"") {
+        Value::Number(Number::Int(644)) => {}
+        v => panic!("expected 644, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_chmod_symbolic() {
+    // Test: convert numeric chmod to symbolic
+    match eval_prog("chmod_symbolic 755") {
+        Value::String(s) => {
+            assert_eq!(s, "rwxr-xr-x");
+        }
+        v => panic!("expected 'rwxr-xr-x', got {:?}", v),
+    }
+
+    match eval_prog("chmod_symbolic 644") {
+        Value::String(s) => {
+            assert_eq!(s, "rw-r--r--");
+        }
+        v => panic!("expected 'rw-r--r--', got {:?}", v),
+    }
+}
+
+#[test]
+fn test_shebang() {
+    // Test: generate shebang line
+    match eval_prog("shebang \"bash\"") {
+        Value::String(s) => {
+            assert_eq!(s, "#!/usr/bin/env bash");
+        }
+        v => panic!("expected '#!/usr/bin/env bash', got {:?}", v),
+    }
+
+    match eval_prog("shebang \"python\"") {
+        Value::String(s) => {
+            assert_eq!(s, "#!/usr/bin/env python");
+        }
+        v => panic!("expected '#!/usr/bin/env python', got {:?}", v),
+    }
+
+    match eval_prog("shebang \"/bin/sh\"") {
+        Value::String(s) => {
+            assert_eq!(s, "#!/bin/sh");
+        }
+        v => panic!("expected '#!/bin/sh', got {:?}", v),
+    }
+}
