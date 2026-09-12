@@ -21,6 +21,7 @@
 
 // Category modules
 pub mod aggregate;
+pub mod color;
 pub mod datetime;
 pub mod debug;
 pub mod dict;
@@ -33,6 +34,7 @@ pub mod markdown;
 pub mod math;
 pub mod regex;
 pub mod registry;
+pub mod ricing;
 pub mod string;
 pub mod types;
 

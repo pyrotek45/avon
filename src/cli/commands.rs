@@ -953,9 +953,9 @@ fn extract_tasks(value: &Value, _source: &str) -> Result<HashMap<String, TaskDef
 pub fn execute_do(opts: CliOptions) -> i32 {
     // Safety check: --git and --stdin run remote/piped shell commands
     // Allow with --force (skip prompt) or interactive confirmation
-    if opts.git_url.is_some() && !opts.force {
+    if let Some(git_url) = opts.git_url.as_ref().filter(|_| !opts.force) {
         eprintln!("Warning: 'do' with --git will run shell commands from a remote source.");
-        eprintln!("  Source: {}", opts.git_url.as_ref().unwrap());
+        eprintln!("  Source: {}", git_url);
         eprintln!("  Use --force to skip this prompt.");
         eprint!("  Continue? [y/N] ");
         let mut input = String::new();

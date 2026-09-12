@@ -1,5 +1,5 @@
 use crate::common::{Chunk, Number, Value};
-use crate::eval::{eval, initial_builtins};
+use crate::eval::{collect_file_templates, eval, initial_builtins};
 use crate::lexer::tokenize;
 use crate::parser::parse;
 
@@ -2650,6 +2650,29 @@ fn test_publish_with_multiline_template() {
         }
         v => panic!("expected FileTemplate, got {:?}", v),
     }
+}
+
+#[test]
+fn test_template_dedent_uses_source_baseline_when_first_line_is_interpolation() {
+    let prog = "let inner = {\"    host: localhost\"} in {\"\n    {inner}\n    port: 5432\n\"}";
+    let value = eval_prog(prog);
+
+    assert_eq!(value.to_string(prog), "    host: localhost\nport: 5432");
+}
+
+#[test]
+fn test_collect_file_templates_uses_source_baseline_when_first_line_is_interpolation() {
+    let prog = "let inner = {\"    host: localhost\"} in publish \"config.yml\" {\"\n    {inner}\n    port: 5432\n\"}";
+    let value = eval_prog(prog);
+    let files = collect_file_templates(&value, prog).expect("collect file templates");
+
+    assert_eq!(
+        files,
+        vec![(
+            "config.yml".to_string(),
+            "    host: localhost\nport: 5432".to_string()
+        )]
+    );
 }
 
 #[test]

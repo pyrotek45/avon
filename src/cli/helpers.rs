@@ -90,11 +90,7 @@ pub fn is_let_expr_complete(input: &str) -> bool {
                     brace_depth += 1;
                 }
             }
-            '}' => {
-                if !in_template {
-                    brace_depth -= 1;
-                }
-            }
+            '}' => brace_depth -= 1,
             '(' => paren_depth += 1,
             ')' => paren_depth -= 1,
             '[' => bracket_depth += 1,
@@ -256,11 +252,7 @@ pub fn is_expression_complete_impl(input: &str) -> bool {
                     brace_depth += 1;
                 }
             }
-            '}' => {
-                if !in_template {
-                    brace_depth -= 1;
-                }
-            }
+            '}' => brace_depth -= 1,
             '(' => paren_depth += 1,
             ')' => paren_depth -= 1,
             '[' => bracket_depth += 1,

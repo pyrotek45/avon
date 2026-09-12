@@ -1,0 +1,31 @@
+# Generate dotfiles with proper permissions and shebangs
+# Demonstrates chmod_numeric, chmod_symbolic, and shebang functions
+
+let scripts = [
+  {name: "brightness", interpreter: "bash"},
+  {name: "volume", interpreter: "bash"},
+  {name: "network", interpreter: "python3"},
+] in
+
+# Generate permissions manifest for reference
+@dotfiles-permissions.txt {"
+DOTFILE PERMISSION MANIFEST
+===========================
+
+# Executable Scripts (755 - rwxr-xr-x)
+scripts/brightness.sh              755 {chmod_symbolic 755}
+scripts/volume.sh                  755 {chmod_symbolic 755}
+scripts/network.sh                 755 {chmod_symbolic 755}
+
+# Configuration Files (644 - rw-r--r--)
+.config/bspwm/bspwmrc              644 {chmod_symbolic 644}
+.config/sxhkd/sxhkdrc              644 {chmod_symbolic 644}
+
+# Sensitive Files (600 - rw------)
+.ssh/config                        600 {chmod_symbolic 600}
+
+# Numeric to Symbolic Conversions
+755 = {chmod_symbolic 755}
+644 = {chmod_symbolic 644}
+600 = {chmod_symbolic 600}
+"}

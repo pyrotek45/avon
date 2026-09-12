@@ -1,0 +1,38 @@
+# Generate Alacritty color scheme from a base color
+# This demonstrates color manipulation for terminal theming
+
+let base_hex = "#2e3440" in
+let accent_hex = "#88c0d0" in
+
+# Generate Alacritty YAML theme
+@alacritty-theme.yml {"
+colors:
+  primary:
+    background: {base_hex}
+    foreground: '#eceff4'
+  normal:
+    black:   '#2e3440'
+    red:     '#bf616a'
+    green:   '#a3be8c'
+    yellow:  '#ebcb8b'
+    blue:    '#81a1c1'
+    magenta: '#b48ead'
+    cyan:    {accent_hex}
+    white:   '#eceff4'
+  bright:
+    black:   '#4c566a'
+    red:     '#ff7b7b'
+    green:   '#b3f58d'
+    yellow:  '#ffce7b'
+    blue:    '#88c0d0'
+    magenta: '#e8b4d4'
+    cyan:    '#a3f7ff'
+    white:   '#ffffff'
+
+cursor:
+  style:
+    shape: Block
+    blinking: Off
+
+opacity: 0.95
+"}

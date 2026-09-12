@@ -1,0 +1,42 @@
+# Generate a polybar configuration for Linux status bars
+# Demonstrates format_filesize, format_temp, progressbar, gauge functions
+
+let cpu_usage = 45 in
+let mem_used = 3200 in
+let mem_total = 8192 in
+let disk_used = 150 in
+let disk_total = 256 in
+let temp = 62 in
+let uptime_seconds = 345600 in
+
+@polybar-config.ini {"
+[colors]
+background = #2e3440
+foreground = #eceff4
+accent = #88c0d0
+warning = #ebcb8b
+
+[bar/main]
+width = 100%
+height = 30
+background = ${{colors.background}}
+foreground = ${{colors.foreground}}
+
+[module/memory]
+type = internal/memory
+label = RAM: {gauge mem_used mem_total}
+
+[module/disk]
+type = internal/fs
+mount-0 = /
+label-mounted = DISK {format_filesize (disk_used * 1000000000)}
+
+[module/temperature]
+type = internal/temperature
+label = TEMP: {format_temp temp}
+
+[module/uptime]
+type = custom/script
+exec = echo {format_uptime uptime_seconds "medium"}
+label = UP: %output%
+"}

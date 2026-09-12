@@ -6,6 +6,7 @@ Avon comes with a comprehensive standard library of built-in functions, plus con
 
 **Quick Navigation:**
 - [Aggregate Functions](#aggregate-functions) — sum, max, min, all, any, count
+- [Color Functions](#color-functions) — hex_to_rgb, rgb_to_hex, lighten, darken, palette_*, contrast_ratio
 - [Date/Time Functions](#datetime-functions) — date operations and timestamps
 - [Debug Functions](#debug-functions) — trace, debug, assert
 - [Dictionary Functions](#dictionary-functions) — get, set, merge, keys, values
@@ -17,6 +18,7 @@ Avon comes with a comprehensive standard library of built-in functions, plus con
 - [Markdown Functions](#markdown-functions) — md_heading, md_link, md_list
 - [Math Functions](#math-functions) — abs, pow, sqrt, ceil, floor
 - [Regex Functions](#regex-functions) — regex_match, regex_replace, scan
+- [Ricing Functions](#ricing-functions) — format_filesize, format_uptime, chmod_symbolic, progressbar, gauge, shebang
 - [String Functions](#string-functions) — concat, upper, lower, split, replace
 - [Type Functions](#type-functions) — typeof, is_string, to_int, etc.
 - [Data Format Conversion](#data-format-conversion) — JSON ↔ YAML ↔ TOML ↔ CSV ↔ XML ↔ HTML ↔ OPML ↔ INI
@@ -58,6 +60,63 @@ get {a: 1} "b" -> default 0   # 0
 find (\x x > 10) [1, 2, 3]    # None
 find (\x x > 10) [1, 2, 3] -> default 999  # 999
 ```
+
+## Color Functions
+
+Color manipulation functions for theme generation, terminal customization, and visual consistency across applications. These functions enable declarative color scheme management.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `hex_to_rgb` | `String -> Dict` | Parses hex color (e.g., "#FF5733") and returns dict with r, g, b keys (0-255). |
+| `rgb_to_hex` | `Int -> Int -> Int -> String` | Converts RGB values (0-255) to hex color string. |
+| `hex_to_hsl` | `String -> Dict` | Converts hex color to HSL dict with h (0-360), s (0-100), l (0-100). |
+| `hsl_to_hex` | `Int -> Int -> Int -> String` | Converts HSL values to hex color string. |
+| `lighten` | `String -> Number -> String` | Lightens a color by percentage (0-100). Returns hex string. |
+| `darken` | `String -> Number -> String` | Darkens a color by percentage (0-100). Returns hex string. |
+| `saturate` | `String -> Number -> String` | Adjusts saturation (+/- 0-100). Positive increases, negative decreases. |
+| `complementary` | `String -> String` | Returns complementary color hex string (opposite on color wheel). |
+| `palette_monochromatic` | `String -> Int -> List` | Generates monochromatic palette (shades/tints) from hex color. Returns list of hex strings. |
+| `palette_analogous` | `String -> List` | Generates analogous colors (harmonious neighbors on color wheel). Returns list of hex strings. |
+| `palette_triadic` | `String -> List` | Generates triadic palette (three evenly-spaced colors). Returns list of hex strings. |
+| `invert_color` | `String -> String` | Inverts a color (RGB inversion). |
+| `grayscale` | `String -> String` | Converts color to grayscale. |
+| `blend_colors` | `String -> String -> Number -> String` | Blends two colors. Third param: 0=first color, 1=second color. |
+| `contrast_ratio` | `String -> String -> Number` | Calculates WCAG contrast ratio between two hex colors. Returns number. |
+
+**Examples:**
+```avon
+# Parse and convert colors
+hex_to_rgb "#FF5733"                   # {r: 255, g: 87, b: 51}
+rgb_to_hex 255 87 51                   # "#ff5733"
+
+# Convert between color spaces
+let hsl = hex_to_hsl "#88c0d0"          # {h: 190, s: 45, l: 59}
+hsl_to_hex 190 45 59                    # "#88c0d0"
+
+# Adjust colors
+lighten "#88c0d0" 20                    # Lighter variant
+darken "#88c0d0" 20                     # Darker variant
+saturate "#88c0d0" 30                   # More vibrant
+saturate "#88c0d0" (-20)                # More muted
+
+# Generate color palettes
+palette_monochromatic "#88c0d0" 5      # [#2b303b, #556077, #8893aa, #c4c9d4, #ffffff]
+palette_analogous "#88c0d0"            # [#88c0d0, #889cd0, #88d0bc]
+palette_triadic "#88c0d0"              # [#88c0d0, #d088c0, #c0d088]
+
+# Color transformations
+invert_color "#88c0d0"                  # Rough complement
+grayscale "#88c0d0"                    # Desaturated version
+blend_colors "#FF0000" "#0000FF" 0.5  # Mix red and blue 50/50
+complementary "#88c0d0"                # Returns hex complement
+
+# Accessibility checks
+contrast_ratio "#ffffff" "#000000"     # 21 (max contrast)
+```
+
+See the [Linux Ricing and System Customization](./TUTORIAL.md#linux-ricing-and-system-customization) section for practical applications.
+
+---
 
 ## Date/Time Functions
 
@@ -368,6 +427,59 @@ Functions for regular expressions.
 | `regex_replace` | `String -> String -> String -> String` | Replaces all matches of the regex pattern with the replacement string. |
 | `regex_split` | `String -> String -> [String]` | Splits the text by the regex pattern. |
 | `scan` | `String -> String -> [String\|[String]]` | Returns a list of all matches (or capture groups) in the text. |
+
+## Ricing Functions
+
+Utilities for Linux system customization, status displays, file formatting, and script generation. These functions support theme generation, dotfile creation, and system monitoring displays.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `format_filesize` | `Number -> String` | Converts bytes to human-readable size (B, KiB, MiB, GiB, TiB, PiB). |
+| `format_temp` | `Number -> String` | Formats temperature in Celsius (e.g., "62°C"). |
+| `format_uptime` | `Number -> String -> String` | Formats uptime seconds to readable format. Second arg: "short", "medium", "long", or "hms". |
+| `progressbar` | `Number -> Number -> String` | Generates ASCII progress bar. Args: filled, total. Returns "█████░░░░░" style. |
+| `gauge` | `Number -> Number -> String` | Generates gauge display with percentage. Args: current, max. |
+| `chmod_numeric` | `String -> Number` | Converts symbolic chmod (e.g., "rwxr-xr-x") to numeric (755). |
+| `chmod_symbolic` | `Number -> String` | Converts numeric chmod (755) to symbolic ("rwxr-xr-x"). |
+| `shebang` | `String -> String` | Generates shebang line for scripts. Args: interpreter name/path. |
+
+**Examples:**
+```avon
+# File and data formatting
+format_filesize 1048576                 # "1.0 MiB"
+format_filesize 1024                    # "1.0 KiB"
+format_temp 62                          # "62°C"
+
+# Uptime formatting
+format_uptime 345600 "short"            # "4d 0h"
+format_uptime 345600 "medium"           # "4d 0h 0m"
+format_uptime 345600 "long"             # "4d 0h 0m 0s"
+format_uptime 3661 "hms"                # "01:01:01"
+
+# Progress and gauge displays
+progressbar 5 10                        # "█████░░░░░"
+progressbar 7 10                        # "███████░░░"
+gauge 50 100                            # "▐▌▌▌▌     ▌ 50%"
+gauge 75 100                            # "▐▌▌▌▌▌▌▌  ▌ 75%"
+
+# File permissions
+chmod_symbolic 755                      # "rwxr-xr-x"
+chmod_symbolic 644                      # "rw-r--r--"
+chmod_symbolic 600                      # "rw-------"
+chmod_numeric "rwxr-xr-x"               # 755
+chmod_numeric "rw-r--r--"               # 644
+
+# Script generation
+shebang "bash"                          # "#!/usr/bin/env bash"
+shebang "python3"                       # "#!/usr/bin/env python3"
+shebang "/usr/bin/zsh"                  # "#!/usr/bin/zsh"
+```
+
+**Note:** For percentage formatting, use `format_percent` from the [Formatting Functions](#formatting-functions) section with precision control: `format_percent 0.75 2` → `"75.00%"`.
+
+See the [Linux Ricing and System Customization](./TUTORIAL.md#linux-ricing-and-system-customization) section for complete ricing workflows and examples.
+
+---
 
 ## String Functions
 

@@ -7,10 +7,7 @@ use std::str::Chars;
 pub fn identifier(next: char, stream: &mut Peekable<Chars<'_>>, line: usize) -> Token {
     let mut ident = String::new();
     ident.push(next);
-    loop {
-        let Some(peek) = stream.peek() else {
-            break;
-        };
+    while let Some(peek) = stream.peek() {
         if peek.is_whitespace() || (!peek.is_alphanumeric() && *peek != '_') {
             break;
         }
@@ -400,10 +397,7 @@ pub fn number(
 ) -> Result<Token, EvalError> {
     let mut number = String::new();
     number.push(next);
-    loop {
-        let Some(peek) = stream.peek() else {
-            break;
-        };
+    while let Some(peek) = stream.peek() {
         if peek.is_whitespace() || !peek.is_numeric() {
             break;
         }
@@ -428,10 +422,7 @@ pub fn number(
                 // This is definitely a float, consume the dot and parse decimal part
                 // Safe: we just checked peek == '.'
                 number.push(stream.next().expect("'.' character exists after peek"));
-                loop {
-                    let Some(peek) = stream.peek() else {
-                        break;
-                    };
+                while let Some(peek) = stream.peek() {
                     if peek.is_whitespace() || !peek.is_numeric() {
                         break;
                     }
@@ -454,11 +445,7 @@ pub fn tokenize(input: String) -> Result<Vec<Token>, EvalError> {
     let mut stream = input.chars().peekable();
     let mut line = 1;
 
-    loop {
-        let Some(next) = stream.next() else {
-            break;
-        };
-
+    while let Some(next) = stream.next() {
         if next == '\n' {
             line += 1;
             continue;

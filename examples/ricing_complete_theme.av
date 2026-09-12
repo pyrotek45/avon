@@ -1,0 +1,37 @@
+# Complete Linux ricing theme generator
+# Demonstrates coordinated color scheme generation
+
+let dark_bg = "#1e1e2e" in
+let light_fg = "#cdd6f4" in
+let accent = "#89b4fa" in
+let darker = darken accent 20 in
+let lighter = lighten accent 20 in
+
+# Generate a theme configuration file
+@theme-colors.txt {"
+THEME COLOR CONFIGURATION
+=========================
+
+Primary Colors:
+  Primary: {accent}
+  Primary Dark: {darker}
+  Primary Light: {lighter}
+
+Base Colors:
+  Background: {dark_bg}
+  Foreground: {light_fg}
+
+Permissions Examples:
+  755 Numeric: {chmod_symbolic 755}
+  644 Numeric: {chmod_symbolic 644}
+
+Script Shebangs:
+  Bash: {shebang "bash"}
+  Python: {shebang "python3"}
+
+File Formatting Examples:
+  1 MiB: {format_filesize 1048576}
+  75% Progress: {format_percent 0.75}
+  62 Degrees: {format_temp 62}
+  Progress Bar: {progressbar 7 10}
+"}

@@ -45,7 +45,7 @@ impl Value {
                 // Only dedent at the outermost level (depth 0)
                 // All nested templates share the outermost template's baseline
                 if depth == 0 {
-                    dedent(&raw)
+                    dedent_with_baseline(&raw, baseline_indent_from_chunks(chunks))
                 } else {
                     raw
                 }
@@ -55,7 +55,7 @@ impl Value {
                     .unwrap_or_else(|e| format!("<eval error: {}>", e));
                 // Only dedent at the outermost level
                 if depth == 0 {
-                    dedent(&raw)
+                    dedent_with_baseline(&raw, baseline_indent_from_chunks(chunks))
                 } else {
                     raw
                 }
@@ -68,7 +68,7 @@ impl Value {
                     .unwrap_or_else(|e| format!("<eval error: {}>", e));
                 // Only dedent at the outermost level
                 if depth == 0 {
-                    dedent(&raw)
+                    dedent_with_baseline(&raw, baseline_indent_from_chunks(&t.0))
                 } else {
                     raw
                 }
@@ -399,14 +399,25 @@ fn render_chunks_to_string_with_depth(
                 )?;
                 match v {
                     Value::List(ref items) => {
-                        let items_str: Vec<String> = items
-                            .iter()
-                            .map(|it| it.to_string_with_depth(source, depth + 1))
-                            .collect();
                         let indent = out.rsplit('\n').next().unwrap_or("");
                         let indent_prefix: String = indent
                             .chars()
                             .take_while(|c| *c == ' ' || *c == '\t')
+                            .collect();
+                        let items_str: Vec<String> = items
+                            .iter()
+                            .map(|it| {
+                                let rendered = it.to_string_with_depth(source, depth + 1);
+                                match it {
+                                    Value::Template(chunks, _) | Value::Path(chunks, _) => {
+                                        remove_baseline_indent(
+                                            &rendered,
+                                            baseline_indent_from_chunks(chunks),
+                                        )
+                                    }
+                                    _ => rendered,
+                                }
+                            })
                             .collect();
 
                         let mut first_item = true;
@@ -435,7 +446,7 @@ fn render_chunks_to_string_with_depth(
     Ok(out)
 }
 
-pub fn dedent(s: &str) -> String {
+fn dedent_with_baseline(s: &str, baseline_indent: usize) -> String {
     let mut lines: Vec<&str> = s.lines().collect();
 
     // Remove leading empty lines
@@ -459,22 +470,6 @@ pub fn dedent(s: &str) -> String {
     if lines.is_empty() {
         return String::new();
     }
-
-    // Find the column position of the first non-whitespace character
-    // This becomes our baseline for dedentation
-    let baseline_indent = lines
-        .iter()
-        .find_map(|line| {
-            let leading_spaces = line.chars().take_while(|c| c.is_whitespace()).count();
-            if leading_spaces < line.len() {
-                // This line has non-whitespace content
-                Some(leading_spaces)
-            } else {
-                // This line is all whitespace, skip it
-                None
-            }
-        })
-        .unwrap_or(0);
 
     let out_lines: Vec<String> = lines
         .into_iter()
@@ -500,6 +495,57 @@ pub fn dedent(s: &str) -> String {
     out_lines.join("\n")
 }
 
+fn baseline_indent_from_chunks(chunks: &[Chunk]) -> usize {
+    let mut current_indent = 0;
+    let mut at_line_start = true;
+
+    for chunk in chunks {
+        match chunk {
+            Chunk::String(text) => {
+                for ch in text.chars() {
+                    if ch == '\n' {
+                        current_indent = 0;
+                        at_line_start = true;
+                        continue;
+                    }
+
+                    if at_line_start {
+                        if ch.is_whitespace() {
+                            current_indent += 1;
+                        } else {
+                            return current_indent;
+                        }
+                    }
+                }
+            }
+            Chunk::Expr(_, _) => {
+                return current_indent;
+            }
+        }
+    }
+
+    0
+}
+
+fn remove_baseline_indent(s: &str, baseline_indent: usize) -> String {
+    if baseline_indent == 0 {
+        return s.to_string();
+    }
+
+    s.lines()
+        .map(|line| {
+            let leading_indent = line
+                .chars()
+                .take_while(|ch| *ch == ' ' || *ch == '\t')
+                .count();
+            line.chars()
+                .skip(leading_indent.min(baseline_indent))
+                .collect::<String>()
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 // Global counter to track total evaluation steps (prevents infinite loops)
 thread_local! {
     static EVAL_COUNTER: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
@@ -514,6 +560,79 @@ pub fn eval(
         counter.set(0);
     });
     eval_with_depth(expr, symbols, source, 0)
+}
+
+fn eval_let_chain(
+    ident: String,
+    value: Box<Expr>,
+    expr: Box<Expr>,
+    line: usize,
+    symbols: &mut HashMap<String, Value>,
+    source: &str,
+    depth: usize,
+) -> Result<Value, EvalError> {
+    const MAX_EVAL_DEPTH: usize = 200;
+
+    let mut current = (ident, value, expr, line);
+    let mut bindings: Vec<(String, Option<Value>)> = Vec::new();
+
+    let result = loop {
+        let (ident, value, expr, line) = current;
+        let binding_depth = depth + bindings.len();
+        if binding_depth > MAX_EVAL_DEPTH {
+            break Err(EvalError::new(
+                format!(
+                    "evaluation depth limit exceeded (depth > {})",
+                    MAX_EVAL_DEPTH
+                ),
+                None,
+                None,
+                line,
+            ));
+        }
+
+        // Exception: allow '_' to be reused for intentionally discarded values.
+        if ident != "_" && symbols.contains_key(&ident) {
+            break Err(EvalError::new(
+                format!("variable '{}' is already defined in this scope", ident),
+                Some("new variable name".to_string()),
+                Some("existing variable".to_string()),
+                line,
+            ));
+        }
+
+        let mut evaluated_value = match eval_with_depth(*value, symbols, source, binding_depth + 1)
+        {
+            Ok(value) => value,
+            Err(err) => break Err(err),
+        };
+        if let Value::Function { ref mut name, .. } = evaluated_value {
+            *name = Some(ident.clone());
+        }
+
+        let previous = symbols.insert(ident.clone(), evaluated_value);
+        bindings.push((ident, previous));
+
+        match *expr {
+            Expr::Let {
+                ident,
+                value,
+                expr,
+                line,
+            } => current = (ident, value, expr, line),
+            body => break eval_with_depth(body, symbols, source, binding_depth + 1),
+        }
+    };
+
+    for (ident, previous) in bindings.into_iter().rev() {
+        if let Some(value) = previous {
+            symbols.insert(ident, value);
+        } else {
+            symbols.remove(&ident);
+        }
+    }
+
+    result
 }
 
 fn eval_with_depth(
@@ -1198,30 +1317,7 @@ fn eval_with_depth(
             value,
             expr,
             line,
-        } => {
-            // Check if variable already exists in current scope (prevent shadowing)
-            // Exception: allow '_' to be reused (common pattern for ignoring values)
-            if ident != "_" && symbols.contains_key(&ident) {
-                return Err(EvalError::new(
-                    format!("variable '{}' is already defined in this scope", ident),
-                    Some("new variable name".to_string()),
-                    Some("existing variable".to_string()),
-                    line,
-                ));
-            }
-
-            // Evaluate the value in the current scope
-            let mut evalue = eval_with_depth(*value, symbols, source, depth + 1)?;
-            if let Value::Function { ref mut name, .. } = evalue {
-                *name = Some(ident.clone());
-            }
-
-            // Add binding to current scope, evaluate expression, then remove (stack-based scoping)
-            symbols.insert(ident.clone(), evalue);
-            let result = eval_with_depth(*expr, symbols, source, depth + 1);
-            symbols.remove(&ident); // Restore previous state
-            result
-        }
+        } => eval_let_chain(ident, value, expr, line, symbols, source, depth),
         Expr::Function {
             ident,
             default,
@@ -1698,6 +1794,9 @@ pub fn execute_builtin(
     if builtins::aggregate::is_builtin(name) {
         return builtins::aggregate::execute(name, args, source, line);
     }
+    if builtins::color::is_builtin(name) {
+        return builtins::color::execute(name, args, source, line);
+    }
     if builtins::datetime::is_builtin(name) {
         return builtins::datetime::execute(name, args, source, line);
     }
@@ -1731,6 +1830,9 @@ pub fn execute_builtin(
     if builtins::regex::is_builtin(name) {
         return builtins::regex::execute(name, args, source, line);
     }
+    if builtins::ricing::is_builtin(name) {
+        return builtins::ricing::execute(name, args, source, line);
+    }
     if builtins::string::is_builtin(name) {
         return builtins::string::execute(name, args, source, line);
     }
@@ -1755,7 +1857,7 @@ pub fn collect_file_templates(v: &Value, source: &str) -> Result<Vec<(String, St
         } => {
             let path = render_chunks_to_string(pchunks, penv, source)?;
             let raw = render_chunks_to_string(tchunks, tenv, source)?;
-            let content = dedent(&raw);
+            let content = dedent_with_baseline(&raw, baseline_indent_from_chunks(tchunks));
             Ok(vec![(path, content)])
         }
         Value::List(items) => {

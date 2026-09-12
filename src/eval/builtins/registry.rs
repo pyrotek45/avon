@@ -11,8 +11,8 @@ use crate::common::Value;
 use std::collections::HashMap;
 
 use super::{
-    aggregate, datetime, debug, dict, env, file_io, formatting, html, list, markdown, math, regex,
-    string, types,
+    aggregate, color, datetime, debug, dict, env, file_io, formatting, html, list, markdown, math,
+    regex, ricing, string, types,
 };
 
 /// Type alias for category module definition
@@ -21,6 +21,7 @@ type CategoryModule = (&'static [&'static str], fn(&str) -> Option<usize>);
 /// All category modules for iteration
 const CATEGORY_MODULES: &[CategoryModule] = &[
     (aggregate::NAMES, aggregate::get_arity),
+    (color::NAMES, color::get_arity),
     (debug::NAMES, debug::get_arity),
     (datetime::NAMES, datetime::get_arity),
     (dict::NAMES, dict::get_arity),
@@ -32,6 +33,7 @@ const CATEGORY_MODULES: &[CategoryModule] = &[
     (markdown::NAMES, markdown::get_arity),
     (math::NAMES, math::get_arity),
     (regex::NAMES, regex::get_arity),
+    (ricing::NAMES, ricing::get_arity),
     (string::NAMES, string::get_arity),
     (types::NAMES, types::get_arity),
 ];
@@ -40,6 +42,7 @@ const CATEGORY_MODULES: &[CategoryModule] = &[
 /// This uses the NAMES arrays from each category module
 pub fn is_builtin_name(name: &str) -> bool {
     aggregate::is_builtin(name)
+        || color::is_builtin(name)
         || debug::is_builtin(name)
         || datetime::is_builtin(name)
         || dict::is_builtin(name)
@@ -51,6 +54,7 @@ pub fn is_builtin_name(name: &str) -> bool {
         || markdown::is_builtin(name)
         || math::is_builtin(name)
         || regex::is_builtin(name)
+        || ricing::is_builtin(name)
         || string::is_builtin(name)
         || types::is_builtin(name)
 }
@@ -59,6 +63,7 @@ pub fn is_builtin_name(name: &str) -> bool {
 /// Delegates to category-specific get_arity functions
 pub fn get_builtin_arity(name: &str) -> Option<usize> {
     aggregate::get_arity(name)
+        .or_else(|| color::get_arity(name))
         .or_else(|| debug::get_arity(name))
         .or_else(|| datetime::get_arity(name))
         .or_else(|| dict::get_arity(name))
@@ -70,6 +75,7 @@ pub fn get_builtin_arity(name: &str) -> Option<usize> {
         .or_else(|| markdown::get_arity(name))
         .or_else(|| math::get_arity(name))
         .or_else(|| regex::get_arity(name))
+        .or_else(|| ricing::get_arity(name))
         .or_else(|| string::get_arity(name))
         .or_else(|| types::get_arity(name))
 }
@@ -116,6 +122,7 @@ pub fn builtin_count() -> usize {
 pub fn all_builtin_names() -> Vec<(&'static str, &'static [&'static str])> {
     vec![
         ("aggregate", aggregate::NAMES),
+        ("color", color::NAMES),
         ("debug", debug::NAMES),
         ("datetime", datetime::NAMES),
         ("dict", dict::NAMES),
@@ -127,6 +134,7 @@ pub fn all_builtin_names() -> Vec<(&'static str, &'static [&'static str])> {
         ("markdown", markdown::NAMES),
         ("math", math::NAMES),
         ("regex", regex::NAMES),
+        ("ricing", ricing::NAMES),
         ("string", string::NAMES),
         ("types", types::NAMES),
     ]
@@ -139,7 +147,7 @@ mod tests {
     #[test]
     fn test_all_builtins_have_arity() {
         let builtins = initial_builtins();
-        for (name, _) in builtins.iter() {
+        for name in builtins.keys() {
             if name == "os" || name == "args" {
                 continue; // os and args are constants, not functions
             }
@@ -154,7 +162,7 @@ mod tests {
     #[test]
     fn test_all_builtins_are_registered() {
         let builtins = initial_builtins();
-        for (name, _) in builtins.iter() {
+        for name in builtins.keys() {
             if name == "os" || name == "args" {
                 continue; // os and args are constants, not functions
             }

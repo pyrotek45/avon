@@ -1,0 +1,120 @@
+# Comprehensive test of all ricing functions
+# This file demonstrates every ricing function for system customization
+
+# Test 1: File size formatting
+let bytes_1k = 1024 in
+let bytes_1m = 1048576 in
+let bytes_1g = 1073741824 in
+let bytes_1t = 1099511627776 in
+
+let size_1k = format_filesize bytes_1k in
+let size_1m = format_filesize bytes_1m in
+let size_1g = format_filesize bytes_1g in
+let size_1t = format_filesize bytes_1t in
+
+# Test 2: Percentage formatting (using format_percent from formatting module)
+let pct_half = format_percent 0.5 1 in
+let pct_75 = format_percent 0.75 0 in
+
+# Test 3: Temperature formatting
+let temp_cold = format_temp 0 in
+let temp_room = format_temp 22 in
+let temp_hot = format_temp 100 in
+
+# Test 4: Uptime formatting (various modes)
+let uptime_seconds = 345600 in
+let uptime_short = format_uptime uptime_seconds "short" in
+let uptime_medium = format_uptime uptime_seconds "medium" in
+let uptime_long = format_uptime uptime_seconds "long" in
+let uptime_hms = format_uptime uptime_seconds "hms" in
+
+# Test 5: Progress bar display
+let progress_empty = progressbar 0 10 in
+let progress_half = progressbar 5 10 in
+let progress_full = progressbar 10 10 in
+
+# Test 6: Gauge display
+let gauge_low = gauge 25 100 in
+let gauge_mid = gauge 50 100 in
+let gauge_high = gauge 75 100 in
+let gauge_full = gauge 100 100 in
+
+# Test 7: File permissions (numeric to symbolic)
+let perm_755 = chmod_symbolic 755 in
+let perm_644 = chmod_symbolic 644 in
+let perm_600 = chmod_symbolic 600 in
+let perm_700 = chmod_symbolic 700 in
+
+# Test 8: File permissions (symbolic to numeric)
+let perm_rwx = chmod_numeric "rwxr-xr-x" in
+let perm_rw = chmod_numeric "rw-r--r--" in
+let perm_rw_private = chmod_numeric "rw-------" in
+let perm_exec = chmod_numeric "rwxr-xr-x" in
+
+# Test 9: Shebang generation
+let shebang_bash = shebang "bash" in
+let shebang_sh = shebang "sh" in
+let shebang_python = shebang "python3" in
+let shebang_zsh = shebang "zsh" in
+let shebang_full = shebang "/usr/bin/env python3" in
+
+# Generate comprehensive output file
+@ricing-functions-output.txt {"
+=====================================
+RICING FUNCTIONS COMPREHENSIVE TEST
+=====================================
+
+Test 1: File Size Formatting
+1 KiB: {size_1k}
+1 MiB: {size_1m}
+1 GiB: {size_1g}
+1 TiB: {size_1t}
+
+Test 2: Percentage Formatting
+50% (with 1 decimal): {pct_half}
+75% (no decimals): {pct_75}
+
+Test 3: Temperature Formatting
+0°C: {temp_cold}
+22°C (room temp): {temp_room}
+100°C (boiling): {temp_hot}
+
+Test 4: Uptime Formatting (345600 seconds = 4 days)
+Short format: {uptime_short}
+Medium format: {uptime_medium}
+Long format: {uptime_long}
+HMS format: {uptime_hms}
+
+Test 5: Progress Bar Display
+Empty (0/10): [{progress_empty}]
+Half (5/10): [{progress_half}]
+Full (10/10): [{progress_full}]
+
+Test 6: Gauge Display
+Low (25/100): [{gauge_low}]
+Mid (50/100): [{gauge_mid}]
+High (75/100): [{gauge_high}]
+Full (100/100): [{gauge_full}]
+
+Test 7: File Permissions (Numeric to Symbolic)
+755: {perm_755}
+644: {perm_644}
+600: {perm_600}
+700: {perm_700}
+
+Test 8: File Permissions (Symbolic to Numeric)
+rwxr-xr-x: {perm_rwx}
+rw-r--r--: {perm_rw}
+rw-------: {perm_rw_private}
+rwxr-xr-x: {perm_exec}
+
+Test 9: Shebang Generation
+bash: {shebang_bash}
+sh: {shebang_sh}
+python3: {shebang_python}
+zsh: {shebang_zsh}
+/usr/bin/env python3: {shebang_full}
+
+=====================================
+All ricing functions executed successfully!
+"}

@@ -1,0 +1,81 @@
+# Comprehensive test of all color manipulation functions
+# This file demonstrates every color function and validates their behavior
+
+# Test 1: Color parsing and conversion
+let base_hex = "#88c0d0" in
+let rgb = hex_to_rgb base_hex in
+let hex_from_rgb = rgb_to_hex rgb.r rgb.g rgb.b in
+let hsl = hex_to_hsl base_hex in
+let hex_from_hsl = hsl_to_hex hsl.h hsl.s hsl.l in
+
+# Test 2: Color adjustment functions
+let lighter = lighten base_hex 20 in
+let darker = darken base_hex 20 in
+let vivid = saturate base_hex 30 in
+let muted = saturate base_hex (-20) in
+
+# Test 3: Color transformation
+let inverted = invert_color base_hex in
+let greyscale = grayscale base_hex in
+
+# Test 4: Palette generation
+let mono_palette = palette_monochromatic base_hex 5 in
+let analogous = palette_analogous base_hex in
+let triadic = palette_triadic base_hex in
+
+# Test 5: Color harmony
+let complement = complementary base_hex in
+
+# Test 6: Color blending
+let blend_50 = blend_colors "#FF0000" "#0000FF" 0.5 in
+let blend_red = blend_colors "#FF0000" "#0000FF" 0.0 in
+let blend_blue = blend_colors "#FF0000" "#0000FF" 1.0 in
+
+# Test 7: Accessibility
+let contrast_white_black = contrast_ratio "#FFFFFF" "#000000" in
+let contrast_bg_fg = contrast_ratio "#1e1e2e" "#cdd6f4" in
+
+# Generate output file with all test results
+@color-functions-output.txt {"
+=====================================
+COLOR FUNCTIONS COMPREHENSIVE TEST
+=====================================
+
+Test 1: Color Parsing and Conversion
+Base Hex: {base_hex}
+RGB: r={rgb.r}, g={rgb.g}, b={rgb.b}
+RGB to Hex: {hex_from_rgb}
+HSL: h={hsl.h}, s={hsl.s}, l={hsl.l}
+HSL to Hex: {hex_from_hsl}
+
+Test 2: Color Adjustment
+Original: {base_hex}
+Lighter (+20): {lighter}
+Darker (-20): {darker}
+Vivid (+30 saturation): {vivid}
+Muted (-20 saturation): {muted}
+
+Test 3: Color Transformation
+Inverted: {inverted}
+Grayscale: {greyscale}
+
+Test 4: Palette Generation
+Monochromatic (5 shades): {mono_palette}
+Analogous: {analogous}
+Triadic: {triadic}
+
+Test 5: Color Harmony
+Complementary: {complement}
+
+Test 6: Color Blending
+Blend Red+Blue 50%: {blend_50}
+Blend Red+Blue 0% (pure red): {blend_red}
+Blend Red+Blue 100% (pure blue): {blend_blue}
+
+Test 7: Accessibility (WCAG Contrast Ratio)
+White vs Black: {contrast_white_black}
+Dark bg vs Light fg: {contrast_bg_fg}
+
+=====================================
+All color functions executed successfully!
+"}

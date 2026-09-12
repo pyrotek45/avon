@@ -226,7 +226,29 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Example 7: Package.json Generator
     - Example 8: Multi-Brace Template Demo
 
-16. **[Troubleshooting](#troubleshooting)**
+16. **[Linux Ricing and System Customization](#linux-ricing-and-system-customization)**
+    - What is Linux Ricing?
+    - Color Manipulation for Themes
+      - Parsing and Converting Colors
+      - Creating Color Palettes
+      - Lightening, Darkening, and Adjusting
+      - Calculating Color Contrast
+    - Generating Terminal Themes (Alacritty, Kitty, WezTerm)
+    - Status Bar Configuration (Polybar, Lemonbar)
+    - Dotfile Generation with Proper Permissions
+    - Complete Theme Systems
+    - File Permissions and Shebangs
+      - Numeric vs Symbolic Permissions
+      - Generating Executable Scripts
+      - Permission Manifest Files
+    - Practical Workflows
+      - Single Source of Truth for Colors
+      - Theme Consistency Across Apps
+      - Declarative Configuration
+    - Example Patterns
+    - Tips for Linux Ricers
+
+17. **[Troubleshooting](#troubleshooting)**
     - Common Errors
       - "expected '\"' after opening braces"
       - "unexpected EOF"
@@ -237,7 +259,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
       - Interpolation not working
     - Debugging Tips
 
-17. **[Gotchas and Common Pitfalls](#gotchas-and-common-pitfalls)**
+18. **[Gotchas and Common Pitfalls](#gotchas-and-common-pitfalls)**
     - Function Parameters Are CLI Arguments
     - Variables Don't Shadow – They Nest
     - Functions with All Defaults Still Return Functions
@@ -256,7 +278,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Task Names Must Use Underscores, Not Dashes
     - And more...
 
-18. **[Tips and Tricks](#tips-and-tricks)**
+19. **[Tips and Tricks](#tips-and-tricks)**
     - Check List Membership with `any`
     - Safe Division with Default Value
     - Type Checking with `typeof` and `is_*`
@@ -264,7 +286,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Working with Characters in Strings
     - And more...
 
-19. **[Piping, Stdin, Stdout, and Embedding Avon](#piping-stdin-stdout-and-embedding-avon)**
+20. **[Piping, Stdin, Stdout, and Embedding Avon](#piping-stdin-stdout-and-embedding-avon)**
     - Piping Avon Source Code into the CLI
     - Piping Data into an Avon Program
     - Capturing Avon Output
@@ -274,7 +296,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Real-World Integration: File Collection Scripts
     - Summary: Stdin/Stdout Modes
 
-20. **[Next Steps](#next-steps)**
+21. **[Next Steps](#next-steps)**
 
 ---
 
@@ -6010,6 +6032,349 @@ See `examples/nginx_gen.av` or `examples/neovim_config.av`. These demonstrate:
 - Single braces are literal (no escaping needed)
 - `{{expr}}` for interpolation within double-brace templates
 - Use this pattern when generating JSON, Lua, Nginx, CSS, etc.
+
+---
+
+## Linux Ricing and System Customization
+
+"Linux ricing" is the art of customizing Linux system appearance and functionality—configuring colors, themes, window managers, terminal emulators, status bars, and dotfiles to create a personalized, visually cohesive desktop environment. Avon excels at this task because ricing requires:
+
+1. **Consistency across many applications** — One color palette used in your terminal, editor, window manager, and status bar
+2. **Computed color schemes** — Colors that relate to each other (complementary, analogous, monochromatic)
+3. **Generated scripts and configs** — Dotfiles with proper permissions and shebangs
+4. **Declarative workflows** — Define your theme once, deploy everywhere
+
+This section shows practical Avon patterns for Linux ricing and system customization.
+
+### What is Linux Ricing?
+
+Linux ricing involves:
+- **Theming**: Terminal emulators (Alacritty, Kitty, WezTerm), editors (Vim, Neovim, Emacs)
+- **Window managers**: Configuration files for bspwm, i3, Openbox, etc.
+- **Status bars**: Polybar, Lemonbar, Waybar configuration
+- **Dotfiles**: Shell configs (`.bashrc`, `.zshrc`), git config, scripts with proper permissions
+- **Color consistency**: A unified color scheme across all applications
+
+### Color Manipulation for Themes
+
+Avon provides comprehensive color functions for theme generation:
+
+#### Parsing and Converting Colors
+
+```avon
+# Parse hex color to RGB
+let rgb = hex_to_rgb "#ff5733" in      # {r: 255, g: 87, b: 51}
+
+# Convert RGB back to hex
+let hex_back = rgb_to_hex rgb.r rgb.g rgb.b in   # "#ff5733"
+
+# Convert to HSL (Hue, Saturation, Lightness) for easier manipulation
+let hsl = hex_to_hsl "#88c0d0" in      # {h: 190, s: 45, l: 59}
+
+# Convert HSL back to hex for final output
+hsl_to_hex hsl.h hsl.s hsl.l           # "#88c0d0"
+```
+
+#### Creating Color Palettes
+
+Avon provides three main palette functions for color harmony:
+
+```avon
+# Monochromatic palette: various shades of one color
+let mono_palette = palette_monochromatic "#2e3440" 5 in
+# Returns: ["#1d3f49", "#3a7f92", "#6db2c5", "#b6d8e2", "#ffffff"]
+mono_palette
+
+# Analogous palette: harmonious colors near each other on color wheel
+let analogous = palette_analogous "#88c0d0" in
+# Returns [primary, analogous1, analogous2]
+analogous
+
+# Triadic palette: three evenly-spaced colors for high contrast
+let triadic = palette_triadic "#88c0d0" in
+triadic
+```
+
+#### Lightening, Darkening, and Adjusting
+
+```avon
+let base = "#88c0d0" in
+
+# Lighten a color by increasing lightness
+let lighter = lighten base 20 in        # Make 20% lighter
+
+# Darken a color by decreasing lightness
+let darker = darken base 20 in          # Make 20% darker
+
+# Adjust saturation (vibrance)
+let vivid = saturate base 30 in         # Increase saturation by 30%
+let muted = saturate base (-20) in      # Decrease saturation by 20%
+
+# Invert a color (get its complement)
+let inverted = invert_color base in     # Inverse hex string
+
+# Get the complementary color
+let complement = complementary base in
+complement
+```
+
+#### Calculating Color Contrast
+
+For accessibility and readability:
+
+```avon
+let bg = "#1e1e2e" in
+let fg = "#cdd6f4" in
+
+# Calculate WCAG contrast ratio
+let ratio = contrast_ratio bg fg in
+# Returns a number like 11.34 (excellent accessibility)
+# WCAG AA requires minimum 4.5:1 for normal text
+ratio
+```
+
+### Generating Terminal Themes (Alacritty, Kitty, WezTerm)
+
+Create a master color definition and generate configs for multiple terminal emulators:
+
+```avon
+let dark_bg = "#1e1e2e" in
+let light_fg = "#cdd6f4" in
+let accent = "#89b4fa" in
+
+# Generate Alacritty theme
+@alacritty-colors.yml {"
+colors:
+  primary:
+    background: {dark_bg}
+    foreground: {light_fg}
+  normal:
+    black:   '#2d2d2d'
+    red:     '#f38ba8'
+    green:   '#a6e3a1'
+    yellow:  '#f9e2af'
+    blue:    {accent}
+    magenta: '#f5c2e7'
+    cyan:    '#94e2d5'
+    white:   {light_fg}
+}
+"}
+
+See `examples/ricing_alacritty_theme.av` for a complete example with computed color palettes.
+
+### Status Bar Configuration (Polybar, Lemonbar)
+
+Use formatting functions to generate status bar configs with dynamic content:
+
+```avon
+let cpu_usage = 45 in
+let memory_used = 3200 in
+let memory_total = 8192 in
+let disk_used = 150 in
+let disk_total = 256 in
+let temp_celsius = 62 in
+let uptime_seconds = 345600 in
+
+@polybar-config.ini {"
+[colors]
+background = #2e3440
+foreground = #eceff4
+
+[module/memory]
+type = internal/memory
+label = RAM: {gauge memory_used memory_total}
+
+[module/disk]
+type = internal/fs
+label = DISK: {format_filesize disk_used * 1000000000}
+
+[module/temperature]
+type = internal/temperature
+label = TEMP: {format_temp temp_celsius}
+
+[module/uptime]
+type = custom/script
+exec = echo {format_uptime uptime_seconds "medium"}
+}
+"}
+
+Formatting functions available:
+- `format_filesize n` — Convert bytes to human-readable (B, KiB, MiB, GiB, etc.)
+- `format_percent ratio precision` — Convert 0.75 to "75%" (see Formatting Functions for details)
+- `format_temp celsius` — Convert 62 to "62°C"
+- `format_uptime seconds format` — Convert to "1d 2h 30m" or other formats
+- `progressbar filled total` — Generate ASCII progress bar "█████░░░░░"
+- `gauge current max` — Generate gauge display "▐▌▌▌▌     ▌ 50%"
+
+See `examples/ricing_polybar_config.av` for a complete polybar configuration.
+
+### Dotfile Generation with Proper Permissions
+
+Generate scripts and configs with correct file permissions and shebangs:
+
+```avon
+# Define scripts that need execution permission
+let scripts = [
+  {name: "brightness", interpreter: "bash"},
+  {name: "volume", interpreter: "python3"},
+  {name: "network", interpreter: "bash"}
+] in
+
+# Generate each script with shebang and 755 permissions
+map (\script
+  @scripts/{script.name}.sh {"
+{shebang script.interpreter}
+# Auto-generated by Avon
+# Permissions: {chmod_symbolic 755}
+
+# Script body here
+set -e
+"}
+) scripts
+```
+
+#### File Permissions and Shebangs
+
+Work with file permissions in two formats:
+
+```avon
+# Numeric chmod (755 = rwxr-xr-x)
+chmod_symbolic 755                      # "rwxr-xr-x"
+chmod_symbolic 644                      # "rw-r--r--"
+chmod_symbolic 600                      # "rw-------"
+
+# Convert symbolic to numeric
+chmod_numeric "rwxr-xr-x"               # 755
+chmod_numeric "rw-r--r--"               # 644
+
+# Generate shebangs
+shebang "bash"                           # "#!/usr/bin/env bash"
+shebang "/usr/bin/python3"               # "#!/usr/bin/python3"
+shebang "zsh"                            # "#!/usr/bin/env zsh"
+```
+
+See `examples/ricing_dotfiles_generator.av` for a complete dotfile generation workflow.
+
+### Complete Theme Systems
+
+Build an end-to-end theme system where one color palette generates configs for multiple applications:
+
+```avon
+let base_bg = "#1e1e2e" in
+let base_fg = "#cdd6f4" in
+let accent = "#89b4fa" in
+
+# Derive related colors
+let accent_dark = darken accent 20 in
+let accent_light = lighten accent 20 in
+let complement = complementary (hex_to_hsl accent) in
+
+# Generate GTK theme
+@gtk-colors.css {{"
+:root {
+  --primary: {{accent}};
+  --primary-dark: {{accent_dark}};
+  --primary-light: {{accent_light}};
+  --background: {{base_bg}};
+  --foreground: {{base_fg}};
+}
+"}}
+
+See `examples/ricing_complete_theme.av` for a comprehensive multi-app theme generator.
+
+### Practical Workflows
+
+#### Single Source of Truth for Colors
+
+Define colors once, use everywhere:
+
+```avon
+# colors.av - define your entire color scheme
+let colors = {
+  primary: "#89b4fa",
+  secondary: "#f38ba8",
+  success: "#a6e3a1",
+  warning: "#f9e2af",
+  error: "#f38ba8",
+  background: "#1e1e2e",
+  foreground: "#cdd6f4"
+} in
+
+# Each app config imports and uses these colors
+# No color duplication across 10+ config files
+colors
+```
+
+#### Theme Consistency Across Apps
+
+Deploy one theme definition to multiple applications:
+
+```avon
+let theme = {
+  name: "nord",
+  bg: "#2e3440",
+  fg: "#eceff4",
+  accent: "#88c0d0"
+} in
+
+# Terminal config uses theme.bg and theme.fg
+# Editor config uses theme.accent
+# Window manager uses all three
+# Change theme once, regenerate all configs
+theme
+```
+
+#### Declarative Configuration
+
+Define what you want, not how to implement it:
+
+```avon
+# Instead of manually editing 5 config files
+# Just describe your desired state:
+
+let config = {
+  colorscheme: "nord",
+  terminal: "alacritty",
+  statusbar: "polybar",
+  fonts: "Noto Sans",
+  scale: 1.1
+} in
+
+# Then generate all needed files from this single config
+config
+```
+
+### Tips for Linux Ricers
+
+1. **Use maps for multiple apps**: Generate configs for terminal, editor, and window manager in one pass
+2. **Store colors as variables**: Modify one variable, regenerate everything
+3. **Use conditional logic**: `if os == "linux" then ... else ...` for cross-platform configs
+4. **Combine with file I/O**: Import existing configs, enhance them with generated colors
+5. **Version control your ricing scripts**: Store `.av` files in git, not individual configs
+6. **Use the `--preview` flag**: Test without deploying: `avon deploy config.av --preview`
+7. **Organize examples in folders**: Keep ricing examples separate: `examples/ricing_*`
+
+### Example Workflows
+
+**Workflow 1: Update one color, regenerate everything**
+```bash
+# Edit your accent color in ricing_complete_theme.av
+# Deploy all generated configs at once
+avon deploy examples/ricing_complete_theme.av --root ~/.config --force
+```
+
+**Workflow 2: Generate theme + deploy scripts**
+```bash
+# One command generates themes + install scripts
+avon deploy my_ricing_system.av --root ~ --force
+```
+
+**Workflow 3: Environment-specific themes**
+```bash
+# Different themes for work vs personal machines
+avon deploy theme.av -theme nord --root ~/.config --force
+avon deploy theme.av -theme dracula --root ~/.config --force
+```
 
 ---
 

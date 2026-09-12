@@ -250,6 +250,143 @@ test_file "GitHub Actions" "$TMPDIR/github.av" 'jobs:
       - uses: actions/checkout@v3
       - run: npm install'
 
+# Interpolation-first multiline file template should dedent from source indentation,
+# not from the interpolated template's rendered content.
+cat > "$TMPDIR/setup_guide.av" << 'EOF'
+# Define the deployment steps.
+let steps = [
+    {
+        num: 1,
+        title: "Configure environment variables",
+        code: "export PORT=8080\nexport NODE_ENV=production",
+    },
+    {
+        num: 2,
+        title: "Install project dependencies",
+        code: "npm install --production\nnpm run build",
+    },
+    {
+        num: 3,
+        title: "Start the production service",
+        code: "npm start",
+    },
+] in
+
+# Format a single step as a numbered Markdown list item.
+let format_step = \step
+        let code_block = "```bash\n" + step.code + "\n```" in {"
+    {step.num}. **{step.title}**
+    {code_block}
+"} in
+# Generate the setup guide.
+@docs/SETUP.md {"
+        # Project Setup Guide
+
+        Follow these steps to deploy the application:
+
+        {map format_step steps}
+"}
+EOF
+
+test_file "Interpolation-first setup guide" "$TMPDIR/setup_guide.av" '--- docs/SETUP.md ---
+# Project Setup Guide
+
+Follow these steps to deploy the application:
+
+
+1. **Configure environment variables**
+```bash
+export PORT=8080
+export NODE_ENV=production
+```
+
+2. **Install project dependencies**
+```bash
+npm install --production
+npm run build
+```
+
+3. **Start the production service**
+```bash
+npm start
+```'
+
+# ========================================
+# Automatic Dedent Edge Cases
+# ========================================
+echo -e "${YELLOW}Automatic Dedent Edge Cases${NC}"
+
+# The first content line is an interpolation, so its source position must set
+# the baseline even when the interpolated value itself contains no indentation.
+cat > "$TMPDIR/interpolation_first.av" << 'EOF'
+let heading = "settings:" in
+@config.yml {"
+        {heading}
+            host: localhost
+                port: 5432
+"}
+EOF
+
+test_file "Interpolation-first baseline preserves relative indentation" "$TMPDIR/interpolation_first.av" '--- config.yml ---
+settings:
+    host: localhost
+        port: 5432'
+
+# Leading and trailing blank lines are removed, while blank lines between
+# content lines remain blank and nested indentation remains relative.
+cat > "$TMPDIR/blank_lines.av" << 'EOF'
+@notes.txt {"
+
+        first paragraph
+
+            indented continuation
+
+"}
+EOF
+
+test_file "Dedent trims boundary blank lines" "$TMPDIR/blank_lines.av" '--- notes.txt ---
+first paragraph
+
+    indented continuation'
+
+# Dedent treats tabs as indentation characters and removes only the baseline.
+cat > "$TMPDIR/tab_indentation.av" << 'EOF'
+@makefile {"
+	all:
+		echo done
+"}
+EOF
+
+test_file "Dedent preserves relative tab indentation" "$TMPDIR/tab_indentation.av" '--- makefile ---
+all:
+	echo done'
+
+# Mapped template results are normalized by their own source baseline before
+# the outer interpolation applies its indentation. This avoids double-indent
+# while retaining indentation relative to each generated list item.
+cat > "$TMPDIR/mapped_templates.av" << 'EOF'
+let services = ["api", "worker"] in
+let service = \name {"
+        - name: {name}
+            enabled: true
+"} in
+@services.yml {"
+    services:
+    {map service services}
+"}
+EOF
+
+test_file "Mapped templates do not double-indent" "$TMPDIR/mapped_templates.av" '--- services.yml ---
+services:
+
+- name: api
+    enabled: true
+
+- name: worker
+    enabled: true'
+
+echo
+
 # React/JSX
 cat > "$TMPDIR/jsx.av" << 'EOF'
 let componentName = "Greeting" in

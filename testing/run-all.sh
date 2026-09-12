@@ -136,15 +136,17 @@ fi
 
 # 2. Run clippy
 print_header "Code Quality - Clippy"
-if cd "$PROJECT_ROOT" && cargo clippy --all-targets --all-features 2>&1 | tail -5; then
+if command -v cargo-clippy > /dev/null 2>&1 && cd "$PROJECT_ROOT" && cargo clippy --all-targets --all-features -- -D warnings; then
     print_success "Clippy linting"
+elif command -v nix-shell > /dev/null 2>&1 && cd "$PROJECT_ROOT" && nix-shell -p rustc cargo clippy --run 'cargo clippy --all-targets --all-features -- -D warnings'; then
+    print_success "Clippy linting (Nix toolchain)"
 else
     print_error "Clippy linting"
 fi
 
 # 3. Check formatting
 print_header "Code Quality - Format Check"
-if cd "$PROJECT_ROOT" && cargo fmt --all -- --check 2>&1 | tail -5; then
+if cd "$PROJECT_ROOT" && cargo fmt --all -- --check; then
     print_success "Code formatting"
 else
     print_error "Code formatting"
