@@ -112,7 +112,18 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
    - Advanced List Operations (`flatmap`, `flatten`)
    - Data & Utilities (`import`, `json_parse`, `os`)
 
-9. **[Importing Files from Folders](#importing-files-from-folders)**
+9. **[Hash Functions & Encoding](#hash-functions--encoding)**
+   - String Hashing with SHA-256 and SHA-512
+   - Base64 Encoding/Decoding
+   - Hexadecimal Encoding/Decoding
+   - Practical Examples
+     - File Integrity Verification
+     - Password Hashing Workflows
+     - Creating Checksums
+     - Data Transmission Encoding
+   - Error Handling with None Returns
+
+10. **[Importing Files from Folders](#importing-files-from-folders)**
    - Core Pattern: Glob → Map/Filter → Fold
    - Common Patterns
      - Load JSON Folder as Dictionary
@@ -167,7 +178,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
    - Real-World Examples
    - Single File in Git, Many Deployments
 
-11. **[Do Mode — Built-in Task Runner](#do-mode--built-in-task-runner)**
+12. **[Do Mode — Built-in Task Runner](#do-mode--built-in-task-runner)**
     - Quick Start
     - Simple Tasks
     - Structured Tasks
@@ -188,7 +199,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Error Handling
     - Do Mode Gotchas
 
-12. **[Error handling and debugging](#error-handling-and-debugging)**
+13. **[Error handling and debugging](#error-handling-and-debugging)**
     - Runtime Type Safety
       - How type checking works
       - Error message format
@@ -201,7 +212,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
       - `assert` (validate conditions)
       - `--debug` flag (detailed output)
 
-13. **[Best Practices](#best-practices)**
+14. **[Best Practices](#best-practices)**
     - Write Clear, Composable Code
     - Test Before Deploying
     - Use Named Arguments
@@ -209,14 +220,14 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Keep Templates Readable
     - Return Lists for Multiple Files
 
-14. **[Security Best Practices](#security-best-practices)**
+15. **[Security Best Practices](#security-best-practices)**
     - Input Validation & Sanitization
     - Template Safety Patterns
     - File Deployment Safety
     - Production Checklist
     - Path Security
 
-15. **[Real-World Examples](#real-world-examples)**
+16. **[Real-World Examples](#real-world-examples)**
     - Example 1: Site Generator
     - Example 2: Neovim Configuration
     - Example 3: Emacs Configuration
@@ -226,7 +237,7 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
     - Example 7: Package.json Generator
     - Example 8: Multi-Brace Template Demo
 
-16. **[Linux Ricing and System Customization](#linux-ricing-and-system-customization)**
+17. **[Linux Ricing and System Customization](#linux-ricing-and-system-customization)**
     - What is Linux Ricing?
     - Color Manipulation for Themes
       - Parsing and Converting Colors
@@ -247,6 +258,16 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
       - Declarative Configuration
     - Example Patterns
     - Tips for Linux Ricers
+
+18. **[Avon as a Linux Utils Replacement](#avon-as-a-linux-utils-replacement)**
+    - Why Replace Common Tools with Avon
+    - Text Processing One-Liners
+    - Data Extraction and Transformation
+    - System Information Scripts
+    - File Operations
+    - Configuration Generation
+    - Task Automation
+    - Real-World Workflows
 
 17. **[Troubleshooting](#troubleshooting)**
     - Common Errors
@@ -2817,8 +2838,10 @@ avon doc dict      # All dictionary functions
 | `indent s spaces` | `indent "code" 4` | `"    code"` |
 | `base64_encode s` | `base64_encode "Hello"` | `"SGVsbG8="` |
 | `base64_decode s` | `base64_decode "SGVsbG8="` | `"Hello"` |
-| `hash_md5 s` | `hash_md5 "hello"` | `"5d41402a..."` |
-| `hash_sha256 s` | `hash_sha256 "hello"` | `"2cf24dba..."` |
+| `hex_encode s` | `hex_encode "hello"` | `"68656c6c6f"` |
+| `hex_decode s` | `hex_decode "68656c6c6f"` | `"hello"` |
+| `sha256 s` | `sha256 "hello"` | `"2cf24dba..."` |
+| `sha512 s` | `sha512 "hello"` | `"9b71d224..."` |
 
 ### Aggregate Functions
 
@@ -3136,6 +3159,239 @@ let formatted = map (\item concat "service: " item) items in
 
 ---
 
+## Hash Functions & Encoding
+
+Avon provides a complete set of cryptographic and encoding functions for data integrity verification, secure transmission, and format conversion. These functions solve common real-world problems without external tools.
+
+### String Hashing with SHA-256 and SHA-512
+
+**SHA-256** produces a 64-character hexadecimal hash suitable for most cryptographic use cases.
+**SHA-512** produces a 128-character hexadecimal hash for higher security requirements.
+
+| Function | Description | Result Length |
+|----------|-------------|---|
+| `sha256 str` | SHA-256 cryptographic hash | 64 hex chars |
+| `sha512 str` | SHA-512 cryptographic hash | 128 hex chars |
+
+**Basic usage:**
+```avon
+sha256 "hello"
+# "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+
+sha512 "hello"
+# "9b71d224bd62f3785d96f46e3e6a6671790312affc7cbffc4d8d93c4b5ee550235e1651e4c0057f13afc8b9ed81017523af4c1011e2a1964fb5c0869deb96c5d"
+
+# Same input always produces same output
+sha256 "hello" == sha256 "hello"  # true
+```
+
+### Base64 Encoding/Decoding
+
+Base64 encodes binary data as ASCII text for safe transmission through text-based channels.
+
+| Function | Description | Use Case |
+|----------|-------------|----------|
+| `base64_encode str` | Encode string to Base64 | Transmit binary data as text |
+| `base64_decode b64str` | Decode Base64 string | Returns None if invalid |
+
+**Basic usage:**
+```avon
+# Encoding
+base64_encode "Hello, World!"
+# "SGVsbG8sIFdvcmxkIQ=="
+
+# Decoding
+base64_decode "SGVsbG8sIFdvcmxkIQ=="
+# "Hello, World!"
+
+# Error handling
+base64_decode "!!!invalid!!!"
+# None (invalid Base64)
+```
+
+### Hexadecimal Encoding/Decoding
+
+Hexadecimal represents binary data as human-readable pairs of hex digits (2 chars per byte).
+
+| Function | Description |
+|----------|-------------|
+| `hex_encode str` | Encode each byte as 2 hex digits |
+| `hex_decode hexstr` | Decode hex string back to bytes, returns None if invalid |
+
+**Basic usage:**
+```avon
+# Encoding
+hex_encode "hello"
+# "68656c6c6f"
+
+hex_encode "A"
+# "41"
+
+# Decoding
+hex_decode "68656c6c6f"
+# "hello"
+
+hex_decode "414243"
+# "ABC"
+
+# Error handling
+hex_decode "ZZ"  # Invalid hex
+# None
+```
+
+### Practical Examples
+
+#### Example 1: File Integrity Verification
+
+Verify file integrity by comparing hashes:
+
+```avon
+let original_file = readfile "data.txt" in
+let original_hash = sha256 original_file in
+let downloaded_file = readfile "downloaded.txt" in
+let downloaded_hash = sha256 downloaded_file in
+
+if original_hash == downloaded_hash
+then "✓ Files match (integrity verified)"
+else "✗ Files differ (possible corruption)"
+```
+
+#### Example 2: Creating Checksums for Distributions
+
+Generate SHA-256 checksums for a list of files:
+
+```avon
+let files = glob "dist/*" in
+map
+  (\f concat (concat (basename f) " ") (sha256 (readfile f)))
+  files
+->
+join "\n"
+->
+publish "CHECKSUMS.sha256"
+```
+
+Result in CHECKSUMS.sha256:
+```
+app-1.0.tar.gz 2cf24dba5fb0a30e26e83b2ac5b9e29e...
+app-1.0.zip e3b0c44298fc1c149afbf4c8996fb92427...
+```
+
+#### Example 3: Password Hashing Workflow
+
+Create a password hash without storing plaintext:
+
+```avon
+# In your deployment config:
+let user_password = env_var "USER_PASSWORD" in
+let password_hash = sha256 user_password in
+
+{
+  user: "admin",
+  password_hash: password_hash,
+  created: now
+}
+->
+format_json
+->
+publish "auth.json"
+```
+
+Deploy it with `avon deploy config.av --backup` to keep a `.bak` copy of any existing
+`auth.json` before overwriting - `--backup` is a `deploy`-only CLI flag, not valid inside
+the expression itself.
+
+#### Example 4: Data Transmission with Encoding
+
+Encode sensitive data for safe transmission:
+
+```avon
+# Encode JSON for transmission
+let data = {name: "Alice", token: "secret-123"} in
+let json_str = format_json data in
+let encoded = base64_encode json_str in
+
+# Now safe to send through text channels
+# Receiver decodes with: base64_decode encoded_str -> json_parse_string
+```
+
+#### Example 5: API Request Signatures
+
+Create cryptographic signatures for API authentication. Note: `timestamp` is a reserved
+builtin (the current Unix time), so it can't be re-bound with `let timestamp = ...`; use a
+different name. Also `concat` only takes 2 arguments - nest calls for more parts:
+
+```avon
+let api_key = env_var "API_KEY" in
+let ts = timestamp in
+let method = "GET" in
+let path = "/users/123" in
+
+# Create signature from concatenated parts
+let to_sign = concat (concat (concat method path) (to_string ts)) api_key in
+let signature = sha256 to_sign in
+
+{
+  method: method,
+  path: path,
+  timestamp: ts,
+  signature: signature
+}
+->
+format_json
+```
+
+### Error Handling with None Returns
+
+`base64_decode` and `hex_decode` return `None` if the input is invalid. Always handle this:
+
+```avon
+let maybe_decoded = base64_decode user_input in
+if is_none maybe_decoded
+then error "Invalid Base64 encoding"
+else maybe_decoded
+```
+
+Or use the `default` function:
+
+```avon
+let decoded = base64_decode user_input -> default "" in
+# Returns empty string if decoding fails
+```
+
+### CLI Usage Examples
+
+One-liners using fallback mode (prints results line-by-line):
+
+```bash
+# Hash a file
+avon 'sha256 (readfile "config.json")'
+
+# Generate multiple hashes
+avon '[readfile "file1.txt", readfile "file2.txt"] -> map sha256'
+
+# Encode a password
+avon 'sha256 (env_var "PASSWORD")'
+
+# Create Base64-encoded config
+avon 'base64_encode (format_json {user: "alice", admin: true})'
+
+# Verify checksums
+avon 'glob "*.txt" -> map (\f concat (concat (basename f) ": ") (sha256 (readfile f)))'
+```
+
+In fallback mode (piping or stdin), lists print one item per line:
+
+```bash
+# Create list from code that produces hashes
+avon run '["file1.txt", "file2.txt"] -> map (\f concat (concat (basename f) " ") (sha256 f))'
+# Output (one per line in fallback mode):
+# file1.txt 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+# file2.txt 3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d
+```
+
+---
+
 ## Importing Files from Folders
 
 Avon's file I/O and list processing capabilities make it powerful for working with entire folders of files. You can load JSON configs, import Avon modules, filter files, and aggregate data—all in a clean, declarative way.
@@ -3330,7 +3586,9 @@ let files = glob "src/**/*.av" in
 let grouped = fold
   (\acc \f
     let dir = dirname f in
-    set acc dir (head (get acc dir) || []) + [basename f])
+    let existing = get acc dir in
+    let prior = if is_none existing then [] else existing in
+    set acc dir (prior + [basename f]))
   {}
   files
 in
@@ -6374,6 +6632,339 @@ avon deploy my_ricing_system.av --root ~ --force
 avon deploy theme.av -theme nord --root ~/.config --force
 avon deploy theme.av -theme dracula --root ~/.config --force
 ```
+
+---
+
+## Avon as a Linux Utils Replacement
+
+Avon excels at replacing many common Linux utilities in a single, declarative tool. Whether you need text processing, data extraction, file operations, or configuration generation, Avon's concise syntax and powerful builtins make it an elegant alternative to traditional pipelines.
+
+### Why Replace Common Tools with Avon?
+
+**Traditional Unix approach:**
+```bash
+cat data.json | jq '.[] | select(.active) | .name' | sort | uniq | wc -l
+```
+
+**Avon approach:**
+```bash
+avon 'json_parse "data.json" -> filter (\x x.active) -> map (\x x.name) -> unique -> length'
+```
+
+**Benefits:**
+1. **Single language** - No shell quoting nightmares or tool version incompatibilities
+2. **Type-safe** - Catch errors at parse time, not runtime
+3. **Reproducible** - Save your scripts in version control
+4. **Portable** - Works identically on Linux, macOS, Windows
+5. **Concise** - Powerful built-in functions reduce verbosity
+
+**A note on `avon '<code>'` vs `avon run '<code>'`:** Bare `avon '<code>'` (no subcommand) is a
+*fallback* mode: Avon first tries to read `<code>` as a file path, and only evaluates it as
+inline code if that file doesn't exist. This is convenient for quick one-liners, and as a bonus
+it prints list results one item per line (perfect for piping into other Unix tools). But if your
+code string is longer than ~255 characters, the OS reports a different file error
+("File name too long") instead of "not found", and Avon will NOT fall back to evaluating it as
+code. For longer or multi-line scripts, always use `avon run '<code>'` instead, which evaluates
+the string directly and never touches the filesystem. The tradeoff is that `avon run` (like
+`avon eval`) prints list results in bracket form `[a, b, c]`, so use `join` explicitly if you
+want one-per-line output.
+
+### Text Processing One-Liners
+
+Replace `sed`, `awk`, `cut`, `tr`, and `sort`:
+
+```bash
+# Extract specific columns from CSV
+avon 'csv_parse "data.csv" -> map (\row row.name)'
+
+# Convert comma-separated to newline-separated (fallback mode prints one item per line)
+avon 'split "a,b,c" ","'
+
+# Count lines in file
+avon 'readlines "log.txt" -> length'
+
+# Filter lines matching a pattern (regex_match takes the pattern FIRST, then the text)
+avon 'readlines "log.txt" -> filter (\l regex_match "ERROR" l)'
+
+# Convert to uppercase
+avon 'readfile "input.txt" -> upper'
+
+# Remove empty lines
+avon 'readlines "file.txt" -> filter (\l not (is_empty l))'
+
+# Reverse lines
+avon 'readlines "file.txt" -> reverse'
+
+# Number lines (like `cat -n`)
+avon 'readlines "file.txt" -> enumerate -> map (\e concat (concat (to_string (head e)) ": ") (last e))'
+```
+
+### Data Extraction and Transformation
+
+Replace `jq`, `yq`, and `xpath`:
+
+```bash
+# Extract specific fields from JSON
+avon 'json_parse "config.json" -> map (\obj {name: (obj.name), email: (obj.email)})'
+
+# Filter JSON objects by condition
+avon 'json_parse "users.json" -> filter (\u u.age > 18) -> format_json'
+
+# Transform YAML to JSON
+avon 'yaml_parse "config.yml" -> format_json -> publish "config.json"'
+
+# Extract and sum numeric values
+avon 'csv_parse "sales.csv" -> map (\row row.amount -> to_float) -> sum'
+
+# Group data by field
+avon 'json_parse "items.json" -> group_by (\item item.category) -> format_json'
+
+# Create lookup table from JSON array (use `set`, not `dict_set` - that function doesn't exist)
+avon 'json_parse "users.json" -> fold (\acc \u set acc (to_string u.id) u) {}'
+```
+
+### System Information Scripts
+
+Replace `lsb_release`, `uname`, `whoami`, and similar:
+
+```bash
+# Show basic system info
+avon '
+let info = {
+  os: os,
+  user: env_var_or "USER" "unknown",
+  home: env_var_or "HOME" "/home/user",
+  shell: env_var_or "SHELL" "/bin/bash"
+} in
+format_json info
+'
+
+# Create system report (fallback mode prints each line automatically, no join needed)
+avon '
+[
+  concat "OS: " os,
+  concat "User: " (env_var_or "USER" "unknown"),
+  concat "Home: " (env_var_or "HOME" "/"),
+  concat "Shell: " (env_var_or "SHELL" "unknown"),
+  concat "Path: " (env_var_or "PWD" "/")
+]
+'
+
+# List all environment variables
+avon 'env_vars -> keys -> sort'
+
+# Generate machine fingerprint
+avon 'sha256 (concat (concat (os) (env_var_or "USER" "unknown")) (env_var_or "HOME" ""))'
+```
+
+### File Operations
+
+Replace `find`, `ls`, `du`, and `file`:
+
+```bash
+# List all .rs files recursively (like `find . -name "*.rs"`)
+avon 'glob "**/*.rs" -> sort'
+
+# Count files by type (glob "**/*.*" avoids matching directories)
+avon '
+glob "**/*.*" -> map (\f
+  let ext = if regex_match "\\." f then split f "." -> last else "no-ext" in
+  ext
+) -> group_by (\e e) -> keys
+'
+
+# Generate file listing with sizes (simplified du)
+avon '
+glob "src/**/*.rs" -> map (\f
+  concat (concat f ": ") (readfile f -> length -> format_bytes)
+)
+'
+
+# Find large files (glob "**/*.*" avoids matching directories, which readfile can't open)
+avon '
+glob "**/*.*" -> filter (\f
+  (readfile f -> length) > 1000000
+) -> map (\f
+  concat (concat (basename f) " (") (concat (readfile f -> length -> format_bytes) ")")
+)
+'
+
+# Create file manifest with hashes
+avon '
+glob "dist/*" -> map (\f
+  {file: (basename f), hash: (sha256 (readfile f)), size: (readfile f -> length)}
+) -> format_json
+'
+```
+
+### Configuration Generation
+
+Replace `envsubst`, `m4`, and manual templating:
+
+```bash
+# Expand environment variables in template
+# (nest replace calls - "->" only feeds the LAST argument, so chaining two
+#  "-> replace old new" in a row would discard the first replacement)
+avon '
+replace (replace (readfile "template.conf") "{{USER}}" (env_var "USER")) "{{HOME}}" (env_var "HOME")
+-> publish "config.conf"
+'
+
+# Generate config from JSON data (multi-line script over 255 chars: use "avon run")
+avon run '
+let config = json_parse "settings.json" in
+let port_line = concat "server_port=" (to_string config.port) in
+let host_line = concat "server_host=" config.host in
+let debug_line = concat "debug=" (to_string config.debug) in
+join [port_line, host_line, debug_line] "\n"
+-> publish "app.conf"
+'
+
+# Multi-environment config generator
+avon '
+let env = env_var_or "APP_ENV" "production" in
+let base_config = yaml_parse ("config." + env + ".yml") in
+base_config -> format_yaml -> publish "runtime-config.yml"
+'
+```
+
+### Task Automation
+
+Replace simple shell scripts:
+
+```bash
+# Process all JSON files
+avon 'glob "data/*.json" -> map (\f {file: (basename f), data: (json_parse f), processed: (now)}) -> format_json -> publish "processed.json"'
+
+# Generate and deploy configs
+avon deploy my_config.av --root ~/.config --force
+
+# Create backup with timestamp (`timestamp` is a reserved builtin - use a different name, e.g. `ts`)
+avon 'let ts = date_format (now) "%Y%m%d_%H%M%S" in let base = concat "backup_" ts in publish (concat base ".json") (readfile "data.json")'
+```
+
+### Real-World Workflows
+
+#### Workflow 1: Daily Report Generation
+
+Create a daily report from logs and metrics:
+
+```bash
+#!/usr/bin/env -S avon run
+let today = date_format (now) "%Y-%m-%d" in
+let error_count = readlines "app.log" -> count (\l regex_match "ERROR" l) in
+let warning_count = readlines "app.log" -> count (\l regex_match "WARN" l) in
+
+{
+  date: today,
+  errors: error_count,
+  warnings: warning_count,
+  status: if error_count > 10 then "CRITICAL" else "OK"
+}
+-> format_json
+-> publish ("reports/" + today + ".json")
+```
+
+Run daily via cron:
+```bash
+# Crontab entry
+0 23 * * * /home/user/generate_report.av
+```
+
+#### Workflow 2: Config Validation
+
+Validate and transform configs. Note: Avon does not allow re-binding (shadowing) a `let`
+variable name, so each validation step needs a distinct name; list concatenation uses `+`
+(not `++`); and `--backup` is a `deploy`-only CLI flag, not valid inside an expression -
+run this script with `avon deploy --backup` if you want a backup of the previous file:
+
+```bash
+avon run '
+let config = yaml_parse "app.yml" in
+let name_errors = if is_none (get config "name") then ["Missing name"] else [] in
+let all_errors = if is_none (get config "port") then name_errors + ["Missing port"] else name_errors in
+
+if is_empty all_errors
+then config -> format_yaml -> publish "app.yml"
+else error (concat "Config invalid: " (join all_errors ", "))
+'
+```
+
+#### Workflow 3: Data Pipeline
+
+Transform data through multiple formats:
+
+```bash
+# CSV -> JSON -> Filter -> YAML
+avon run '
+csv_parse "input.csv"
+-> map (\row {name: row.name, value: (to_float row.value)})
+-> filter (\item item.value > 100)
+-> format_yaml
+-> publish "filtered.yml"
+'
+```
+
+#### Workflow 4: Batch File Processing
+
+Process multiple files with one command. Note: a multi-line lambda body containing a `->`
+chain must be wrapped in its own parentheses, otherwise later steps in the chain (like
+`format_json` and `publish` here) apply to the outer `map`'s result instead of running once
+per file:
+
+```bash
+avon run '
+glob "input/*.json" -> map (\f
+  (json_parse f
+  -> map (\row row.name -> upper)
+  -> format_json
+  -> publish (concat "output/" (basename f)))
+)
+'
+```
+
+### CLI Usage: Fallback Mode Behavior
+
+When running Avon in fallback mode (direct file or stdin), lists print one item per line:
+
+```bash
+# Create three items
+echo '[1, 2, 3]' | avon -
+# Output (line-by-line):
+# 1
+# 2
+# 3
+
+# Map function over items - "avon -" reads the whole avon PROGRAM from stdin
+# (not raw data to feed into a running program), so the data must be part
+# of the piped code itself:
+echo '["a", "b", "c"] -> map upper' | avon -
+# Output (line-by-line):
+# A
+# B
+# C
+
+# Multiple items from file processing
+avon 'glob "*.txt"'
+# Output (one file per line):
+# file1.txt
+# file2.txt
+# file3.txt
+```
+
+Compare with explicit modes that show brackets:
+
+```bash
+# Run mode (shows brackets)
+avon run '[1, 2, 3]'
+# Output: [1, 2, 3]
+
+# Eval mode (shows brackets)
+avon eval config.av  # if config.av returns [1, 2, 3]
+# Output: [1, 2, 3]
+```
+
+This fallback behavior makes Avon perfect for piping data through shell pipelines!
 
 ---
 

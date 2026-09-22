@@ -16,6 +16,10 @@ pub const NAMES: &[&str] = &[
     "csv_parse_string",
     "dirname",
     "exists",
+    "file_is_dir",
+    "file_is_file",
+    "file_mtime",
+    "file_size",
     "fill_template",
     "glob",
     "html_parse",
@@ -26,6 +30,7 @@ pub const NAMES: &[&str] = &[
     "ini_parse_string",
     "json_parse",
     "json_parse_string",
+    "lines_grep",
     "opml_parse",
     "opml_parse_string",
     "publish",
@@ -45,13 +50,12 @@ pub const NAMES: &[&str] = &[
 pub fn get_arity(name: &str) -> Option<usize> {
     match name {
         "abspath" | "basename" | "csv_parse" | "csv_parse_string" | "dirname" | "exists"
-        | "glob" | "html_parse" | "html_parse_string" | "import" | "ini_parse"
-        | "ini_parse_string" | "json_parse" | "json_parse_string" | "opml_parse"
-        | "opml_parse_string" | "readfile" | "readlines" | "toml_parse" | "toml_parse_string"
-        | "walkdir" | "xml_parse" | "xml_parse_string" | "yaml_parse" | "yaml_parse_string" => {
-            Some(1)
-        }
-        "fill_template" | "import_git" | "publish" | "relpath" => Some(2),
+        | "file_is_dir" | "file_is_file" | "file_mtime" | "file_size" | "glob" | "html_parse"
+        | "html_parse_string" | "import" | "ini_parse" | "ini_parse_string" | "json_parse"
+        | "json_parse_string" | "opml_parse" | "opml_parse_string" | "readfile" | "readlines"
+        | "toml_parse" | "toml_parse_string" | "walkdir" | "xml_parse" | "xml_parse_string"
+        | "yaml_parse" | "yaml_parse_string" => Some(1),
+        "fill_template" | "import_git" | "lines_grep" | "publish" | "relpath" => Some(2),
         _ => None,
     }
 }
@@ -240,6 +244,102 @@ pub fn execute(name: &str, args: &[Value], source: &str, line: usize) -> Result<
             })?;
             let lines: Vec<Value> = data.lines().map(|s| Value::String(s.to_string())).collect();
             Ok(Value::List(lines))
+        }
+        "file_size" => {
+            let pathv = &args[0];
+            let p = value_to_path_string(pathv, source)?;
+            let metadata = std::fs::metadata(&p).map_err(|e| {
+                EvalError::new(
+                    format!("file_size: failed to read {}: {}", p, e),
+                    None,
+                    None,
+                    line,
+                )
+            })?;
+            Ok(Value::Number(crate::common::Number::Int(
+                metadata.len() as i64
+            )))
+        }
+        "file_mtime" => {
+            let pathv = &args[0];
+            let p = value_to_path_string(pathv, source)?;
+            let metadata = std::fs::metadata(&p).map_err(|e| {
+                EvalError::new(
+                    format!("file_mtime: failed to read {}: {}", p, e),
+                    None,
+                    None,
+                    line,
+                )
+            })?;
+            match metadata.modified() {
+                Ok(time) => {
+                    let duration = time
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default();
+                    Ok(Value::Number(crate::common::Number::Int(
+                        duration.as_secs() as i64,
+                    )))
+                }
+                Err(e) => Err(EvalError::new(
+                    format!("file_mtime: failed to get mtime: {}", e),
+                    None,
+                    None,
+                    line,
+                )),
+            }
+        }
+        "file_is_dir" => {
+            let pathv = &args[0];
+            let p = value_to_path_string(pathv, source)?;
+            Ok(Value::Bool(std::path::Path::new(&p).is_dir()))
+        }
+        "file_is_file" => {
+            let pathv = &args[0];
+            let p = value_to_path_string(pathv, source)?;
+            Ok(Value::Bool(std::path::Path::new(&p).is_file()))
+        }
+        "lines_grep" => {
+            // Args: file path, regex pattern
+            let pathv = &args[0];
+            let patternv = &args[1];
+
+            let p = value_to_path_string(pathv, source)?;
+            let pattern = match patternv {
+                Value::String(s) => s.clone(),
+                _ => {
+                    return Err(EvalError::type_mismatch(
+                        "string",
+                        patternv.to_string(source),
+                        line,
+                    ))
+                }
+            };
+
+            let data = std::fs::read_to_string(&p).map_err(|e| {
+                EvalError::new(
+                    format!("lines_grep: failed to read {}: {}", p, e),
+                    None,
+                    None,
+                    line,
+                )
+            })?;
+
+            let regex = regex::Regex::new(&pattern).map_err(|e| {
+                EvalError::new(
+                    format!("lines_grep: invalid regex: {}", e),
+                    None,
+                    None,
+                    line,
+                )
+            })?;
+
+            let matching_lines: Vec<Value> = data
+                .lines()
+                .filter(|line| regex.is_match(line))
+                .map(|line| Value::String(line.to_string()))
+                .collect();
+
+            Ok(Value::List(matching_lines))
         }
         "fill_template" => {
             // Args: filename (string or path), substitutions (dict or list of [key, value] pairs)

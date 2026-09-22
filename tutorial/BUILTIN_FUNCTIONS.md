@@ -517,9 +517,11 @@ Functions for string manipulation.
 | `upper` | `String -> String` | Converts the string to uppercase. |
 | `words` | `String -> [String]` | Splits a string into words (by whitespace). |
 | `base64_encode` | `String -> String` | Encodes a string to Base64. |
-| `base64_decode` | `String -> String` | Decodes a Base64-encoded string. |
-| `hash_md5` | `String -> String` | Returns the MD5 hash of a string as a hex string. |
-| `hash_sha256` | `String -> String` | Returns the SHA-256 hash of a string as a hex string. |
+| `base64_decode` | `String -> String\|None` | Decodes a Base64-encoded string, returns None if invalid. |
+| `hex_encode` | `String -> String` | Encodes a string as hexadecimal (2 hex digits per byte). |
+| `hex_decode` | `String -> String\|None` | Decodes a hexadecimal string, returns None if invalid. |
+| `sha256` | `String -> String` | Returns the SHA-256 hash of a string as a hex string. |
+| `sha512` | `String -> String` | Returns the SHA-512 hash of a string as a hex string. |
 
 **Examples:**
 ```avon
@@ -540,9 +542,15 @@ repeat "ab" 3                               # "ababab"
 replace "hello world" "world" "Avon"        # "hello Avon"
 base64_encode "Hello, World!"               # "SGVsbG8sIFdvcmxkIQ=="
 base64_decode "SGVsbG8sIFdvcmxkIQ=="        # "Hello, World!"
-hash_md5 "hello"                            # "5d41402abc4b2a76b9719d911017c592"
-hash_sha256 "hello"                         # "2cf24dba5fb0a30e26e83b2ac5b9e29e..."
+hex_encode "hello"                          # "68656c6c6f"
+hex_decode "68656c6c6f"                     # "hello"
+sha256 "hello"                              # "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+sha512 "hello"                              # "9b71d224bd62f3785d96f46e3e6a6671790312affc7cbffc4d8d93c4b5ee550235e1651e4c0057f13afc8b9ed81017523af..."
 ```
+
+## Encoding & Hashing Functions
+
+Use these functions for data encoding, checksums, and cryptographic operations.
 
 ## Type Functions
 

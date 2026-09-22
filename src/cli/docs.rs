@@ -701,8 +701,10 @@ pub fn get_builtin_doc(func_name: &str) -> Option<String> {
         // Encoding/Hashing Operations
         ("base64_encode", "base64_encode :: String -> String\n  Encode a string to Base64 format.\n  Useful for encoding binary data as text.\n  \n  Arguments:\n    1. String to encode\n  \n  Example: base64_encode \"hello\" -> \"aGVsbG8=\"\n           Encode text\n  \n  Example: base64_encode \"foo bar\" -> \"Zm9vIGJhcg==\"\n           Encode with spaces\n  \n  Use case: Encode binary data, create data URIs, transmit non-text data as text\n  Note: The result contains only A-Z, a-z, 0-9, +, /, and = (padding)"),
         ("base64_decode", "base64_decode :: String -> String | None\n  Decode a Base64 encoded string back to original text.\n  Returns None if input is not valid Base64.\n  \n  Arguments:\n    1. Base64 encoded string\n  \n  Example: base64_decode \"aGVsbG8=\" -> \"hello\"\n           Decode to original text\n  \n  Example: base64_decode \"Zm9vIGJhcg==\" -> \"foo bar\"\n           Decode with spaces preserved\n  \n  Example: base64_decode \"invalid!\" -> None\n           Invalid Base64 returns None\n  \n  Use case: Decode received data, read stored encoded values, authentication tokens\n  Note: Always check for None when decoding untrusted data"),
-        ("hash_md5", "hash_md5 :: String -> String\n  Compute the MD5 hash of a string.\n  Returns a 32-character hexadecimal string.\n  \n  WARNING: MD5 is cryptographically broken. Use for checksums only, NOT for security.\n  \n  Arguments:\n    1. String to hash\n  \n  Example: hash_md5 \"hello\" -> \"5d41402abc4b2a76b9719d911017c592\"\n           MD5 hash of \"hello\"\n  \n  Example: hash_md5 \"\" -> \"d41d8cd98f00b204e9800998ecf8427e\"\n           Hash of empty string\n  \n  Use case: File checksums, detecting changes, non-security hashing\n  WARNING: Do NOT use for password hashing or security-critical applications\n  Note: Same input always produces same output (deterministic)"),
-        ("hash_sha256", "hash_sha256 :: String -> String\n  Compute the SHA-256 hash of a string.\n  Returns a 64-character hexadecimal string.\n  SHA-256 is cryptographically secure and widely used.\n  \n  Arguments:\n    1. String to hash\n  \n  Example: hash_sha256 \"hello\" -> \"2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824\"\n           SHA-256 hash of \"hello\"\n  \n  Example: hash_sha256 \"\" -> \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n           Hash of empty string\n  \n  Use case: File integrity verification, checksums, cryptographic operations, password hashing\n  Note: Same input always produces same output (deterministic)\n  Note: Suitable for security applications (unlike MD5)"),
+        ("hex_encode", "hex_encode :: String -> String\n  Encode a string as hexadecimal (2 hex digits per byte).\n  \n  Arguments:\n    1. String to encode\n  \n  Example: hex_encode \"hello\" -> \"68656c6c6f\"\n           Each character becomes 2 hex digits\n  \n  Example: hex_encode \"AB\" -> \"4142\"\n           A=0x41, B=0x42\n  \n  Use case: Display binary data as text, create hex dumps\n  Note: Result is lowercase hex digits"),
+        ("hex_decode", "hex_decode :: String -> String | None\n  Decode a hexadecimal string back to original text.\n  Returns None if input is not valid hex.\n  \n  Arguments:\n    1. Hexadecimal encoded string\n  \n  Example: hex_decode \"68656c6c6f\" -> \"hello\"\n           Decode from hex\n  \n  Example: hex_decode \"4142\" -> \"AB\"\n           0x41=A, 0x42=B\n  \n  Example: hex_decode \"invalid!\" -> None\n           Invalid hex returns None\n  \n  Use case: Parse hex dumps, read binary data in text form\n  Note: Input must contain only 0-9, a-f, A-F"),
+        ("sha256", "sha256 :: String -> String\n  Compute the SHA-256 hash of a string.\n  Returns a 64-character hexadecimal string.\n  SHA-256 is cryptographically secure and widely used.\n  \n  Arguments:\n    1. String to hash\n  \n  Example: sha256 \"hello\" -> \"2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824\"\n           SHA-256 hash of \"hello\"\n  \n  Example: sha256 \"\" -> \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n           Hash of empty string\n  \n  Use case: File integrity verification, checksums, cryptographic operations, password hashing\n  Note: Same input always produces same output (deterministic)\n  Note: Suitable for security applications"),
+        ("sha512", "sha512 :: String -> String\n  Compute the SHA-512 hash of a string.\n  Returns a 128-character hexadecimal string.\n  SHA-512 is even more secure than SHA-256 and widely used.\n  \n  Arguments:\n    1. String to hash\n  \n  Example: sha512 \"hello\" -> (128 hex characters)\n           SHA-512 hash of \"hello\"\n  \n  Example: sha512 \"\" -> (128 hex characters for empty string)\n           Hash of empty string\n  \n  Use case: File integrity verification, checksums, cryptographic operations, password hashing\n  Note: Same input always produces same output (deterministic)\n  Note: Produces longer hash than SHA-256 (more collision-resistant)"),
 
         // List Operations
         ("map", "map :: (a -> b) -> [a] -> [b]\n  Transform each item in a list by applying a function.\n  \n  Arguments:\n    1. Function to apply to each element\n    2. List to transform\n  \n  Example: map (\\x x * 2) [1, 2, 3] -> [2, 4, 6]\n           Double each number in the list\n  \n  Example: map upper [\"hello\", \"world\"] -> [\"HELLO\", \"WORLD\"]\n           Convert each string to uppercase\n  \n  Tip: Use with partially applied functions:\n       let double = map (\\x x * 2) in\n       double [1, 2, 3]"),
@@ -1315,6 +1317,35 @@ pub fn print_builtin_docs() {
     println!();
     println!("  Note: Path values are created with @ syntax: @config/{{env}}.yml");
     println!("        Paths can be stored in variables and passed to file functions.");
+    println!();
+
+    // Encoding/Hashing Operations
+    println!("Encoding/Hashing Operations:");
+    println!("----------------------------");
+    println!(
+        "  {:<18} :: {}",
+        "base64_encode", "String -> String  (encode to Base64)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "base64_decode", "String -> String | None  (decode from Base64)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "hex_encode", "String -> String  (encode to hexadecimal)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "hex_decode", "String -> String | None  (decode from hexadecimal)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "sha256", "String -> String  (SHA-256 hash)"
+    );
+    println!(
+        "  {:<18} :: {}",
+        "sha512", "String -> String  (SHA-512 hash)"
+    );
     println!();
 
     // Data Utilities

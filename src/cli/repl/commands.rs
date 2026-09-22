@@ -1170,7 +1170,7 @@ pub fn handle_command(
                 }
             };
 
-            let result = process_source(source, source_name, deploy_opts, true);
+            let result = process_source(source, source_name, deploy_opts, true, false);
 
             if result == 0 {
                 println!("Deployment completed successfully");

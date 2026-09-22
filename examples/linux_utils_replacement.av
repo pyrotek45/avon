@@ -1,0 +1,11 @@
+# Linux Utilities Replacement Examples
+# Shows how Avon can replace common shell utilities
+
+# Example: Process lines of data like awk
+let data = ["alice:30", "bob:25", "charlie:35"] in
+
+# Extract just the names
+let extract_name = \line (head (split line ":")) in
+let names = data -> map extract_name in
+
+join names ", "

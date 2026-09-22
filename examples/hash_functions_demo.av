@@ -1,0 +1,15 @@
+# Hash Functions & Encoding Demo
+# Demonstrates practical uses of hashing and encoding in Avon
+
+# Example 1: File integrity verification
+let file_content = "Important data that should not change" in
+let original_hash = sha256 file_content in
+let is_verified = (sha256 file_content) == original_hash in
+
+{
+  file: "data.txt",
+  original_hash: original_hash,
+  verified: is_verified
+}
+->
+format_json

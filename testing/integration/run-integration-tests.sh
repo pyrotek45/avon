@@ -53,6 +53,7 @@ echo -e "${BLUE}========================================${NC}"
 # ── CLI Integration ──────────────────────────────────────
 print_section "CLI Integration"
 run_test "CLI Integration"        "$INTEGRATION_DIR/test_cli_integration.sh"
+run_test "New Builtins"           "$INTEGRATION_DIR/test_new_builtins.sh"
 
 # ── Example Outputs ──────────────────────────────────────
 print_section "Example Outputs"

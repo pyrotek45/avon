@@ -11,8 +11,8 @@ use crate::common::Value;
 use std::collections::HashMap;
 
 use super::{
-    aggregate, color, datetime, debug, dict, env, file_io, formatting, html, list, markdown, math,
-    regex, ricing, string, types,
+    aggregate, color, datetime, debug, dict, env, file_io, formatting, hash, html, list, markdown,
+    math, regex, ricing, string, types,
 };
 
 /// Type alias for category module definition
@@ -28,6 +28,7 @@ const CATEGORY_MODULES: &[CategoryModule] = &[
     (env::NAMES, env::get_arity),
     (file_io::NAMES, file_io::get_arity),
     (formatting::NAMES, formatting::get_arity),
+    (hash::NAMES, hash::get_arity),
     (html::NAMES, html::get_arity),
     (list::NAMES, list::get_arity),
     (markdown::NAMES, markdown::get_arity),
@@ -49,6 +50,7 @@ pub fn is_builtin_name(name: &str) -> bool {
         || env::is_builtin(name)
         || file_io::is_builtin(name)
         || formatting::is_builtin(name)
+        || hash::is_builtin(name)
         || html::is_builtin(name)
         || list::is_builtin(name)
         || markdown::is_builtin(name)
@@ -70,6 +72,7 @@ pub fn get_builtin_arity(name: &str) -> Option<usize> {
         .or_else(|| env::get_arity(name))
         .or_else(|| file_io::get_arity(name))
         .or_else(|| formatting::get_arity(name))
+        .or_else(|| hash::get_arity(name))
         .or_else(|| html::get_arity(name))
         .or_else(|| list::get_arity(name))
         .or_else(|| markdown::get_arity(name))
@@ -129,6 +132,7 @@ pub fn all_builtin_names() -> Vec<(&'static str, &'static [&'static str])> {
         ("env", env::NAMES),
         ("file_io", file_io::NAMES),
         ("formatting", formatting::NAMES),
+        ("hash", hash::NAMES),
         ("html", html::NAMES),
         ("list", list::NAMES),
         ("markdown", markdown::NAMES),

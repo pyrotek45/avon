@@ -28,6 +28,7 @@ pub mod dict;
 pub mod env;
 pub mod file_io;
 pub mod formatting;
+pub mod hash;
 pub mod html;
 pub mod list;
 pub mod markdown;

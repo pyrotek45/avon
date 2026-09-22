@@ -1297,7 +1297,8 @@ fn eval_with_depth(
                     Value::Builtin(name, args) if args.is_empty() => {
                         // Check if this is a zero-arity builtin that should be executed
                         let arity = match name.as_str() {
-                            "now" | "timestamp" | "timezone" | "uuid" | "env_vars" => 0,
+                            "now" | "timestamp" | "timezone" | "uuid" | "env_vars" | "hostname"
+                            | "whoami" => 0,
                             _ => 1, // Default arity for safety
                         };
                         if arity == 0 {
@@ -1814,6 +1815,9 @@ pub fn execute_builtin(
     }
     if builtins::formatting::is_builtin(name) {
         return builtins::formatting::execute(name, args, source, line);
+    }
+    if builtins::hash::is_builtin(name) {
+        return builtins::hash::execute(name, args, source, line);
     }
     if builtins::html::is_builtin(name) {
         return builtins::html::execute(name, args, source, line);

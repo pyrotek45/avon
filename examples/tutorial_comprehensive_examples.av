@@ -1,0 +1,125 @@
+# Comprehensive Tutorial Examples
+# Demonstrates all key Avon features with working examples
+
+# All examples wrapped in a single expression with nested let bindings
+let hash_basic = sha256 "hello" in
+let hash_sha512 = sha512 "hello" in
+let encoded = base64_encode "Hello, World!" in
+let decoded = base64_decode encoded in
+let hex_result = hex_encode "hello" in
+let unhex = hex_decode hex_result in
+let file_content = "Important data" in
+let file_hash = sha256 file_content in
+let is_verified = (sha256 file_content) == file_hash in
+
+let word_list = split "apple,banana,cherry" "," in
+let rejoined = join word_list "|" in
+let upper_text = upper "hello world" in
+let lower_text = lower "HELLO WORLD" in
+let reversed = reverse ["a", "b", "c"] in
+let enumerated = ["line1", "line2", "line3"] -> enumerate -> map (\e concat (concat (to_string (head e)) ": ") (last e)) in
+let numbers = [10, 20, 15, 30, 25] in
+let large = numbers -> filter (\x x > 18) in
+
+let users = [
+  {name: "alice", email: "alice@example.com", age: 28},
+  {name: "bob", email: "bob@example.com", age: 32},
+  {name: "charlie", email: "charlie@example.com", age: 25}
+] in
+let names = users -> map (\u u.name) in
+let user_info = users -> map (\u {name: (u.name), email: (u.email)}) in
+let adults = users -> filter (\u u.age >= 18) in
+let by_age_range = users -> group_by (\u if u.age >= 30 then "senior" else "junior") in
+let total_age = users -> map (\u u.age) -> sum in
+let avg_age_calc = total_age / (users -> length) in
+let user_count = users -> length in
+
+let system_os = os in
+let username = env_var_or "USER" "unknown" in
+let home_dir = env_var_or "HOME" "/home/user" in
+let fingerprint = sha256 (concat (concat system_os username) home_dir) in
+let system_info = {
+  os: system_os,
+  user: username,
+  home: home_dir,
+  timestamp: now,
+  fingerprint: fingerprint
+} in
+
+let app_config = {port: 8080, host: "localhost", debug: false} in
+let port_line = concat "server_port=" (to_string app_config.port) in
+let host_line = concat "server_host=" app_config.host in
+let debug_line = concat "debug=" (to_string app_config.debug) in
+let config_lines = [port_line, host_line, debug_line] in
+let config_text = join config_lines "\n" in
+
+let items = [
+  {id: 1, category: "tools", price: 50},
+  {id: 2, category: "books", price: 20},
+  {id: 3, category: "tools", price: 75},
+  {id: 4, category: "books", price: 15}
+] in
+let by_category = items -> group_by (\item item.category) in
+let category_totals = by_category -> keys -> map (\cat {
+  category: cat,
+  count: (get by_category cat -> length),
+  total_price: (get by_category cat -> map (\item item.price) -> sum)
+}) in
+
+let sensitive_data = {username: "admin", token: "secret123"} in
+let json_data = format_json sensitive_data in
+let encoded_data = base64_encode json_data in
+
+let config = {name: "myapp", port: 8080, timeout: 30} in
+let has_name = is_none (get config "name") -> not in
+let has_port = is_none (get config "port") -> not in
+let is_valid = (has_name && has_port) in
+
+# ===== FINAL OUTPUT =====
+# Create comprehensive output with all examples
+{
+  hashing: {
+    sha256_example: hash_basic,
+    sha512_example: hash_sha512,
+    base64_encode_example: encoded,
+    base64_decode_example: decoded,
+    hex_encode_example: hex_result,
+    hex_decode_example: unhex,
+    file_hash: file_hash,
+    integrity_check: is_verified
+  },
+  text_processing: {
+    split_join: rejoined,
+    uppercase: upper_text,
+    lowercase: lower_text,
+    reversed_list: reversed,
+    enumeration_sample: (enumerated -> head),
+    filtered_numbers: large
+  },
+  data_extraction: {
+    user_names: names,
+    user_info_subset: (user_info -> head),
+    adult_count: (adults -> length),
+    age_grouping: by_age_range,
+    total_age: total_age,
+    avg_age: avg_age_calc,
+    user_count: user_count
+  },
+  system_info: system_info,
+  configuration: {
+    app_config: app_config,
+    config_text: config_text,
+    validation_result: is_valid
+  },
+  complex_workflow: {
+    by_category: by_category,
+    category_summary: category_totals
+  },
+  encoding: {
+    original_data: sensitive_data,
+    json_format: json_data,
+    base64_encoded: encoded_data
+  }
+}
+->
+format_json

@@ -24,7 +24,7 @@ pub fn run_cli(args: Vec<String>) -> i32 {
 
     match cmd.as_str() {
         "eval" => match parse_args(rest, true) {
-            Ok(opts) => execute_eval(opts),
+            Ok(opts) => execute_eval(opts, false),
             Err(e) => {
                 eprintln!("Error: {}", e);
                 eprintln!("  Usage: avon eval <file> [options]");
@@ -34,7 +34,7 @@ pub fn run_cli(args: Vec<String>) -> i32 {
             }
         },
         "deploy" => match parse_args(rest, true) {
-            Ok(opts) => execute_deploy(opts),
+            Ok(opts) => execute_deploy(opts, false),
             Err(e) => {
                 eprintln!("Error: {}", e);
                 eprintln!("  Usage: avon deploy <file> [options]");
@@ -149,7 +149,7 @@ pub fn run_cli(args: Vec<String>) -> i32 {
                         legacy_args.extend_from_slice(rest);
                         match parse_args(&legacy_args, true) {
                             // require_file=true satisfied by --git
-                            Ok(opts) => execute_deploy(opts),
+                            Ok(opts) => execute_deploy(opts, false),
                             Err(e) => {
                                 eprintln!("Error: {}", e);
                                 1
@@ -160,7 +160,7 @@ pub fn run_cli(args: Vec<String>) -> i32 {
                         let mut legacy_args = vec!["--git".to_string()]; // map to git opt
                         legacy_args.extend_from_slice(rest);
                         match parse_args(&legacy_args, true) {
-                            Ok(opts) => execute_eval(opts),
+                            Ok(opts) => execute_eval(opts, false),
                             Err(e) => {
                                 eprintln!("Error: {}", e);
                                 1
@@ -209,9 +209,9 @@ pub fn run_cli(args: Vec<String>) -> i32 {
                 match parse_args(&eff_args, true) {
                     Ok(opts) => {
                         if is_deploy {
-                            execute_deploy(opts)
+                            execute_deploy(opts, true)
                         } else {
-                            execute_eval(opts)
+                            execute_eval(opts, true)
                         }
                     }
                     Err(e) => {
@@ -298,6 +298,7 @@ pub fn process_source(
     source_name: String,
     opts: CliOptions,
     deploy_mode: bool,
+    is_fallback: bool,
 ) -> i32 {
     if opts.debug {
         eprintln!("[DEBUG] Starting lexer...");
@@ -464,7 +465,21 @@ pub fn process_source(
                             Ok(_) | Err(_) => {
                                 // If no file templates found (empty list) or collection errors,
                                 // print the value as-is (no highlighting)
-                                println!("{}", v.to_string(&source));
+                                // Special case: print lists line-by-line only in fallback mode
+                                if is_fallback {
+                                    match &v {
+                                        Value::List(items) => {
+                                            for item in items {
+                                                println!("{}", item.to_string(&source));
+                                            }
+                                        }
+                                        _ => {
+                                            println!("{}", v.to_string(&source));
+                                        }
+                                    }
+                                } else {
+                                    println!("{}", v.to_string(&source));
+                                }
                             }
                         }
                         0
@@ -902,23 +917,23 @@ fn deploy_files(v: &Value, source: &str, source_name: &str, opts: &CliOptions) -
     }
 }
 
-pub fn execute_eval(opts: CliOptions) -> i32 {
+pub fn execute_eval(opts: CliOptions, is_fallback: bool) -> i32 {
     match get_source(&opts) {
-        Ok((source, name)) => process_source(source, name, opts, false),
+        Ok((source, name)) => process_source(source, name, opts, false, is_fallback),
         Err(c) => c,
     }
 }
 
-pub fn execute_deploy(opts: CliOptions) -> i32 {
+pub fn execute_deploy(opts: CliOptions, is_fallback: bool) -> i32 {
     match get_source(&opts) {
-        Ok((source, name)) => process_source(source, name, opts, true),
+        Ok((source, name)) => process_source(source, name, opts, true, is_fallback),
         Err(c) => c,
     }
 }
 
 pub fn execute_run(opts: CliOptions) -> i32 {
     if let Some(code) = opts.code.clone() {
-        process_source(code, "<input>".to_string(), opts, false)
+        process_source(code, "<input>".to_string(), opts, false, false)
     } else {
         1
     }

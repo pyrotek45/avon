@@ -1,0 +1,16 @@
+# Encoding and Hashing Examples
+# Shows Base64, Hex, and SHA hashing
+
+# Encode text to multiple formats
+let text = "Hello, World!" in
+let full_sha512 = sha512 text in
+
+{
+  original: text,
+  base64: base64_encode text,
+  hex: hex_encode text,
+  sha256: sha256 text,
+  sha512_short: slice full_sha512 0 32
+}
+->
+format_json

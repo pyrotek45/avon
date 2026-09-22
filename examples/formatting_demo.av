@@ -12,8 +12,8 @@ let big_num = 12345678.9 in
 let scientific = format_scientific big_num 2 in
 
 # Byte formatting
-let file_size = 1536000 in
-let bytes_formatted = format_bytes file_size in
+let bytes_to_format = 1536000 in
+let bytes_formatted = format_bytes bytes_to_format in
 
 # List formatting
 let items = ["apple", "banana", "cherry"] in

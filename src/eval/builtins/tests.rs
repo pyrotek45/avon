@@ -3056,3 +3056,160 @@ fn test_shebang() {
         v => panic!("expected '#!/bin/sh', got {:?}", v),
     }
 }
+
+#[test]
+fn test_file_size() {
+    // Create a temporary test file
+    let test_content = "Hello, World!";
+    let test_path = "/tmp/avon_test_file_size.txt";
+    std::fs::write(test_path, test_content).expect("write test file");
+
+    // Test: file_size returns bytes
+    let prog = format!(r#"file_size "{}""#, test_path);
+    match eval_prog(&prog) {
+        Value::Number(Number::Int(size)) => {
+            assert_eq!(size, test_content.len() as i64);
+        }
+        v => panic!("expected int size, got {:?}", v),
+    }
+
+    std::fs::remove_file(test_path).expect("cleanup");
+}
+
+#[test]
+fn test_file_is_dir() {
+    // Test: file_is_dir returns true for directories
+    match eval_prog(r#"file_is_dir "src""#) {
+        Value::Bool(true) => {}
+        v => panic!("expected true for directory, got {:?}", v),
+    }
+
+    // Test: file_is_dir returns false for files
+    match eval_prog(r#"file_is_dir "README.md""#) {
+        Value::Bool(false) => {}
+        v => panic!("expected false for file, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_file_is_file() {
+    // Test: file_is_file returns true for files
+    match eval_prog(r#"file_is_file "README.md""#) {
+        Value::Bool(true) => {}
+        v => panic!("expected true for file, got {:?}", v),
+    }
+
+    // Test: file_is_file returns false for directories
+    match eval_prog(r#"file_is_file "src""#) {
+        Value::Bool(false) => {}
+        v => panic!("expected false for directory, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_file_mtime() {
+    // Create a temporary test file
+    let test_path = "/tmp/avon_test_mtime.txt";
+    std::fs::write(test_path, "test").expect("write test file");
+
+    // Test: file_mtime returns an integer timestamp
+    let prog = format!(r#"file_mtime "{}""#, test_path);
+    match eval_prog(&prog) {
+        Value::Number(Number::Int(mtime)) => {
+            // Verify it's a reasonable timestamp (should be recent, within last day)
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as i64;
+            assert!(mtime > 0, "mtime should be positive");
+            assert!(mtime <= now, "mtime should not be in the future");
+            assert!(
+                now - mtime < 86400,
+                "mtime should be recent (within 24 hours)"
+            );
+        }
+        v => panic!("expected int timestamp, got {:?}", v),
+    }
+
+    std::fs::remove_file(test_path).expect("cleanup");
+}
+
+#[test]
+fn test_lines_grep() {
+    // Create a temporary test file
+    let test_path = "/tmp/avon_test_grep.txt";
+    let content = "foo\nbar\nbaz\nfoo123\nbarfoo\n";
+    std::fs::write(test_path, content).expect("write test file");
+
+    // Test 1: grep for lines containing "foo"
+    let prog = format!(r#"lines_grep "{}" "foo""#, test_path);
+    match eval_prog(&prog) {
+        Value::List(lines) => {
+            assert_eq!(lines.len(), 3); // foo, foo123, barfoo
+                                        // Check that all results contain "foo"
+            for line in &lines {
+                if let Value::String(s) = line {
+                    assert!(s.contains("foo"));
+                } else {
+                    panic!("expected strings in list");
+                }
+            }
+        }
+        v => panic!("expected list, got {:?}", v),
+    }
+
+    // Test 2: grep with regex pattern "^foo"
+    let prog = format!(r#"lines_grep "{}" "^foo""#, test_path);
+    match eval_prog(&prog) {
+        Value::List(lines) => {
+            assert_eq!(lines.len(), 2); // foo, foo123 (lines starting with foo)
+            match lines.first() {
+                Some(Value::String(s)) => assert_eq!(s, "foo"),
+                _ => panic!("first line should be 'foo'"),
+            }
+        }
+        v => panic!("expected list, got {:?}", v),
+    }
+
+    std::fs::remove_file(test_path).expect("cleanup");
+}
+
+#[test]
+fn test_whoami() {
+    // Test: whoami returns current user
+    match eval_prog("whoami") {
+        Value::String(user) => {
+            // Just check that we got a non-empty string
+            assert!(!user.is_empty(), "whoami should return non-empty username");
+        }
+        v => panic!("expected string from whoami, got {:?}", v),
+    }
+}
+
+#[test]
+fn test_random_range() {
+    // Test: random_range returns values in the correct range
+    for _ in 0..10 {
+        match eval_prog("random_range 1 10") {
+            Value::Number(Number::Int(n)) => {
+                assert!(
+                    (1..=10).contains(&n),
+                    "random value should be between 1 and 10, got {}",
+                    n
+                );
+            }
+            v => panic!("expected int from random_range, got {:?}", v),
+        }
+    }
+
+    // Test: random_range with same min and max
+    match eval_prog("random_range 5 5") {
+        Value::Number(Number::Int(n)) => {
+            assert_eq!(
+                n, 5,
+                "random_range with same min/max should return that value"
+            );
+        }
+        v => panic!("expected 5, got {:?}", v),
+    }
+}
