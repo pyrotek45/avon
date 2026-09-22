@@ -42,6 +42,13 @@ avon run '"Hello, world!"'
 # Output: Hello, world!
 ```
 
+If you are working directly in the terminal and the first argument is not a real file, Avon will also fall back to evaluating that string as code. That makes one-off expressions very handy:
+
+```bash
+avon '1+1'
+# Output: 2
+```
+
 You can also do math:
 
 ```bash

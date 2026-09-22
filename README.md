@@ -30,6 +30,7 @@ Avon is designed to be powerful and flexible. I'm excited to see how you use it 
 | [**Do Mode Guide**](./tutorial/DO_MODE_GUIDE.md) | Built-in task runner guide. Define and run shell tasks with dependencies, env vars, and auto-discovery. |
 | **Command Line** | Run `avon doc` for built-in help on any function, `avon help do` for task runner help |
 | **Examples** | See `examples/` directory for 160+ real-world examples |
+| **Release Notes** | See [CHANGELOG.md](./CHANGELOG.md) for the 0.6.0 release summary |
 
 ---
 
@@ -82,6 +83,15 @@ let greeting = "Hello" in
 
 ```bash
 avon eval hello.av
+```
+
+**Quick expression mode (no file needed):**
+
+If the argument is not an actual file, Avon will treat it as inline code instead.
+
+```bash
+avon '1+1'
+# Output: 2
 ```
 
 **Deploy to disk:**

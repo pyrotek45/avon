@@ -127,7 +127,7 @@ pub fn run_cli(args: Vec<String>) -> i32 {
             0
         }
         "version" | "--version" | "-v" => {
-            println!("avon 0.1.0");
+            println!("avon 0.6.0");
             0
         }
         "help" | "--help" | "-h" => {
@@ -255,22 +255,20 @@ pub fn get_source(opts: &CliOptions) -> Result<(String, String), i32> {
                     1
                 })
         } else {
-            std::fs::read_to_string(file)
-                .map(|s| (s, file.clone()))
-                .map_err(|e| {
+            match std::fs::read_to_string(file) {
+                Ok(s) => Ok((s, file.clone())),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                    Ok((file.clone(), "<input>".to_string()))
+                }
+                Err(e) => {
                     eprintln!("Error: Failed to read file: {}", file);
                     eprintln!("  Reason: {}", e);
-                    if e.kind() == std::io::ErrorKind::NotFound {
-                        eprintln!("  Tip: Check that the file exists and the path is correct");
-                        eprintln!(
-                            "  Tip: Use 'avon eval {}' to test if the file is valid",
-                            file
-                        );
-                    } else if e.kind() == std::io::ErrorKind::PermissionDenied {
+                    if e.kind() == std::io::ErrorKind::PermissionDenied {
                         eprintln!("  Tip: Check file permissions");
                     }
-                    1
-                })
+                    Err(1)
+                }
+            }
         }
     } else {
         // Try to auto-discover Avon.av
@@ -1339,5 +1337,22 @@ fn execute_do_info(opts: &CliOptions, task_name: &str) -> i32 {
             }
         }
         Err(c) => c,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_source_falls_back_to_code_when_file_is_missing() {
+        let opts = CliOptions {
+            file: Some("1+1".to_string()),
+            ..CliOptions::default()
+        };
+
+        let (source, source_name) = get_source(&opts).expect("missing file should fallback to code");
+        assert_eq!(source, "1+1");
+        assert_eq!(source_name, "<input>");
     }
 }
