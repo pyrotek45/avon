@@ -621,6 +621,24 @@ pub fn get_category_doc(category: &str) -> Option<String> {
             "chmod_symbolic",
             "shebang"
         )),
+        "hashing" | "hash" | "hashes" | "encoding" | "encode" | "crypto" | "base64" | "hex" => {
+            Some(format!(
+                "Hashing/Encoding Functions:\n\
+                 ───────────────────────────\n\
+                 Cryptographic hashing and binary-to-text encoding functions.\n\n\
+                 Hashing:\n\
+                 {:<16} Compute SHA-256 hash (64 hex chars)\n\
+                 {:<16} Compute SHA-512 hash (128 hex chars)\n\n\
+                 Base64 Encoding:\n\
+                 {:<16} Encode string to Base64\n\
+                 {:<16} Decode Base64 string (None if invalid)\n\n\
+                 Hex Encoding:\n\
+                 {:<16} Encode string to hexadecimal\n\
+                 {:<16} Decode hexadecimal string (None if invalid)\n\n\
+                 Use :doc <function> for detailed documentation.",
+                "sha256", "sha512", "base64_encode", "base64_decode", "hex_encode", "hex_decode"
+            ))
+        }
         _ => None,
     }
 }

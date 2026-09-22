@@ -3176,7 +3176,10 @@ fn test_lines_grep() {
 
 #[test]
 fn test_whoami() {
-    // Test: whoami returns current user
+    // Test: whoami returns current user.
+    // Set USER explicitly so the test is deterministic in sandboxed build
+    // environments (e.g. Nix) where USER/LOGNAME may not be set.
+    std::env::set_var("USER", "testuser");
     match eval_prog("whoami") {
         Value::String(user) => {
             // Just check that we got a non-empty string
