@@ -156,9 +156,10 @@ pub fn execute(name: &str, args: &[Value], _source: &str, line: usize) -> Result
                     line,
                 ));
             }
-            let filled = match &args[0] {
-                Value::Number(Number::Int(n)) => *n,
-                Value::Number(Number::Float(f)) => *f as i64,
+            // arg[0]: progress (0-1 float)
+            let progress = match &args[0] {
+                Value::Number(Number::Int(n)) => *n as f64,
+                Value::Number(Number::Float(f)) => *f,
                 _ => {
                     return Err(EvalError::new(
                         "progressbar requires numbers",
@@ -168,9 +169,10 @@ pub fn execute(name: &str, args: &[Value], _source: &str, line: usize) -> Result
                     ))
                 }
             };
-            let total = match &args[1] {
-                Value::Number(Number::Int(n)) => *n,
-                Value::Number(Number::Float(f)) => *f as i64,
+            // arg[1]: width in characters (int)
+            let width = match &args[1] {
+                Value::Number(Number::Int(n)) => *n as usize,
+                Value::Number(Number::Float(f)) => *f as usize,
                 _ => {
                     return Err(EvalError::new(
                         "progressbar requires numbers",
@@ -181,25 +183,23 @@ pub fn execute(name: &str, args: &[Value], _source: &str, line: usize) -> Result
                 }
             };
 
-            if total <= 0 {
+            if width == 0 {
                 return Err(EvalError::new(
-                    "progressbar total must be > 0",
+                    "progressbar width must be > 0",
                     None,
                     None,
                     line,
                 ));
             }
 
-            let filled = filled.min(total).max(0);
-            let ratio = filled as f64 / total as f64;
-            let bar_width = 10;
-            let filled_count = ((ratio * bar_width as f64).round()) as usize;
+            let progress = progress.clamp(0.0, 1.0);
+            let filled_count = ((progress * width as f64).round()) as usize;
 
             let mut bar = String::new();
             for _ in 0..filled_count {
                 bar.push('█');
             }
-            for _ in filled_count..bar_width {
+            for _ in filled_count..width {
                 bar.push('░');
             }
 
@@ -215,35 +215,32 @@ pub fn execute(name: &str, args: &[Value], _source: &str, line: usize) -> Result
                     line,
                 ));
             }
-            let current = match &args[0] {
+            // arg[0]: value (0-1 float)
+            let value = match &args[0] {
                 Value::Number(Number::Int(n)) => *n as f64,
                 Value::Number(Number::Float(f)) => *f,
                 _ => return Err(EvalError::new("gauge requires numbers", None, None, line)),
             };
-            let max = match &args[1] {
-                Value::Number(Number::Int(n)) => *n as f64,
-                Value::Number(Number::Float(f)) => *f,
+            // arg[1]: width in characters (int) - reserved for future use
+            let _width = match &args[1] {
+                Value::Number(Number::Int(n)) => *n as usize,
+                Value::Number(Number::Float(f)) => *f as usize,
                 _ => return Err(EvalError::new("gauge requires numbers", None, None, line)),
             };
 
-            if max <= 0.0 {
-                return Err(EvalError::new("gauge max must be > 0", None, None, line));
-            }
+            let value = value.clamp(0.0, 1.0);
+            let percent = (value * 100.0).round() as i64;
 
-            let ratio = (current / max).clamp(0.0, 1.0);
-            let percent = (ratio * 100.0).round() as i64;
-            let filled = ((ratio * 10.0).round()) as usize;
+            // Return Unicode gauge symbols based on the value
+            let gauge_char = match (value * 4.0).round() as i64 {
+                0 => "◯", // empty
+                1 => "◑", // quarter
+                2 => "◐", // half
+                3 => "◕", // three-quarter
+                _ => "●", // full
+            };
 
-            let mut bar = String::from("▐");
-            for _ in 0..filled {
-                bar.push('▌');
-            }
-            for _ in filled..10 {
-                bar.push(' ');
-            }
-            bar.push('▌');
-
-            Ok(Value::String(format!("{} {}%", bar, percent)))
+            Ok(Value::String(format!("{} {}%", gauge_char, percent)))
         }
 
         "chmod_numeric" => {
@@ -474,7 +471,7 @@ mod tests {
         let result = execute(
             "progressbar",
             &[
-                Value::Number(Number::Int(5)),
+                Value::Number(Number::Float(0.5)),
                 Value::Number(Number::Int(10)),
             ],
             "",
