@@ -1351,7 +1351,8 @@ mod tests {
             ..CliOptions::default()
         };
 
-        let (source, source_name) = get_source(&opts).expect("missing file should fallback to code");
+        let (source, source_name) =
+            get_source(&opts).expect("missing file should fallback to code");
         assert_eq!(source, "1+1");
         assert_eq!(source_name, "<input>");
     }

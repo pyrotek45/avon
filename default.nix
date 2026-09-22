@@ -6,8 +6,8 @@
 }:
 
 let
-  # Use beta which should have Rust 1.88+
-  rust = pkgs.rust-bin.beta.latest.minimal.override {
+  # Match the project shell toolchain.
+  rust = pkgs.rust-bin.stable.latest.minimal.override {
     extensions = [ "rust-src" "rustfmt" "clippy" ];
   };
   
@@ -19,7 +19,7 @@ in
 
 rustPlatform.buildRustPackage {
   pname = "avon";
-  version = "0.1.0";
+  version = "0.6.0";
   src = ./.;
   
   cargoLock = {
