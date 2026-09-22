@@ -1,21 +1,18 @@
 # Changelog
 
-All notable changes to Avon are documented in this file.
-
 ## [0.6.0] - 2026-09-22
 
 ### Added
-- Direct inline evaluation from the terminal: `avon '1+1'` now works when the argument is not a real file, falling back to evaluating the string as Avon code.
-- Better one-off CLI ergonomics for quick expressions without creating a temporary `.av` file.
-- Expanded quick-start and usage docs so new users can discover the direct-expression workflow immediately.
+- Inline expression mode in the CLI: when a positional argument is not an actual file, Avon now treats it as source code and evaluates it directly.
+- Expanded built-in documentation and examples for the newer language functions and helpers.
+- Improved release packaging and project validation for the 0.6.0 line.
 
 ### Improved
-- CLI file loading now distinguishes between a genuinely missing file and a normal I/O error, so real problems still surface correctly instead of being silently misinterpreted.
-- Release metadata is now aligned with the v0.6.0 release version across the package and CLI output.
+- Updated tutorial and getting-started content to cover fileless expression execution and current CLI workflows.
+- Refined deployment, import, and file I/O behavior for more predictable project automation.
+- Continued documentation polish for the built-in function reference and example-driven usage.
 
-### Documentation
-- Added a dedicated release log for the 0.6.0 milestone.
-- Updated the getting-started docs to show both `avon run 'expr'` and the direct `avon 'expr'` shorthand.
+### Fixed
+- Fixed the missing-file fallback path so `avon '1+1'` works as expected without breaking normal file-based execution.
+- Resolved formatting and lint regression issues discovered during the shell validation pass.
 
-### Notes
-- This release focuses on a smoother terminal workflow for fast testing and experimentation while preserving the existing file-based deployment and evaluation model.
