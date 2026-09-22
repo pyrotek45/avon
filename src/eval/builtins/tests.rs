@@ -10,6 +10,20 @@ fn eval_prog(prog: &str) -> Value {
     eval(ast.program, &mut symbols, prog).expect("eval")
 }
 
+fn temp_test_path(name: &str) -> std::path::PathBuf {
+    let mut path = std::env::temp_dir();
+    path.push(format!(
+        "avon_{}_{}_{}.tmp",
+        name,
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    path
+}
+
 #[test]
 fn test_math_extended() {
     match eval_prog("abs (0 - 5)") {
@@ -3061,11 +3075,11 @@ fn test_shebang() {
 fn test_file_size() {
     // Create a temporary test file
     let test_content = "Hello, World!";
-    let test_path = "/tmp/avon_test_file_size.txt";
-    std::fs::write(test_path, test_content).expect("write test file");
+    let test_path = temp_test_path("file_size");
+    std::fs::write(&test_path, test_content).expect("write test file");
 
     // Test: file_size returns bytes
-    let prog = format!(r#"file_size "{}""#, test_path);
+    let prog = format!(r#"file_size "{}""#, test_path.display());
     match eval_prog(&prog) {
         Value::Number(Number::Int(size)) => {
             assert_eq!(size, test_content.len() as i64);
@@ -3109,11 +3123,11 @@ fn test_file_is_file() {
 #[test]
 fn test_file_mtime() {
     // Create a temporary test file
-    let test_path = "/tmp/avon_test_mtime.txt";
-    std::fs::write(test_path, "test").expect("write test file");
+    let test_path = temp_test_path("mtime");
+    std::fs::write(&test_path, "test").expect("write test file");
 
     // Test: file_mtime returns an integer timestamp
-    let prog = format!(r#"file_mtime "{}""#, test_path);
+    let prog = format!(r#"file_mtime "{}""#, test_path.display());
     match eval_prog(&prog) {
         Value::Number(Number::Int(mtime)) => {
             // Verify it's a reasonable timestamp (should be recent, within last day)
@@ -3137,12 +3151,12 @@ fn test_file_mtime() {
 #[test]
 fn test_lines_grep() {
     // Create a temporary test file
-    let test_path = "/tmp/avon_test_grep.txt";
+    let test_path = temp_test_path("grep");
     let content = "foo\nbar\nbaz\nfoo123\nbarfoo\n";
-    std::fs::write(test_path, content).expect("write test file");
+    std::fs::write(&test_path, content).expect("write test file");
 
     // Test 1: grep for lines containing "foo"
-    let prog = format!(r#"lines_grep "{}" "foo""#, test_path);
+    let prog = format!(r#"lines_grep "{}" "foo""#, test_path.display());
     match eval_prog(&prog) {
         Value::List(lines) => {
             assert_eq!(lines.len(), 3); // foo, foo123, barfoo
@@ -3159,7 +3173,7 @@ fn test_lines_grep() {
     }
 
     // Test 2: grep with regex pattern "^foo"
-    let prog = format!(r#"lines_grep "{}" "^foo""#, test_path);
+    let prog = format!(r#"lines_grep "{}" "^foo""#, test_path.display());
     match eval_prog(&prog) {
         Value::List(lines) => {
             assert_eq!(lines.len(), 2); // foo, foo123 (lines starting with foo)
