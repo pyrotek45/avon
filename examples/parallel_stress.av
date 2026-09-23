@@ -1,0 +1,39 @@
+# Bounded correctness stress, not a benchmark or a wall-clock speed claim.
+# avon eval examples/parallel_stress.av
+# RAYON_NUM_THREADS=4 avon eval examples/parallel_stress.av -size 2049
+# CLI named parameters are strings: validate FIRST, explicitly convert to Int,
+# then check the bound BEFORE allocating. Zero exercises empty collections.
+# No network, environment, or file reads; Rayon is configured by the caller.
+\size?"2000"
+let size_message = "parallel_stress: size must be an integer from 0 to 10000 (1-5 decimal digits)" in
+let n = if regex_match "^[0-9]{1,5}$" size then to_int size else error size_message in
+if n > 10000 then error size_message else (
+  # Define callbacks before large collections to keep captured scopes small.
+  let transform = \item item * item + 3 * item + 7 in
+  let keep = \item (item % 3) == 0 in
+  # Addition is associative; zero is the identity for EVERY parallel partition.
+  let add_items = \acc \item acc + item in
+  let input = range 1 n in
+  let mapped_seq = map transform input in
+  let mapped_par = pmap transform input in
+  let filtered_seq = filter keep input in
+  let filtered_par = pfilter keep input in
+  let sum_seq = fold add_items 0 input in
+  let sum_par = pfold add_items 0 input in
+  let mapped_sum_seq = fold add_items 0 mapped_seq in
+  let mapped_sum_par = pfold add_items 0 mapped_par in
+  let checked_size = assert ((length input) == n) "parallel_stress: range length mismatch" in
+  let checked_map = assert (mapped_seq == mapped_par) "parallel_stress: ordered map mismatch" in
+  let checked_filter = assert (filtered_seq == filtered_par) "parallel_stress: ordered filter mismatch" in
+  let checked_fold = assert (sum_seq == sum_par) "parallel_stress: sum mismatch" in
+  let checked_formula = assert (sum_par == (n * (n + 1) / 2)) "parallel_stress: sum formula mismatch" in
+  let checked_mapped_sum = assert (mapped_sum_seq == mapped_sum_par)
+    "parallel_stress: mapped sum mismatch" in
+  let checked_filter_count = assert ((length filtered_par) == (to_int (floor (n / 3))))
+    "parallel_stress: filter count mismatch" in
+  format_json {
+    ok: true, example: "parallel_stress", size: n,
+    mapped: length mapped_par, filtered: length filtered_par,
+    sum: sum_par, mapped_sum: mapped_sum_par
+  }
+)

@@ -22,6 +22,27 @@ pub fn run_cli(args: Vec<String>) -> i32 {
     let cmd = &args[1];
     let rest = if args.len() > 2 { &args[2..] } else { &[] };
 
+    // Commands without option parsing must not silently ignore a dry-run flag.
+    // Evaluation commands validate parsed options below, so quoted source text
+    // containing "--dry-run" remains ordinary program data.
+    if matches!(
+        cmd.as_str(),
+        "repl"
+            | "doc"
+            | "docs"
+            | "--doc"
+            | "version"
+            | "--version"
+            | "-v"
+            | "help"
+            | "--help"
+            | "-h"
+    ) && rest.iter().any(|arg| arg == "--dry-run")
+    {
+        eprintln!("Error: --dry-run is only supported for do and deploy operations");
+        return 1;
+    }
+
     match cmd.as_str() {
         "eval" => match parse_args(rest, true) {
             Ok(opts) => execute_eval(opts, false),
@@ -129,7 +150,7 @@ pub fn run_cli(args: Vec<String>) -> i32 {
             0
         }
         "version" | "--version" | "-v" => {
-            println!("avon 0.6.0");
+            println!("avon {}", env!("CARGO_PKG_VERSION"));
             0
         }
         "help" | "--help" | "-h" => {
@@ -502,403 +523,8 @@ pub fn process_source(
 
 fn deploy_files(v: &Value, source: &str, source_name: &str, opts: &CliOptions) -> i32 {
     match collect_file_templates(v, source) {
-        Ok(files) => {
-            // SAFETY: Collect all files first, validate all paths, then write all files
-            // If any error occurs during collection or validation, no files are written
-
-            // Step 1: Prepare all file operations (validate paths, create dirs)
-            // SECURITY: Canonicalize root path once to prevent symlink attacks
-            let (root_path, canonical_root) = if let Some(root_str) = &opts.root {
-                let root = std::path::Path::new(root_str);
-                match std::fs::canonicalize(root) {
-                    Ok(canon) => (root.to_path_buf(), Some(canon)),
-                    Err(_) => {
-                        // If root doesn't exist, create it and then canonicalize
-                        if let Err(e) = std::fs::create_dir_all(root) {
-                            eprintln!("Error: Failed to create root directory: {}", root_str);
-                            eprintln!("  Reason: {}", e);
-                            eprintln!("Deployment aborted. No files were written.");
-                            return 1;
-                        }
-                        match std::fs::canonicalize(root) {
-                            Ok(canon) => (root.to_path_buf(), Some(canon)),
-                            Err(e) => {
-                                eprintln!(
-                                    "Error: Failed to canonicalize root directory: {}",
-                                    root_str
-                                );
-                                eprintln!("  Reason: {}", e);
-                                eprintln!("Deployment aborted. No files were written.");
-                                return 1;
-                            }
-                        }
-                    }
-                }
-            } else {
-                (std::path::PathBuf::new(), None)
-            };
-
-            let mut prepared_files: Vec<(std::path::PathBuf, String, bool, bool)> = Vec::new();
-            for (path, content) in &files {
-                let write_path = if let Some(canon_root) = &canonical_root {
-                    // SECURITY: Reject paths containing ".." before processing
-                    // This prevents directory traversal attacks
-                    if path.contains("..") {
-                        eprintln!("Error: Path traversal detected: {}", path);
-                        eprintln!("  Path contains '..' which is not allowed");
-                        eprintln!("  Deployment aborted.");
-                        return 1;
-                    }
-
-                    let rel = path.trim_start_matches('/');
-                    // SECURITY: Normalize path to prevent directory traversal attacks
-                    // Filter out ParentDir ("..") and RootDir components as additional safety
-                    let normalized = std::path::Path::new(rel)
-                        .components()
-                        .filter(|c| match c {
-                            std::path::Component::ParentDir => false, // Block ".."
-                            std::path::Component::RootDir => false,   // Block absolute paths
-                            _ => true,
-                        })
-                        .collect::<std::path::PathBuf>();
-
-                    // Build the full path within the root using the canonical root path
-                    // This ensures the path is absolute for proper security checks
-                    let full_path = canon_root.join(&normalized);
-
-                    // SECURITY: Canonicalize the full path to resolve symlinks
-                    // If the path doesn't exist yet, we need to check parent directories
-                    let resolved = if full_path.exists() {
-                        match std::fs::canonicalize(&full_path) {
-                            Ok(p) => p,
-                            Err(e) => {
-                                eprintln!("Error: Failed to resolve path: {}", full_path.display());
-                                eprintln!("  Reason: {}", e);
-                                eprintln!("Deployment aborted. No files were written.");
-                                return 1;
-                            }
-                        }
-                    } else {
-                        // Path doesn't exist yet - canonicalize parent and check it's within root
-                        if let Some(parent) = full_path.parent() {
-                            if parent.exists() {
-                                match std::fs::canonicalize(parent) {
-                                    Ok(canon_parent) => {
-                                        // Ensure parent is within root
-                                        if !canon_parent.starts_with(canon_root) {
-                                            eprintln!("Error: Path traversal detected: {}", path);
-                                            eprintln!(
-                                                "  Attempted path would escape --root directory"
-                                            );
-                                            eprintln!("  Deployment aborted.");
-                                            return 1;
-                                        }
-                                        // Build the final path from canonical parent + filename
-                                        canon_parent.join(full_path.file_name().unwrap_or_default())
-                                    }
-                                    Err(e) => {
-                                        eprintln!(
-                                            "Error: Failed to resolve parent directory: {}",
-                                            parent.display()
-                                        );
-                                        eprintln!("  Reason: {}", e);
-                                        eprintln!("Deployment aborted. No files were written.");
-                                        return 1;
-                                    }
-                                }
-                            } else {
-                                // Parent doesn't exist - will be created, but validate the path structure
-                                // Check that all parent components are safe
-                                let mut current = root_path.clone();
-                                for component in normalized.components() {
-                                    current = current.join(component);
-                                    // This should never happen due to filtering above, but double-check
-                                    if let std::path::Component::ParentDir = component {
-                                        eprintln!("Error: Path traversal detected: {}", path);
-                                        eprintln!("  Attempted path would escape --root directory");
-                                        eprintln!("  Deployment aborted.");
-                                        return 1;
-                                    }
-                                }
-                                full_path
-                            }
-                        } else {
-                            // No parent - this is the root itself (shouldn't happen with file paths)
-                            full_path
-                        }
-                    };
-
-                    // SECURITY: Final check - ensure resolved path is within canonical root
-                    if !resolved.starts_with(canon_root) {
-                        eprintln!("Error: Path traversal detected: {}", path);
-                        eprintln!("  Attempted path would escape --root directory");
-                        eprintln!("  Resolved path: {}", resolved.display());
-                        eprintln!("  Root directory: {}", canon_root.display());
-                        eprintln!("  Deployment aborted.");
-                        return 1;
-                    }
-
-                    resolved
-                } else {
-                    // SECURITY: Without --root, validate absolute paths don't contain ".."
-                    let path_buf = std::path::Path::new(&path).to_path_buf();
-                    if path_buf
-                        .components()
-                        .any(|c| matches!(c, std::path::Component::ParentDir))
-                    {
-                        eprintln!("Error: Path contains '..' which is not allowed without --root");
-                        eprintln!("  Use --root to safely contain file operations");
-                        eprintln!("  Deployment aborted.");
-                        return 1;
-                    }
-                    // Also block absolute paths without --root for security
-                    if path_buf.is_absolute() {
-                        eprintln!("Error: Absolute paths are not allowed without --root");
-                        eprintln!("  Use --root to safely contain file operations");
-                        eprintln!("  Example: avon deploy program.av --root ./output");
-                        eprintln!("  Deployment aborted.");
-                        return 1;
-                    }
-                    path_buf
-                };
-
-                let exists = write_path.exists();
-                let mut should_backup = false;
-
-                if exists {
-                    if opts.if_not_exists {
-                        println!("Skipped {} (exists)", write_path.display());
-                        continue;
-                    }
-
-                    if opts.backup {
-                        should_backup = true;
-                    } else if !opts.force && !opts.append {
-                        eprintln!("WARNING: File {} exists. Use --force to overwrite, --append to append, or --backup to backup and overwrite.", write_path.display());
-                        continue;
-                    }
-                }
-
-                // Create parent directories before writing
-                if let Some(parent) = write_path.parent() {
-                    if let Err(e) = std::fs::create_dir_all(parent) {
-                        eprintln!("Error: Failed to create directory: {}", parent.display());
-                        eprintln!("  Reason: {}", e);
-                        if e.kind() == std::io::ErrorKind::PermissionDenied {
-                            eprintln!("  Tip: Check directory permissions");
-                            eprintln!("  Tip: Try using a different --root directory");
-                        } else if e.kind() == std::io::ErrorKind::NotFound {
-                            eprintln!("  Tip: Check that the parent path exists");
-                        }
-                        eprintln!("Deployment aborted. No files were written.");
-                        return 1;
-                    }
-                }
-
-                prepared_files.push((write_path, content.clone(), exists, should_backup));
-            }
-
-            // Step 2: Validate all files can be written BEFORE writing any
-            for (write_path, _content, exists, should_backup) in &prepared_files {
-                if *exists {
-                    #[allow(clippy::suspicious_open_options)]
-                    match std::fs::OpenOptions::new()
-                        .write(true)
-                        .truncate(false)
-                        .open(write_path)
-                    {
-                        Ok(_) => {}
-                        Err(e) => {
-                            eprintln!(
-                                "Error: Cannot write to existing file: {}",
-                                write_path.display()
-                            );
-                            eprintln!("  Reason: {}", e);
-                            if e.kind() == std::io::ErrorKind::PermissionDenied {
-                                eprintln!("  Tip: Check file permissions");
-                            }
-                            eprintln!("Deployment aborted. No files were written.");
-                            return 1;
-                        }
-                    }
-                }
-
-                if *should_backup {
-                    let file_name = match write_path.file_name() {
-                        Some(name) => name.to_os_string(),
-                        None => {
-                            eprintln!(
-                                "Error: Cannot determine file name for backup: {}",
-                                write_path.display()
-                            );
-                            eprintln!("Deployment aborted. No files were written.");
-                            return 1;
-                        }
-                    };
-                    let mut backup_name = file_name;
-                    backup_name.push(".bak");
-                    let backup_path = write_path.with_file_name(backup_name);
-
-                    #[allow(clippy::suspicious_open_options)]
-                    match std::fs::OpenOptions::new()
-                        .write(true)
-                        .create(true)
-                        .truncate(true)
-                        .open(&backup_path)
-                    {
-                        Ok(_) => {}
-                        Err(e) => {
-                            eprintln!(
-                                "Error: Cannot create backup file: {}",
-                                backup_path.display()
-                            );
-                            eprintln!("  Reason: {}", e);
-                            if e.kind() == std::io::ErrorKind::PermissionDenied {
-                                eprintln!("  Tip: Check write permissions for backup location");
-                            }
-                            eprintln!("Deployment aborted. No files were written.");
-                            return 1;
-                        }
-                    }
-                }
-
-                if !*exists {
-                    if let Some(parent) = write_path.parent() {
-                        let test_file = parent.join(".avon_write_test");
-                        match std::fs::File::create(&test_file) {
-                            Ok(_) => {
-                                let _ = std::fs::remove_file(&test_file);
-                            }
-                            Err(e) => {
-                                eprintln!("Error: Cannot write to directory: {}", parent.display());
-                                eprintln!("  Reason: {}", e);
-                                if e.kind() == std::io::ErrorKind::PermissionDenied {
-                                    eprintln!("  Tip: Check directory write permissions");
-                                }
-                                eprintln!("Deployment aborted. No files were written.");
-                                return 1;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Step 3: All files validated - now write them all
-            let mut written_files = Vec::new();
-            for (write_path, content, exists, should_backup) in prepared_files {
-                if should_backup {
-                    let file_name = match write_path.file_name() {
-                        Some(name) => name.to_os_string(),
-                        None => {
-                            eprintln!(
-                                "Error: Cannot determine file name for backup: {}",
-                                write_path.display()
-                            );
-                            return 1;
-                        }
-                    };
-                    let mut backup_name = file_name;
-                    backup_name.push(".bak");
-                    let backup_path = write_path.with_file_name(backup_name);
-
-                    if let Err(e) = std::fs::copy(&write_path, &backup_path) {
-                        eprintln!("Error: Failed to create backup: {}", backup_path.display());
-                        eprintln!("  Reason: {}", e);
-                        if e.kind() == std::io::ErrorKind::PermissionDenied {
-                            eprintln!("  Tip: Check write permissions for the backup location");
-                        }
-                        if !written_files.is_empty() {
-                            eprintln!(
-                                "  Note: {} file(s) were written before the error occurred.",
-                                written_files.len()
-                            );
-                        }
-                        eprintln!("Deployment aborted.");
-                        return 1;
-                    }
-                    println!("Backed up to {}", backup_path.display());
-                }
-
-                if opts.append && exists {
-                    use std::io::Write;
-                    match std::fs::OpenOptions::new().append(true).open(&write_path) {
-                        Ok(mut f) => {
-                            if let Err(e) = f.write_all(content.as_bytes()) {
-                                eprintln!(
-                                    "Error: Failed to append to file: {}",
-                                    write_path.display()
-                                );
-                                eprintln!("  Reason: {}", e);
-                                if e.kind() == std::io::ErrorKind::PermissionDenied {
-                                    eprintln!("  Tip: Check file permissions");
-                                } else if e.kind() == std::io::ErrorKind::OutOfMemory {
-                                    eprintln!("  Tip: File may be too large for available memory");
-                                }
-                                if !written_files.is_empty() {
-                                    eprintln!(
-                                        "  Note: {} file(s) were written before the error occurred.",
-                                        written_files.len()
-                                    );
-                                }
-                                eprintln!("Deployment aborted.");
-                                return 1;
-                            }
-                            println!("Appended to {}", write_path.display());
-                            written_files.push(write_path.clone());
-                        }
-                        Err(e) => {
-                            eprintln!(
-                                "Error: Failed to open file for append: {}",
-                                write_path.display()
-                            );
-                            eprintln!("  Reason: {}", e);
-                            if e.kind() == std::io::ErrorKind::PermissionDenied {
-                                eprintln!("  Tip: Check file permissions");
-                                eprintln!("  Tip: Try using --backup instead of --append");
-                            }
-                            if !written_files.is_empty() {
-                                eprintln!(
-                                    "  Note: {} file(s) were written before the error occurred.",
-                                    written_files.len()
-                                );
-                            }
-                            eprintln!("Deployment aborted.");
-                            return 1;
-                        }
-                    }
-                } else {
-                    if let Err(e) = std::fs::write(&write_path, content) {
-                        eprintln!("Error: Failed to write file: {}", write_path.display());
-                        eprintln!("  Reason: {}", e);
-                        if e.kind() == std::io::ErrorKind::PermissionDenied {
-                            eprintln!("  Tip: Check file permissions");
-                            eprintln!("  Tip: Try using a different --root directory");
-                        } else if e.kind() == std::io::ErrorKind::NotFound {
-                            eprintln!("  Tip: Check that the parent directory exists");
-                        } else if e.kind() == std::io::ErrorKind::OutOfMemory {
-                            eprintln!("  Tip: File may be too large for available memory");
-                        }
-                        if !written_files.is_empty() {
-                            eprintln!(
-                                "  Note: {} file(s) were written before the error occurred.",
-                                written_files.len()
-                            );
-                        }
-                        eprintln!("Deployment aborted.");
-                        return 1;
-                    }
-                    if exists {
-                        println!("Overwrote {}", write_path.display());
-                    } else {
-                        println!("Wrote {}", write_path.display());
-                    }
-                    written_files.push(write_path);
-                }
-            }
-            0
-        }
+        Ok(files) => super::deployment::deploy(&files, opts),
         Err(e) => {
-            // In deploy mode, if the result isn't deployable (not FileTemplate or list), error out
             eprintln!("Error: Deployment failed - result is not deployable");
             eprintln!("  The program evaluated successfully, but the result cannot be deployed.");
             eprintln!("  Expected: FileTemplate or list of FileTemplates");
@@ -906,9 +532,7 @@ fn deploy_files(v: &Value, source: &str, source_name: &str, opts: &CliOptions) -
             eprintln!("  Details: {}", e.message);
             eprintln!();
             eprintln!("  Tip: Make sure your program returns a FileTemplate (using @path {{...}})");
-            eprintln!(
-                "  Tip: Or return a list of FileTemplates: [@file1.txt {{...}}, @file2.txt {{...}}]"
-            );
+            eprintln!("  Tip: Or return a list of FileTemplates: [@file1.txt {{...}}, @file2.txt {{...}}]");
             eprintln!(
                 "  Tip: Use 'avon eval {}' to see what your program evaluates to",
                 source_name
@@ -920,6 +544,10 @@ fn deploy_files(v: &Value, source: &str, source_name: &str, opts: &CliOptions) -
 }
 
 pub fn execute_eval(opts: CliOptions, is_fallback: bool) -> i32 {
+    if opts.dry_run {
+        eprintln!("Error: --dry-run is only supported for do and deploy operations; eval already previews generated content");
+        return 1;
+    }
     match get_source(&opts) {
         Ok((source, name)) => process_source(source, name, opts, false, is_fallback),
         Err(c) => c,
@@ -934,6 +562,10 @@ pub fn execute_deploy(opts: CliOptions, is_fallback: bool) -> i32 {
 }
 
 pub fn execute_run(opts: CliOptions) -> i32 {
+    if opts.dry_run {
+        eprintln!("Error: --dry-run is only supported for do and deploy operations; run evaluates inline code");
+        return 1;
+    }
     if let Some(code) = opts.code.clone() {
         process_source(code, "<input>".to_string(), opts, false, false)
     } else {

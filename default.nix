@@ -19,7 +19,7 @@ in
 
 rustPlatform.buildRustPackage {
   pname = "avon";
-  version = "0.6.0";
+  version = "0.6.2";
   src = ./.;
   
   cargoLock = {

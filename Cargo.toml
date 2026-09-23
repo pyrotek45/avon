@@ -1,6 +1,6 @@
 [package]
 name = "avon"
-version = "0.6.0"
+version = "0.6.2"
 edition = "2021"
 authors = ["Avon Contributors"]
 description = "A modern template language for generating code, configs, and infrastructure"
@@ -40,3 +40,13 @@ md-5 = "0.10"
 uuid = { version = "1.11", features = ["v4"] }
 rand = "0.8"
 rayon = "1.10"
+cap-std = "4.0"
+cap-fs-ext = "4.0"
+cap-primitives = "4.0"
+cap-tempfile = "4.0"
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", features = ["fs"] }
+
+[dev-dependencies]
+tempfile = "3"

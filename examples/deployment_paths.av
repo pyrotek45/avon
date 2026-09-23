@@ -1,0 +1,2 @@
+# Preview with eval; deploy relative to the working directory or an explicit --root.
+@config/app.txt {"Hello, deployment!"}

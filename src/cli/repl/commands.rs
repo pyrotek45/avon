@@ -13,6 +13,220 @@ use std::collections::HashMap;
 
 use super::AvonHelper;
 
+/// Find flags only outside Avon literals, comments and nested expressions. Use
+/// the lexer for literals: templates do not have ordinary string quote rules.
+fn deployment_suffix_start(input: &str) -> Result<usize, String> {
+    let mut offset = 0;
+    let mut nesting = Vec::new();
+    while offset < input.len() {
+        let tail = &input[offset..];
+        let ch = tail.chars().next().unwrap();
+        if nesting.is_empty()
+            && tail.starts_with("--")
+            && (offset == 0 || input[..offset].ends_with(char::is_whitespace))
+        {
+            return Ok(offset);
+        }
+        offset += ch.len_utf8();
+        if ch == '#' {
+            offset += input[offset..].find('\n').unwrap_or(input.len() - offset);
+            continue;
+        }
+        let template = ch == '{'
+            && input[offset..]
+                .trim_start_matches('{')
+                .trim_start()
+                .starts_with('"');
+        if ch == '"' || ch == '@' || template {
+            let mut stream = input[offset..].chars().peekable();
+            let mut line = 1;
+            let result = match ch {
+                '"' => crate::lexer::string(&mut stream, &mut line),
+                '@' => crate::lexer::path(&mut stream, &mut line),
+                _ => crate::lexer::chunk(&mut stream, &mut line),
+            };
+            result.map_err(|e| e.message)?;
+            offset = input.len() - stream.map(char::len_utf8).sum::<usize>();
+            continue;
+        }
+        match ch {
+            '(' => nesting.push(')'),
+            '[' => nesting.push(']'),
+            '{' => nesting.push('}'),
+            ')' | ']' | '}' if nesting.pop() != Some(ch) => {
+                return Err("Mismatched expression delimiter".to_string());
+            }
+            _ => {}
+        }
+    }
+    if !nesting.is_empty() {
+        return Err("Unclosed expression delimiter".to_string());
+    }
+    Ok(input.len())
+}
+
+/// Read a suffix argument, supporting quoted paths and escaped whitespace.
+/// Unlike a shell, this does not expand variables or execute substitutions.
+fn deployment_word(input: &str) -> Result<(String, &str), String> {
+    let input = input.trim_start();
+    let mut chars = input.char_indices().peekable();
+    let mut quote = None;
+    let mut word = String::new();
+    while let Some((offset, ch)) = chars.next() {
+        if quote.is_none() && ch.is_whitespace() {
+            return Ok((word, &input[offset..]));
+        }
+        if Some(ch) == quote {
+            quote = None;
+        } else if quote.is_none() && matches!(ch, '\'' | '"') {
+            quote = Some(ch);
+        } else if ch == '\\' && quote != Some('\'') {
+            match chars.peek().copied() {
+                Some((_, next)) if next.is_whitespace() || matches!(next, '\\' | '\'' | '"') => {
+                    word.push(next);
+                    chars.next();
+                }
+                None => return Err("Trailing escape in deployment argument".to_string()),
+                _ => word.push(ch),
+            }
+        } else {
+            word.push(ch);
+        }
+    }
+    if quote.is_some() {
+        return Err("Unterminated quote in deployment argument".to_string());
+    }
+    Ok((word, ""))
+}
+
+fn parse_deploy_expression(input: &str) -> Result<(&str, CliOptions), String> {
+    let start = deployment_suffix_start(input)?;
+    let expression = input[..start].trim();
+    if expression.is_empty() {
+        return Err("Missing expression".to_string());
+    }
+    let mut remaining = input[start..].trim_start();
+    let mut opts = CliOptions::new();
+    while !remaining.is_empty() {
+        let (flag, rest) = deployment_word(remaining)?;
+        remaining = rest.trim_start();
+        match flag.as_str() {
+            "--root" => {
+                if remaining.is_empty() || remaining.starts_with("--") {
+                    return Err("--root requires a directory argument".to_string());
+                }
+                let (root, rest) = deployment_word(remaining)?;
+                if root.is_empty() {
+                    return Err("--root requires a nonempty directory argument".to_string());
+                }
+                opts.root = Some(root);
+                remaining = rest.trim_start();
+            }
+            "--dry-run" => opts.dry_run = true,
+            "--force" => opts.force = true,
+            "--backup" => opts.backup = true,
+            "--append" => opts.append = true,
+            "--if-not-exists" => opts.if_not_exists = true,
+            _ => {
+                return Err(format!(
+                    "Unknown deployment flag or unexpected argument: {flag}"
+                ))
+            }
+        }
+    }
+    Ok((expression, opts))
+}
+
+fn explicit_write_options(filename: &str) -> Result<(String, CliOptions), String> {
+    let path = std::path::Path::new(filename);
+    // Path::file_name normalizes trailing slashes and '/.'; reject these rather
+    // than silently selecting a different file. The planner validates the leaf.
+    if filename.is_empty()
+        || filename.ends_with(std::path::is_separator)
+        || filename.rsplit(std::path::is_separator).next() == Some(".")
+    {
+        return Err("Expected a file name, not a directory".to_string());
+    }
+    let leaf = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| "Invalid file name".to_string())?;
+    let parent = path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or_else(|| std::path::Path::new("."));
+    let mut opts = CliOptions::new();
+    // An explicit user-selected parent is authority, not a generated path.
+    opts.root = Some(
+        parent
+            .to_str()
+            .ok_or_else(|| "Invalid parent directory".to_string())?
+            .to_string(),
+    );
+    opts.force = true;
+    Ok((leaf.to_string(), opts))
+}
+
+fn write_explicit_file(filename: &str, content: String) -> bool {
+    match explicit_write_options(filename) {
+        Ok((leaf, opts)) => crate::cli::deployment::deploy(&[(leaf, content)], &opts) == 0,
+        Err(error) => {
+            eprintln!("Error writing to '{}': {}", filename, error);
+            false
+        }
+    }
+}
+
+fn avon_string(value: &str) -> String {
+    // These are precisely the escapes decoded by lexer::string (not JSON's
+    // additional \uXXXX / \b / \f escapes).
+    let mut result = String::from("\"");
+    for ch in value.chars() {
+        match ch {
+            '\\' => result.push_str("\\\\"),
+            '"' => result.push_str("\\\""),
+            '\n' => result.push_str("\\n"),
+            '\r' => result.push_str("\\r"),
+            '\t' => result.push_str("\\t"),
+            _ => result.push(ch),
+        }
+    }
+    result.push('"');
+    result
+}
+
+fn session_value(value: &Value) -> Option<String> {
+    match value {
+        Value::String(s) => Some(avon_string(s)),
+        Value::Number(Number::Int(i)) => Some(i.to_string()),
+        Value::Number(Number::Float(f)) if f.is_finite() => Some(f.to_string()),
+        Value::Bool(b) => Some(b.to_string()),
+        Value::None => Some("none".to_string()),
+        Value::List(items) => {
+            let items = items
+                .iter()
+                .map(session_value)
+                .collect::<Option<Vec<_>>>()?;
+            Some(format!("[{}]", items.join(", ")))
+        }
+        Value::Dict(items) => {
+            let mut entries: Vec<_> = items.iter().collect();
+            entries.sort_by_key(|(key, _)| *key);
+            let mut result = "{}".to_string();
+            for (key, value) in entries {
+                result = format!(
+                    "(set {} {} {})",
+                    result,
+                    avon_string(key),
+                    session_value(value)?
+                );
+            }
+            Some(result)
+        }
+        _ => None,
+    }
+}
+
 pub fn handle_command(
     cmd: &str,
     state: &mut ReplState,
@@ -71,6 +285,7 @@ pub fn handle_command(
             println!("  --git <url>     Fetch from GitHub (format: user/repo/path/file.av)");
             println!("  --debug         Enable debug output");
             println!("  --root <dir>    Set output directory (deploy only)");
+            println!("  --dry-run       Validate deployment without writing files");
             println!("  --force         Overwrite existing files (deploy only)");
             println!("  --backup        Create .bak backup (deploy only)");
             println!("  -param value    Pass named parameter");
@@ -985,6 +1200,11 @@ pub fn handle_command(
             let mut use_git = false;
             let mut file_parts: Vec<&str> = Vec::new();
 
+            if parts.contains(&"--dry-run") {
+                eprintln!("Error: --dry-run is only supported for do and deploy operations; use :deploy <file> --dry-run");
+                return Some(false);
+            }
+
             let mut i = 0;
             while i < parts.len() {
                 match parts[i] {
@@ -1064,7 +1284,7 @@ pub fn handle_command(
         "deploy" => {
             eprintln!("Error: Missing file path");
             eprintln!("Usage: :deploy <file_path> [flags...]");
-            eprintln!("  Flags: --git, --root <dir>, --force, --backup, --append, --if-not-exists, --debug");
+            eprintln!("  Flags: --git, --root <dir>, --dry-run, --force, --backup, --append, --if-not-exists, --debug");
             eprintln!("  Example: :deploy config.av --root ./output --backup");
             eprintln!("  Example: :deploy --git user/repo/config.av --root ./out");
             eprintln!("  Note: This deploys FileTemplates from the file to disk");
@@ -1077,7 +1297,7 @@ pub fn handle_command(
             if parts.is_empty() {
                 eprintln!("Error: Missing file path");
                 eprintln!("Usage: :deploy <file_path> [flags...]");
-                eprintln!("  Flags: --git, --root <dir>, --force, --backup, --append, --if-not-exists, --debug");
+                eprintln!("  Flags: --git, --root <dir>, --dry-run, --force, --backup, --append, --if-not-exists, --debug");
                 eprintln!("  Example: :deploy config.av --root ./output --backup");
                 eprintln!("  Example: :deploy --git user/repo/config.av --root ./out");
                 eprintln!("  Note: This deploys FileTemplates from the file to disk");
@@ -1118,6 +1338,10 @@ pub fn handle_command(
                     }
                     "--if-not-exists" => {
                         deploy_opts.if_not_exists = true;
+                        i += 1;
+                    }
+                    "--dry-run" => {
+                        deploy_opts.dry_run = true;
                         i += 1;
                     }
                     "--debug" => {
@@ -1170,49 +1394,41 @@ pub fn handle_command(
                 }
             };
 
+            let dry_run = deploy_opts.dry_run;
             let result = process_source(source, source_name, deploy_opts, true, false);
 
-            if result == 0 {
+            if result == 0 && !dry_run {
                 println!("Deployment completed successfully");
             }
             Some(false)
         }
         "deploy-expr" => {
             eprintln!("Error: Missing expression");
-            eprintln!("Usage: :deploy-expr <expression> [--root <dir>]");
+            eprintln!("Usage: :deploy-expr <expression> [flags...]");
+            eprintln!(
+                "  Flags: --root <dir>, --dry-run, --force, --backup, --append, --if-not-exists"
+            );
             eprintln!("  Example: :deploy-expr @test.txt {{\"Hello\"}}");
             eprintln!("  Example: :deploy-expr config --root ./output");
             eprintln!(
                 "  Note: The expression must evaluate to a FileTemplate or list of FileTemplates"
             );
-            eprintln!("  Note: --root is required for deployment");
+            eprintln!(
+                "  Note: --root defaults to the current directory; quote paths containing spaces"
+            );
             Some(false)
         }
         cmd if cmd.starts_with("deploy-expr ") => {
             let rest = cmd.trim_start_matches("deploy-expr ").trim();
 
-            let (expr_str, root_dir) = if let Some(root_pos) = rest.find("--root") {
-                let expr_part = rest[..root_pos].trim();
-                let root_part = rest[root_pos..].trim();
-                let root_parts: Vec<&str> = root_part.split_whitespace().collect();
-                if root_parts.len() >= 2 && root_parts[0] == "--root" {
-                    (expr_part, Some(root_parts[1].to_string()))
-                } else {
-                    (rest, None)
+            let (expr_str, deploy_opts) = match parse_deploy_expression(rest) {
+                Ok(parsed) => parsed,
+                Err(error) => {
+                    eprintln!("Error: {}", error);
+                    eprintln!("Usage: :deploy-expr <expression> [--root <dir>] [--dry-run] [--force|--backup|--append|--if-not-exists]");
+                    return Some(false);
                 }
-            } else {
-                (rest, None)
             };
-
-            if expr_str.is_empty() {
-                eprintln!("Error: Missing expression");
-                eprintln!("Usage: :deploy-expr <expression> [--root <dir>]");
-                eprintln!("  Example: :deploy-expr @test.txt {{\"Hello\"}}");
-                eprintln!("  Example: :deploy-expr config --root ./output");
-                eprintln!("  Note: The expression must evaluate to a FileTemplate or list of FileTemplates");
-                eprintln!("  Note: --root is required for deployment");
-                return Some(false);
-            }
 
             match tokenize(expr_str.to_string()) {
                 Ok(tokens) => {
@@ -1227,50 +1443,9 @@ pub fn handle_command(
                                     return Some(false);
                                 }
 
-                                let root_path = if let Some(root_str) = root_dir {
-                                    std::path::Path::new(&root_str).to_path_buf()
-                                } else {
-                                    eprintln!("Error: --root is required for :deploy-expr");
-                                    eprintln!("  Usage: :deploy-expr <expr> --root <dir>");
-                                    return Some(false);
-                                };
-
-                                if let Err(e) = std::fs::create_dir_all(&root_path) {
-                                    eprintln!("Error: Failed to create root directory: {}", e);
-                                    return Some(false);
-                                }
-
-                                let mut success = true;
-                                for (path, content) in &files {
-                                    let rel = path.trim_start_matches('/');
-                                    let full_path = root_path.join(rel);
-
-                                    if let Some(parent) = full_path.parent() {
-                                        if let Err(e) = std::fs::create_dir_all(parent) {
-                                            eprintln!("Error: Failed to create directory: {}", e);
-                                            success = false;
-                                            break;
-                                        }
-                                    }
-
-                                    if let Err(e) = std::fs::write(&full_path, content) {
-                                        eprintln!(
-                                            "Error: Failed to write {}: {}",
-                                            full_path.display(),
-                                            e
-                                        );
-                                        success = false;
-                                        break;
-                                    }
-                                    println!("Deployed: {}", full_path.display());
-                                }
-
-                                if success {
+                                let result = crate::cli::deployment::deploy(&files, &deploy_opts);
+                                if result == 0 && !deploy_opts.dry_run {
                                     println!("Deployment completed successfully");
-                                } else {
-                                    eprintln!(
-                                        "Deployment failed - some files may have been written"
-                                    );
                                 }
                             }
                             Err(e) => {
@@ -1345,16 +1520,8 @@ pub fn handle_command(
                     match eval(ast.program, &mut state.symbols, expr_str) {
                         Ok(val) => {
                             let content = val.to_string("");
-                            match std::fs::write(file_path, content) {
-                                Ok(_) => {
-                                    println!("Written to: {}", file_path);
-                                }
-                                Err(e) => {
-                                    eprintln!("Error writing to '{}': {}", file_path, e);
-                                    if e.kind() == std::io::ErrorKind::PermissionDenied {
-                                        eprintln!("  Tip: Check file permissions");
-                                    }
-                                }
+                            if write_explicit_file(file_path, content) {
+                                println!("Written to: {}", file_path);
                             }
                         }
                         Err(e) => {
@@ -1408,24 +1575,12 @@ pub fn handle_command(
             let mut session_code = String::from("# Avon REPL Session\n");
             session_code.push_str("# Saved variables:\n\n");
             let mut saved_count = 0;
-            let mut dict_entries = Vec::new();
+            let mut saved_dict = "{}".to_string();
 
             for (name, val) in &user_vars {
-                let val_str = match val {
-                    Value::String(s) => format!("\"{}\"", s.replace("\"", "\\\"")),
-                    Value::Number(Number::Int(i)) => i.to_string(),
-                    Value::Number(Number::Float(f)) => f.to_string(),
-                    Value::Bool(b) => b.to_string(),
-                    Value::List(_) => val.to_string(""),
-                    Value::Dict(_) => val.to_string(""),
-                    Value::Function { .. } => {
-                        eprintln!(
-                            "Warning: Cannot save function '{}' (functions cannot be serialized)",
-                            name
-                        );
-                        continue;
-                    }
-                    _ => {
+                let val_str = match session_value(val) {
+                    Some(serialized) => serialized,
+                    None => {
                         eprintln!(
                             "Warning: Cannot save variable '{}' (type not serializable)",
                             name
@@ -1433,25 +1588,24 @@ pub fn handle_command(
                         continue;
                     }
                 };
-                session_code.push_str(&format!("let {} = {} in\n", name, val_str));
-                dict_entries.push(format!("{}: {}", name, name));
+                // Names can originate in :eval dictionaries or :let input, so
+                // serialize them as data too, never as source identifiers.
+                saved_dict = format!("(set {} {} {})", saved_dict, avon_string(name), val_str);
                 saved_count += 1;
             }
 
-            if saved_count > 0 {
-                session_code.push_str(&format!("{{{}}}\n", dict_entries.join(", ")));
+            if saved_count == 0 {
+                eprintln!("No serializable variables to save.");
+                return Some(false);
             }
+            session_code.push_str(&saved_dict);
+            session_code.push('\n');
 
-            match std::fs::write(file_path, session_code) {
-                Ok(_) => {
-                    println!(
-                        "Session saved to: {} ({} variables)",
-                        file_path, saved_count
-                    );
-                }
-                Err(e) => {
-                    eprintln!("Error saving session to '{}': {}", file_path, e);
-                }
+            if write_explicit_file(file_path, session_code) {
+                println!(
+                    "Session saved to: {} ({} variables)",
+                    file_path, saved_count
+                );
             }
             Some(false)
         }
@@ -2227,5 +2381,168 @@ pub fn handle_command(
             );
             Some(false)
         }
+    }
+}
+
+#[cfg(test)]
+mod deployment_command_tests {
+    use super::*;
+
+    #[test]
+    fn suffix_flags_leave_avon_literals_intact() {
+        for expression in [
+            r#"publish "out" "--root ignored --force""#,
+            r#"publish "out" "escaped \" --backup \\""#,
+            r#"publish "out" {{"literal " --root not-a-flag --force"}}"#,
+            r#"publish "out" {{{"{{"nested --root"}} --append"}}}"#,
+            r#"publish "out" {{"{{"--root"}} --backup"}}"#,
+            r#"[publish "out" (get {value: "--dry-run"} "value")]"#,
+            r#"publish @out-{"--root"} "value""#,
+            "publish \"out\" \"é\" # --root ignored\n",
+            "(1 -- 2)",
+        ] {
+            let input = format!("{}\n--dry-run --root 'output dir' --force", expression);
+            let (parsed, opts) = parse_deploy_expression(&input).unwrap();
+            assert_eq!(parsed, expression.trim());
+            assert_eq!(opts.root.as_deref(), Some("output dir"));
+            assert!(opts.dry_run && opts.force);
+            assert!(!opts.backup && !opts.append && !opts.if_not_exists);
+        }
+    }
+
+    #[test]
+    fn suffix_root_is_optional_and_all_flags_are_supported() {
+        let (expression, opts) = parse_deploy_expression("files").unwrap();
+        assert_eq!(expression, "files");
+        assert!(opts.root.is_none());
+        assert!(!opts.force && !opts.dry_run);
+        let (_, opts) =
+            parse_deploy_expression("files --backup --append --if-not-exists --dry-run --force")
+                .unwrap();
+        assert!(opts.root.is_none());
+        assert!(opts.backup && opts.append && opts.if_not_exists && opts.dry_run && opts.force);
+    }
+
+    #[test]
+    fn suffix_root_supports_quotes_spaces_and_escapes() {
+        for (argument, expected) in [
+            (r#""/tmp/output dir""#, "/tmp/output dir"),
+            ("'/tmp/output dir'", "/tmp/output dir"),
+            (r"/tmp/output\ dir", "/tmp/output dir"),
+            (r#""dir \"quoted\"""#, "dir \"quoted\""),
+            ("'--force'", "--force"),
+            (r"'C:\output dir'", r"C:\output dir"),
+        ] {
+            let input = format!("files --root {} --dry-run", argument);
+            let (_, opts) = parse_deploy_expression(&input).unwrap();
+            assert_eq!(opts.root.as_deref(), Some(expected));
+            assert!(opts.dry_run);
+        }
+    }
+
+    #[test]
+    fn suffix_rejects_missing_values_unknown_flags_and_malformed_input() {
+        for input in [
+            "",
+            "--dry-run",
+            "files --root",
+            "files --root --force",
+            "files --root ''",
+            "files --root \"unterminated",
+            "files --root dir\\",
+            "files --unknown",
+            "files --root dir --unknown",
+            "files --force extra",
+            "files --root=dir",
+            "(files --force",
+            "files ] --force",
+            "\"unterminated",
+        ] {
+            assert!(
+                parse_deploy_expression(input).is_err(),
+                "accepted {input:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn explicit_paths_select_the_parent_as_root() {
+        let (leaf, opts) = explicit_write_options("output.txt").unwrap();
+        assert_eq!(leaf, "output.txt");
+        assert_eq!(opts.root.as_deref(), Some("."));
+        assert!(opts.force);
+        let dir = tempfile::tempdir().unwrap();
+        let filename = dir.path().join("output.txt");
+        let (leaf, opts) = explicit_write_options(filename.to_str().unwrap()).unwrap();
+        assert_eq!(leaf, "output.txt");
+        assert_eq!(
+            std::path::Path::new(opts.root.as_ref().unwrap()),
+            dir.path()
+        );
+        for invalid in ["", ".", "..", "/", "dir/", "dir/.", "dir/.."] {
+            assert!(
+                explicit_write_options(invalid).is_err(),
+                "accepted {invalid:?}"
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn explicit_writes_do_not_follow_symlinks_or_truncate_other_hard_links() {
+        let dir = tempfile::tempdir().unwrap();
+        let original = dir.path().join("original");
+        let link = dir.path().join("link");
+        let hard_link = dir.path().join("hard-link");
+        std::fs::write(&original, "original data").unwrap();
+        std::os::unix::fs::symlink(&original, &link).unwrap();
+        assert!(!write_explicit_file(
+            link.to_str().unwrap(),
+            "new data".to_string()
+        ));
+        std::fs::hard_link(&original, &hard_link).unwrap();
+        assert!(write_explicit_file(
+            hard_link.to_str().unwrap(),
+            "new data".to_string()
+        ));
+        assert_eq!(std::fs::read_to_string(original).unwrap(), "original data");
+        assert_eq!(std::fs::read_to_string(hard_link).unwrap(), "new data");
+    }
+
+    #[test]
+    fn session_strings_round_trip_through_the_lexer() {
+        for value in [
+            "",
+            "é🦀",
+            "\\",
+            "\\\" in malicious",
+            "\n\r\t",
+            "\0\u{8}\u{c}",
+            "{ --root }",
+        ] {
+            let tokens = tokenize(avon_string(value)).unwrap();
+            assert_eq!(tokens.len(), 1);
+            assert!(matches!(&tokens[0], crate::common::Token::String(s, _) if s == value));
+        }
+    }
+
+    #[test]
+    fn session_nested_values_and_keys_are_serialized_as_data() {
+        let payload = "\\\" in injected\n# comment\r\t";
+        let mut values = HashMap::new();
+        values.insert(
+            payload.to_string(),
+            Value::List(vec![Value::String(payload.to_string())]),
+        );
+        let source = session_value(&Value::Dict(values)).unwrap();
+        let tokens = tokenize(source.clone()).unwrap();
+        let result = eval(parse(tokens).program, &mut initial_builtins(), &source).unwrap();
+        let Value::Dict(values) = result else {
+            panic!("expected dictionary")
+        };
+        let Value::List(items) = &values[payload] else {
+            panic!("expected list")
+        };
+        assert!(matches!(&items[0], Value::String(s) if s == payload));
     }
 }

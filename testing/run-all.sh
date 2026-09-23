@@ -15,6 +15,8 @@
 # ║    bash testing/run-all.sh --no-clean   # Skip rebuild             ║
 # ╚════════════════════════════════════════════════════════════════════╝
 
+set -o pipefail
+
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TESTING_DIR="$PROJECT_ROOT/testing"
 

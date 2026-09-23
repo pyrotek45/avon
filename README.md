@@ -9,13 +9,13 @@ Avon is a functional language for generating, deploying, and automating any text
 - **Functional programming** — Variables, functions, map/filter/fold, type safety
 - **Built-in deployment** — Files know where they belong
 - **Built-in task runner** — Define and run shell tasks with dependency resolution
-- **Atomic deployment** — All-or-nothing, no partial failures
+- **Deployment preflight checks** — Validate destinations before writing generated contents
 - **Git integration** — Share templates, deploy anywhere
 - **Extensible** — Combine primitives in creative ways
 
 Avon is designed to be powerful and flexible. I'm excited to see how you use it in ways not even mentioned here.
 
-[![Rust](https://img.shields.io/badge/Rust-1.70%2B-orange)](https://www.rust-lang.org/)
+[![Rust](https://img.shields.io/badge/Rust-stable-orange)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
 
 ---
@@ -30,7 +30,6 @@ Avon is designed to be powerful and flexible. I'm excited to see how you use it 
 | [**Do Mode Guide**](./tutorial/DO_MODE_GUIDE.md) | Built-in task runner guide. Define and run shell tasks with dependencies, env vars, and auto-discovery. |
 | **Command Line** | Run `avon doc` for built-in help on any function, `avon help do` for task runner help |
 | **Examples** | See `examples/` directory for 160+ real-world examples |
-| **Release Notes** | See [CHANGELOG.md](./CHANGELOG.md) for the 0.6.0 release summary |
 
 ---
 
@@ -191,16 +190,43 @@ When you run `avon deploy program.av`, Avon evaluates your program and:
 3. **List of FileTemplates** — Writes them all
    - Generate multiple files from one program
 
-### Atomic Deployment
+### Preview Paths and Deployment Roots
 
-Deployment is atomic — if any error occurs during evaluation or validation, **no files are written**.
+`eval` previews FileTemplates; `deploy` writes them. A bare file invocation also previews by default. For a runnable example, [examples/deployment_paths.av](examples/deployment_paths.av) produces this preview:
+
+```text
+--- config/app.txt ---
+Hello, deployment!
+```
+
+The header is the **template's rendered path**, not a resolved destination or a write confirmation.
+
+- **Without `--root`:** deployment writes relative to the process's **current working directory**, not the source file's directory or Avon's installation directory. The success message normally uses a relative path.
+- **With `--root ./output`:** deployment creates the output directory if needed, resolves it to an absolute path, and writes relative to it. A relative root is relative to the working directory. Success messages show absolute destinations.
+- **With `--root /absolute/directory`:** the chosen directory becomes the output base. This does not grant administrator privileges or change evaluation-time read paths.
+- **In `eval`:** `--root` does not alter preview headers or validate deployment destinations. Preview evaluates the program and renders contents but does not deploy FileTemplates.
+- **Existing files:** skipped with a warning by default. Use `--backup`, `--force`, or `--append` to opt into changes, or `--if-not-exists` for an explicit skip message.
+
+**Preview contents with `avon eval`; inspect destinations with `avon deploy … --dry-run`.** The latter prints an absolute `Root:` and `CREATE`, `OVERWRITE`, `APPEND`, `BACKUP source -> source.bak`, or `SKIP (exists)` actions, without generated contents or deployment writes (including directories, backups, and probes). `eval` ignores `--root`. Both still evaluate the program; neither is an evaluator sandbox. There is no CLI `avon preview` subcommand.
+
+`--dry-run` is supported **only for `do` and deployment operations** (including bare-file `--deploy` and REPL deployment commands). `eval`, `run`, bare-file preview, help, documentation, version, and REPL startup reject it rather than silently ignoring it.
+
+With or without `--root`, generated paths must be portable relative paths and cannot contain symlink components (including dangling or in-root links). Absolute `publish` paths are rejected, not rebased. The deliberately selected root may itself be a canonicalized alias. Conflicting targets and planned backups are rejected before writing. Handle-relative, no-follow directory access mitigates symlink substitution; replacement avoids modifying outside hard-link aliases. Existing regular `.bak` files are replaced, not archived; Unix replacement preserves rwx permissions but strips setuid/setgid.
+
+Absolute plan/log paths can reveal usernames and directory structure; content previews can reveal secrets. Trust the selected root and output tree: hostile directory renames and concurrent deployment serialization are not guaranteed safe. Use OS sandboxing for untrusted evaluation and avoid elevated privileges. See the tutorial for the full path policy and remaining limits.
+
+See the [tutorial's complete guide to preview headers, defaults, deployment roots, and security](tutorial/TUTORIAL.md#preview-headers-default-mode-and-deployment-paths), with reproducible [deployment path checks](testing/integration/test_deployment_paths.sh).
+
+### Deployment Validation and Failure Handling
+
+Deployment validates destinations before writing generated contents, but is **not an all-or-nothing transaction**.
 
 **Three-phase process:**
 1. **Evaluate** — Run your program and collect FileTemplates
-2. **Validate** — Check all paths, permissions, and directories
-3. **Write** — Only if phases 1 & 2 succeed, write all files
+2. **Plan (read-only)** — Check paths, collisions, directories, and permissions without creating directories, backups, or probes
+3. **Write** — Only if phases 1 & 2 succeed and `--dry-run` is absent, write sequentially
 
-If evaluation fails (type errors, undefined variables), validation fails (permissions, path issues), or the result isn't deployable, Avon aborts with zero files written. This prevents partial deployments that leave your system in an inconsistent state
+Evaluation/collection errors and preflight failures stop deployment before output writes. Read-only permission checks cannot guarantee space, all ACL behavior, or unchanged filesystem state. A failure during actual writing can leave completed files, created directories, backups, or a partial new file; there is no rollback. Review output and exit status, and keep independent backups when updating important files.
 
 **Example outputs:**
 
@@ -675,9 +701,9 @@ Built-in functions for string operations, list operations, formatting, date/time
 
 Avon won't deploy if there's a type error. Catch issues before deployment.
 
-### Atomic Deployment
+### Deployment Preflight Checks
 
-All-or-nothing deployment. If any error occurs during evaluation or validation, no files are written. No partial deployments, no inconsistent state.
+Avon checks destinations without writing during preflight. This catches many errors early, but is not a transaction: later write failures can leave partial output, directories, or backups. See [deployment failure handling](#deployment-validation-and-failure-handling).
 
 ### Any Text Format
 

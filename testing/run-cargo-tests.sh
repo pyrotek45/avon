@@ -4,6 +4,8 @@
 # This runs all Rust-level unit tests in src/
 # Integration tests are handled by the bash test suite in testing/integration/
 
+set -o pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
@@ -34,7 +36,7 @@ echo ""
 # Run library unit tests
 echo "--- Library unit tests ---"
 if cargo test --lib 2>&1 | tail -5 | grep -q "test result: ok"; then
-    count=$(cargo test --lib 2>&1 | grep "test result" | grep -oP '\d+ passed')
+    count=$(cargo test --lib 2>&1 | grep "test result" | grep -oE '[0-9]+ passed')
     echo -e "${GREEN}✓ Library unit tests ($count)${NC}"
     ((PASSED++))
 else
@@ -47,7 +49,7 @@ fi
 echo ""
 echo "--- Binary unit tests ---"
 if cargo test --bin avon 2>&1 | tail -5 | grep -q "test result: ok"; then
-    count=$(cargo test --bin avon 2>&1 | grep "test result" | grep -oP '\d+ passed')
+    count=$(cargo test --bin avon 2>&1 | grep "test result" | grep -oE '[0-9]+ passed')
     echo -e "${GREEN}✓ Binary unit tests ($count)${NC}"
     ((PASSED++))
 else

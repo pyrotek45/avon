@@ -62,6 +62,7 @@ run_test "Example Outputs"        "$INTEGRATION_DIR/test_example_outputs.sh"
 # ── Deploy & Backup ──────────────────────────────────────
 print_section "Deploy & Backup"
 run_test "Backup Tests"           "$INTEGRATION_DIR/test_backup.sh"
+run_test "Deployment Paths"       "$INTEGRATION_DIR/test_deployment_paths.sh"
 run_test "Atomic Deployment"      "$INTEGRATION_DIR/test_atomic_deployment.sh"
 run_test "Bulletproof Tests"      "$INTEGRATION_DIR/test_bulletproof.sh"
 
@@ -69,6 +70,10 @@ run_test "Bulletproof Tests"      "$INTEGRATION_DIR/test_bulletproof.sh"
 print_section "Do Mode (Task Runner)"
 run_test "Do Mode Tests"          "$INTEGRATION_DIR/test_do_mode.sh"
 run_test "Do Mode Doc Verification" "$INTEGRATION_DIR/test_do_mode_docs.sh"
+run_test "Tutorial Verification"  "$INTEGRATION_DIR/test_tutorial_verified.sh"
+run_test "Builtin Reference"      "$INTEGRATION_DIR/test_builtin_reference.sh"
+run_test "Getting Started Guide"  "$INTEGRATION_DIR/test_getting_started.sh"
+run_test "Release Examples"       "$INTEGRATION_DIR/test_release_examples.sh"
 
 # ── Code Structure ───────────────────────────────────────
 print_section "Code Structure"

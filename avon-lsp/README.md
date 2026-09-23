@@ -13,7 +13,7 @@ A standalone Language Server Protocol implementation for the Avon template langu
 
 ### Prerequisites
 
-- Rust 1.56 or later
+- Current stable Rust toolchain (the language server builds the Avon crate too; the old Rust 1.56 minimum is not supported by current dependencies)
 - Cargo
 
 ### Building

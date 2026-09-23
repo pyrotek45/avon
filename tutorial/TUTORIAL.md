@@ -88,6 +88,10 @@ Avon is a general-purpose tool that handles everything from complex infrastructu
 
 7. **[File Templates & Deployment](#file-templates--deployment)**
    - Basic FileTemplate
+  - [Preview Headers, Default Mode, and Deployment Paths](#preview-headers-default-mode-and-deployment-paths)
+    - What eval displays (and does not validate)
+    - Working directory vs source directory vs `--root`
+    - Full paths in output and security limitations
    - Deploying Single Files
    - Deploying Multiple Files
    - Dynamic File Paths
@@ -368,6 +372,8 @@ What happened?
 - `@greeting.txt` specifies the output file path (relative to `--root`)
 - `{"..."}` is a template that interpolates the `{name}` variable
 - `--root ./output` ensures files are written to `./output/greeting.txt`
+
+For preview headers, deployment without `--root`, and path-security caveats, see [Preview Headers, Default Mode, and Deployment Paths](#preview-headers-default-mode-and-deployment-paths).
 
 ### Generate Multiple Files
 
@@ -705,10 +711,10 @@ From highest to lowest precedence:
 
 Pipe Operator:
 ```avon
-a -> b                     # Pipe: pass a as first argument to b
+a -> b                     # Equivalent to b a
 ```
 
-The pipe operator `->` (not `|`) chains expressions, passing the left-hand side as the first argument to the right-hand side. This eliminates nested parentheses and makes code more readable.
+The pipe operator `->` (not `|`) appends the left-hand side as the **last argument** to the call on the right: `a -> f b` is `f b a`. For example, `let f = \a \b [a,b] in 1 -> f 2` returns `[2, 1]`. Check each function's argument order rather than assuming all builtins accept piped data in the same position.
 
 Note: Only `->` is a valid pipe operator. The single `|` character is not a pipe operator in Avon.
 **Basic pipe:**
@@ -736,6 +742,27 @@ Note: Only `->` is a valid pipe operator. The single `|` character is not a pipe
 10 -> \x x * 2             # Equivalent to: (\x x * 2) 10
 # Result: 20
 ```
+
+**Argument order matters:**
+```avon
+"hello world" -> regex_match "^hello"  # true: pattern first, text last
+join ["a", "b"] ","                   # "a,b": list first, separator last
+["a", "b"] -> (\xs join xs ",")       # "a,b": adapt with a lambda
+replace "aaa bbb" "aaa" "XXX"          # "XXX bbb": text, old, new
+"aaa bbb" -> (\s replace s "aaa" "XXX") -> (\s replace s "bbb" "YYY")
+# "XXX YYY"
+```
+
+`["a","b"] -> join ","` is a type error. `"aaa bbb" -> replace "aaa" "XXX"` returns `"aaa"`, not `"XXX bbb"`: it means `replace "aaa" "XXX" "aaa bbb"`. Chaining that mistaken call is an argument-order error, not evidence that pipes discard earlier results.
+
+**Lambda body scope:** The current binary evaluates this multi-line body as a chain inside the lambda:
+```avon
+map (\s
+  s -> upper -> length
+) ["ab", "c"]
+# [2, 1]
+```
+Wrapping the body as `(s -> upper -> length)` gives the same result. Parentheses can make scope clearer, but are not a required workaround for this example.
 
 **Pipe with path literals:**
 ```avon
@@ -848,13 +875,13 @@ All file operations accept path values:
 - `fill_template path dict` - Fill template with substitutions
 
 **Paths vs Strings:**
-Paths are distinct from strings. They're type-safe and provide better error messages:
+Paths and strings are distinct values, but `readfile` accepts **both**. Given a file containing `hello`, both expressions return `hello`:
 ```avon
 let p = @config.yml in
 readfile p                       # Works: path value
 
 let s = "config.yml" in
-readfile s                       # Type error: expected Path, got String
+readfile s                       # Works: string filename too
 ```
 
 **FileTemplate Syntax:**
@@ -2406,6 +2433,10 @@ let items = ["apple", "banana", "cherry"] in {"
 
 ## File Templates & Deployment
 
+For self-contained examples combining parallel mapping, configuration overrides,
+format conversion and deployment plans, see [release_matrix.av](../examples/release_matrix.av),
+[parallel_stress.av](../examples/parallel_stress.av), and [deployment_paths.av](../examples/deployment_paths.av).
+
 The real power of Avon is **file templates**: combining a file path with a template to generate files.
 
 ### Basic FileTemplate
@@ -2416,7 +2447,107 @@ The real power of Avon is **file templates**: combining a file path with a templ
 "}
 ```
 
-This is a `FileTemplate` value. When you evaluate and deploy a program that returns this, Avon writes the file.
+This is a `FileTemplate` value. Creating or evaluating it does not deploy it; deployment is a separate CLI operation. The same applies to `publish`, which constructs a `FileTemplate` rather than immediately writing a file.
+
+### Preview Headers, Default Mode, and Deployment Paths
+
+There are **two different paths** to keep in mind: the path stored in a `FileTemplate`, and the destination selected when deploying it.
+
+#### Preview and default mode
+
+The runnable example [examples/deployment_paths.av](../examples/deployment_paths.av) returns:
+
+```avon
+@config/app.txt {"Hello, deployment!"}
+```
+
+From the repository directory, preview it with:
+
+```bash
+avon eval examples/deployment_paths.av
+```
+
+Output:
+
+```text
+--- config/app.txt ---
+Hello, deployment!
+```
+
+The header identifies the **rendered path stored in the FileTemplate**, including any interpolated path components. It is not the source file's name, an absolute destination calculation, or a confirmation that anything was written. A list of FileTemplates produces one header and content block per generated file.
+
+| Invocation | Behavior |
+|---|---|
+| `avon eval examples/deployment_paths.av` | Evaluate and preview; do not deploy FileTemplates |
+| `avon examples/deployment_paths.av` | Same preview behavior by default |
+| `avon run '@config/app.txt {"Hello, deployment!"}'` | Evaluate inline code and preview |
+| `avon deploy examples/deployment_paths.av` | Write relative to the current working directory |
+| `avon examples/deployment_paths.av --deploy` | Explicitly opt into deployment in bare-file mode |
+| `avon` | Show help; no deployment |
+
+**Use `eval` to preview contents, or `deploy --dry-run` to inspect the deployment plan.** There is no CLI `avon preview` subcommand (the REPL has `:preview`). `do --dry-run` separately previews task execution.
+
+`--dry-run` is valid only for **task and deployment operations**: `do`, `deploy`, the bare-file `--deploy` alias, legacy deployment, and REPL `:deploy`/`:deploy-expr`. It is rejected for `eval`, `run`, bare-file preview, legacy evaluation, help/docs/version, REPL startup, and `:preview`. Unsupported uses fail before evaluating the source; a quoted `"--dry-run"` inside Avon code remains ordinary data.
+
+```bash
+avon deploy examples/deployment_paths.av --root ./output --dry-run
+```
+
+The deployment plan prints an absolute `Root:` and absolute destinations labeled `CREATE`, `OVERWRITE`, `APPEND`, or `SKIP (exists)`. With `--backup`, it also prints `BACKUP source -> source.bak`. It does **not** print generated contents or create/change output files, directories, backup placeholders, or write-access probes. It runs the same read-only path and permission checks as real deployment. These checks cannot guarantee available space, all ACL behavior, or unchanged permissions/filesystem state when writing later.
+
+Passing `--root ./output` to `eval` does not change the header or create that directory: preview ignores the deployment root. It also does not run deployment's destination, permission, overwrite, or symlink checks. Successful preview is therefore **not proof that deployment will succeed or stay inside a directory**.
+
+Both preview and deployment planning still evaluate the program: evaluation can read local files or fetch remote data, and content preview can print secrets. “Does not deploy FileTemplates” is not a sandbox guarantee for untrusted programs.
+
+#### Where files go: with and without `--root`
+
+The **current working directory** is the directory from which the process is launched (normally shown by `pwd`). It is not automatically the Avon repository, the directory containing the executable, or the directory containing the source template.
+
+For the example above, assuming the working directory is `/home/alice/work`:
+
+| Deployment option | Destination | Typical success message |
+|---|---|---|
+| No `--root` | /home/alice/work/config/app.txt | `Wrote config/app.txt` |
+| `--root .` | /home/alice/work/config/app.txt | `Wrote /home/alice/work/config/app.txt` |
+| `--root ./output` | /home/alice/work/output/config/app.txt | `Wrote /home/alice/work/output/config/app.txt` |
+| `--root /tmp/avon-output` | /tmp/avon-output/config/app.txt | `Wrote /tmp/avon-output/config/app.txt` |
+
+These are illustrative destinations, not literal output paths on every machine. Supplying the source from a different directory does not change the base directory for output. A relative `--root` is also relative to the **working directory**, not the source file.
+
+The selected root's existing ancestor is canonicalized, allowing a deliberately chosen root symlink/alias. Missing root and output directories are created only during actual writing, not planning. The destination is that root plus the template's relative path. **Without `--root`, the working directory uses the same path security as an explicit root.**
+
+`--root` controls **FileTemplate output routing**, not the program's working directory or filesystem read permissions. For example, a relative `readfile` input remains relative to the working directory, not to the output root. The flag does not mean the Unix root account, require administrator privileges, or grant extra permissions. Normal OS permissions still apply.
+
+Existing destination files are **skipped with a warning by default** (this can still exit successfully). Choose `--force` to replace, `--backup` to copy the old content to a `.bak` sibling before replacing, or `--append` to append. `--if-not-exists` explicitly skips and prints `Skipped … (exists)`.
+
+An existing regular `.bak` is replaced, not kept as backup history. Append/overwrite and backup replacement replace directory entries rather than modifying existing hard-linked file contents. On Unix, replacement preserves the original read/write/execute permission bits but strips setuid/setgid bits. Deployment is sequential, not a rollback transaction; see [Deployment Safety](#deployment-safety).
+
+#### Should output show the entire filepath?
+
+The current interface deliberately distinguishes **template preview** from **deployment reporting**:
+
+- Preview prints the template path as stored, normally relative. It does not prepend the working directory or `--root`.
+- Deployment without `--root` normally reports a relative path.
+- Deployment with `--root` reports an absolute destination, even when the supplied root was relative. If the root is a symlink, the message uses its canonical location.
+- `deploy --dry-run` always reports an absolute root and destinations, even without `--root`, but no generated contents.
+- Errors may also show absolute resolved paths and the root directory.
+
+A relative preview is useful because the same template can be deployed to different roots; it should not be read as an absolute deployment plan. Absolute deployment messages help identify where files were written, but **printing a path does not itself grant access to that file**. It can nevertheless disclose usernames, directory layout, project names, or mounted locations if logs are shared. Preview contents can disclose much more, including rendered secrets. Review/redact terminal transcripts and CI logs before publishing them; relative headers are not a privacy boundary.
+
+One edge case: absolute `@/…` path literals are rejected, but `publish` can construct an absolute string path. Preview displays that path verbatim. **Deployment rejects absolute generated paths both with and without `--root`**; it does not rebase them. Use a relative generated path and select an absolute base with `--root` instead.
+
+#### Path safety and current limitations
+
+Both implicit and explicit roots enforce the same generated-path policy:
+
+- Use relative file paths with forward slashes. Absolute paths, `..`, Windows drive prefixes/UNC paths, backslashes, colons (including alternate data streams), control characters, device names such as `NUL`/`COM1`, and components ending in a dot or space are rejected. Other Windows-invalid characters such as `?` and `*` are also rejected.
+- Generated output components may not be symlinks, even dangling links or links pointing inside the root. A symlink followed by a missing subdirectory is rejected too. This is different from the trusted, user-selected root alias above.
+- Normalized duplicate targets, case-insensitive collisions, file/ancestor conflicts, and conflicts with planned backup paths are rejected before writes.
+- The writer uses `cap-std` directory handles and no-follow directory opens, mitigating symlink substitutions between checking and use. Replacing file entries avoids mutating outside hard-link aliases during overwrite, append, or backup replacement.
+
+**This is not an evaluator sandbox or a guarantee against every concurrent filesystem attack.** The chosen root authority and output tree must be trusted; hostile renames of opened directories are outside the protection promised here. There is no guarantee of serialization between concurrent deployments. Use a fresh directory under your control, avoid elevated privileges, and use OS sandboxing for untrusted evaluation or hostile filesystem environments. `--root` does not restrict evaluation-time reads or network access.
+
+These behaviors are exercised by [deployment path checks](../testing/integration/test_deployment_paths.sh) and [focused tutorial checks](../testing/integration/test_tutorial_verified.sh), using disposable temporary directories. These are regression checks, not proof against all threats.
 
 ### Deploying Single Files
 
@@ -2744,13 +2875,18 @@ This generates `config-dev.yml` and `config-prod.yml`.
 
 ### Important Deploy Flags
 
-**`--root <dir>`** — Prepend this directory to all generated paths
+**`--root <dir>`** — Select the base for relative generated paths
 - **Default behavior:** If `--root` is not specified, files are written relative to the current working directory where `avon` is executed
-- **Recommended for safety:** Prevents accidental writes to system directories
-- All file paths are resolved relative to this directory (or current directory if not specified)
+- **Recommended:** Makes output routing explicit; the same path checks apply without it. This is not a complete sandbox; see [path safety and current limitations](#path-safety-and-current-limitations)
+- Generated file paths are resolved relative to this directory (or current directory if not specified); input reads are not rebased
 - Example: `--root ./output` means `@config.yml` becomes `./output/config.yml`
 - Example: Without `--root`, running `avon deploy config.av` from `/home/user/project/` writes `@config.yml` to `/home/user/project/config.yml`
-- **Use this flag** to keep your deployments contained and predictable
+- **Use this flag** to select a predictable output directory under your control
+
+**`--dry-run`** — Validate and print the deployment plan without output writes
+- Shows an absolute root and destinations/actions, not generated contents
+- Creates no files, directories, backups, or probes; still evaluates the program
+- A successful read-only check does not guarantee a later write will succeed
 
 **`--force`** — Overwrite existing files without warning
 - **Destructive:** Permanently replaces existing files
@@ -2759,7 +2895,7 @@ This generates `config-dev.yml` and `config-prod.yml`.
 - Overrides the default behavior of skipping existing files
 
 **`--backup`** — Create a backup before overwriting
-- **Safe overwrite:** Copies existing file to `filename.bak` before writing
+- Copies existing file to `filename.bak` before replacing it; an existing regular backup is replaced, not archived
 - If backup fails (e.g., permissions), deployment aborts
 - Original file remains untouched if backup fails
 - Best practice for updating critical configurations
@@ -2772,7 +2908,7 @@ This generates `config-dev.yml` and `config-prod.yml`.
 **`--if-not-exists`** — Only create file if it doesn't already exist
 - **Initialization mode:** Skips files that already exist
 - Useful for setup scripts that should only run once
-- No warning is shown for skipped files (they're silently ignored)
+- Prints `Skipped … (exists)` rather than an overwrite warning
 
 **`--git <url>`** — Fetch source from a git raw URL
 - Format: `user/repo/path/to/file.av`
@@ -2788,9 +2924,9 @@ This generates `config-dev.yml` and `config-prod.yml`.
 **Safety Guardrails:**
 - By default, Avon **will not overwrite** existing files. It skips them and prints a warning.
 - `--force` overrides this safety check (destructive).
-- `--backup` allows overwriting but preserves the old file as `filename.bak` (safe).
-- `--root` confines all writes to a specific directory (recommended for safety).
-- If any error occurs during deployment preparation or validation, **zero files are written** (truly atomic deployment). All files are validated before any writes occur.
+- `--backup` saves the previous contents as `filename.bak`, replacing any prior regular backup; keep independent history if needed.
+- `--root` selects an output base, not an evaluator sandbox. The output tree and root authority must be trusted.
+- Preflight is read-only. Actual writes are sequential without rollback: later failure can leave completed files, directories, backups, or a partial new file.
 
 ---
 
@@ -2891,9 +3027,9 @@ avon doc dict      # All dictionary functions
 | `timestamp` | Current Unix timestamp | `timestamp` → `1733850600` |
 | `timezone` | Current timezone offset | `timezone` → `"+00:00"` |
 | `date_format dt fmt` | Format datetime | `date_format "2024-12-10T15:30:00Z" "%Y-%m-%d"` → `"2024-12-10"` |
-| `date_parse str fmt` | Parse datetime string | `date_parse "2024-12-10" "%Y-%m-%d"` → `"2024-12-10T00:00:00Z"` |
-| `date_add dt offset` | Add to datetime | `date_add "2024-12-10T00:00:00Z" "1d"` → `"2024-12-11T00:00:00Z"` |
-| `date_diff dt1 dt2` | Days between dates | `date_diff "2024-12-01" "2024-12-10"` → `9` |
+| `date_parse str fmt` | Parse using the local timezone when no offset is supplied | `date_format (date_parse "2024-12-10" "%Y-%m-%d") "%Y-%m-%d"` → `"2024-12-10"` |
+| `date_add dt offset` | Add to datetime | `date_add "2024-12-10T00:00:00Z" "1d"` → `"2024-12-11T00:00:00+00:00"` |
+| `date_diff dt1 dt2` | First datetime minus second, in seconds | `date_diff "2024-12-10T00:00:00Z" "2024-12-01T00:00:00Z"` → `777600` |
 
 **Date format codes:** `%Y` year, `%m` month, `%d` day, `%H` hour, `%M` minute, `%S` second
 
@@ -4479,11 +4615,11 @@ String : String
 - `:run <file> [--debug]` - Evaluate file and display result (doesn't modify REPL state)
 - `:eval <file>` - Evaluate file and merge Dict keys into REPL (if result is a Dict)
 - `:preview <file> [--debug]` - Preview what would be deployed without writing files
-- `:deploy <file> [flags...]` - Deploy a file (supports same flags as CLI: `--root <dir>`, `--force`, `--backup`, `--append`, `--if-not-exists`, `--debug`, `-param value`)
-- `:deploy-expr <expr> [--root <dir>]` - Deploy the result of an expression
-- `:write <file> <expr>` - Write expression result to file
+- `:deploy <file> [flags...]` - Deploy a file (including `--root <dir>`, `--dry-run`, `--force`, `--backup`, `--append`, `--if-not-exists`, `--debug`, `-param value`)
+- `:deploy-expr <expr> [flags...]` - Deploy an expression, with optional suffix flags `--root <dir>`, `--dry-run`, `--force`, `--backup`, `--append`, `--if-not-exists`. Both deployment commands use the CLI's shared planner and path policy; without a root, they use the current working directory.
+- `:write <file> <expr>` - Write expression result to an explicitly chosen path
 - `:history` - Show command history (last 50 entries)
-- `:save-session <file>` - Save REPL state (variables) to file
+- `:save-session <file>` - Save REPL state (variables) to an explicitly chosen path. Like `:write`, this intentionally uses ambient paths (not generated-path confinement), with a safe leaf writer that rejects final symlinks. Choose these paths yourself; they are not a sandbox boundary.
 - `:load-session <file>` - Load REPL state from file
 - `:assert <expr>` - Assert that expression evaluates to true
 - `:test <expr> <expected>` - Test that expression equals expected value
@@ -5423,10 +5559,10 @@ Parse error: expected 'in' after let binding
 
 **Deployment errors:**
 If an error occurs during file materialization (writing files), Avon:
-- Stops immediately with zero files written (truly atomic deployment - all files validated before any writes)
+- Stops on the failure; earlier successful writes may remain
 - Reports exactly what failed
 - Shows how many files were written before the error
-- Does not leave partial deployments
+- Does not roll back partial deployments
 
 **Error recovery:**
 - After an error, you can fix the issue and try again
@@ -5494,13 +5630,13 @@ avon deploy program.av myservice prod 1.0
 
 ### Always Use `--root`
 
-Avoid accidentally writing to system directories. Your `/etc` will thank you:
+Make the output base explicit rather than accidentally generating files in the current working directory. Use a directory under your control; see [path safety and current limitations](#path-safety-and-current-limitations).
 
 ```bash
 # Good: files go to ./generated/
 avon deploy program.av --root ./generated --force
 
-# Risky: files go to absolute paths
+# No explicit root: relative output paths use the current working directory
 avon deploy program.av --force
 ```
 
@@ -5989,59 +6125,60 @@ Avon prioritizes safety in code generation. This section covers security conside
 Always validate and sanitize user-provided values before using them in templates:
 
 ```avon
-# ❌ UNSAFE: Direct interpolation of user input
-@config.json {"command": {user_input}}
-
-# ✅ SAFE: Validate against whitelist
+# Validate against an allowlist, then serialize as JSON data
 let commands = ["start", "stop", "restart"] in
-let cmd = if contains commands input then input else "start" in
-@script.sh {"command": {cmd}}
+let input = "invalid" in
+let cmd = if contains input commands then input else "start" in
+publish "config.json" (format_json {command: cmd})
+# Preview content: {"command": "start"}
 ```
 
-Whitelist validation prevents command injection and template escaping attacks.
+For list membership, `contains` takes the element first, list second. An allowlist constrains this value; it is not a universal injection defense. Serialize for the target format instead of assuming template interpolation escapes JSON, shell commands, or other languages.
 
 ### Template Safety Patterns
 
-Avoid dangerous patterns when working with templates:
+Interpolation inserts text, without automatically escaping it for the target language. For JSON, use `format_json`:
 
 ```avon
-# ❌ DON'T: Treat user input as code
-@exec.sh {exec_command}  # Dangerous if exec_command is user input
-
-# ✅ DO: Treat everything as data
+let value = "safe_\"quoted" in
 let safe_value = if starts_with value "safe_" then value else "" in
-@config.json {"value": safe_value}
+publish "config.json" (format_json {value: safe_value})
+# Preview content: {"value": "safe_\"quoted"}
 ```
 
-Avon doesn't execute arbitrary code, so all user input is treated as literal text. Keep it that way.
+A prefix check alone does not escape quotes. For comparison, `let value = "\"quoted" in @raw.txt {"{value}"}` previews the literal text `"quoted`. Generated scripts may execute that text later, and `avon do` intentionally runs task commands. Neither template evaluation nor deployment should be advertised as a sandbox for untrusted programs.
 
 ### File Deployment Safety
 
-The deployment process is designed to be **atomic and fail-safe**:
+The deployment process validates destinations before writing generated contents, but is **not a transactional or sandboxed operation**:
 
-1. **Three-Phase Deployment:**
-   - **Phase 1: Validation** - All paths checked, no writes occur
-   - **Phase 2: Permission Check** - Verify all files can be written before starting
-   - **Phase 3: Writing** - Only after all validation passes do files get written
-   
-   If any error occurs, **zero files are written**.
+1. **Evaluate, plan, then write:**
+  - Evaluate the program and collect FileTemplates.
+  - Plan using read-only path, collision, and permission checks. No output directories, backup placeholders, or probes are created.
+  - With `--dry-run`, print the plan and stop. Otherwise write sequentially, creating missing directories as needed.
+
+  Read-only checks do not guarantee space, all ACL behavior, or unchanged filesystem state. A write-phase failure can leave completed output, directories, backups, or a partial new file. There is no rollback.
 
 2. **Safety Flags:**
 
 ```bash
 # PREVIEW first (does NOT write files)
-avon preview config.av --root ./output
+avon eval examples/deployment_paths.av
+
+# PLAN destinations/actions without deployment writes
+avon deploy examples/deployment_paths.av --root ./output --backup --dry-run
 
 # Deploy with safety
-avon deploy config.av --root ./output --backup
+avon deploy examples/deployment_paths.av --root ./output --backup
 ```
 
 | Flag | Behavior | Use When |
 |------|----------|----------|
-| `--root <dir>` | Confine all writes to directory | Always use this |
-| `--backup` | Backup existing files to `.bak` | Updating critical files |
+| `--root <dir>` | Select output base; same path checks apply without it | Prefer a fresh directory under your control |
+| `--dry-run` | Read-only plan, no generated contents or deployment writes | Check destinations/actions before writing |
+| `--backup` | Save previous contents to `.bak`, replacing a prior regular backup | Updating files; not a backup history |
 | `--if-not-exists` | Skip existing files | First-time setup |
-| `--force` | Overwrite immediately | You're certain it's safe |
+| `--force` | Overwrite after preflight | You're certain it's safe |
 
 3. **Default Behavior:**
 By default, `avon deploy` **skips** existing files and prints a warning. This is conservative by design.
@@ -6050,8 +6187,8 @@ By default, `avon deploy` **skips** existing files and prints a warning. This is
 
 Before deploying Avon in production:
 
-- [ ] Always use `--root` flag to confine output
-- [ ] Preview with `avon preview` before deploying
+- [ ] Use an explicit `--root` and inspect the output tree for symlinks
+- [ ] Preview contents with `avon eval` and inspect destinations with `deploy --dry-run`; neither isolates evaluation
 - [ ] Use `--backup` when updating existing configurations
 - [ ] Validate all user input in templates
 - [ ] Store templates in version control (Git)
@@ -6061,39 +6198,40 @@ Before deploying Avon in production:
 
 ### Path Security
 
-Path validation in **Avon code** prevents directory traversal attacks:
+Deployment rejects parent traversal, absolute generated paths, non-portable names, and symlink output components, with or without `--root`. See [path safety and current limitations](#path-safety-and-current-limitations) for the trusted-root/output-tree requirement and concurrency limits.
 
 ```bash
 # This is fine - normal file system navigation in the CLI
 cd /some/deep/folder && avon deploy ../config.av --root ./output
 ```
 
-However, within Avon code (`@` path literals), directory traversal is blocked:
+However, parent traversal in a generated path is rejected when deploying:
 
 ```avon
-# ❌ BLOCKED: Can't use .. in Avon code to escape --root
+# ❌ BLOCKED at deployment (including without --root)
 @../escape.json {"hack"}
 
-# ✅ ALLOWED: Paths relative to --root stay within root
+# ✅ ALLOWED: Ordinary relative output paths in a trusted tree
 @config.json {"setting"}
-@app/config/settings.json {"debug": true}
+@app/config/settings.json {"debug: true"}
 ```
 
 This distinction is important:
 - **CLI file paths**: Use them however you want (normal file system rules)
-- **Avon code paths** (`@file.txt`): Must be relative, no `..` allowed (security boundary)
+- **Generated paths**: Must be portable relative file paths; deployment rejects `..` and symlink components. These checks are not an evaluator sandbox, and content preview is not deployment validation.
 
 ```avon
 # Paths are relative to --root (or current dir)
-@config.json {"setting": "value"}
+@config.json {"setting: value"}
 
 # Works with nested paths
-@app/config/settings.json {"debug": true}
+@app/config/settings.json {"debug: true"}
 
 # Use forward slashes for cross-platform compatibility
-@subdir/file.txt {"content": "data"}
+@subdir/file.txt {"content: data"}
 ```
 
+These last examples illustrate paths, not JSON serialization; use `format_json` when generating JSON data.
 
 
 ---
@@ -6102,25 +6240,17 @@ This distinction is important:
 
 ### Deployment Safety
 
-Avon's deployment process is designed to be **truly atomic** and fail-safe. When deploying a list of FileTemplates, if any file cannot be written, **zero files are written**.
+Avon prepares and validates a list of FileTemplates before writing generated contents. This catches many errors early, but it does **not** guarantee all-or-nothing deployment.
 
-The process uses a three-phase approach to ensure atomicity:
+The process uses three phases:
 
-**Phase 1: Preparation & Validation**
-- All paths are validated for security (no path traversal)
-- All parent directories are created
-- No type errors occurred during evaluation
+**Phase 1: Evaluation & Collection** — Evaluate the program and collect deployable FileTemplates. Evaluation errors stop deployment.
 
-**Phase 2: Write Validation**
-Before writing any files, Avon validates that **all** files can be written:
-- For existing files: Verifies they can be opened for writing (checks permissions)
-- For backup operations: Verifies backup location is writable
-- For new files: Verifies parent directories are writable
+**Phase 2: Read-only Planning** — Validate portable relative paths, existing component types, destination/backup conflicts, and permissions. For missing directories, check the nearest existing parent without creating anything. No write probes or backup placeholders are used. `--dry-run` prints this plan instead of proceeding to writes; it does not preview contents.
 
-**Phase 3: Writing**
-Only after all files pass validation does Avon proceed to write them. Files are written sequentially, but since all have been validated, write failures are extremely rare.
+**Phase 3: Sequential Writing** — Create missing directories and write each target. Existing files and backups are replaced by directory entry, protecting outside hard-link aliases from content mutation. An existing regular `.bak` is replaced, not retained as history.
 
-This ensures truly atomic deployments—either all files write or none do.
+Read-only checks cannot guarantee disk space, all ACL behavior, or an unchanged filesystem. A later write failure can leave earlier output, directories, backups, or a partial new file. There is no rollback or guarantee that concurrent deployments are serialized. Keep independent backups and check the command's exit status and output.
 
 ### Preventing Accidental Overwrites
 
@@ -6440,11 +6570,11 @@ foreground = #eceff4
 
 [module/memory]
 type = internal/memory
-label = RAM: {gauge memory_used memory_total}
+label = RAM: {gauge (memory_used / memory_total) 10}
 
 [module/disk]
 type = internal/fs
-label = DISK: {format_filesize disk_used * 1000000000}
+label = DISK: {format_filesize (disk_used * 1000000000)}
 
 [module/temperature]
 type = internal/temperature
@@ -6461,8 +6591,8 @@ Formatting functions available:
 - `format_percent ratio precision` — Convert 0.75 to "75%" (see Formatting Functions for details)
 - `format_temp celsius` — Convert 62 to "62°C"
 - `format_uptime seconds format` — Convert to "1d 2h 30m" or other formats
-- `progressbar filled total` — Generate ASCII progress bar "█████░░░░░"
-- `gauge current max` — Generate gauge display "▐▌▌▌▌     ▌ 50%"
+- `progressbar fraction width` — `progressbar 0.5 10` produces the Unicode bar "█████░░░░░"
+- `gauge fraction width` — `gauge 0.5 10` produces "◐ 50%" (width is currently ignored)
 
 See `examples/ricing_polybar_config.av` for a complete polybar configuration.
 
@@ -6761,11 +6891,13 @@ avon 'sha256 (concat (concat (os) (env_var_or "USER" "unknown")) (env_var_or "HO
 
 Replace `find`, `ls`, `du`, and `file`:
 
+`glob` matches paths, not just regular files: even `glob "**/*.*"` includes a directory named `dir.with.dot`. The examples that call `readfile` assume the matches are readable UTF-8 files; an extension pattern is not a file-type check.
+
 ```bash
 # List all .rs files recursively (like `find . -name "*.rs"`)
 avon 'glob "**/*.rs" -> sort'
 
-# Count files by type (glob "**/*.*" avoids matching directories)
+# List distinct extensions of matching paths (not a count; directories can match)
 avon '
 glob "**/*.*" -> map (\f
   let ext = if regex_match "\\." f then split f "." -> last else "no-ext" in
@@ -6780,7 +6912,7 @@ glob "src/**/*.rs" -> map (\f
 )
 '
 
-# Find large files (glob "**/*.*" avoids matching directories, which readfile can't open)
+# Find large text files (requires all matches to be readable UTF-8 files)
 avon '
 glob "**/*.*" -> filter (\f
   (readfile f -> length) > 1000000
@@ -6803,8 +6935,7 @@ Replace `envsubst`, `m4`, and manual templating:
 
 ```bash
 # Expand environment variables in template
-# (nest replace calls - "->" only feeds the LAST argument, so chaining two
-#  "-> replace old new" in a row would discard the first replacement)
+# replace takes text FIRST, then old and new; nest calls or use lambda adapters.
 avon '
 replace (replace (readfile "template.conf") "{{USER}}" (env_var "USER")) "{{HOME}}" (env_var "HOME")
 -> publish "config.conf"
@@ -7105,7 +7236,7 @@ This might seem restrictive, but it actually prevents bugs where you accidentall
 
 ### Gotcha 3: Functions with All Defaults Still Return Functions
 
-A common misconception: if a function has all defaults, you might think calling it returns the result. But Avon is functionally pure—functions are values:
+A common misconception: if a function has all defaults, you might think merely referencing it returns its result. Functions are values; this does not imply evaluation is free of I/O:
 
 ```avon
 let greet = \name ? "World" "Hello, {name}!" in
@@ -7307,6 +7438,10 @@ math.double 5  # 10
 ```
 
 This means the imported file could return anything—a dictionary, a function, a number, a FileTemplate, whatever. This is powerful but means you need to know what each imported file returns.
+
+Local `import` accepts string or Path filenames. Relative `import` and `readfile` paths use the **process working directory**, not the importing file's directory; `--root` does not change them. For example, if `source/module.av` contains `readfile "input.txt"`, importing it reads the working directory's `input.txt` even when another exists beside the module. Imports are evaluation, not a sandbox.
+
+Unused `let` bindings are evaluated too: `let unused = readfile "missing.txt" in 1` fails when that file is missing. `let unused = not_an_api 1 in 1` also fails with `unknown symbol`; putting an unavailable API in an unused binding does not make it optional.
 
 **Solution:** Make it clear in your file what it returns. Consider a convention like:
 - `lib_*.av` files return function libraries (dicts of functions)

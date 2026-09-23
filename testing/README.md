@@ -39,7 +39,7 @@ testing/run-all.sh                         ← MAIN ENTRY POINT
   │     ├── test_error_handling.sh           Error & edge cases (61 tests)
   │     ├── test_path_literal_block.sh       Absolute path blocking
   │     ├── test_path_traversal.sh           Path traversal protection
-  │     ├── test_security_comprehensive.sh   Security sandbox
+    │     ├── test_security_comprehensive.sh   Security regression checks
   │     ├── test_root_relative_paths.sh      Relative --root paths
   │     ├── test_all_examples.sh             All example files compile
   │     ├── test_tutorial_snippets.sh        Tutorial code validation
@@ -124,7 +124,7 @@ Tests for the Avon language implementation — parsing, evaluation, builtins, te
 | `test_error_handling.sh` | 61 | Type errors, division by zero, boundary cases, none edge cases |
 | `test_path_literal_block.sh` | — | Blocks absolute path literals in source |
 | `test_path_traversal.sh` | — | Prevents `../` path traversal |
-| `test_security_comprehensive.sh` | — | Full security sandbox tests |
+| `test_security_comprehensive.sh` | — | Security regression cases, not proof of sandboxing |
 | `test_root_relative_paths.sh` | — | `--root` flag with relative paths |
 | `test_all_examples.sh` | — | Every `examples/*.av` file compiles |
 | `test_tutorial_snippets.sh` | — | Tutorial code snippets work |
@@ -140,12 +140,19 @@ End-to-end tests for the CLI, deploy system, and REPL:
 | Test Script | Tests | What It Covers |
 |---|---|---|
 | `test_cli_integration.sh` | 27 | `avon run`, `eval`, `deploy`, `doc` commands |
+| `test_builtin_reference.sh` | 215 runtime checks + help/inventory checks | Builtin reference contracts, serialization fixtures, and all 231 registered names |
+| `test_getting_started.sh` | 98 | Executes documented beginner commands directly from the guide |
+| `test_release_examples.sh` | — | Nine-file deployment matrix; bounded parallel correctness checks with 1/2/4 threads |
+| `test_deployment_paths.sh` | — | Preview vs read-only deployment plans, cwd/explicit roots, overwrite flags, absolute-path and symlink rejection, untouched preflight outputs, and shared REPL planner (isolated temporary directory) |
+| `test_tutorial_verified.sh` | — | Focused executable tutorial checks: pipe/argument order, lambda scope, import/read I/O, unused bindings, JSON serialization, portable paths/collisions, hard links, Unix modes, writer failure and REPL explicit paths (Linux, isolated temporary directory) |
 | `test_example_outputs.sh` | — | Example file output patterns |
 | `test_backup.sh` | — | `--backup` flag for deploy |
-| `test_atomic_deployment.sh` | — | Atomic file deployment |
+| `test_atomic_deployment.sh` | — | Evaluation/preflight failures and successful writes; does not establish transactional rollback |
 | `test_bulletproof.sh` | — | Resilience under edge cases |
 | `test_do_mode.sh` | 32 | Do mode: simple/structured tasks, deps, dry-run, list, info, env vars, errors, typos, cycles |
 | `test_do_mode_docs.sh` | 41 | Do mode: doc verification — security blocks, file resolution, auto-discovery, CLI help accuracy |
+
+Run the focused documentation checks with `bash testing/integration/test_tutorial_verified.sh`. They use the existing release binary (or an explicit `AVON` path), temporary fixtures, and Linux utilities; they do not build, use the network, or execute the entire tutorial. Run `bash testing/integration/test_deployment_paths.sh` for complementary preview/plan/deploy cases. Passing these checks does not prove sandboxing, rollback, or safe concurrent deployments.
 
 ### REPL Tests (`repl/`)
 

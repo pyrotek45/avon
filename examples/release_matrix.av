@@ -1,0 +1,50 @@
+# Self-contained release fixture: no network, environment, or file reads.
+# Preview: avon eval examples/release_matrix.av
+# Checks:  avon eval examples/release_matrix.av -output summary
+# Plan:    avon deploy examples/release_matrix.av --root ./release-out --dry-run
+# Write:   avon deploy examples/release_matrix.av --root ./release-out
+# Each environment gets equivalent JSON, YAML, and TOML configurations.
+\output?"files"
+let fixture = json_parse_string "{\"service\":\"atlas\",\"version\":\"1.2.3\",\"environments\":[{\"name\":\"dev\",\"overrides\":{\"debug\":true,\"replicas\":1}},{\"name\":\"staging\",\"overrides\":{\"replicas\":2},\"region\":\"eu-west\"},{\"name\":\"prod\",\"overrides\":{\"replicas\":4,\"port\":9090}}]}" in
+let base = {port: 8080, replicas: 1, debug: false, timeout: 30} in
+let make_config = \entry (
+  let layered = dict_merge base (default {} (get entry "overrides")) in
+  dict_merge layered {
+    environment: entry.name,
+    service: fixture.service,
+    version: fixture.version,
+    region: default "local" (get entry "region")
+  }
+) in
+# Compare primitive projections, not nested dictionary display ordering.
+let signature = \cfg [cfg.environment, cfg.service, cfg.version, cfg.region,
+                      cfg.port, cfg.replicas, cfg.debug, cfg.timeout] in
+let configs = pmap make_config fixture.environments in
+let sequential = map make_config fixture.environments in
+let checked_parallel = assert ((map signature configs) == (map signature sequential))
+  "release_matrix: parallel configuration mismatch" in
+let checked_defaults = assert ((map signature configs) == [
+  ["dev", "atlas", "1.2.3", "local", 8080, 1, true, 30],
+  ["staging", "atlas", "1.2.3", "eu-west", 8080, 2, false, 30],
+  ["prod", "atlas", "1.2.3", "local", 9090, 4, false, 30]
+]) "release_matrix: defaults or override precedence changed" in
+let render_config = \cfg (
+  let json_text = format_json cfg in
+  let yaml_text = format_yaml cfg in
+  let toml_text = format_toml cfg in
+  let checked_json = assert ((signature (json_parse_string json_text)) == (signature cfg))
+    "release_matrix: JSON round trip mismatch" in
+  let checked_yaml = assert ((signature (yaml_parse_string yaml_text)) == (signature cfg))
+    "release_matrix: YAML round trip mismatch" in
+  let checked_toml = assert ((signature (toml_parse_string toml_text)) == (signature cfg))
+    "release_matrix: TOML round trip mismatch" in
+  [publish (cfg.environment + "/config.json") json_text,
+   publish (cfg.environment + "/config.yaml") yaml_text,
+   publish (cfg.environment + "/config.toml") toml_text]
+) in
+let artifacts = flatten (pmap render_config configs) in
+let checked_count = assert ((length artifacts) == 9) "release_matrix: expected nine files" in
+if output == "summary" then
+  format_json {ok: true, example: "release_matrix", environments: 3, files: length artifacts}
+else if output == "files" then artifacts
+else error "release_matrix: output must be files or summary"

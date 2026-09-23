@@ -16,8 +16,9 @@ pub struct CliOptions {
     pub pos_args: Vec<String>,
     pub file: Option<String>,
     pub code: Option<String>,
-    // Task runner options (Phase 2)
+    // Shared deployment/task preview flag
     pub dry_run: bool,
+    // Task runner options
     pub list_tasks: bool,
     pub task_info: Option<String>,
 }
@@ -63,7 +64,7 @@ pub fn parse_args(args: &[String], require_file: bool) -> Result<CliOptions, Str
     while i < args.len() {
         match args[i].as_str() {
             "--root" => {
-                if i + 1 < args.len() {
+                if i + 1 < args.len() && !args[i + 1].is_empty() && !args[i + 1].starts_with("--") {
                     opts.root = Some(args[i + 1].clone());
                     i += 2;
                 } else {
@@ -103,7 +104,7 @@ pub fn parse_args(args: &[String], require_file: bool) -> Result<CliOptions, Str
                 i += 1;
             }
             "--info" => {
-                if i + 1 < args.len() {
+                if i + 1 < args.len() && !args[i + 1].starts_with("--") {
                     opts.task_info = Some(args[i + 1].clone());
                     i += 2;
                 } else {
@@ -111,7 +112,7 @@ pub fn parse_args(args: &[String], require_file: bool) -> Result<CliOptions, Str
                 }
             }
             "--git" => {
-                if i + 1 < args.len() {
+                if i + 1 < args.len() && !args[i + 1].starts_with("--") {
                     opts.git_url = Some(args[i + 1].clone());
                     i += 2;
                 } else {
@@ -132,7 +133,7 @@ pub fn parse_args(args: &[String], require_file: bool) -> Result<CliOptions, Str
             }
             s if s.starts_with('-') => {
                 let key = s.trim_start_matches('-').to_string();
-                if i + 1 < args.len() {
+                if i + 1 < args.len() && !args[i + 1].starts_with("--") {
                     opts.named_args.insert(key, args[i + 1].clone());
                     i += 2;
                 } else {
@@ -162,4 +163,27 @@ pub fn parse_args(args: &[String], require_file: bool) -> Result<CliOptions, Str
     }
 
     Ok(opts)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dry_run_cannot_be_consumed_as_a_missing_root_or_named_value() {
+        for args in [
+            vec!["input.av", "--root", "--dry-run"],
+            vec!["input.av", "--root", ""],
+            vec!["input.av", "-env", "--dry-run"],
+            vec!["--git", "--dry-run"],
+            vec!["--info", "--dry-run"],
+        ] {
+            let args: Vec<_> = args.into_iter().map(str::to_string).collect();
+            assert!(parse_args(&args, true).is_err());
+        }
+        let args = ["input.av", "--root", "output dir", "--dry-run"].map(str::to_string);
+        let opts = parse_args(&args, true).unwrap();
+        assert!(opts.dry_run);
+        assert_eq!(opts.root.as_deref(), Some("output dir"));
+    }
 }

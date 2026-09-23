@@ -27,6 +27,11 @@ A hands-on guide to learning Avon step by step. Each lesson builds on the previo
 17. [Lesson 17: Task Runner (Do Mode)](#lesson-17-task-runner-do-mode) — Run shell tasks
 18. [Where to Go Next](#where-to-go-next)
 
+For tested multi-format generation and bounded parallel workloads, see
+[release_matrix.av](../examples/release_matrix.av) and [parallel_stress.av](../examples/parallel_stress.av).
+The beginner command examples are also exercised directly from this document by
+[test_getting_started.sh](../testing/integration/test_getting_started.sh).
+
 ---
 
 ## Lesson 1: Hello, Avon!
@@ -510,6 +515,8 @@ avon run '["  HELLO  ", "  world  ", "  AVON  "] -> map trim -> map lower'
 > # Output: c, b, a
 > ```
 
+`regex_match` takes the pattern first and text last, so `"hello world" -> regex_match "^hello"` returns `true`. In contrast, `replace` takes **text, old, new**: use `replace "aaa bbb" "aaa" "XXX"` (returns `XXX bbb`) or pipe through a lambda such as `\s replace s "aaa" "XXX"`.
+
 ### Try It Yourself
 
 ```bash
@@ -528,7 +535,7 @@ avon run 'let config = {host:"localhost", port:8080} in config.host'
 # Output: localhost
 ```
 
-> **Note:** When using dicts on the command line, don't put spaces after colons (bash interprets `{a: 1}` as brace expansion). In `.av` files, spaces are fine.
+> **Note:** Quote the whole expression as shown. Inside shell single quotes, braces are literal and spaces after colons are fine: `avon run 'let config = {host: "localhost", port: 8080} in config.host'`. Dictionary display order is unspecified; use `sort (keys config)` when you need stable key ordering.
 
 ### Accessing Values
 
@@ -549,8 +556,8 @@ avon run 'let config = {host:"localhost", port:8080} in get config "host"'
 ### Dict Operations
 
 ```bash
-avon run 'let config = {host:"localhost", port:8080} in keys config'
-# Output: [port, host]
+avon run 'let config = {host:"localhost", port:8080} in sort (keys config)'
+# Output: [host, port]
 
 avon run 'let config = {host:"localhost", port:8080} in has_key config "host"'
 # Output: true
@@ -621,13 +628,16 @@ avon run 'let x = 10 in {"x is {x} and double is {x * 2}"}'
 When you interpolate a list, each item goes on its own line:
 
 ```bash
-avon run 'let items = ["apple", "banana", "cherry"] in {"Items:\n{items}"}'
+avon run 'let items = ["apple", "banana", "cherry"] in {"Items:
+{items}"}'
 # Output:
 # Items:
 # apple
 # banana
 # cherry
 ```
+
+The template contains a real newline. Writing `\n` inside template text would print those two characters literally; string literals interpret escape sequences instead.
 
 Use `join` to put items on one line:
 
@@ -671,8 +681,19 @@ Deploy it with `deploy` (actually writes the file):
 
 ```bash
 avon deploy hello.av --root ./output --force
-# Output: Wrote ./output/hello.txt
+# Output uses an absolute path, for example:
+# Wrote /home/alice/work/output/hello.txt
 ```
+
+The preview header shows the **path stored in the FileTemplate**, not an absolute deployment destination. Passing `--root` to `eval` does not change that header or validate the output location.
+
+`--root ./output` is relative to the directory where you run Avon, not the source file's directory. **Without `--root`, deployment writes relative to that current working directory.** A bare file invocation previews by default; creating a FileTemplate does not itself write it.
+
+Use `eval` to preview generated contents. Use `deploy --dry-run` for a **read-only deployment plan**: an absolute `Root:` and `CREATE`, `OVERWRITE`, `APPEND`, `BACKUP source -> source.bak`, or `SKIP (exists)` actions. Planning does not print generated contents or create/change output files, directories, backups, or probes. It still evaluates your program, so it is not a sandbox for untrusted code. There is no CLI `preview` subcommand.
+
+The flag is supported only by task (`do`) and deployment operations. Adding `--dry-run` to `eval`, `run`, or bare-file preview is an error; they already preview values without deploying them.
+
+With or without `--root`, deployment applies the same path checks: generated paths must be portable relative paths, cannot contain symlink components, and cannot conflict with other targets or planned backups. A deliberately chosen root alias is allowed; absolute generated `publish` paths are not. Preflight is read-only, but actual writes are sequential without rollback. Trust the output tree and use OS isolation for untrusted code; a successful plan does not guarantee later write success. See [Preview Headers, Default Mode, and Deployment Paths](TUTORIAL.md#preview-headers-default-mode-and-deployment-paths) for details.
 
 ### Multi-Line Templates with Dedent
 
@@ -702,9 +723,11 @@ The 4-space indent is stripped automatically. This keeps your source code readab
 
 ### Key Concepts
 
-- `eval` — preview what would be generated (read-only, safe)
+- `eval` — evaluate and preview without deploying FileTemplates; rendered contents may contain secrets
 - `deploy` — actually write files to disk
-- `--root ./dir` — confine all output to a directory (always use this!)
+- `deploy --dry-run` — show a read-only destination/action plan, not generated contents
+- `--root ./dir` — choose an output base (not an evaluation sandbox)
+- No `--root` — use the current working directory, with the same generated-path security
 - `--force` — overwrite existing files
 
 ### Try It Yourself
@@ -777,10 +800,10 @@ The file path in `@path` supports interpolation too — `@config-{env}.yml` crea
 
 ```bash
 avon deploy multi.av --root ./configs --force
-# Output:
-# Wrote ./configs/config-dev.yml
-# Wrote ./configs/config-staging.yml
-# Wrote ./configs/config-prod.yml
+# Example output when run from /home/alice/work:
+# Wrote /home/alice/work/configs/config-dev.yml
+# Wrote /home/alice/work/configs/config-staging.yml
+# Wrote /home/alice/work/configs/config-prod.yml
 ```
 
 ### Try It Yourself
@@ -998,6 +1021,8 @@ avon run 'let utils = import "utils.av" in utils.shout "wow"'
 ```
 
 The pattern is simple: make a file that evaluates to a **dict of functions**, then import it and use dot notation to call them. This is how you build reusable libraries in Avon.
+
+Relative local `import` and `readfile` paths are resolved from the directory where Avon is running, not from the imported file's directory. `--root` only changes deployment output routing. Import evaluates code with your process's read access; only import trusted code or use OS-level isolation.
 
 ### Importing from GitHub
 

@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod completer;
+pub(crate) mod deployment;
 pub mod docs;
 pub mod helpers;
 pub mod options;

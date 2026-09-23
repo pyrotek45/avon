@@ -820,6 +820,8 @@ Task-level `env` values take priority over system environment variables.
 
 ### `--dry-run` — Preview Execution Plan
 
+For `do`, this prints the task execution plan without launching task commands. Avon still evaluates the task definition, including any reads or downloads it uses. The same flag on `deploy` prints destination/action plans without deployment writes. Other CLI modes reject `--dry-run`; use `eval` to preview generated contents without this flag. See [deployment planning](TUTORIAL.md#preview-headers-default-mode-and-deployment-paths).
+
 See what would run without executing anything:
 
 ```sh
