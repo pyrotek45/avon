@@ -4,6 +4,10 @@
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TEST_DIR="$PROJECT_ROOT/testing/imports"
+TESTING_DIR="$PROJECT_ROOT/testing"
+
+# Source common utilities to get $AVON variable
+source "$TESTING_DIR/common.sh"
 
 # Colors
 RED='\033[0;31m'
@@ -26,7 +30,7 @@ cd "$TEST_DIR" || exit 1
 for test_file in test_*.av; do
     test_name=$(basename "$test_file" .av)
     
-    if avon eval "$test_file" > /dev/null 2>&1; then
+    if "$AVON" eval "$test_file" > /dev/null 2>&1; then
         echo -e "${GREEN}✓ $test_name${NC}"
         ((PASSED++))
     else

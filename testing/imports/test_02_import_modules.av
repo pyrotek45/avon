@@ -1,7 +1,7 @@
 # Test 2: Import all Avon modules from a library folder
 # Expected: List of imported modules
 
-let av_files = glob "test_imports/lib/*.av" in
+let av_files = glob "lib/*.av" in
 let modules = map (\f import f) av_files in
 {
   test: "Test 2: Import Avon modules",

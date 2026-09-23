@@ -3,7 +3,7 @@
 
 let config_dict = fold (\acc \f 
   set acc (basename f) (json_parse f)
-) {} (glob "test_imports/config/*.json") in
+) {} (glob "config/*.json") in
 
 {
   test: "Test 7: Load JSON folder as config dict",

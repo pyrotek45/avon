@@ -1,4 +1,4 @@
-let modules = glob "test_imports/lib/*.av" in
+let modules = glob "lib/*.av" in
 let registry = fold (\acc \f
   let name = replace (basename f) ".av" "" in
   let entry = {
